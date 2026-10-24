@@ -1,0 +1,24 @@
+﻿{
+  "routerMap": [
+    {
+      "name": "bookmarks",
+      "pageSourceFile": "src/main/ets/view/BookmarkPage.ets",
+      "buildFunction": "BookmarkPageBuilder"
+    },
+    {
+      "name": "history",
+      "pageSourceFile": "src/main/ets/view/HistoryPage.ets",
+      "buildFunction": "HistoryPageBuilder"
+    },
+    {
+      "name": "downloads",
+      "pageSourceFile": "src/main/ets/view/DownloadPage.ets",
+      "buildFunction": "DownloadPageBuilder"
+    },
+    {
+      "name": "settings",
+      "pageSourceFile": "src/main/ets/view/SettingsPage.ets",
+      "buildFunction": "SettingsPageBuilder"
+    }
+  ]
+}

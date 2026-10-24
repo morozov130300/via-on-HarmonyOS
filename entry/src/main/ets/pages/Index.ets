@@ -22,6 +22,7 @@ struct Index {
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
   private downloads: DownloadCoordinator = DownloadCoordinator.getInstance()
+  private mainNavStack: NavPathStack = new NavPathStack()
   @Local ready: boolean = false
   @Local showSearch: boolean = false
   @Local showTabPanel: boolean = false
@@ -84,8 +85,9 @@ struct Index {
 
   build() {
     Stack() {
-      Column() {
-        if (this.ready) {
+      Navigation(this.mainNavStack) {
+        Column() {
+          if (this.ready) {
           Tabs({ index: this.tabStore.currentIndex }) {
             ForEach(this.tabStore.tabs, (tab: TabItem) => {
               TabContent() {
@@ -150,6 +152,9 @@ struct Index {
       .width('100%')
       .height('100%')
       .backgroundColor($r('app.color.page_bg'))
+      }
+      .hideTitleBar(true)
+      .mode(NavigationMode.Stack)
 
       if (this.tabStore.current().loading) {
         Progress({ value: this.tabStore.current().progress, total: 100, type: ProgressType.Linear })
@@ -192,6 +197,6 @@ struct Index {
   }
 
   private openPage(page: string): void {
-    console.info(`open page: ${page}`)
+    this.mainNavStack.pushPathByName(page, '', true)
   }
 }
