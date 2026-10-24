@@ -98,7 +98,7 @@ export class BrowserDb {
       return result
     }
     const predicates = new relationalStore.RdbPredicates('history')
-    predicates.orderByDesc('visited').limit(500)
+    predicates.orderByDesc('visited').limitAs(500)
     const resultSet = await this.rdb.query(predicates)
     while (resultSet.goToNextRow()) {
       const rec = new HistoryRec()

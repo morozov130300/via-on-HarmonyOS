@@ -49,29 +49,62 @@ export class AppSettings {
     return AppSettings.instance
   }
 
+  private async readString(key: string, defaultValue: string): Promise<string> {
+    if (this.store === null) {
+      return defaultValue
+    }
+    const value = await this.store.get(key, defaultValue)
+    if (typeof value === 'string') {
+      return value
+    }
+    return defaultValue
+  }
+
+  private async readNumber(key: string, defaultValue: number): Promise<number> {
+    if (this.store === null) {
+      return defaultValue
+    }
+    const value = await this.store.get(key, defaultValue)
+    if (typeof value === 'number') {
+      return value
+    }
+    return defaultValue
+  }
+
+  private async readBoolean(key: string, defaultValue: boolean): Promise<boolean> {
+    if (this.store === null) {
+      return defaultValue
+    }
+    const value = await this.store.get(key, defaultValue)
+    if (typeof value === 'boolean') {
+      return value
+    }
+    return defaultValue
+  }
+
   async init(context: Context): Promise<void> {
     if (this.store !== null) {
       return
     }
     try {
       this.store = await preferences.getPreferences(context, 'via_settings')
-      this.engineKey = this.store.getString('engineKey', 'baidu')
-      this.customEngineTemplate = this.store.getString('customEngineTemplate', '')
-      this.adBlockOn = this.store.getBoolean('adBlockOn', true)
-      this.adBlockTotal = this.store.getNumber('adBlockTotal', 0)
-      this.textZoom = this.store.getNumber('textZoom', 100)
-      this.nightMode = this.store.getBoolean('nightMode', false)
-      this.uaMode = this.store.getNumber('uaMode', UA_MODE_DEFAULT)
-      this.customUa = this.store.getString('customUa', '')
-      this.noImage = this.store.getBoolean('noImage', false)
-      this.restoreTabs = this.store.getBoolean('restoreTabs', true)
-      this.homepageMode = this.store.getNumber('homepageMode', 0)
-      this.homeUrl = this.store.getString('homeUrl', '')
-      this.searchHistory = this.readStringArray('searchHistory')
-      this.siteSettings = this.readSiteSettings()
-      this.customRules = this.readRules()
-      this.userScripts = this.readScripts()
-      this.scriptNextId = this.store.getNumber('scriptNextId', 1)
+      this.engineKey = await this.readString('engineKey', 'baidu')
+      this.customEngineTemplate = await this.readString('customEngineTemplate', '')
+      this.adBlockOn = await this.readBoolean('adBlockOn', true)
+      this.adBlockTotal = await this.readNumber('adBlockTotal', 0)
+      this.textZoom = await this.readNumber('textZoom', 100)
+      this.nightMode = await this.readBoolean('nightMode', false)
+      this.uaMode = await this.readNumber('uaMode', UA_MODE_DEFAULT)
+      this.customUa = await this.readString('customUa', '')
+      this.noImage = await this.readBoolean('noImage', false)
+      this.restoreTabs = await this.readBoolean('restoreTabs', true)
+      this.homepageMode = await this.readNumber('homepageMode', 0)
+      this.homeUrl = await this.readString('homeUrl', '')
+      this.searchHistory = await this.readStringArray('searchHistory')
+      this.siteSettings = await this.readSiteSettings()
+      this.customRules = await this.readRules()
+      this.userScripts = await this.readScripts()
+      this.scriptNextId = await this.readNumber('scriptNextId', 1)
     } catch (error) {
       const err = error as BusinessError
       console.error(`settings init failed: ${err.code} ${err.message}`)
@@ -254,11 +287,8 @@ export class AppSettings {
     this.flushKey('siteSettings', JSON.stringify(payload))
   }
 
-  private readSiteSettings(): SiteSetting[] {
-    if (this.store === null) {
-      return []
-    }
-    const raw = this.store.getString('siteSettings', '[]')
+  private async readSiteSettings(): Promise<SiteSetting[]> {
+    const raw = await this.readString('siteSettings', '[]')
     const result: SiteSetting[] = []
     try {
       const parsed = JSON.parse(raw) as Object[]
@@ -320,11 +350,8 @@ export class AppSettings {
     this.flushKey('customRules', JSON.stringify(payload))
   }
 
-  private readRules(): RuleEntry[] {
-    if (this.store === null) {
-      return []
-    }
-    const raw = this.store.getString('customRules', '[]')
+  private async readRules(): Promise<RuleEntry[]> {
+    const raw = await this.readString('customRules', '[]')
     const result: RuleEntry[] = []
     try {
       const parsed = JSON.parse(raw) as Object[]
@@ -386,11 +413,8 @@ export class AppSettings {
     this.flushKey('scriptNextId', this.scriptNextId)
   }
 
-  private readScripts(): UserScriptRec[] {
-    if (this.store === null) {
-      return []
-    }
-    const raw = this.store.getString('userScripts', '[]')
+  private async readScripts(): Promise<UserScriptRec[]> {
+    const raw = await this.readString('userScripts', '[]')
     const result: UserScriptRec[] = []
     try {
       const parsed = JSON.parse(raw) as Object[]
@@ -407,11 +431,8 @@ export class AppSettings {
     return result
   }
 
-  private readStringArray(key: string): string[] {
-    if (this.store === null) {
-      return []
-    }
-    const raw = this.store.getString(key, '[]')
+  private async readStringArray(key: string): Promise<string[]> {
+    const raw = await this.readString(key, '[]')
     const result: string[] = []
     try {
       const parsed = JSON.parse(raw) as Object[]
@@ -439,11 +460,8 @@ export class AppSettings {
     this.flushKey('tabsSnapshotIndex', activeIndex)
   }
 
-  readTabsSnapshot(): SavedTab[] {
-    if (this.store === null) {
-      return []
-    }
-    const raw = this.store.getString('tabsSnapshot', '[]')
+  async readTabsSnapshot(): Promise<SavedTab[]> {
+    const raw = await this.readString('tabsSnapshot', '[]')
     const result: SavedTab[] = []
     try {
       const parsed = JSON.parse(raw) as Object[]
@@ -461,10 +479,7 @@ export class AppSettings {
     return result
   }
 
-  readTabsSnapshotIndex(): number {
-    if (this.store === null) {
-      return 0
-    }
-    return this.store.getNumber('tabsSnapshotIndex', 0)
+  async readTabsSnapshotIndex(): Promise<number> {
+    return await this.readNumber('tabsSnapshotIndex', 0)
   }
 }

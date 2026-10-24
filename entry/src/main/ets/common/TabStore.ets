@@ -24,11 +24,11 @@ export class TabStore {
     return TabStore.instance
   }
 
-  init(settings: AppSettings): void {
+  async init(settings: AppSettings): Promise<void> {
     if (!settings.restoreTabs) {
       return
     }
-    const saved = settings.readTabsSnapshot()
+    const saved = await settings.readTabsSnapshot()
     if (saved.length === 0) {
       return
     }
@@ -41,7 +41,7 @@ export class TabStore {
       restored.push(tab)
     }
     this.tabs = restored
-    const savedIndex = settings.readTabsSnapshotIndex()
+    const savedIndex = await settings.readTabsSnapshotIndex()
     if (savedIndex >= 0 && savedIndex < restored.length) {
       this.currentIndex = savedIndex
     } else {
