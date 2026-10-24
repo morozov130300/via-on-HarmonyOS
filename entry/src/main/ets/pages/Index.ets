@@ -1,23 +1,197 @@
+import { promptAction } from '@kit.ArkUI'
+import { TabItem } from '../common/Types'
+import { AppSettings } from '../common/Settings'
+import { AdBlocker } from '../common/AdBlock'
+import { BrowserDb } from '../common/Database'
+import { TabStore } from '../common/TabStore'
+import { DownloadCoordinator } from '../common/Downloads'
+import { TabWeb } from '../components/TabWeb'
+import { HomePage } from '../components/HomePage'
+import { AddressBar } from '../components/AddressBar'
+import { Toolbar } from '../components/Toolbar'
+import { SearchOverlay } from '../components/SearchOverlay'
+import { TabPanel } from '../components/TabPanel'
+import { MenuSheet } from '../components/MenuSheet'
+
+const EXIT_INTERVAL: number = 2000
+
 @Entry
-@Component
+@ComponentV2
 struct Index {
-  @State message: string = 'Hello World';
+  private settings: AppSettings = AppSettings.getInstance()
+  private tabStore: TabStore = TabStore.getInstance()
+  private db: BrowserDb = BrowserDb.getInstance()
+  private downloads: DownloadCoordinator = DownloadCoordinator.getInstance()
+  @Local ready: boolean = false
+  @Local showSearch: boolean = false
+  @Local showTabPanel: boolean = false
+  @Local showMenu: boolean = false
+  @Local exitHintTime: number = 0
+
+  aboutToAppear(): void {
+    this.bootstrap()
+  }
+
+  aboutToDisappear(): void {
+    this.tabStore.snapshot(this.settings)
+    this.settings.persistAdBlockTotal()
+  }
+
+  private async bootstrap(): Promise<void> {
+    const context = getContext(this)
+    await this.settings.init(context)
+    await this.db.init(context)
+    this.downloads.register(context)
+    AdBlocker.getInstance().init(this.settings)
+    await this.tabStore.init(this.settings)
+    this.ready = true
+  }
+
+  onBackPress(): boolean {
+    if (this.showSearch) {
+      this.showSearch = false
+      return true
+    }
+    if (this.showMenu) {
+      this.showMenu = false
+      return true
+    }
+    if (this.showTabPanel) {
+      this.showTabPanel = false
+      return true
+    }
+    const tab = this.tabStore.current()
+    if (!tab.isHomePage()) {
+      if (tab.canBack) {
+        try {
+          tab.controller.backward()
+        } catch (error) {
+          console.error('backward failed')
+        }
+        return true
+      }
+      this.tabStore.gotoHome()
+      return true
+    }
+    const now = Date.now()
+    if (now - this.exitHintTime < EXIT_INTERVAL) {
+      return false
+    }
+    this.exitHintTime = now
+    promptAction.showToast({ message: $r('app.string.press_back_again_exit'), duration: 2000 })
+    return true
+  }
 
   build() {
-    RelativeContainer() {
-      Text(this.message)
-        .id('HelloWorld')
-        .fontSize($r('app.float.page_text_font_size'))
-        .fontWeight(FontWeight.Bold)
-        .alignRules({
-          center: { anchor: '__container__', align: VerticalAlign.Center },
-          middle: { anchor: '__container__', align: HorizontalAlign.Center }
+    Stack() {
+      Column() {
+        if (this.ready) {
+          Tabs({ index: this.tabStore.currentIndex }) {
+            ForEach(this.tabStore.tabs, (tab: TabItem) => {
+              TabContent() {
+                Stack() {
+                  TabWeb({ tab: tab })
+                  if (tab.isHomePage()) {
+                    HomePage({ onSearchTap: () => {
+                      this.showSearch = true
+                    } })
+                  }
+                }
+              }
+            }, (tab: TabItem) => tab.id.toString())
+          }
+          .scrollable(false)
+          .barHeight(0)
+          .animationDuration(150)
+          .layoutWeight(1)
+          .onChange((index: number) => {
+            this.tabStore.switchTo(index)
+          })
+
+          Column() {
+            if (!this.tabStore.current().isHomePage()) {
+              AddressBar({ tab: this.tabStore.current(), onAddressTap: () => {
+                this.showSearch = true
+              } })
+            }
+            Toolbar({
+              tab: this.tabStore.current(),
+              onBack: () => {
+                const tab = this.tabStore.current()
+                if (tab.canBack) {
+                  try {
+                    tab.controller.backward()
+                  } catch (error) {
+                    console.error('backward failed')
+                  }
+                }
+              },
+              onForward: () => {
+                const tab = this.tabStore.current()
+                if (tab.canForward) {
+                  try {
+                    tab.controller.forward()
+                  } catch (error) {
+                    console.error('forward failed')
+                  }
+                }
+              },
+              onTabs: () => {
+                this.showTabPanel = true
+              },
+              onMenu: () => {
+                this.showMenu = true
+              }
+            })
+          }
+          .width('100%')
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor($r('app.color.page_bg'))
+
+      if (this.tabStore.current().loading) {
+        Progress({ value: this.tabStore.current().progress, total: 100, type: ProgressType.Linear })
+          .width('100%')
+          .height(2)
+          .color($r('app.color.accent'))
+          .backgroundColor(Color.Transparent)
+          .position({ x: 0, y: 0 })
+      }
+
+      if (this.showSearch) {
+        SearchOverlay({
+          initialText: this.tabStore.current().isHomePage() ? '' : this.tabStore.current().url,
+          onClose: () => {
+            this.showSearch = false
+          }
         })
-        .onClick(() => {
-          this.message = 'Welcome';
+      }
+      if (this.showTabPanel) {
+        TabPanel({
+          onClose: () => {
+            this.showTabPanel = false
+          }
         })
+      }
+      if (this.showMenu) {
+        MenuSheet({
+          onClose: () => {
+            this.showMenu = false
+          },
+          onOpenPage: (page: string) => {
+            this.showMenu = false
+            this.openPage(page)
+          }
+        })
+      }
     }
-    .height('100%')
     .width('100%')
+    .height('100%')
+  }
+
+  private openPage(page: string): void {
+    console.info(`open page: ${page}`)
   }
 }
