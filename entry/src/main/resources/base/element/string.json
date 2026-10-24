@@ -2,15 +2,359 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "Via 浏览器主模块"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "Via 浏览器"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "Via"
+    },
+    {
+      "name": "app_name",
+      "value": "Via"
+    },
+    {
+      "name": "search_or_type_url",
+      "value": "搜索或输入网址"
+    },
+    {
+      "name": "blocked_ads_count",
+      "value": "已拦截 %d 个广告"
+    },
+    {
+      "name": "press_back_again_exit",
+      "value": "再按一次返回键退出"
+    },
+    {
+      "name": "page_failed_load",
+      "value": "网页无法打开"
+    },
+    {
+      "name": "page_error_retry",
+      "value": "重试"
+    },
+    {
+      "name": "entered_incognito",
+      "value": "已进入隐身浏览"
+    },
+    {
+      "name": "incognito_hint",
+      "value": "此标签页不会保留浏览记录"
+    },
+    {
+      "name": "paste_and_go",
+      "value": "粘贴并前往"
+    },
+    {
+      "name": "new_tab",
+      "value": "新标签页"
+    },
+    {
+      "name": "new_incognito_tab",
+      "value": "新的隐身标签页"
+    },
+    {
+      "name": "tab_default_title",
+      "value": "新标签页"
+    },
+    {
+      "name": "bookmarks",
+      "value": "书签"
+    },
+    {
+      "name": "history",
+      "value": "历史记录"
+    },
+    {
+      "name": "downloads",
+      "value": "下载"
+    },
+    {
+      "name": "settings",
+      "value": "设置"
+    },
+    {
+      "name": "about",
+      "value": "关于"
+    },
+    {
+      "name": "refresh",
+      "value": "刷新"
+    },
+    {
+      "name": "home_page",
+      "value": "主页"
+    },
+    {
+      "name": "share",
+      "value": "分享"
+    },
+    {
+      "name": "add_bookmark",
+      "value": "添加书签"
+    },
+    {
+      "name": "edit_bookmark",
+      "value": "编辑书签"
+    },
+    {
+      "name": "remove_bookmark",
+      "value": "移除书签"
+    },
+    {
+      "name": "bookmark_added",
+      "value": "已添加书签"
+    },
+    {
+      "name": "bookmark_removed",
+      "value": "已移除书签"
+    },
+    {
+      "name": "find_in_page",
+      "value": "页面内查找"
+    },
+    {
+      "name": "reader_mode",
+      "value": "阅读模式"
+    },
+    {
+      "name": "night_mode",
+      "value": "夜间模式"
+    },
+    {
+      "name": "no_image_mode",
+      "value": "无图模式"
+    },
+    {
+      "name": "pc_mode",
+      "value": "电脑模式"
+    },
+    {
+      "name": "site_settings",
+      "value": "网站设定"
+    },
+    {
+      "name": "ad_block",
+      "value": "广告拦截"
+    },
+    {
+      "name": "text_size",
+      "value": "文字大小"
+    },
+    {
+      "name": "clear_data",
+      "value": "清除数据"
+    },
+    {
+      "name": "qr_code",
+      "value": "二维码"
+    },
+    {
+      "name": "read_aloud",
+      "value": "朗读"
+    },
+    {
+      "name": "stop_reading",
+      "value": "停止朗读"
+    },
+    {
+      "name": "user_scripts",
+      "value": "用户脚本"
+    },
+    {
+      "name": "custom_rules",
+      "value": "自定义规则"
+    },
+    {
+      "name": "page_info",
+      "value": "网页信息"
+    },
+    {
+      "name": "cancel",
+      "value": "取消"
+    },
+    {
+      "name": "confirm",
+      "value": "确定"
+    },
+    {
+      "name": "delete",
+      "value": "删除"
+    },
+    {
+      "name": "save",
+      "value": "保存"
+    },
+    {
+      "name": "search_engine",
+      "value": "搜索引擎"
+    },
+    {
+      "name": "search_history",
+      "value": "搜索历史"
+    },
+    {
+      "name": "clear_search_history",
+      "value": "清除搜索历史"
+    },
+    {
+      "name": "restore_tabs",
+      "value": "恢复标签页"
+    },
+    {
+      "name": "empty_bookmarks",
+      "value": "暂无书签"
+    },
+    {
+      "name": "empty_history",
+      "value": "暂无历史记录"
+    },
+    {
+      "name": "empty_downloads",
+      "value": "暂无下载内容"
+    },
+    {
+      "name": "download_started",
+      "value": "开始下载"
+    },
+    {
+      "name": "download_failed",
+      "value": "下载失败"
+    },
+    {
+      "name": "download_finished",
+      "value": "下载完成"
+    },
+    {
+      "name": "download_paused",
+      "value": "已暂停"
+    },
+    {
+      "name": "security_warning",
+      "value": "安全警告"
+    },
+    {
+      "name": "ssl_error_message",
+      "value": "该网站的安全证书存在问题，继续访问可能存在风险。"
+    },
+    {
+      "name": "continue_visit",
+      "value": "继续访问"
+    },
+    {
+      "name": "go_back",
+      "value": "后退"
+    },
+    {
+      "name": "clear_cache",
+      "value": "清除缓存"
+    },
+    {
+      "name": "clear_cookies",
+      "value": "清除 Cookie"
+    },
+    {
+      "name": "clear_form_data",
+      "value": "清除表单数据"
+    },
+    {
+      "name": "cleared",
+      "value": "已清除"
+    },
+    {
+      "name": "version",
+      "value": "版本"
+    },
+    {
+      "name": "feedback",
+      "value": "反馈"
+    },
+    {
+      "name": "open_in_new_tab",
+      "value": "在新标签页打开"
+    },
+    {
+      "name": "copy_link",
+      "value": "复制链接"
+    },
+    {
+      "name": "copied",
+      "value": "已复制"
+    },
+    {
+      "name": "name_label",
+      "value": "名称"
+    },
+    {
+      "name": "address_label",
+      "value": "网址"
+    },
+    {
+      "name": "search_suggestion",
+      "value": "搜索建议"
+    },
+    {
+      "name": "homepage_setting",
+      "value": "主页设置"
+    },
+    {
+      "name": "logo_slogan",
+      "value": "简单、纯粹、速度至上"
+    },
+    {
+      "name": "toolbar_edit",
+      "value": "编辑工具栏"
+    },
+    {
+      "name": "no_results_found",
+      "value": "未找到"
+    },
+    {
+      "name": "match_count",
+      "value": "%d/%d"
+    },
+    {
+      "name": "script_enabled",
+      "value": "已启用"
+    },
+    {
+      "name": "script_disabled",
+      "value": "未启用"
+    },
+    {
+      "name": "add_script",
+      "value": "添加脚本"
+    },
+    {
+      "name": "add_rule",
+      "value": "添加规则"
+    },
+    {
+      "name": "rule_hint",
+      "value": "输入域名，如 ad.example.com"
+    },
+    {
+      "name": "allowlist",
+      "value": "放行名单"
+    },
+    {
+      "name": "subscription_rules",
+      "value": "订阅规则"
+    },
+    {
+      "name": "delete_tab",
+      "value": "关闭标签页"
+    },
+    {
+      "name": "close_all_tabs",
+      "value": "关闭全部标签页"
+    },
+    {
+      "name": "tab_count_unit",
+      "value": "个标签页"
     }
   ]
 }

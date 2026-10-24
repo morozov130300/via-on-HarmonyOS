@@ -3,6 +3,90 @@
     {
       "name": "start_window_background",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "page_bg",
+      "value": "#FAFAFA"
+    },
+    {
+      "name": "surface",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "fg",
+      "value": "#1A1A1A"
+    },
+    {
+      "name": "fg_secondary",
+      "value": "#888888"
+    },
+    {
+      "name": "fg_tertiary",
+      "value": "#B0B0B0"
+    },
+    {
+      "name": "accent",
+      "value": "#00A5F6"
+    },
+    {
+      "name": "danger",
+      "value": "#FF3E00"
+    },
+    {
+      "name": "divider",
+      "value": "#F0F0F0"
+    },
+    {
+      "name": "icon",
+      "value": "#444444"
+    },
+    {
+      "name": "icon_active",
+      "value": "#00A5F6"
+    },
+    {
+      "name": "icon_disabled",
+      "value": "#C8C8C8"
+    },
+    {
+      "name": "incognito_bg",
+      "value": "#2A2A2C"
+    },
+    {
+      "name": "incognito_fg",
+      "value": "#EAEAEA"
+    },
+    {
+      "name": "search_suggestion_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "chip_bg",
+      "value": "#F2F2F2"
+    },
+    {
+      "name": "progress_color",
+      "value": "#00A5F6"
+    },
+    {
+      "name": "badge_bg",
+      "value": "#00A5F6"
+    },
+    {
+      "name": "badge_fg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "logo_blue",
+      "value": "#00A5F6"
+    },
+    {
+      "name": "logo_red",
+      "value": "#FF3E00"
+    },
+    {
+      "name": "logo_amber",
+      "value": "#FFB700"
     }
   ]
 }
