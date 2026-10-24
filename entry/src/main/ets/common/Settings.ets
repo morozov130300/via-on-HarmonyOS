@@ -9,11 +9,6 @@ export const UA_MODE_CUSTOM: number = 3
 export const PC_UA: string = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 export const MOBILE_UA: string = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
 
-interface TabSnapshot {
-  url: string
-  incognito: boolean
-}
-
 export class SavedTab {
   url: string
   incognito: boolean
@@ -112,7 +107,19 @@ export class AppSettings {
 
   addAdBlocked(count: number): void {
     this.adBlockTotal = this.adBlockTotal + count
-    this.flushKey('adBlockTotal', this.adBlockTotal)
+    if (this.store !== null) {
+      this.store.put('adBlockTotal', this.adBlockTotal).catch((error: BusinessError) => {
+        console.error(`settings put adBlockTotal failed: ${error.message}`)
+      })
+    }
+  }
+
+  persistAdBlockTotal(): void {
+    if (this.store !== null) {
+      this.store.flush().catch((error: BusinessError) => {
+        console.error(`settings flush failed: ${error.message}`)
+      })
+    }
   }
 
   setTextZoom(zoom: number): void {
@@ -420,7 +427,7 @@ export class AppSettings {
     return result
   }
 
-  saveTabsSnapshot(tabs: SavedTab[]): void {
+  saveTabsSnapshot(tabs: SavedTab[], activeIndex: number): void {
     const payload: Record<string, Object>[] = []
     for (let i = 0; i < tabs.length; i++) {
       const entry: Record<string, Object> = {}
@@ -429,6 +436,7 @@ export class AppSettings {
       payload.push(entry)
     }
     this.flushKey('tabsSnapshot', JSON.stringify(payload))
+    this.flushKey('tabsSnapshotIndex', activeIndex)
   }
 
   readTabsSnapshot(): SavedTab[] {
@@ -451,5 +459,12 @@ export class AppSettings {
       console.error('parse tabsSnapshot failed')
     }
     return result
+  }
+
+  readTabsSnapshotIndex(): number {
+    if (this.store === null) {
+      return 0
+    }
+    return this.store.getNumber('tabsSnapshotIndex', 0)
   }
 }
