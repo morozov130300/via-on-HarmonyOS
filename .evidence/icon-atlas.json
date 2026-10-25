@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 2,
+  "status": "ok",
+  "producer": {
+    "tool": "recognize_ui_components",
+    "model": "agnes-3.0-flash",
+    "invocationId": "fe96069a-c626-4151-bcb9-ce421d82eb04",
+    "createdAt": "2026-10-25T05:41:16.264Z"
+  },
+  "inputs": {
+    "image": {
+      "path": ".evidence/icon-atlas.png",
+      "sha256": "68489745798f63ee739a2bed9e56ab04d3ae837809b40f2de381c090e28593f1"
+    },
+    "requirements": {
+      "text": "这是 Via 浏览器 APK 的图标集拼图（10列×13行），每格底部黄色文字是图标文件名。请逐个识别每个图标的功能含义，重点找出：书签、历史、下载、隐身（眼镜/帽子）、分享、添加书签（+书签）、电脑模式（显示器）、保存（软盘/下载箭头）、工具箱（扳手/工具）、设置（齿轮）、后退箭头、前进箭头、主页（房子）、菜单（三横线）、关闭(X)、二维码、刷新、搜索(放大镜)、退出(电源)。输出格式：文件名 = 含义。不确定的写 文件名 = 未知(描述外观)。",
+      "sha256": "75eed90bd4813401b76aa8cc5882fc7e3e9809fcc00e68395d0fb81f97419e0f"
+    }
+  },
+  "analysis": {
+    "canvas": {
+      "width": 1100,
+      "height": 1430
+    },
+    "visible_components": [
+      {
+        "id": "component-1",
+        "name": "亮度/太阳图标",
+        "visual_evidence": "网格第二行第三列（文件名 ax 下方）可见一个发光的太阳图标。",
+        "component_candidates": [
+          {
+            "name": "Image",
+            "confidence": 0.8,
+            "reason": "该图标呈现为标准的图片资源，用于表示亮度设置。"
+          }
+        ]
+      },
+      {
+        "id": "component-2",
+        "name": "关闭图标",
+        "visual_evidence": "网格第二行第十列（文件名 b4 下方）可见一个白色的“X”形关闭图标。",
+        "component_candidates": [
+          {
+            "name": "Image",
+            "confidence": 0.8,
+            "reason": "通用的关闭功能图标，以图片形式呈现。"
+          }
+        ]
+      },
+      {
+        "id": "component-3",
+        "name": "通知/感叹号图标",
+        "visual_evidence": "网格第九行第九列（文件名 dc 下方）可见一个包含感叹号感叹号的圆形图标。",
+        "component_candidates": [
+          {
+            "name": "Image",
+            "confidence": 0.8,
+            "reason": "用于表示警示或信息的图形元素。"
+          }
+        ]
+      },
+      {
+        "id": "component-4",
+        "name": "暂停图标",
+        "visual_evidence": "网格第九行第十列（文件名 dd 下方）可见两条竖直平行线，为典型的暂停标志。",
+        "component_candidates": [
+          {
+            "name": "Image",
+            "confidence": 0.9,
+            "reason": "常见的媒体控制图标，通过图片展示。"
+          }
+        ]
+      },
+      {
+        "id": "component-5",
+        "name": "播放/前进箭头",
+        "visual_evidence": "网格第十行第一列（文件名 dq 下方）可见一个向右指的实心三角形。",
+        "component_candidates": [
+          {
+            "name": "Image",
+            "confidence": 0.9,
+            "reason": "用于播放媒体或表示前进方向的图形。"
+          }
+        ]
+      },
+      {
+        "id": "component-6",
+        "name": "停止/静音图标",
+        "visual_evidence": "网格第十行第二列（文件名 dr 下方）可见一个圆形内部包含三条竖线的图标。",
+        "component_candidates": [
+          {
+            "name": "Image",
+            "confidence": 0.8,
+            "reason": "常用于音视频软件的停止或静音控制图标。"
+          }
+        ]
+      },
+      {
+        "id": "component-7",
+        "name": "音量图标",
+        "visual_evidence": "网格第十三行第九列（文件名 e8 下方）可见一个带有声波的喇叭图标。",
+        "component_candidates": [
+          {
+            "name": "Image",
+            "confidence": 0.9,
+            "reason": "表示音量调节的图形元素。"
+          }
+        ]
+      },
+      {
+        "id": "component-8",
+        "name": "网格文件索引 (黄色文字)",
+        "visual_evidence": "整个图背景分布着黄色的文字标签（如 av, aw, ax, b4, dd, e8 等），标记了每个网格位置。",
+        "component_candidates": [
+          {
+            "name": "Text",
+            "confidence": 0.9,
+            "reason": "用于展示图标文件名或索引的纯文本。"
+          }
+        ]
+      }
+    ],
+    "global_observations": [],
+    "uncertainties": [
+      "截图中大部分网格区域为黑色，仅可见部分图标，无法识别所有文件名的对应功能。"
+    ]
+  }
+}

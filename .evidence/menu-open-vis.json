@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 2,
+  "status": "ok",
+  "producer": {
+    "tool": "recognize_ui_components",
+    "model": "agnes-3.0-flash",
+    "invocationId": "ee31b1f4-6570-4d2f-a276-d3329f429e9e",
+    "createdAt": "2026-10-25T05:20:17.902Z"
+  },
+  "inputs": {
+    "image": {
+      "path": ".evidence/menu-open.png",
+      "sha256": "0e6a6eb6d87bbf9b5a3b4fe7c04329cf3aaaf9a0c337d64ac277a425ba2faab3"
+    },
+    "requirements": {
+      "text": "Via 浏览器菜单弹层截图（896x1848）。请给出精确视觉参数：1) 弹层背景色 hex；2) 每个菜单项（书签/历史/下载/隐身/分享/添加书签/电脑模式/保存/工具箱/设置）的图标颜色、文字颜色、文字大小、图标在单元格内的位置；3) 弹层圆角值；4) 弹层下方区域（退出/取消图标）的背景色与图标颜色；5) 遮罩区域颜色。全部用 hex 色值和像素数值回答。",
+      "sha256": "9bb86db76d3c17bc9ae5a02ad412f3d43e8edad9b8a1e80f1edaf3d5e8377054"
+    }
+  },
+  "analysis": {
+    "canvas": {
+      "width": 896,
+      "height": 1848
+    },
+    "visible_components": [
+      {
+        "id": "component-1",
+        "name": "浏览器主页顶部导航",
+        "visual_evidence": "深蓝色背景，顶部有放大镜图标、'主页'文字以及右上角的标签页管理图标。",
+        "component_candidates": [
+          {
+            "name": "Row",
+            "confidence": 0.9,
+            "reason": "用于水平布局顶部的图标和文本。"
+          },
+          {
+            "name": "Text",
+            "confidence": 0.9,
+            "reason": "显示'主页'文本。"
+          }
+        ]
+      },
+      {
+        "id": "component-2",
+        "name": "主页中心品牌区",
+        "visual_evidence": "左侧有圆形 Logo，中间有明显的 'HUAWEI' 大字，下方有一个圆角的长条搜索框。",
+        "component_candidates": [
+          {
+            "name": "Text",
+            "confidence": 0.9,
+            "reason": "显示品牌名称。"
+          },
+          {
+            "name": "TextInput",
+            "confidence": 0.85,
+            "reason": "用于搜索输入的长条 UI 元素。"
+          }
+        ]
+      },
+      {
+        "id": "component-3",
+        "name": "个人中心卡片",
+        "visual_evidence": "搜索框下方有一个圆形头像和'华为开发者'文字。",
+        "component_candidates": [
+          {
+            "name": "Column",
+            "confidence": 0.8,
+            "reason": "垂直布局头像和文字。"
+          }
+        ]
+      },
+      {
+        "id": "component-4",
+        "name": "底部功能菜单网格",
+        "visual_evidence": "底部深灰色背景面板，包含 5 列 2 行的图标网格，标签分别为书签、历史、下载、隐身、分享、添加书签、电脑模式、保存、工具箱、设置。'隐身'和'下载'使用亮色高亮显示，其他为白色。",
+        "component_candidates": [
+          {
+            "name": "Grid",
+            "confidence": 0.95,
+            "reason": "网格布局最适合此处的 2 行 5 列图标矩阵。"
+          },
+          {
+            "name": "GridItem",
+            "confidence": 0.9,
+            "reason": "网格中的每个独立功能项。"
+          }
+        ]
+      },
+      {
+        "id": "component-5",
+        "name": "底部控制栏",
+        "visual_evidence": "在网格下方，包含分页圆点（左侧）和右下角的电源图标与向下箭头。",
+        "component_candidates": [
+          {
+            "name": "Row",
+            "confidence": 0.9,
+            "reason": "水平布局底部的指示器和控制图标。"
+          }
+        ]
+      }
+    ],
+    "global_observations": [
+      "整体采用深色模式风格，背景色为深海军蓝（顶部）与深灰黑（底部弹层）。",
+      "菜单项采用 Icon 在 Text 上方居中的经典网格布局。",
+      "当前'下载'功能被高亮显示，暗示可能处于选中或加载状态。"
+    ],
+    "uncertainties": [
+      "由于截图为静态图片，无法确认底部弹层是否为模态弹窗（如 ActionSheet）还是固定布局。",
+      "部分图标的具体字体或图标库类型无法仅通过视觉确定，只能根据功能推测。"
+    ]
+  }
+}
