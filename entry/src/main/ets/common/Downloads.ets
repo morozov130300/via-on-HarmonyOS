@@ -1,5 +1,6 @@
 import { webview } from '@kit.ArkWeb'
 import { fileIo } from '@kit.CoreFileKit'
+import { request } from '@kit.BasicServicesKit'
 import { BrowserDb } from './Database'
 import { DownloadRec, DownloadStatus } from './Types'
 
@@ -51,6 +52,53 @@ export class DownloadCoordinator {
       return name
     }
     return `download_${Date.now()}`
+  }
+
+  private fileNameFromUrl(url: string): string {
+    const queryStart = url.indexOf('?')
+    const base = queryStart >= 0 ? url.substring(0, queryStart) : url
+    const slash = base.lastIndexOf('/')
+    let name = slash >= 0 ? base.substring(slash + 1) : ''
+    name = name.replace(/[\\/:*?"<>|]/g, '_')
+    if (name.length > 100) {
+      name = name.substring(name.length - 100)
+    }
+    if (name === '') {
+      return `download_${Date.now()}`
+    }
+    return name
+  }
+
+  async startUrlDownload(context: Context, url: string): Promise<void> {
+    if (this.saveDir === '') {
+      return
+    }
+    const path = `${this.saveDir}/${this.fileNameFromUrl(url)}`
+    const rec = new DownloadRec()
+    rec.url = url
+    rec.path = path
+    rec.mime = ''
+    rec.size = 0
+    rec.received = 0
+    rec.status = DownloadStatus.Running
+    rec.created = Date.now()
+    const id = await this.db.insertDownload(rec)
+    request.downloadFile(context, { url: url, filePath: path })
+      .then((task: request.DownloadTask) => {
+        task.on('complete', () => {
+          this.db.updateDownload(id, 0, DownloadStatus.Completed).catch(() => {
+          })
+        })
+        task.on('fail', () => {
+          this.db.updateDownload(id, 0, DownloadStatus.Failed).catch(() => {
+          })
+        })
+      })
+      .catch((error: BusinessError) => {
+        console.error(`start url download failed: ${error.message}`)
+        this.db.updateDownload(id, 0, DownloadStatus.Failed).catch(() => {
+        })
+      })
   }
 
   private handleBefore(item: webview.WebDownloadItem): void {

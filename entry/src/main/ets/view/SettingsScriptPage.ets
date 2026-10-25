@@ -26,20 +26,29 @@ export struct SettingsScriptPage {
               .width('100%')
               .padding({ left: 16, top: 10, bottom: 6 })
             ForEach(this.settings.userScripts, (script: UserScriptRec) => {
-              Column() {
-                Text(script.name)
-                  .fontSize(15)
-                  .fontColor($r('app.color.fg'))
-                  .maxLines(1)
-                Text(script.enabled ? '已启用' : '已禁用')
-                  .fontSize(12)
-                  .fontColor($r('app.color.fg_secondary'))
-                  .margin({ top: 2 })
+              Row() {
+                Column() {
+                  Text(script.name)
+                    .fontSize(15)
+                    .fontColor($r('app.color.fg'))
+                    .maxLines(1)
+                  Text(script.enabled ? '已启用' : '已禁用')
+                    .fontSize(12)
+                    .fontColor($r('app.color.fg_secondary'))
+                    .margin({ top: 2 })
+                }
+                .alignItems(HorizontalAlign.Start)
+                .layoutWeight(1)
+                Toggle({ type: ToggleType.Switch, isOn: script.enabled })
+                  .onChange((value: boolean) => {
+                    script.enabled = value
+                    this.settings.saveScript(script)
+                  })
               }
               .width('100%')
               .padding({ left: 16, right: 16, top: 11, bottom: 11 })
-              .alignItems(HorizontalAlign.Start)
-            }, (script: UserScriptRec) => script.id.toString())
+              .alignItems(VerticalAlign.Center)
+            }, (script: UserScriptRec) => `${script.id}_${script.enabled}`)
           }
         }
         .width('100%')

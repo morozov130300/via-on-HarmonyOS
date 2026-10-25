@@ -1,4 +1,4 @@
-import { common, Want } from '@kit.AbilityKit'
+﻿import { common, Want } from '@kit.AbilityKit'
 import { print } from '@kit.BasicServicesKit'
 import { productViewManager } from '@kit.AppGalleryKit'
 import { fileIo } from '@kit.CoreFileKit'
@@ -303,7 +303,7 @@ export struct MenuSheet {
   private addToDesktop(): void {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
-      this.notImplemented()
+      this.homePageGuard()
       return
     }
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
@@ -346,7 +346,7 @@ export struct MenuSheet {
   private translatePage(): void {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
-      this.notImplemented()
+      this.homePageGuard()
       return
     }
     try {
@@ -360,7 +360,7 @@ export struct MenuSheet {
   private printPage(): void {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
-      this.notImplemented()
+      this.homePageGuard()
       return
     }
     try {
@@ -406,9 +406,9 @@ export struct MenuSheet {
     return this.settings.menuHidden.indexOf(id) >= 0
   }
 
-  private notImplemented(): void {
+  private homePageGuard(): void {
     this.onClose()
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.no_page_open'), duration: 1500 })
   }
 
   private openIncognito(): void {

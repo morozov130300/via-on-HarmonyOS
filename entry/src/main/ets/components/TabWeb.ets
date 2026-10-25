@@ -1,3 +1,7 @@
+import { pasteboard } from '@kit.BasicServicesKit'
+import { common } from '@kit.AbilityKit'
+import { systemShare } from '@kit.ShareKit'
+import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { TabItem } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
@@ -5,6 +9,7 @@ import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { hostOf } from '../common/SearchEngines'
 import { Reader } from '../common/Reader'
+import { DownloadCoordinator } from '../common/Downloads'
 import { AppIcon } from './AppIcon'
 
 @ComponentV2
@@ -14,6 +19,7 @@ export struct TabWeb {
   private settings: AppSettings = AppSettings.getInstance()
   private adBlocker: AdBlocker = AdBlocker.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
+  private tabStore: TabStore = TabStore.getInstance()
 
   build() {
     Stack() {
@@ -80,6 +86,9 @@ export struct TabWeb {
             this.tab.matchOrdinal = event.activeMatchOrdinal
             this.tab.matchCount = event.numberOfMatches
           }
+        })
+        .onContextMenuShow((event?: OnContextMenuShowEvent) => {
+          return this.handleContextMenu(event)
         })
         .onInterceptRequest((event: OnInterceptRequestEvent) => {
           if (!event.request.isMainFrame()) {
@@ -184,6 +193,114 @@ export struct TabWeb {
       console.error(`add history failed: ${error.message}`)
     })
     TabStore.getInstance().snapshot(this.settings)
+  }
+
+  private handleContextMenu(event?: OnContextMenuShowEvent): boolean {
+    if (event === undefined) {
+      return false
+    }
+    const link = event.param.getLinkUrl()
+    if (link === '') {
+      return false
+    }
+    this.showLinkMenu(link)
+    return true
+  }
+
+  private showLinkMenu(link: string): void {
+    const hidden = this.settings.longPressHidden
+    const sheets: SheetInfo[] = []
+    if (hidden.indexOf('open') < 0) {
+      sheets.push({
+        title: '打开',
+        action: (): void => {
+          this.tabStore.navigate(link)
+        }
+      })
+    }
+    if (hidden.indexOf('open_new_tab') < 0) {
+      sheets.push({
+        title: '新标签页打开',
+        action: (): void => {
+          this.tabStore.newTabAt(link, false)
+        }
+      })
+    }
+    if (hidden.indexOf('open_background') < 0) {
+      sheets.push({
+        title: '后台打开',
+        action: (): void => {
+          this.tabStore.newTabAt(link, true)
+        }
+      })
+    }
+    if (hidden.indexOf('copy_link') < 0) {
+      sheets.push({
+        title: '复制链接',
+        action: (): void => {
+          this.copyLink(link)
+        }
+      })
+    }
+    if (hidden.indexOf('download') < 0) {
+      sheets.push({
+        title: '下载链接',
+        action: (): void => {
+          this.downloadLink(link)
+        }
+      })
+    }
+    if (hidden.indexOf('share') < 0) {
+      sheets.push({
+        title: '分享链接',
+        action: (): void => {
+          this.shareLink(link)
+        }
+      })
+    }
+    if (sheets.length === 0) {
+      return
+    }
+    ActionSheet.show({
+      title: hostOf(link),
+      message: link,
+      sheets: sheets
+    })
+  }
+
+  private copyLink(link: string): void {
+    const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, link)
+    pasteboard.getSystemPasteboard().setData(data).then(() => {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.link_copied'), duration: 1500 })
+    }).catch(() => {
+      console.error('copy link failed')
+    })
+  }
+
+  private downloadLink(link: string): void {
+    const context = getContext(this) as Context
+    DownloadCoordinator.getInstance().startUrlDownload(context, link).then(() => {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_started'), duration: 1500 })
+    }).catch(() => {
+      console.error('download link failed')
+    })
+  }
+
+  private shareLink(link: string): void {
+    const shareData: systemShare.SharedData = new systemShare.SharedData({
+      utd: utd.UniformDataType.HYPERLINK,
+      content: link,
+      title: link,
+      description: link
+    })
+    const controller: systemShare.ShareController = new systemShare.ShareController(shareData)
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    controller.show(context, {
+      selectionMode: systemShare.SelectionMode.SINGLE,
+      previewMode: systemShare.SharePreviewMode.DETAIL
+    }).catch(() => {
+      console.error('share link failed')
+    })
   }
 
   private injectCustomCss(): void {
