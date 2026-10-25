@@ -1,0 +1,52 @@
+import { ViaIcon } from './ViaIcon'
+
+@ComponentV2
+export struct SettingsHeader {
+  @Param @Require headerTitle: string = ''
+  @Param rightText: string = ''
+  @Param rightIcon: Resource | null = null
+  @Event onBack: () => void = () => {
+  }
+  @Event onRight: () => void = () => {
+  }
+
+  build() {
+    Row() {
+      ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
+        .width(44)
+        .height(43)
+        .onClick(() => {
+          this.onBack()
+        })
+
+      Text(this.headerTitle)
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .layoutWeight(1)
+        .textAlign(TextAlign.Center)
+
+      if (this.rightIcon !== null) {
+        ViaIcon({ icon: this.rightIcon, iconSize: 22, iconColor: $r('app.color.fg') })
+          .width(44)
+          .height(43)
+          .onClick(() => {
+            this.onRight()
+          })
+      } else if (this.rightText !== '') {
+        Text(this.rightText)
+          .fontSize(15)
+          .fontColor($r('app.color.fg'))
+          .padding({ left: 12, right: 16 })
+          .onClick(() => {
+            this.onRight()
+          })
+      } else {
+        Blank()
+          .width(44)
+      }
+    }
+    .width('100%')
+    .height(43)
+  }
+}

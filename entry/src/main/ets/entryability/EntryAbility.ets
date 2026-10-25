@@ -2,6 +2,9 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { emitter } from '@kit.BasicServicesKit';
+import { AppSettings } from '../common/Settings';
+import { BrowserDb } from '../common/Database';
+import { webview } from '@kit.ArkWeb';
 
 const DOMAIN = 0x0000;
 const SHORTCUT_URL_EVENT_ID = 10001;
@@ -71,5 +74,34 @@ export default class EntryAbility extends UIAbility {
   onBackground(): void {
     // Ability has back to background
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+    this.applyClearOnExit();
+  }
+
+  private applyClearOnExit(): void {
+    try {
+      const settings = AppSettings.getInstance();
+      const flags = settings.clearOnExit;
+      if (flags === '') {
+        return;
+      }
+      const db = BrowserDb.getInstance();
+      if (flags.includes('history')) {
+        db.clearHistory().catch(() => {
+        });
+      }
+      if (flags.includes('bookmarks')) {
+        db.clearBookmarks().catch(() => {
+        });
+      }
+      if (flags.includes('cookies')) {
+        try {
+          webview.WebCookieManager.clearAllCookies();
+        } catch (err) {
+          hilog.error(DOMAIN, 'testTag', 'Failed to clear cookies. Cause: %{public}s', JSON.stringify(err));
+        }
+      }
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', 'Failed to clear on exit. Cause: %{public}s', JSON.stringify(err));
+    }
   }
 }

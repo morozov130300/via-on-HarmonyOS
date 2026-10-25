@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 class LongPressEntry {
   id: string
@@ -22,10 +23,18 @@ const LONG_PRESS_ENTRIES: LongPressEntry[] = [
 @ComponentV2
 export struct SettingsLongPressPage {
   private settings: AppSettings = AppSettings.getInstance()
+  private navPathStack: NavPathStack = new NavPathStack()
 
   build() {
     NavDestination() {
-      Scroll() {
+      Column() {
+        SettingsHeader({
+          headerTitle: '定制长按菜单',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
+        Scroll() {
         Column() {
           ForEach(LONG_PRESS_ENTRIES, (entry: LongPressEntry) => {
             Row() {
@@ -45,13 +54,18 @@ export struct SettingsLongPressPage {
           }, (entry: LongPressEntry) => entry.id)
         }
         .width('100%')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .align(Alignment.Top)
       }
       .width('100%')
       .height('100%')
-      .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('定制长按菜单')
+    .onReady((ctx: NavDestinationContext) => {
+      this.navPathStack = ctx.pathStack
+    })
   }
 
   private isHidden(id: string): boolean {

@@ -1,5 +1,5 @@
 import { TabItem } from '../common/Types'
-import { AppSettings } from '../common/Settings'
+import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
@@ -71,6 +71,7 @@ struct Index {
       return
     }
     await this.settings.init(context)
+    applyOrientationSetting(context)
     await this.db.init(context)
     this.downloads.register(context)
     AdBlocker.getInstance().init(this.settings)

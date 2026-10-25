@@ -1,5 +1,6 @@
 import { pasteboard } from '@kit.BasicServicesKit'
 import { TabStore } from '../common/TabStore'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 const CONTACT_QQ_GROUP_URL: string = 'http://viayoo.com/contact/qqgroup/'
 const CONTACT_WECHAT_URL: string = 'http://viayoo.com/contact/wechat/'
@@ -14,7 +15,14 @@ export struct SettingsAboutPage {
 
   build() {
     NavDestination() {
-      Scroll() {
+      Column() {
+        SettingsHeader({
+          headerTitle: '关于',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
+        Scroll() {
         Column() {
           Column({ space: 6 }) {
             Text('Via')
@@ -66,13 +74,15 @@ export struct SettingsAboutPage {
           .alignItems(HorizontalAlign.Start)
         }
         .width('100%')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .align(Alignment.Top)
       }
       .width('100%')
       .height('100%')
-      .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('关于')
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })

@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 class ToolbarEntry {
   id: string
@@ -19,10 +20,18 @@ const TOOLBAR_ENTRIES: ToolbarEntry[] = [
 @ComponentV2
 export struct SettingsToolbarPage {
   private settings: AppSettings = AppSettings.getInstance()
+  private navPathStack: NavPathStack = new NavPathStack()
 
   build() {
     NavDestination() {
-      Scroll() {
+      Column() {
+        SettingsHeader({
+          headerTitle: '工具栏设置',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
+        Scroll() {
         Column() {
           ForEach(TOOLBAR_ENTRIES, (entry: ToolbarEntry) => {
             Row() {
@@ -42,13 +51,18 @@ export struct SettingsToolbarPage {
           }, (entry: ToolbarEntry) => entry.id)
         }
         .width('100%')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .align(Alignment.Top)
       }
       .width('100%')
       .height('100%')
-      .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('工具栏设置')
+    .onReady((ctx: NavDestinationContext) => {
+      this.navPathStack = ctx.pathStack
+    })
   }
 
   private isHidden(id: string): boolean {

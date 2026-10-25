@@ -3,15 +3,28 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { UserScriptRec } from '../common/Types'
 import { SettingToggleRow, SettingNavRow } from '../components/SettingRows'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
 export struct SettingsScriptPage {
   private settings: AppSettings = AppSettings.getInstance()
+  private navPathStack: NavPathStack = new NavPathStack()
   @Local updating: boolean = false
 
   build() {
     NavDestination() {
-      Scroll() {
+      Column() {
+        SettingsHeader({
+          headerTitle: '脚本',
+          rightText: '更新',
+          onBack: () => {
+            this.navPathStack.pop()
+          },
+          onRight: () => {
+            this.updateScripts()
+          }
+        })
+        Scroll() {
         Column() {
           SettingToggleRow({ rowLabel: '启用脚本', isToggleOn: this.settings.scriptEnabled, onToggleRow: (isOn: boolean) => {
             this.settings.setScriptEnabled(isOn)
@@ -53,21 +66,17 @@ export struct SettingsScriptPage {
         }
         .width('100%')
       }
+        .width('100%')
+        .layoutWeight(1)
+        .align(Alignment.Top)
+      }
       .width('100%')
       .height('100%')
-      .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('脚本')
-    .menus([
-      {
-        value: '更新',
-        icon: $r('sys.symbol.arrow_clockwise'),
-        action: () => {
-          this.updateScripts()
-        }
-      }
-    ])
+    .onReady((ctx: NavDestinationContext) => {
+      this.navPathStack = ctx.pathStack
+    })
   }
 
   private updateScripts(): void {

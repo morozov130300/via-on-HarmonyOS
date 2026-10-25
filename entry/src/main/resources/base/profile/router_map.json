@@ -104,6 +104,21 @@
       "name": "syncPage",
       "pageSourceFile": "src/main/ets/view/SyncPage.ets",
       "buildFunction": "SyncPageBuilder"
+    },
+    {
+      "name": "uaPage",
+      "pageSourceFile": "src/main/ets/view/UaPage.ets",
+      "buildFunction": "UaPageBuilder"
+    },
+    {
+      "name": "uaEditPage",
+      "pageSourceFile": "src/main/ets/view/UaEditPage.ets",
+      "buildFunction": "UaEditPageBuilder"
+    },
+    {
+      "name": "gestureSettings",
+      "pageSourceFile": "src/main/ets/view/SettingsGesturePage.ets",
+      "buildFunction": "SettingsGesturePageBuilder"
     }
   ]
 }

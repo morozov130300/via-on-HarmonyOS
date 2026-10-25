@@ -1,5 +1,6 @@
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
+import { webview } from '@kit.ArkWeb'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { TabItem } from '../common/Types'
@@ -21,6 +22,14 @@ export struct TabWeb {
   private db: BrowserDb = BrowserDb.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
 
+  aboutToAppear(): void {
+    try {
+      webview.WebviewController.setWebDebuggingAccess(this.settings.allowDebugWeb)
+    } catch (error) {
+      console.error('setWebDebuggingAccess failed')
+    }
+  }
+
   build() {
     Stack() {
       Web({ src: 'about:blank', controller: this.tab.controller, incognitoMode: this.tab.incognito })
@@ -36,6 +45,7 @@ export struct TabWeb {
         .darkMode(this.settings.nightMode ? WebDarkMode.On : WebDarkMode.Off)
         .forceDarkAccess(this.settings.nightMode)
         .onControllerAttached(() => {
+          this.applyAdvancedSettings()
           if (this.tab.initialUrl !== '') {
             try {
               this.tab.controller.loadUrl(this.tab.initialUrl)
@@ -48,6 +58,7 @@ export struct TabWeb {
           this.tab.url = event.url
           this.tab.loading = true
           this.tab.isError = false
+          this.applyAdvancedSettings()
           this.applyUa(event.url)
           this.updateNavState()
         })
@@ -79,7 +90,11 @@ export struct TabWeb {
           event.request.deny()
         })
         .onSslErrorEventReceive((event: OnSslErrorEventReceiveEvent) => {
-          event.handler.handleCancel()
+          if (this.settings.ignoreSslWarning) {
+            event.handler.handleConfirm()
+          } else {
+            event.handler.handleCancel()
+          }
         })
         .onSearchResultReceive((event: OnSearchResultReceiveEvent) => {
           if (event.isDoneCounting) {
@@ -154,6 +169,16 @@ export struct TabWeb {
     .height('100%')
     .backgroundColor($r('app.color.page_bg'))
     .justifyContent(FlexAlign.Center)
+    .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal })
+      .onActionEnd((event: GestureEvent) => {
+        if (!this.settings.swipeSwitchTab) {
+          return
+        }
+        if (Math.abs(event.offsetX) < 80 || Math.abs(event.offsetX) < Math.abs(event.offsetY)) {
+          return
+        }
+        this.tabStore.stepTab(event.offsetX > 0 ? -1 : 1)
+      }))
   }
 
   private siteNoImage(): boolean {
@@ -162,6 +187,19 @@ export struct TabWeb {
       return setting.noImage
     }
     return false
+  }
+
+  private applyAdvancedSettings(): void {
+    try {
+      webview.WebviewController.setWebDebuggingAccess(this.settings.allowDebugWeb)
+    } catch (error) {
+      console.error('setWebDebuggingAccess failed')
+    }
+    try {
+      this.tab.controller.enableSafeBrowsing(!this.settings.disableSafeBrowsing)
+    } catch (error) {
+      console.error('enableSafeBrowsing failed')
+    }
   }
 
   private applyUa(url: string): void {

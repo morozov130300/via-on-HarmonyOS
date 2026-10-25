@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 class MenuEntry {
   id: string
@@ -39,10 +40,18 @@ const TOOLBOX_ENTRIES: MenuEntry[] = [
 @ComponentV2
 export struct SettingsMenuPage {
   private settings: AppSettings = AppSettings.getInstance()
+  private navPathStack: NavPathStack = new NavPathStack()
 
   build() {
     NavDestination() {
-      Scroll() {
+      Column() {
+        SettingsHeader({
+          headerTitle: '定制菜单',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
+        Scroll() {
         Column() {
           Text('主菜单')
             .fontSize(13)
@@ -62,13 +71,18 @@ export struct SettingsMenuPage {
           }, (entry: MenuEntry) => entry.id)
         }
         .width('100%')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .align(Alignment.Top)
       }
       .width('100%')
       .height('100%')
-      .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('定制菜单')
+    .onReady((ctx: NavDestinationContext) => {
+      this.navPathStack = ctx.pathStack
+    })
   }
 
   @Builder

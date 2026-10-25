@@ -405,6 +405,14 @@
       "value": "个标签页"
     },
     {
+      "name": "tab_closed",
+      "value": "标签页已关闭"
+    },
+    {
+      "name": "undo",
+      "value": "撤销"
+    },
+    {
       "name": "invalid_input",
       "value": "名称或网址不能为空"
     },
@@ -657,6 +665,18 @@
       "value": "功能开发中"
     },
     {
+      "name": "import_done",
+      "value": "导入完成"
+    },
+    {
+      "name": "import_failed",
+      "value": "操作失败"
+    },
+    {
+      "name": "export_done",
+      "value": "导出完成"
+    },
+    {
       "name": "page_saved",
       "value": "页面已保存"
     },
@@ -695,6 +715,26 @@
     {
       "name": "link_copied",
       "value": "链接已复制"
+    },
+    {
+      "name": "ua_empty",
+      "value": "标题和标识不能为空"
+    },
+    {
+      "name": "webdav_not_configured",
+      "value": "请先设置 WebDAV 服务器地址"
+    },
+    {
+      "name": "backup_done",
+      "value": "备份完成"
+    },
+    {
+      "name": "backup_failed",
+      "value": "操作失败"
+    },
+    {
+      "name": "restore_done",
+      "value": "恢复完成"
     }
   ]
 }
