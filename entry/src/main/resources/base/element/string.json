@@ -655,6 +655,22 @@
     {
       "name": "feature_wip",
       "value": "功能开发中"
+    },
+    {
+      "name": "page_saved",
+      "value": "页面已保存"
+    },
+    {
+      "name": "reset_done",
+      "value": "已重置"
+    },
+    {
+      "name": "latest_version",
+      "value": "当前已是最新版本"
+    },
+    {
+      "name": "email_copied",
+      "value": "邮箱已复制"
     }
   ]
 }
