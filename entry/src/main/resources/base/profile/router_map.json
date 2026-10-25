@@ -19,6 +19,21 @@
       "name": "settings",
       "pageSourceFile": "src/main/ets/view/SettingsPage.ets",
       "buildFunction": "SettingsPageBuilder"
+    },
+    {
+      "name": "siteSettings",
+      "pageSourceFile": "src/main/ets/view/SiteSettingsPage.ets",
+      "buildFunction": "SiteSettingsPageBuilder"
+    },
+    {
+      "name": "rules",
+      "pageSourceFile": "src/main/ets/view/RulesPage.ets",
+      "buildFunction": "RulesPageBuilder"
+    },
+    {
+      "name": "userScripts",
+      "pageSourceFile": "src/main/ets/view/UserScriptsPage.ets",
+      "buildFunction": "UserScriptsPageBuilder"
     }
   ]
 }

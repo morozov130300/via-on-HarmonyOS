@@ -1,4 +1,3 @@
-import { promptAction } from '@kit.ArkUI'
 import { TabItem } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
@@ -12,6 +11,7 @@ import { Toolbar } from '../components/Toolbar'
 import { SearchOverlay } from '../components/SearchOverlay'
 import { TabPanel } from '../components/TabPanel'
 import { MenuSheet } from '../components/MenuSheet'
+import { FindBar } from '../components/FindBar'
 
 const EXIT_INTERVAL: number = 2000
 
@@ -27,6 +27,7 @@ struct Index {
   @Local showSearch: boolean = false
   @Local showTabPanel: boolean = false
   @Local showMenu: boolean = false
+  @Local showFindBar: boolean = false
   @Local exitHintTime: number = 0
 
   aboutToAppear(): void {
@@ -39,7 +40,11 @@ struct Index {
   }
 
   private async bootstrap(): Promise<void> {
-    const context = getContext(this)
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      console.error('host context unavailable')
+      return
+    }
     await this.settings.init(context)
     await this.db.init(context)
     this.downloads.register(context)
@@ -61,6 +66,15 @@ struct Index {
       this.showTabPanel = false
       return true
     }
+    if (this.showFindBar) {
+      this.showFindBar = false
+      try {
+        this.tabStore.current().controller.clearMatches()
+      } catch (error) {
+        console.error('clearMatches failed')
+      }
+      return true
+    }
     const tab = this.tabStore.current()
     if (!tab.isHomePage()) {
       if (tab.canBack) {
@@ -79,7 +93,7 @@ struct Index {
       return false
     }
     this.exitHintTime = now
-    promptAction.showToast({ message: $r('app.string.press_back_again_exit'), duration: 2000 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit'), duration: 2000 })
     return true
   }
 
@@ -188,8 +202,20 @@ struct Index {
           onOpenPage: (page: string) => {
             this.showMenu = false
             this.openPage(page)
+          },
+          onFindInPage: () => {
+            this.showFindBar = true
           }
         })
+      }
+      if (this.showFindBar) {
+        FindBar({
+          tab: this.tabStore.current(),
+          onClose: () => {
+            this.showFindBar = false
+          }
+        })
+          .position({ x: 0, y: 0 })
       }
     }
     .width('100%')

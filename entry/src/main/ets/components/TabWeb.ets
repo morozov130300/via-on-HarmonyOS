@@ -71,6 +71,12 @@ export struct TabWeb {
         .onSslErrorEventReceive((event: OnSslErrorEventReceiveEvent) => {
           event.handler.handleCancel()
         })
+        .onSearchResultReceive((event: OnSearchResultReceiveEvent) => {
+          if (event.isDoneCounting) {
+            this.tab.matchOrdinal = event.activeMatchOrdinal
+            this.tab.matchCount = event.numberOfMatches
+          }
+        })
         .onInterceptRequest((event: OnInterceptRequestEvent) => {
           if (!event.request.isMainFrame()) {
             const requestUrl = event.request.getRequestUrl()

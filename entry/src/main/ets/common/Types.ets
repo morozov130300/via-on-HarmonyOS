@@ -22,6 +22,8 @@ export class TabItem {
   @Trace isError: boolean
   @Trace errorDesc: string
   @Trace initialUrl: string
+  @Trace matchOrdinal: number
+  @Trace matchCount: number
   controller: webview.WebviewController
 
   constructor(id: number, incognito: boolean) {
@@ -37,6 +39,8 @@ export class TabItem {
     this.isError = false
     this.errorDesc = ''
     this.initialUrl = ''
+    this.matchOrdinal = 0
+    this.matchCount = 0
     this.controller = new webview.WebviewController()
   }
 
