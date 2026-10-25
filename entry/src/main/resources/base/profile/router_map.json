@@ -99,6 +99,11 @@
       "name": "licensePage",
       "pageSourceFile": "src/main/ets/view/LicensePage.ets",
       "buildFunction": "LicensePageBuilder"
+    },
+    {
+      "name": "syncPage",
+      "pageSourceFile": "src/main/ets/view/SyncPage.ets",
+      "buildFunction": "SyncPageBuilder"
     }
   ]
 }

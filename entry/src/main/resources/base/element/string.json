@@ -679,6 +679,22 @@
     {
       "name": "ai_need_key",
       "value": "请先在设置中配置 AI"
+    },
+    {
+      "name": "sync_done",
+      "value": "已与云空间同步"
+    },
+    {
+      "name": "sync_failed",
+      "value": "同步失败，请检查网络或云空间开关"
+    },
+    {
+      "name": "no_page_open",
+      "value": "请先打开网页"
+    },
+    {
+      "name": "link_copied",
+      "value": "链接已复制"
     }
   ]
 }

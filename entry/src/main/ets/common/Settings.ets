@@ -1,5 +1,6 @@
 import { preferences } from '@kit.ArkData'
 import { SiteSetting, RuleEntry, UserScriptRec } from './Types'
+import { BrowserDb } from './Database'
 
 export const UA_MODE_DEFAULT: number = 0
 export const UA_MODE_PC: number = 1
@@ -8,6 +9,23 @@ export const UA_MODE_CUSTOM: number = 3
 
 export const PC_UA: string = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 export const MOBILE_UA: string = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+
+const SNAPSHOT_TS_KEY: string = 'via_snapshot_ts'
+const SYNC_KEYS: string[] = [
+  'engineKey', 'customEngineTemplate', 'adBlockOn', 'textZoom', 'nightMode',
+  'uaMode', 'customUa', 'noImage', 'homepageMode', 'homeUrl',
+  'ruleSubUrl', 'scriptEnabled', 'doNotTrack', 'disableWebRtc', 'doNotSell',
+  'dataSaver', 'autoSniffButton', 'allowDebugWeb', 'disableCustomTabs',
+  'disableSafeBrowsing', 'ignoreSslWarning',
+  'homeBgColor', 'homeLogoText', 'homeLogoType', 'homeLogoSize', 'homeLogoStyle',
+  'homePillCorner', 'homePillOpacity', 'homePillStrokeWidth', 'homePillStrokeOpacity',
+  'homePillStyle', 'homeFavSize', 'homeFavCorner', 'homeFavColor', 'homeFavIconStyle',
+  'homeAdvEffect', 'homeAdvArea',
+  'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
+  'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
+  'searchHistory', 'customRules', 'userScripts', 'siteSettings'
+]
+const SNAPSHOT_DEBOUNCE_MS: number = 1500
 
 export class SavedTab {
   url: string
@@ -23,6 +41,8 @@ export class SavedTab {
 export class AppSettings {
   private static instance: AppSettings | null = null
   private store: preferences.Preferences | null = null
+  private snapshotTimer: number = -1
+  private applyingSnapshot: boolean = false
 
   @Trace engineKey: string = 'baidu'
   @Trace customEngineTemplate: string = ''
@@ -126,6 +146,26 @@ export class AppSettings {
     }
     try {
       this.store = await preferences.getPreferences(context, 'via_settings')
+      const db = BrowserDb.getInstance()
+      const remote = await this.parseRemoteSnapshot()
+      if (remote !== null) {
+        await this.applySnapshot(remote)
+      }
+      await this.loadFields()
+      db.addDataChangeListener(() => {
+        this.onCloudDataChange()
+      })
+    } catch (error) {
+      const err = error as BusinessError
+      console.error(`settings init failed: ${err.code} ${err.message}`)
+    }
+  }
+
+  private async loadFields(): Promise<void> {
+    if (this.store === null) {
+      return
+    }
+    try {
       this.engineKey = await this.readString('engineKey', 'baidu')
       this.customEngineTemplate = await this.readString('customEngineTemplate', '')
       this.adBlockOn = await this.readBoolean('adBlockOn', true)
@@ -183,7 +223,104 @@ export class AppSettings {
       this.aiModel = await this.readString('aiModel', 'deepseek-chat')
     } catch (error) {
       const err = error as BusinessError
-      console.error(`settings init failed: ${err.code} ${err.message}`)
+      console.error(`settings load failed: ${err.code} ${err.message}`)
+    }
+  }
+
+  private async parseRemoteSnapshot(): Promise<Record<string, Object> | null> {
+    const db = BrowserDb.getInstance()
+    const raw = await db.loadSettingsSnapshot()
+    if (raw === '') {
+      return null
+    }
+    try {
+      const parsed = JSON.parse(raw) as Record<string, Object>
+      const ts = parsed['ts']
+      if (typeof ts !== 'number') {
+        return null
+      }
+      const localTs = await this.readNumber(SNAPSHOT_TS_KEY, 0)
+      if (ts <= localTs) {
+        return null
+      }
+      return parsed
+    } catch (error) {
+      console.error('parse remote snapshot failed')
+      return null
+    }
+  }
+
+  private async applySnapshot(snapshot: Record<string, Object>): Promise<void> {
+    if (this.store === null) {
+      return
+    }
+    this.applyingSnapshot = true
+    try {
+      const kv = snapshot['kv']
+      if (typeof kv === 'object' && kv !== null) {
+        const pairs = kv as Record<string, Object>
+        for (let i = 0; i < SYNC_KEYS.length; i++) {
+          const key = SYNC_KEYS[i]
+          const value = pairs[key]
+          if (value !== undefined) {
+            await this.store.put(key, value as preferences.ValueType)
+          }
+        }
+        const ts = snapshot['ts']
+        if (typeof ts === 'number') {
+          await this.store.put(SNAPSHOT_TS_KEY, ts)
+        }
+        await this.store.flush()
+      }
+    } catch (error) {
+      console.error('apply snapshot failed')
+    } finally {
+      this.applyingSnapshot = false
+    }
+  }
+
+  private async onCloudDataChange(): Promise<void> {
+    if (this.applyingSnapshot) {
+      return
+    }
+    const remote = await this.parseRemoteSnapshot()
+    if (remote !== null) {
+      await this.applySnapshot(remote)
+      await this.loadFields()
+    }
+  }
+
+  private scheduleSnapshot(): void {
+    if (this.snapshotTimer >= 0) {
+      clearTimeout(this.snapshotTimer)
+    }
+    this.snapshotTimer = setTimeout(() => {
+      this.snapshotTimer = -1
+      this.writeSnapshot()
+    }, SNAPSHOT_DEBOUNCE_MS)
+  }
+
+  private async writeSnapshot(): Promise<void> {
+    if (this.store === null || this.applyingSnapshot) {
+      return
+    }
+    try {
+      const kv: Record<string, Object> = {}
+      for (let i = 0; i < SYNC_KEYS.length; i++) {
+        const key = SYNC_KEYS[i]
+        const value = await this.store.get(key, '')
+        kv[key] = value as Object
+      }
+      const ts = Date.now()
+      kv[SNAPSHOT_TS_KEY] = ts
+      await this.store.put(SNAPSHOT_TS_KEY, ts)
+      await this.store.flush()
+      const snapshot: Record<string, Object> = {}
+      snapshot['ts'] = ts
+      snapshot['kv'] = kv
+      await BrowserDb.getInstance().saveSettingsSnapshot(JSON.stringify(snapshot))
+    } catch (error) {
+      console.error('write snapshot failed')
     }
   }
 
@@ -197,6 +334,9 @@ export class AppSettings {
     this.store.flush().catch((error: BusinessError) => {
       console.error(`settings flush failed: ${error.message}`)
     })
+    if (SYNC_KEYS.indexOf(key) >= 0) {
+      this.scheduleSnapshot()
+    }
   }
 
   setEngineKey(key: string): void {

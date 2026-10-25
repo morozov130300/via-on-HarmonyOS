@@ -69,6 +69,21 @@ export class TabStore {
     return true
   }
 
+  newTabAt(url: string, background: boolean): boolean {
+    if (this.tabs.length >= MAX_TABS) {
+      return false
+    }
+    const tab = new TabItem(this.nextTabId, false)
+    this.nextTabId = this.nextTabId + 1
+    tab.initialUrl = url
+    tab.url = url
+    this.tabs.push(tab)
+    if (!background) {
+      this.currentIndex = this.tabs.length - 1
+    }
+    return true
+  }
+
   closeTab(index: number): void {
     if (index < 0 || index >= this.tabs.length) {
       return
