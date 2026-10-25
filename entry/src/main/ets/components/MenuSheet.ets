@@ -1,11 +1,23 @@
-import { common } from '@kit.AbilityKit'
+import { common, Want } from '@kit.AbilityKit'
 import { print } from '@kit.BasicServicesKit'
+import { productViewManager } from '@kit.AppGalleryKit'
+import { fileIo } from '@kit.CoreFileKit'
 import { AppSettings, UA_MODE_DEFAULT, UA_MODE_PC, UA_MODE_MOBILE } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { SiteSetting } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
 import { ViaIcon } from './ViaIcon'
+
+const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translator__){window.__via_translator__.showBanner(true);return;}`
+  + `window.googleTranslateElementInit=function(){if(!window.__via_translator__){window.__via_translator__=new google.translate.TranslateElement({autoDisplay:false,floatPosition:0,multilanguagePage:true,includedLanguages:"af,sq,am,ar,hy,az,eu,be,bn,bs,bg,ca,ceb,ny,zh-CN,zh-TW,co,hr,cs,da,nl,en,eo,et,tl,fi,fr,fy,gl,ka,de,el,gu,ht,ha,haw,he,hi,hmn,hu,is,id,ga,it,ja,jv,kn,kk,km,ky,ko,ku,lo,la,lv,lt,lb,mk,mg,ms,ml,mt,mi,mr,mn,my,ne,no,ps,fa,pl,pt,pa,ro,ru,sr,st,sd,si,sk,sl,so,sm,es,su,sw,sv,tg,ta,te,th,tr,uk,ur,uz,vi,cy,xh,yi,yo,zu",pageLanguage:"auto"});}`
+  + `window.__via_translator__.showBanner(true);};`
+  + `var s=document.createElement("script");s.src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";document.getElementsByTagName("head")[0].appendChild(s);`
+  + `document.addEventListener("securitypolicyviolation",function onCsp(e){document.removeEventListener("securitypolicyviolation",onCsp);`
+  + `var id="via-translate-bridge";var t=document.getElementById(id);`
+  + `if(t){if(typeof translate!=="undefined"){if("zh-CN"!==translate.to){translate.changeLanguage("zh-CN");}}else{var n=document.createElement("script");n.id=id;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t);}}`
+  + `else{t=document.createElement("script");t.id=id;t.src="https://fastly.jsdelivr.net/gh/xnx3/translate@v3.14.0/translate.js/translate.min.js";`
+  + `t.onload=function(){translate.selectLanguageTag.show=false;translate.service.use("client.edge");translate.changeLanguage("zh-CN");};document.head.appendChild(t);}});})();`
 
 @ComponentV2
 export struct MenuSheet {
@@ -128,7 +140,7 @@ export struct MenuSheet {
         }
         GridItem() {
           this.GridCell($r('app.media.via_ic_add_to_desktop'), $r('app.string.add_to_desktop'), () => {
-            this.notImplemented()
+            this.addToDesktop()
           })
         }
         GridItem() {
@@ -244,15 +256,63 @@ export struct MenuSheet {
     .alignItems(VerticalAlign.Center)
   }
 
+  private shortcutTid: string = ''
+
+  private addToDesktop(): void {
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
+      this.notImplemented()
+      return
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    this.prepareShortcutIcon(context).then(() => {
+      const want: Want = {
+        bundleName: context.abilityInfo.bundleName,
+        moduleName: 'entry',
+        abilityName: 'EntryAbility',
+        parameters: { 'viaUrl': tab.url }
+      }
+      const label = tab.title.trim() !== '' ? tab.title.trim() : hostOf(tab.url)
+      const iconPath = `${context.filesDir}/via_shortcut_icon.png`
+      return productViewManager.checkPinShortcutPermitted(context, `via_${Date.now()}`, want, label, iconPath, '')
+    }).then((result: productViewManager.CheckShortcutResult) => {
+      this.shortcutTid = result.tid ?? ''
+      if (this.shortcutTid === '') {
+        return Promise.reject(new Error('empty tid'))
+      }
+      return productViewManager.requestNewPinShortcut(context, this.shortcutTid)
+    }).then(() => {
+      this.onClose()
+    }).catch((error: BusinessError) => {
+      console.error(`add shortcut failed: ${error.message}`)
+    })
+  }
+
+  private prepareShortcutIcon(context: common.UIAbilityContext): Promise<void> {
+    const iconPath = `${context.filesDir}/via_shortcut_icon.png`
+    return context.resourceManager.getMediaContent($r('app.media.foreground').id).then((content: Uint8Array) => {
+      const file = fileIo.openSync(iconPath,
+        fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+      return fileIo.write(file.fd, content.buffer).finally(() => {
+        fileIo.closeSync(file)
+      })
+    }).then(() => {
+      return Promise.resolve()
+    })
+  }
+
   private translatePage(): void {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
       this.notImplemented()
       return
     }
-    const target = `https://fanyi.baidu.com/transpage?query=${encodeURIComponent(tab.url)}&from=auto&to=zh`
-    this.onClose()
-    this.tabStore.navigate(target)
+    try {
+      tab.controller.runJavaScript(TRANSLATE_INJECT_JS)
+      this.onClose()
+    } catch (error) {
+      console.error('inject translator failed')
+    }
   }
 
   private printPage(): void {

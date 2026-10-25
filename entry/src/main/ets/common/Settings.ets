@@ -52,6 +52,21 @@ export class AppSettings {
   @Trace disableCustomTabs: boolean = false
   @Trace disableSafeBrowsing: boolean = false
   @Trace ignoreSslWarning: boolean = false
+  @Trace homeBgColor: string = ''
+  @Trace homeLogoText: string = 'VIA'
+  @Trace homeLogoSize: number = 0
+  @Trace homeLogoStyle: number = 3
+  @Trace homePillCorner: number = 0
+  @Trace homePillOpacity: number = 2
+  @Trace homePillStrokeWidth: number = 2
+  @Trace homePillStrokeOpacity: number = 2
+  @Trace homePillStyle: number = 1
+  @Trace homeFavSize: number = 0
+  @Trace homeFavCorner: number = 0
+  @Trace homeFavColor: number = 1
+  @Trace homeFavIconStyle: number = 1
+  @Trace homeAdvEffect: number = 1
+  @Trace homeAdvArea: number = 0
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -127,6 +142,21 @@ export class AppSettings {
       this.disableCustomTabs = await this.readBoolean('disableCustomTabs', false)
       this.disableSafeBrowsing = await this.readBoolean('disableSafeBrowsing', false)
       this.ignoreSslWarning = await this.readBoolean('ignoreSslWarning', false)
+      this.homeBgColor = await this.readString('homeBgColor', '')
+      this.homeLogoText = await this.readString('homeLogoText', 'VIA')
+      this.homeLogoSize = await this.readNumber('homeLogoSize', 0)
+      this.homeLogoStyle = await this.readNumber('homeLogoStyle', 3)
+      this.homePillCorner = await this.readNumber('homePillCorner', 0)
+      this.homePillOpacity = await this.readNumber('homePillOpacity', 2)
+      this.homePillStrokeWidth = await this.readNumber('homePillStrokeWidth', 2)
+      this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 2)
+      this.homePillStyle = await this.readNumber('homePillStyle', 1)
+      this.homeFavSize = await this.readNumber('homeFavSize', 0)
+      this.homeFavCorner = await this.readNumber('homeFavCorner', 0)
+      this.homeFavColor = await this.readNumber('homeFavColor', 1)
+      this.homeFavIconStyle = await this.readNumber('homeFavIconStyle', 1)
+      this.homeAdvEffect = await this.readNumber('homeAdvEffect', 1)
+      this.homeAdvArea = await this.readNumber('homeAdvArea', 0)
     } catch (error) {
       const err = error as BusinessError
       console.error(`settings init failed: ${err.code} ${err.message}`)
@@ -270,6 +300,100 @@ export class AppSettings {
   setIgnoreSslWarning(on: boolean): void {
     this.ignoreSslWarning = on
     this.flushKey('ignoreSslWarning', on)
+  }
+
+  setHomeBgColor(color: string): void {
+    this.homeBgColor = color
+    this.flushKey('homeBgColor', color)
+  }
+
+  setHomeLogoText(text: string): void {
+    const value = text.trim() !== '' ? text : 'VIA'
+    this.homeLogoText = value
+    this.flushKey('homeLogoText', value)
+  }
+
+  setHomeLogoSize(index: number): void {
+    this.homeLogoSize = index
+    this.flushKey('homeLogoSize', index)
+  }
+
+  setHomeLogoStyle(index: number): void {
+    this.homeLogoStyle = index
+    this.flushKey('homeLogoStyle', index)
+  }
+
+  setHomePillCorner(index: number): void {
+    this.homePillCorner = index
+    this.flushKey('homePillCorner', index)
+  }
+
+  setHomePillOpacity(index: number): void {
+    this.homePillOpacity = index
+    this.flushKey('homePillOpacity', index)
+  }
+
+  setHomePillStrokeWidth(index: number): void {
+    this.homePillStrokeWidth = index
+    this.flushKey('homePillStrokeWidth', index)
+  }
+
+  setHomePillStrokeOpacity(index: number): void {
+    this.homePillStrokeOpacity = index
+    this.flushKey('homePillStrokeOpacity', index)
+  }
+
+  setHomePillStyle(index: number): void {
+    this.homePillStyle = index
+    this.flushKey('homePillStyle', index)
+  }
+
+  setHomeFavSize(index: number): void {
+    this.homeFavSize = index
+    this.flushKey('homeFavSize', index)
+  }
+
+  setHomeFavCorner(index: number): void {
+    this.homeFavCorner = index
+    this.flushKey('homeFavCorner', index)
+  }
+
+  setHomeFavColor(index: number): void {
+    this.homeFavColor = index
+    this.flushKey('homeFavColor', index)
+  }
+
+  setHomeFavIconStyle(index: number): void {
+    this.homeFavIconStyle = index
+    this.flushKey('homeFavIconStyle', index)
+  }
+
+  setHomeAdvEffect(index: number): void {
+    this.homeAdvEffect = index
+    this.flushKey('homeAdvEffect', index)
+  }
+
+  setHomeAdvArea(index: number): void {
+    this.homeAdvArea = index
+    this.flushKey('homeAdvArea', index)
+  }
+
+  resetHomeStyle(): void {
+    this.setHomeBgColor('')
+    this.setHomeLogoText('VIA')
+    this.setHomeLogoSize(0)
+    this.setHomeLogoStyle(3)
+    this.setHomePillCorner(0)
+    this.setHomePillOpacity(2)
+    this.setHomePillStrokeWidth(2)
+    this.setHomePillStrokeOpacity(2)
+    this.setHomePillStyle(1)
+    this.setHomeFavSize(0)
+    this.setHomeFavCorner(0)
+    this.setHomeFavColor(1)
+    this.setHomeFavIconStyle(1)
+    this.setHomeAdvEffect(1)
+    this.setHomeAdvArea(0)
   }
 
   uaForHost(host: string): string | null {

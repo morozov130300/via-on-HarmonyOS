@@ -18,8 +18,13 @@ import { ReaderView } from '../components/ReaderView'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
+import { webview } from '@kit.ArkWeb'
+import { fileIo } from '@kit.CoreFileKit'
+import { BusinessError, emitter } from '@kit.BasicServicesKit'
+import { hostOf } from '../common/SearchEngines'
 
 const EXIT_INTERVAL: number = 2000
+const SHORTCUT_URL_EVENT_ID = 10001
 
 @Entry
 @ComponentV2
@@ -41,6 +46,13 @@ struct Index {
 
   aboutToAppear(): void {
     this.bootstrap()
+    emitter.on({ eventId: SHORTCUT_URL_EVENT_ID }, (event: emitter.EventData) => {
+      const data = event.data as Record<string, Object>
+      const viaUrl = data['viaUrl']
+      if (typeof viaUrl === 'string' && viaUrl !== '') {
+        this.tabStore.navigate(viaUrl)
+      }
+    })
   }
 
   aboutToDisappear(): void {
@@ -61,6 +73,11 @@ struct Index {
     AdBlocker.getInstance().init(this.settings)
     await this.tabStore.init(this.settings)
     this.ready = true
+    const launchUrl = AppStorage.get<string>('via_launch_url') ?? ''
+    if (launchUrl !== '') {
+      AppStorage.setOrCreate('via_launch_url', '')
+      this.tabStore.navigate(launchUrl)
+    }
   }
 
   onBackPress(): boolean {
@@ -176,6 +193,8 @@ struct Index {
             })
           }
           .width('100%')
+          .padding({ bottom: 6 })
+          .backgroundColor($r('app.color.home_bg'))
         }
       }
       .width('100%')
@@ -225,7 +244,7 @@ struct Index {
             this.shareCurrentPage()
           },
           onSavePage: () => {
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+            this.saveCurrentPageAsPdf()
           }
         })
       }
@@ -288,6 +307,40 @@ struct Index {
       previewMode: systemShare.SharePreviewMode.DETAIL
     }).catch((error: BusinessError) => {
       console.error(`share failed: ${error.code} ${error.message}`)
+    })
+  }
+
+  private saveCurrentPageAsPdf(): void {
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
+      return
+    }
+    const pdfConfig: webview.PdfConfiguration = {
+      width: 8.27,
+      height: 11.69,
+      marginTop: 0,
+      marginBottom: 0,
+      marginRight: 0,
+      marginLeft: 0,
+      shouldPrintBackground: true
+    }
+    tab.controller.createPdf(pdfConfig).then((result: webview.PdfData) => {
+      try {
+        const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+        const filePath = `${context.filesDir}/${hostOf(tab.url)}.pdf`
+        const file = fileIo.openSync(filePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE)
+        fileIo.write(file.fd, result.pdfArrayBuffer().buffer).then((writeLen: number) => {
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.page_saved'), duration: 1500 })
+        }).catch((error: BusinessError) => {
+          console.error(`write pdf failed: ${error.message}`)
+        }).finally(() => {
+          fileIo.closeSync(file)
+        })
+      } catch (error) {
+        console.error('save pdf failed')
+      }
+    }).catch((error: BusinessError) => {
+      console.error(`create pdf failed: ${error.message}`)
     })
   }
 }

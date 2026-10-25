@@ -1,12 +1,38 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { emitter } from '@kit.BasicServicesKit';
 
 const DOMAIN = 0x0000;
+const SHORTCUT_URL_EVENT_ID = 10001;
+
+function extractViaUrl(want: Want): string {
+  const params = want.parameters
+  if (params === undefined) {
+    return ''
+  }
+  const viaUrl = params['viaUrl']
+  return typeof viaUrl === 'string' ? viaUrl : ''
+}
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+    const viaUrl = extractViaUrl(want)
+    if (viaUrl !== '') {
+      AppStorage.setOrCreate('via_launch_url', viaUrl)
+    }
+  }
+
+  onNewEntry(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewEntry');
+    const viaUrl = extractViaUrl(want)
+    if (viaUrl !== '') {
+      emitter.emit(
+        { eventId: SHORTCUT_URL_EVENT_ID },
+        { data: { 'viaUrl': viaUrl } }
+      )
+    }
   }
 
   onDestroy(): void {

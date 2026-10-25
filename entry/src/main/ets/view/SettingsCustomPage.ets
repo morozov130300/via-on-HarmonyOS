@@ -1,46 +1,36 @@
-const CUSTOM_BG_COLORS: string[] = ['#F8A246', '#FEC849', '#B4BE74', '#6AC4C4', '#616FBA', '#9B66AA', '#CB9E67', '#9B9FAB', '#694D35']
-const LOGO_FONT_SIZES: string[] = ['63px', '48px', '36px']
-const LOGO_FONT_SIZE_VP: number[] = [25, 19, 14]
-const LOGO_STYLES: string[] = ['常规', '粗体', '斜体', '粗体 斜体']
-const PILL_CORNERS: string[] = ['100%', '50%', '0%']
-const PILL_CORNER_VP: number[] = [17, 8, 0]
-const PILL_OPACITY: string[] = ['25%', '50%', '100%']
-const PILL_OPACITY_VP: number[] = [0.25, 0.5, 1]
-const PILL_STROKE_WIDTHS: string[] = ['7px', '3px', '0px']
-const PILL_STROKE_VP: number[] = [2.8, 1.2, 0]
-const PILL_STYLES: string[] = ['矩形', '胶囊']
-const FAV_SIZES: string[] = ['50px', '40px', '60px']
-const FAV_SIZE_VP: number[] = [20, 16, 24]
-const FAV_CORNERS: string[] = ['100%', '50%', '0%']
-const FAV_CORNER_VP: number[] = [10, 5, 0]
-const FAV_ICON_STYLES: string[] = ['图标优先', '文字优先']
-const FAV_ICON_COLORS: string[] = ['多彩', '单色']
-const ADV_EFFECTS: string[] = ['透明', '不透明']
-const ADV_AREAS: string[] = ['展示', '隐藏']
+import { HomePage } from '../components/HomePage'
+import { AppSettings } from '../common/Settings'
+import {
+  HOME_ADV_AREAS,
+  HOME_ADV_EFFECTS,
+  HOME_BG_COLORS,
+  HOME_FAV_CORNERS,
+  HOME_FAV_ICON_COLORS,
+  HOME_FAV_ICON_STYLES,
+  HOME_FAV_SIZES,
+  HOME_LOGO_FONT_LABELS,
+  HOME_LOGO_STYLES,
+  HOME_PILL_CORNERS,
+  HOME_PILL_OPACITY,
+  HOME_PILL_STROKE_LABELS,
+  HOME_PILL_STYLES
+} from '../common/HomeStyle'
 
 @ComponentV2
 export struct SettingsCustomPage {
-  @Local bgIndex: number = 4
-  @Local logoSizeIndex: number = 0
-  @Local logoStyleIndex: number = 3
-  @Local logoText: string = 'VIA'
-  @Local logoDraft: string = 'VIA'
+  private settings: AppSettings = AppSettings.getInstance()
+  @Local logoDraft: string = ''
   private logoDialogId: number = -1
-  @Local pillCornerIndex: number = 0
-  @Local pillOpacityIndex: number = 0
-  @Local pillStrokeIndex: number = 0
-  @Local pillStyleIndex: number = 0
-  @Local favSizeIndex: number = 0
-  @Local favCornerIndex: number = 0
-  @Local favIconStyleIndex: number = 0
-  @Local favIconColorIndex: number = 0
-  @Local advEffectIndex: number = 0
-  @Local advAreaIndex: number = 0
 
   build() {
     NavDestination() {
       Column() {
-        this.PreviewCard()
+        Column() {
+          HomePage({ onSearchTap: () => {
+          } })
+        }
+        .width('100%')
+        .layoutWeight(1)
 
         Tabs({ barPosition: BarPosition.End }) {
           TabContent() {
@@ -82,68 +72,6 @@ export struct SettingsCustomPage {
   }
 
   @Builder
-  PreviewCard() {
-    Column() {
-      Blank()
-
-      Column({ space: 8 }) {
-        Text(this.logoText)
-          .fontSize(LOGO_FONT_SIZE_VP[this.logoSizeIndex])
-          .fontColor('#FAFAFA')
-          .fontWeight(this.logoStyleIndex === 1 || this.logoStyleIndex === 3 ? FontWeight.Bold : FontWeight.Normal)
-          .fontStyle(this.logoStyleIndex === 2 || this.logoStyleIndex === 3 ? FontStyle.Italic : FontStyle.Normal)
-
-        Row() {
-          Text($r('app.string.search'))
-            .fontSize(14)
-            .fontColor('#FAFAFA')
-            .opacity(0.8)
-        }
-        .height(34)
-        .padding({ left: 48, right: 48 })
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor('#646986')
-        .opacity(ADV_EFFECTS[this.advEffectIndex] === '透明' ? PILL_OPACITY_VP[this.pillOpacityIndex] : 1)
-        .borderRadius(PILL_STYLES[this.pillStyleIndex] === '胶囊' ? 17 : PILL_CORNER_VP[this.pillCornerIndex])
-        .border({
-          width: PILL_STROKE_VP[this.pillStrokeIndex],
-          color: $r('app.color.search_pill_border')
-        })
-      }
-
-      if (ADV_AREAS[this.advAreaIndex] === '展示') {
-        Column({ space: 6 }) {
-          Text('华')
-            .fontSize(FAV_SIZE_VP[this.favSizeIndex] * 0.6)
-            .fontColor(Color.White)
-            .width(FAV_SIZE_VP[this.favSizeIndex])
-            .height(FAV_SIZE_VP[this.favSizeIndex])
-            .textAlign(TextAlign.Center)
-            .backgroundColor(this.favCircleColor())
-            .borderRadius(FAV_CORNERS[this.favCornerIndex] === '100%'
-              ? FAV_SIZE_VP[this.favSizeIndex] / 2 : FAV_CORNER_VP[this.favCornerIndex])
-          Text('华为开发者')
-            .fontSize(11)
-            .fontColor('#FAFAFA')
-            .opacity(0.7)
-        }
-        .margin({ top: 28 })
-      }
-
-      Blank()
-    }
-    .width('100%')
-    .layoutWeight(1)
-    .margin(12)
-    .borderRadius(12)
-    .backgroundColor(CUSTOM_BG_COLORS[this.bgIndex])
-  }
-
-  private favCircleColor(): ResourceColor {
-    return FAV_ICON_COLORS[this.favIconColorIndex] === '多彩' ? '#5B8DEF' : '#9F9F9F'
-  }
-
-  @Builder
   PanelItem(iconRes: Resource, itemLabel: string, itemValue: string, onTapItem: () => void) {
     Column({ space: 4 }) {
       Image(iconRes)
@@ -170,14 +98,14 @@ export struct SettingsCustomPage {
   @Builder
   LogoPanel() {
     Row() {
-      this.PanelItem($r('app.media.via_ic_c_logo_text'), 'Logo', '文字', () => {
+      this.PanelItem($r('app.media.via_ic_c_logo_text'), 'Logo', this.settings.homeLogoText, () => {
         this.editLogoText()
       })
-      this.PanelItem($r('app.media.via_ic_c_font_size'), '字体大小', LOGO_FONT_SIZES[this.logoSizeIndex], () => {
-        this.logoSizeIndex = (this.logoSizeIndex + 1) % LOGO_FONT_SIZES.length
+      this.PanelItem($r('app.media.via_ic_c_font_size'), '字体大小', HOME_LOGO_FONT_LABELS[this.settings.homeLogoSize], () => {
+        this.settings.setHomeLogoSize((this.settings.homeLogoSize + 1) % HOME_LOGO_FONT_LABELS.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_font_style'), '字体风格', LOGO_STYLES[this.logoStyleIndex], () => {
-        this.logoStyleIndex = (this.logoStyleIndex + 1) % LOGO_STYLES.length
+      this.PanelItem($r('app.media.via_ic_c_font_style'), '字体风格', HOME_LOGO_STYLES[this.settings.homeLogoStyle], () => {
+        this.settings.setHomeLogoStyle((this.settings.homeLogoStyle + 1) % HOME_LOGO_STYLES.length)
       })
     }
     .width('100%')
@@ -188,20 +116,20 @@ export struct SettingsCustomPage {
   @Builder
   SearchPanel() {
     Row() {
-      this.PanelItem($r('app.media.via_ic_c_corner'), '圆角值', PILL_CORNERS[this.pillCornerIndex], () => {
-        this.pillCornerIndex = (this.pillCornerIndex + 1) % PILL_CORNERS.length
+      this.PanelItem($r('app.media.via_ic_c_corner'), '圆角值', HOME_PILL_CORNERS[this.settings.homePillCorner], () => {
+        this.settings.setHomePillCorner((this.settings.homePillCorner + 1) % HOME_PILL_CORNERS.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_opacity'), '不透明度', PILL_OPACITY[this.pillOpacityIndex], () => {
-        this.pillOpacityIndex = (this.pillOpacityIndex + 1) % PILL_OPACITY.length
+      this.PanelItem($r('app.media.via_ic_c_opacity'), '不透明度', HOME_PILL_OPACITY[this.settings.homePillOpacity], () => {
+        this.settings.setHomePillOpacity((this.settings.homePillOpacity + 1) % HOME_PILL_OPACITY.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_stroke_width'), '描边粗细', PILL_STROKE_WIDTHS[this.pillStrokeIndex], () => {
-        this.pillStrokeIndex = (this.pillStrokeIndex + 1) % PILL_STROKE_WIDTHS.length
+      this.PanelItem($r('app.media.via_ic_c_stroke_width'), '描边粗细', HOME_PILL_STROKE_LABELS[this.settings.homePillStrokeWidth], () => {
+        this.settings.setHomePillStrokeWidth((this.settings.homePillStrokeWidth + 1) % HOME_PILL_STROKE_LABELS.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_stroke_opacity'), '描边不透明度', PILL_OPACITY[this.pillOpacityIndex], () => {
-        this.pillOpacityIndex = (this.pillOpacityIndex + 1) % PILL_OPACITY.length
+      this.PanelItem($r('app.media.via_ic_c_stroke_opacity'), '描边不透明度', HOME_PILL_OPACITY[this.settings.homePillStrokeOpacity], () => {
+        this.settings.setHomePillStrokeOpacity((this.settings.homePillStrokeOpacity + 1) % HOME_PILL_OPACITY.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_search_style'), '搜索框样式', PILL_STYLES[this.pillStyleIndex], () => {
-        this.pillStyleIndex = (this.pillStyleIndex + 1) % PILL_STYLES.length
+      this.PanelItem($r('app.media.via_ic_c_search_style'), '搜索框样式', HOME_PILL_STYLES[this.settings.homePillStyle], () => {
+        this.settings.setHomePillStyle((this.settings.homePillStyle + 1) % HOME_PILL_STYLES.length)
       })
     }
     .width('100%')
@@ -212,15 +140,15 @@ export struct SettingsCustomPage {
   @Builder
   BgPanel() {
     Row({ space: 12 }) {
-      ForEach(CUSTOM_BG_COLORS, (colorHex: string, index: number) => {
+      ForEach(HOME_BG_COLORS, (colorHex: string) => {
         Circle()
           .fill(colorHex)
-          .stroke(index === this.bgIndex ? '#FAFAFA' : Color.Transparent)
-          .strokeWidth(index === this.bgIndex ? 2 : 0)
-          .width(index === this.bgIndex ? 38 : 28)
-          .height(index === this.bgIndex ? 38 : 28)
+          .stroke(this.settings.homeBgColor === colorHex ? '#FAFAFA' : Color.Transparent)
+          .strokeWidth(this.settings.homeBgColor === colorHex ? 2 : 0)
+          .width(this.settings.homeBgColor === colorHex ? 38 : 28)
+          .height(this.settings.homeBgColor === colorHex ? 38 : 28)
           .onClick(() => {
-            this.bgIndex = index
+            this.settings.setHomeBgColor(colorHex)
           })
       }, (colorHex: string) => colorHex)
     }
@@ -232,20 +160,20 @@ export struct SettingsCustomPage {
   @Builder
   FavPanel() {
     Row() {
-      this.PanelItem($r('app.media.via_ic_c_fav_width'), '宽度', FAV_SIZES[this.favSizeIndex], () => {
-        this.favSizeIndex = (this.favSizeIndex + 1) % FAV_SIZES.length
+      this.PanelItem($r('app.media.via_ic_c_fav_width'), '宽度', HOME_FAV_SIZES[this.settings.homeFavSize], () => {
+        this.settings.setHomeFavSize((this.settings.homeFavSize + 1) % HOME_FAV_SIZES.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_fav_height'), '高度', FAV_SIZES[this.favSizeIndex], () => {
-        this.favSizeIndex = (this.favSizeIndex + 1) % FAV_SIZES.length
+      this.PanelItem($r('app.media.via_ic_c_fav_height'), '高度', HOME_FAV_SIZES[this.settings.homeFavSize], () => {
+        this.settings.setHomeFavSize((this.settings.homeFavSize + 1) % HOME_FAV_SIZES.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_fav_corner'), '圆角值', FAV_CORNERS[this.favCornerIndex], () => {
-        this.favCornerIndex = (this.favCornerIndex + 1) % FAV_CORNERS.length
+      this.PanelItem($r('app.media.via_ic_c_fav_corner'), '圆角值', HOME_FAV_CORNERS[this.settings.homeFavCorner], () => {
+        this.settings.setHomeFavCorner((this.settings.homeFavCorner + 1) % HOME_FAV_CORNERS.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_fav_icon_style'), '图标样式', FAV_ICON_STYLES[this.favIconStyleIndex], () => {
-        this.favIconStyleIndex = (this.favIconStyleIndex + 1) % FAV_ICON_STYLES.length
+      this.PanelItem($r('app.media.via_ic_c_fav_icon_style'), '图标样式', HOME_FAV_ICON_STYLES[this.settings.homeFavIconStyle], () => {
+        this.settings.setHomeFavIconStyle((this.settings.homeFavIconStyle + 1) % HOME_FAV_ICON_STYLES.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_fav_icon_color'), '图标色彩', FAV_ICON_COLORS[this.favIconColorIndex], () => {
-        this.favIconColorIndex = (this.favIconColorIndex + 1) % FAV_ICON_COLORS.length
+      this.PanelItem($r('app.media.via_ic_c_fav_icon_color'), '图标色彩', HOME_FAV_ICON_COLORS[this.settings.homeFavColor], () => {
+        this.settings.setHomeFavColor((this.settings.homeFavColor + 1) % HOME_FAV_ICON_COLORS.length)
       })
     }
     .width('100%')
@@ -256,11 +184,11 @@ export struct SettingsCustomPage {
   @Builder
   AdvPanel() {
     Row() {
-      this.PanelItem($r('app.media.via_ic_c_adv_effect'), '搜索框效果', ADV_EFFECTS[this.advEffectIndex], () => {
-        this.advEffectIndex = (this.advEffectIndex + 1) % ADV_EFFECTS.length
+      this.PanelItem($r('app.media.via_ic_c_adv_effect'), '搜索框效果', HOME_ADV_EFFECTS[this.settings.homeAdvEffect], () => {
+        this.settings.setHomeAdvEffect((this.settings.homeAdvEffect + 1) % HOME_ADV_EFFECTS.length)
       })
-      this.PanelItem($r('app.media.via_ic_c_adv_area'), '搜索区域', ADV_AREAS[this.advAreaIndex], () => {
-        this.advAreaIndex = (this.advAreaIndex + 1) % ADV_AREAS.length
+      this.PanelItem($r('app.media.via_ic_c_adv_area'), '搜索区域', HOME_ADV_AREAS[this.settings.homeAdvArea], () => {
+        this.settings.setHomeAdvArea((this.settings.homeAdvArea + 1) % HOME_ADV_AREAS.length)
       })
       this.PanelItem($r('app.media.via_ic_c_adv_css'), '自定义 CSS', '', () => {
         this.notImplemented()
@@ -269,7 +197,8 @@ export struct SettingsCustomPage {
         this.notImplemented()
       })
       this.PanelItem($r('app.media.via_ic_c_reset'), '重置', '', () => {
-        this.resetCustom()
+        this.settings.resetHomeStyle()
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.reset_done'), duration: 1500 })
       })
     }
     .width('100%')
@@ -278,7 +207,7 @@ export struct SettingsCustomPage {
   }
 
   private editLogoText(): void {
-    this.logoDraft = this.logoText
+    this.logoDraft = this.settings.homeLogoText
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: () => {
         this.LogoInputDialog()
@@ -301,24 +230,6 @@ export struct SettingsCustomPage {
         console.error('close logo dialog failed')
       }
     }
-  }
-
-  private resetCustom(): void {
-    this.bgIndex = 4
-    this.logoSizeIndex = 0
-    this.logoStyleIndex = 3
-    this.logoText = 'VIA'
-    this.pillCornerIndex = 0
-    this.pillOpacityIndex = 0
-    this.pillStrokeIndex = 0
-    this.pillStyleIndex = 0
-    this.favSizeIndex = 0
-    this.favCornerIndex = 0
-    this.favIconStyleIndex = 0
-    this.favIconColorIndex = 0
-    this.advEffectIndex = 0
-    this.advAreaIndex = 0
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.reset_done'), duration: 1500 })
   }
 
   @Builder
@@ -347,7 +258,7 @@ export struct SettingsCustomPage {
           .fontSize(15)
           .layoutWeight(1)
           .onClick(() => {
-            this.logoText = this.logoDraft !== '' ? this.logoDraft : 'VIA'
+            this.settings.setHomeLogoText(this.logoDraft)
             this.closeLogoDialog()
           })
       }
