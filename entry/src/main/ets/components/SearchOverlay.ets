@@ -1,10 +1,12 @@
 import { http } from '@kit.NetworkKit'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { abilityAccessCtrl, Permissions } from '@kit.AbilityKit'
+import { scanBarcode } from '@kit.ScanKit'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { AppIcon } from './AppIcon'
+import { ViaIcon } from './ViaIcon'
 
 const SUGGEST_URL_PREFIX: string = 'https://suggestion.baidu.com/su?action=opensearch&wd='
 const HISTORY_LIMIT: number = 8
@@ -83,10 +85,15 @@ export struct SearchOverlay {
           .onSubmit((enterKey: EnterKeyType) => {
             this.commit(this.inputText)
           })
-        AppIcon({ icon: $r('sys.symbol.xmark'), iconSize: 20, iconColor: $r('app.color.fg_secondary') })
+        ViaIcon({ icon: $r('app.media.via_ic_scan'), iconSize: 22, iconColor: $r('app.color.fg_secondary') })
           .onClick(() => {
-            this.inputText = ''
-            this.suggestions = []
+            this.startScan()
+          })
+        Text($r('app.string.cancel'))
+          .fontSize(15)
+          .fontColor($r('app.color.fg'))
+          .onClick(() => {
+            this.onClose()
           })
       }
       .width('100%')
@@ -197,6 +204,21 @@ export struct SearchOverlay {
     }
     this.tabStore.navigate(target)
     this.onClose()
+  }
+
+  private startScan(): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    scanBarcode.startScanForResult(context).then((data: scanBarcode.ScanResult) => {
+      const scanned = data.originalValue.trim()
+      if (scanned !== '') {
+        this.commit(scanned)
+      }
+    }).catch((error: BusinessError) => {
+      console.error(`scan failed: ${error.code}`)
+    })
   }
 
   private cancelPending(): void {

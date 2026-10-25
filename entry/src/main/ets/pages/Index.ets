@@ -15,7 +15,6 @@ import { FindBar } from '../components/FindBar'
 import { Reader } from '../common/Reader'
 import { TtsManager } from '../common/Tts'
 import { ReaderView } from '../components/ReaderView'
-import { QrDialog } from '../components/QrDialog'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
@@ -37,7 +36,6 @@ struct Index {
   @Local showFindBar: boolean = false
   @Local showReader: boolean = false
   @Local readerText: string = ''
-  @Local showQr: boolean = false
   @Local exitHintTime: number = 0
   private tts: TtsManager = TtsManager.getInstance()
 
@@ -68,10 +66,6 @@ struct Index {
   onBackPress(): boolean {
     if (this.showSearch) {
       this.showSearch = false
-      return true
-    }
-    if (this.showQr) {
-      this.showQr = false
       return true
     }
     if (this.showReader) {
@@ -255,14 +249,6 @@ struct Index {
           },
           onStopSpeak: () => {
             this.tts.stop()
-          }
-        })
-      }
-      if (this.showQr) {
-        QrDialog({
-          url: this.tabStore.current().url,
-          onClose: () => {
-            this.showQr = false
           }
         })
       }
