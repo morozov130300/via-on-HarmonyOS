@@ -1,4 +1,3 @@
-import { promptAction } from '@kit.ArkUI'
 import { AppSettings, UA_MODE_DEFAULT, UA_MODE_PC, UA_MODE_MOBILE } from '../common/Settings'
 import { BrowserDb } from '../common/Database'
 import { findEngine } from '../common/SearchEngines'
@@ -66,6 +65,15 @@ export struct SettingsPage {
             })
           this.SettingRow($r('sys.symbol.trash'), $r('app.string.clear_data'), '', () => {
             this.confirmClear()
+          })
+          this.SettingRow($r('sys.symbol.slider_horizontal_2'), $r('app.string.site_settings'), '', () => {
+            this.navPathStack.pushPathByName('siteSettings', '', true)
+          })
+          this.SettingRow($r('sys.symbol.checkmark_shield'), $r('app.string.custom_rules'), '', () => {
+            this.navPathStack.pushPathByName('rules', '', true)
+          })
+          this.SettingRow($r('sys.symbol.doc_plaintext_and_pencil'), $r('app.string.user_scripts'), '', () => {
+            this.navPathStack.pushPathByName('userScripts', '', true)
           })
           this.SettingRow($r('sys.symbol.doc_text_fill'), $r('app.string.about'),
             'Via for HarmonyOS', () => {
@@ -204,7 +212,7 @@ export struct SettingsPage {
             console.error(`clear downloads failed: ${error.message}`)
           })
           this.settings.clearSearchHistory()
-          promptAction.showToast({ message: $r('app.string.cleared'), duration: 1500 })
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
         }
       }
     })

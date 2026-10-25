@@ -355,6 +355,54 @@
     {
       "name": "tab_count_unit",
       "value": "个标签页"
+    },
+    {
+      "name": "invalid_input",
+      "value": "名称或网址不能为空"
+    },
+    {
+      "name": "block",
+      "value": "拦截"
+    },
+    {
+      "name": "allow",
+      "value": "放行"
+    },
+    {
+      "name": "enabled",
+      "value": "启用"
+    },
+    {
+      "name": "no_site_settings",
+      "value": "暂无网站设定"
+    },
+    {
+      "name": "no_rules",
+      "value": "暂无自定义规则"
+    },
+    {
+      "name": "no_scripts",
+      "value": "暂无用户脚本"
+    },
+    {
+      "name": "remove",
+      "value": "移除"
+    },
+    {
+      "name": "all_sites",
+      "value": "所有网站"
+    },
+    {
+      "name": "match_host",
+      "value": "匹配域名"
+    },
+    {
+      "name": "script_code",
+      "value": "脚本代码"
+    },
+    {
+      "name": "edit_script",
+      "value": "编辑脚本"
     }
   ]
 }

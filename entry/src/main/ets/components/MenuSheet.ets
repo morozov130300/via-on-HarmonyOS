@@ -1,4 +1,3 @@
-import { promptAction } from '@kit.ArkUI'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
@@ -10,6 +9,7 @@ import { AppIcon } from './AppIcon'
 export struct MenuSheet {
   @Event onClose: () => void = () => {}
   @Event onOpenPage: (page: string) => void = (page: string) => {}
+  @Event onFindInPage: () => void = () => {}
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
 
@@ -50,6 +50,10 @@ export struct MenuSheet {
             })
             this.MenuRow($r('sys.symbol.download'), $r('app.string.downloads'), () => {
               this.onOpenPage('downloads')
+            })
+            this.MenuRow($r('sys.symbol.magnifyingglass'), $r('app.string.find_in_page'), () => {
+              this.onClose()
+              this.onFindInPage()
             })
             this.ToggleRow($r('sys.symbol.moon'), $r('app.string.night_mode'), this.settings.nightMode, (isOn: boolean) => {
               this.settings.setNightMode(isOn)
@@ -151,7 +155,7 @@ export struct MenuSheet {
     }
     const title = tab.title !== '' ? tab.title : hostOf(tab.url)
     BrowserDb.getInstance().addBookmark(title, tab.url).then(() => {
-      promptAction.showToast({ message: $r('app.string.bookmark_added'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.bookmark_added'), duration: 1500 })
     }).catch((error: BusinessError) => {
       console.error(`add bookmark failed: ${error.message}`)
     })

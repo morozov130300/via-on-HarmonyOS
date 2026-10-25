@@ -272,6 +272,17 @@ export class AppSettings {
     this.persistSiteSettings()
   }
 
+  removeSiteSetting(host: string): void {
+    const next: SiteSetting[] = []
+    for (let i = 0; i < this.siteSettings.length; i++) {
+      if (this.siteSettings[i].host !== host) {
+        next.push(this.siteSettings[i])
+      }
+    }
+    this.siteSettings = next
+    this.persistSiteSettings()
+  }
+
   private persistSiteSettings(): void {
     const payload: Record<string, Object>[] = []
     for (let i = 0; i < this.siteSettings.length; i++) {
