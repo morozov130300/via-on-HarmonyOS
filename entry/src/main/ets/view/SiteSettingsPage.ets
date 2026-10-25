@@ -1,6 +1,7 @@
 import { SiteSetting } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AppIcon } from '../components/AppIcon'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
 export struct SiteSettingsPage {
@@ -9,7 +10,14 @@ export struct SiteSettingsPage {
 
   build() {
     NavDestination() {
-      if (this.settings.siteSettings.length === 0) {
+      Column() {
+        SettingsHeader({
+          headerTitle: '网站设定',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
+        if (this.settings.siteSettings.length === 0) {
         Column() {
           Text($r('app.string.no_site_settings'))
             .fontSize(14)
@@ -64,12 +72,14 @@ export struct SiteSettingsPage {
           .width('100%')
           .padding(12)
         }
-        .width('100%')
-        .height('100%')
-        .align(Alignment.Top)
+          .width('100%')
+          .layoutWeight(1)
+          .align(Alignment.Top)
+        }
       }
+      .width('100%')
+      .height('100%')
     }
-    .title($r('app.string.site_settings'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })

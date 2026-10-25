@@ -28,8 +28,7 @@ export struct SettingNavRow {
 }
 
 @ComponentV2
-export struct SettingToggleRow {
-  @Param @Require rowLabel: string = ''
+export struct SettingToggleRow {  @Param @Require rowLabel: string = ''
   @Param rowDesc: string = ''
   @Param @Require isToggleOn: boolean = false
   @Event onToggleRow: (isOn: boolean) => void = (isOn: boolean) => {}
@@ -60,5 +59,41 @@ export struct SettingToggleRow {
     .width('100%')
     .padding({ left: 16, right: 16, top: 13, bottom: 13 })
     .alignItems(VerticalAlign.Center)
+  }
+}
+
+@ComponentV2
+export struct SettingRadioRow {
+  @Param @Require rowLabel: string = ''
+  @Param @Require isSelected: boolean = false
+  @Event onTapRow: () => void = () => {}
+
+  build() {
+    Row() {
+      Text(this.rowLabel)
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .layoutWeight(1)
+      if (this.isSelected) {
+        Circle()
+          .fill($r('app.color.accent'))
+          .width(20)
+          .height(20)
+      } else {
+        Circle()
+          .fill(Color.Transparent)
+          .stroke($r('app.color.fg_secondary'))
+          .strokeWidth(1)
+          .width(20)
+          .height(20)
+      }
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 13, bottom: 13 })
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => {
+      this.onTapRow()
+    })
   }
 }

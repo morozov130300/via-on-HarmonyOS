@@ -1,6 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 const AI_PROVIDER_LABELS: Record<string, string> = {
   'deepseek': 'DeepSeek',
@@ -19,7 +20,14 @@ export struct SettingsAiPage {
 
   build() {
     NavDestination() {
-      Scroll() {
+      Column() {
+        SettingsHeader({
+          headerTitle: 'AI 设置',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
+        Scroll() {
         Column() {
           SettingNavRow({ rowLabel: '服务商', rowValue: this.providerLabel(), onTapRow: () => {
             this.pickProvider()
@@ -32,13 +40,15 @@ export struct SettingsAiPage {
           } })
         }
         .width('100%')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .align(Alignment.Top)
       }
       .width('100%')
       .height('100%')
-      .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('AI 设置')
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })

@@ -1,6 +1,22 @@
 import { preferences } from '@kit.ArkData'
+import { window } from '@kit.ArkUI'
 import { SiteSetting, RuleEntry, UserScriptRec } from './Types'
 import { BrowserDb } from './Database'
+import { uaByKey, simplifyUaString, CustomUaEntry } from './UaTable'
+
+export function applyOrientationSetting(context: Context): void {
+  const settings = AppSettings.getInstance()
+  window.getLastWindow(context).then((win: window.Window) => {
+    if (settings.orientation === 1) {
+      win.setPreferredOrientation(window.Orientation.PORTRAIT)
+    } else if (settings.orientation === 2) {
+      win.setPreferredOrientation(window.Orientation.LANDSCAPE)
+    } else {
+      win.setPreferredOrientation(window.Orientation.UNSPECIFIED)
+    }
+  }).catch(() => {
+  })
+}
 
 export const UA_MODE_DEFAULT: number = 0
 export const UA_MODE_PC: number = 1
@@ -23,7 +39,10 @@ const SYNC_KEYS: string[] = [
   'homeAdvEffect', 'homeAdvArea',
   'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
   'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
-  'searchHistory', 'customRules', 'userScripts', 'siteSettings'
+  'searchHistory', 'customRules', 'userScripts', 'siteSettings',
+  'uaKey', 'customUaList', 'desktopUaKey', 'simplifyUa',
+  'syncMode', 'orientation', 'externalPlayer', 'clearOnExit',
+  'volumePageFlip', 'swipeSwitchTab', 'undoCloseToast'
 ]
 const SNAPSHOT_DEBOUNCE_MS: number = 1500
 
@@ -99,6 +118,21 @@ export class AppSettings {
   @Trace aiProvider: string = 'deepseek'
   @Trace aiApiKey: string = ''
   @Trace aiModel: string = 'deepseek-chat'
+  @Trace uaKey: string = 'default'
+  @Trace customUaList: CustomUaEntry[] = []
+  @Trace desktopUaKey: string = 'win_chrome'
+  @Trace simplifyUa: boolean = false
+  @Trace syncMode: string = 'cloud'
+  @Trace webdavUrl: string = ''
+  @Trace webdavUser: string = ''
+  @Trace webdavPwd: string = ''
+  @Trace orientation: number = 0
+  @Trace downloadDir: string = ''
+  @Trace externalPlayer: boolean = false
+  @Trace clearOnExit: string = ''
+  @Trace volumePageFlip: boolean = false
+  @Trace swipeSwitchTab: boolean = false
+  @Trace undoCloseToast: boolean = false
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -221,6 +255,33 @@ export class AppSettings {
       this.aiProvider = await this.readString('aiProvider', 'deepseek')
       this.aiApiKey = await this.readString('aiApiKey', '')
       this.aiModel = await this.readString('aiModel', 'deepseek-chat')
+      this.customUaList = await this.readCustomUaList()
+      this.uaKey = await this.readString('uaKey', '')
+      if (this.uaKey === '') {
+        if (this.uaMode === UA_MODE_PC) {
+          this.uaKey = 'win_chrome'
+        } else if (this.uaMode === UA_MODE_MOBILE) {
+          this.uaKey = 'android_phone'
+        } else if (this.uaMode === UA_MODE_CUSTOM) {
+          this.uaKey = 'custom'
+        } else {
+          this.uaKey = 'default'
+        }
+        this.flushKey('uaKey', this.uaKey)
+      }
+      this.desktopUaKey = await this.readString('desktopUaKey', 'win_chrome')
+      this.simplifyUa = await this.readBoolean('simplifyUa', false)
+      this.syncMode = await this.readString('syncMode', 'cloud')
+      this.webdavUrl = await this.readString('webdavUrl', '')
+      this.webdavUser = await this.readString('webdavUser', '')
+      this.webdavPwd = await this.readString('webdavPwd', '')
+      this.orientation = await this.readNumber('orientation', 0)
+      this.downloadDir = await this.readString('downloadDir', '')
+      this.externalPlayer = await this.readBoolean('externalPlayer', false)
+      this.clearOnExit = await this.readString('clearOnExit', '')
+      this.volumePageFlip = await this.readBoolean('volumePageFlip', false)
+      this.swipeSwitchTab = await this.readBoolean('swipeSwitchTab', false)
+      this.undoCloseToast = await this.readBoolean('undoCloseToast', false)
     } catch (error) {
       const err = error as BusinessError
       console.error(`settings load failed: ${err.code} ${err.message}`)
@@ -290,6 +351,14 @@ export class AppSettings {
     }
   }
 
+  async applyBackupKv(kv: Record<string, Object>): Promise<void> {
+    const snapshot: Record<string, Object> = {}
+    snapshot['ts'] = Date.now()
+    snapshot['kv'] = kv
+    await this.applySnapshot(snapshot)
+    await this.loadFields()
+  }
+
   private scheduleSnapshot(): void {
     if (this.snapshotTimer >= 0) {
       clearTimeout(this.snapshotTimer)
@@ -305,12 +374,7 @@ export class AppSettings {
       return
     }
     try {
-      const kv: Record<string, Object> = {}
-      for (let i = 0; i < SYNC_KEYS.length; i++) {
-        const key = SYNC_KEYS[i]
-        const value = await this.store.get(key, '')
-        kv[key] = value as Object
-      }
+      const kv = await this.buildSyncKv()
       const ts = Date.now()
       kv[SNAPSHOT_TS_KEY] = ts
       await this.store.put(SNAPSHOT_TS_KEY, ts)
@@ -322,6 +386,19 @@ export class AppSettings {
     } catch (error) {
       console.error('write snapshot failed')
     }
+  }
+
+  async buildSyncKv(): Promise<Record<string, Object>> {
+    const kv: Record<string, Object> = {}
+    if (this.store === null) {
+      return kv
+    }
+    for (let i = 0; i < SYNC_KEYS.length; i++) {
+      const key = SYNC_KEYS[i]
+      const value = await this.store.get(key, '')
+      kv[key] = value as Object
+    }
+    return kv
   }
 
   private flushKey(key: string, value: preferences.ValueType): void {
@@ -389,6 +466,79 @@ export class AppSettings {
   setCustomUa(ua: string): void {
     this.customUa = ua
     this.flushKey('customUa', ua)
+  }
+
+  setUaKey(key: string): void {
+    this.uaKey = key
+    this.flushKey('uaKey', key)
+  }
+
+  setDesktopUaKey(key: string): void {
+    this.desktopUaKey = key
+    this.flushKey('desktopUaKey', key)
+  }
+
+  setSimplifyUa(on: boolean): void {
+    this.simplifyUa = on
+    this.flushKey('simplifyUa', on)
+  }
+
+  saveCustomUaEntry(entry: CustomUaEntry): void {
+    const next: CustomUaEntry[] = []
+    let replaced = false
+    for (let i = 0; i < this.customUaList.length; i++) {
+      if (this.customUaList[i].title === entry.title) {
+        next.push(entry)
+        replaced = true
+      } else {
+        next.push(this.customUaList[i])
+      }
+    }
+    if (!replaced) {
+      next.push(entry)
+    }
+    this.customUaList = next
+    this.persistCustomUaList()
+  }
+
+  removeCustomUaEntry(title: string): void {
+    const next: CustomUaEntry[] = []
+    for (let i = 0; i < this.customUaList.length; i++) {
+      if (this.customUaList[i].title !== title) {
+        next.push(this.customUaList[i])
+      }
+    }
+    this.customUaList = next
+    this.persistCustomUaList()
+  }
+
+  private persistCustomUaList(): void {
+    const payload: Record<string, Object>[] = []
+    for (let i = 0; i < this.customUaList.length; i++) {
+      const entry: Record<string, Object> = {}
+      entry['title'] = this.customUaList[i].title
+      entry['ua'] = this.customUaList[i].ua
+      payload.push(entry)
+    }
+    this.flushKey('customUaList', JSON.stringify(payload))
+  }
+
+  private async readCustomUaList(): Promise<CustomUaEntry[]> {
+    const raw = await this.readString('customUaList', '[]')
+    const result: CustomUaEntry[] = []
+    try {
+      const parsed = JSON.parse(raw) as Object[]
+      for (let i = 0; i < parsed.length; i++) {
+        const element = parsed[i] as Record<string, Object>
+        const item = CustomUaEntry.fromJson(element)
+        if (item !== null) {
+          result.push(item)
+        }
+      }
+    } catch (error) {
+      console.error('parse customUaList failed')
+    }
+    return result
   }
 
   setNoImage(on: boolean): void {
@@ -602,6 +752,61 @@ export class AppSettings {
     this.flushKey('aiModel', model)
   }
 
+  setSyncMode(mode: string): void {
+    this.syncMode = mode
+    this.flushKey('syncMode', mode)
+  }
+
+  setWebdavUrl(url: string): void {
+    this.webdavUrl = url
+    this.flushKey('webdavUrl', url)
+  }
+
+  setWebdavUser(user: string): void {
+    this.webdavUser = user
+    this.flushKey('webdavUser', user)
+  }
+
+  setWebdavPwd(pwd: string): void {
+    this.webdavPwd = pwd
+    this.flushKey('webdavPwd', pwd)
+  }
+
+  setOrientation(value: number): void {
+    this.orientation = value
+    this.flushKey('orientation', value)
+  }
+
+  setDownloadDir(dir: string): void {
+    this.downloadDir = dir
+    this.flushKey('downloadDir', dir)
+  }
+
+  setExternalPlayer(on: boolean): void {
+    this.externalPlayer = on
+    this.flushKey('externalPlayer', on)
+  }
+
+  setClearOnExit(flags: string): void {
+    this.clearOnExit = flags
+    this.flushKey('clearOnExit', flags)
+  }
+
+  setVolumePageFlip(on: boolean): void {
+    this.volumePageFlip = on
+    this.flushKey('volumePageFlip', on)
+  }
+
+  setSwipeSwitchTab(on: boolean): void {
+    this.swipeSwitchTab = on
+    this.flushKey('swipeSwitchTab', on)
+  }
+
+  setUndoCloseToast(on: boolean): void {
+    this.undoCloseToast = on
+    this.flushKey('undoCloseToast', on)
+  }
+
   resetHomeStyle(): void {
     this.setHomeBgColor('')
     this.setHomeLogoText('VIA')
@@ -623,19 +828,24 @@ export class AppSettings {
 
   uaForHost(host: string): string | null {
     const site = this.getSiteSetting(host)
+    let key = this.uaKey
     if (site !== null && site.pcMode) {
-      return PC_UA
+      key = this.desktopUaKey
     }
-    if (this.uaMode === UA_MODE_PC) {
-      return PC_UA
+    let ua: string | null = null
+    if (key === 'custom') {
+      ua = this.customUa !== '' ? this.customUa : null
+    } else {
+      const def = uaByKey(key)
+      ua = def !== null ? def.ua : null
     }
-    if (this.uaMode === UA_MODE_MOBILE) {
-      return MOBILE_UA
+    if (ua === null) {
+      return null
     }
-    if (this.uaMode === UA_MODE_CUSTOM && this.customUa !== '') {
-      return this.customUa
+    if (this.simplifyUa) {
+      return simplifyUaString(ua)
     }
-    return null
+    return ua
   }
 
   addSearchHistory(query: string): void {

@@ -1,7 +1,11 @@
 import { BusinessError } from '@kit.BasicServicesKit'
-import { AppSettings, UA_MODE_DEFAULT, UA_MODE_PC, UA_MODE_MOBILE } from '../common/Settings'
+import { fileIo, picker } from '@kit.CoreFileKit'
+import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { BrowserDb } from '../common/Database'
+import { BackupManager } from '../common/Backup'
+import { uaByKey } from '../common/UaTable'
 import { SettingNavRow, SettingToggleRow } from '../components/SettingRows'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
 export struct SettingsGeneralPage {
@@ -11,88 +15,457 @@ export struct SettingsGeneralPage {
 
   build() {
     NavDestination() {
-      Scroll() {
-        Column() {
-          SettingNavRow({ rowLabel: '同步', onTapRow: () => {
-            this.pickSync()
-          } })
-          SettingNavRow({ rowLabel: '浏览器标识', rowValue: this.uaLabel(), onTapRow: () => {
-            this.pickUa()
-          } })
-          SettingNavRow({ rowLabel: '清除数据', onTapRow: () => {
-            this.confirmClear()
-          } })
-          SettingToggleRow({ rowLabel: '广告拦截', isToggleOn: this.settings.adBlockOn, onToggleRow: (isOn: boolean) => {
-            this.settings.setAdBlockOn(isOn)
-          } })
-          SettingNavRow({ rowLabel: '网站设定', onTapRow: () => {
-            this.navPathStack.pushPathByName('siteSettings', '', true)
-          } })
-          SettingNavRow({ rowLabel: '密码管理器', onTapRow: () => {
-            this.showPasswordVaultGuide()
-          } })
-          SettingToggleRow({ rowLabel: '夜间模式', isToggleOn: this.settings.nightMode, onToggleRow: (isOn: boolean) => {
-            this.settings.setNightMode(isOn)
-          } })
-          SettingToggleRow({ rowLabel: '阅读模式', isToggleOn: this.settings.readerAuto, onToggleRow: (isOn: boolean) => {
-            this.settings.setReaderAuto(isOn)
-          } })
-          SettingNavRow({ rowLabel: '工具栏设置', onTapRow: () => {
-            this.navPathStack.pushPathByName('toolbarCustom', '', true)
-          } })
-          SettingNavRow({ rowLabel: '定制菜单', onTapRow: () => {
-            this.navPathStack.pushPathByName('menuCustom', '', true)
-          } })
-          SettingNavRow({ rowLabel: '定制长按菜单', onTapRow: () => {
-            this.navPathStack.pushPathByName('longPressCustom', '', true)
-          } })
-          SettingNavRow({ rowLabel: '语言', rowValue: this.languageLabel(), onTapRow: () => {
-            this.pickLanguage()
-          } })
-          SettingNavRow({ rowLabel: '主页', rowValue: this.homeLabel(), onTapRow: () => {
-            this.pickHome()
-          } })
-          SettingNavRow({ rowLabel: '搜索设置', onTapRow: () => {
-            this.pickEngine()
-          } })
-          SettingNavRow({ rowLabel: 'AI 设置', onTapRow: () => {
-            this.navPathStack.pushPathByName('aiSettings', '', true)
-          } })
+      Column() {
+        SettingsHeader({
+          headerTitle: '通用',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
+        Scroll() {
+          Column() {
+            SettingNavRow({ rowLabel: '同步', rowValue: this.syncLabel(), onTapRow: () => {
+              this.navPathStack.pushPathByName('syncPage', '', true)
+            } })
+            SettingNavRow({ rowLabel: '浏览器标识', rowValue: this.uaLabel(), onTapRow: () => {
+              this.navPathStack.pushPathByName('uaPage', '', true)
+            } })
+            SettingNavRow({ rowLabel: '清除数据', onTapRow: () => {
+              this.confirmClear()
+            } })
+            SettingToggleRow({ rowLabel: '广告拦截', isToggleOn: this.settings.adBlockOn, onToggleRow: (isOn: boolean) => {
+              this.settings.setAdBlockOn(isOn)
+            } })
+            SettingNavRow({ rowLabel: '网站设定', onTapRow: () => {
+              this.navPathStack.pushPathByName('siteSettings', '', true)
+            } })
+            SettingNavRow({ rowLabel: '密码管理器', onTapRow: () => {
+              this.showPasswordVaultGuide()
+            } })
+            SettingToggleRow({ rowLabel: '夜间模式', isToggleOn: this.settings.nightMode, onToggleRow: (isOn: boolean) => {
+              this.settings.setNightMode(isOn)
+            } })
+            SettingToggleRow({ rowLabel: '阅读模式', isToggleOn: this.settings.readerAuto, onToggleRow: (isOn: boolean) => {
+              this.settings.setReaderAuto(isOn)
+            } })
+            SettingNavRow({ rowLabel: '工具栏设置', onTapRow: () => {
+              this.navPathStack.pushPathByName('toolbarCustom', '', true)
+            } })
+            SettingNavRow({ rowLabel: '定制菜单', onTapRow: () => {
+              this.navPathStack.pushPathByName('menuCustom', '', true)
+            } })
+            SettingNavRow({ rowLabel: '定制长按菜单', onTapRow: () => {
+              this.navPathStack.pushPathByName('longPressCustom', '', true)
+            } })
+            SettingNavRow({ rowLabel: '语言', rowValue: this.languageLabel(), onTapRow: () => {
+              this.pickLanguage()
+            } })
+            SettingNavRow({ rowLabel: '主页', rowValue: this.homeLabel(), onTapRow: () => {
+              this.pickHome()
+            } })
+            SettingNavRow({ rowLabel: '搜索设置', onTapRow: () => {
+              this.pickEngine()
+            } })
+            SettingNavRow({ rowLabel: 'AI 设置', onTapRow: () => {
+              this.navPathStack.pushPathByName('aiSettings', '', true)
+            } })
+            SettingNavRow({ rowLabel: '屏幕方向', rowValue: this.orientationLabel(), onTapRow: () => {
+              this.pickOrientation()
+            } })
+            SettingNavRow({ rowLabel: '下载目录', rowValue: this.downloadDirLabel(), onTapRow: () => {
+              this.pickDownloadDir()
+            } })
+            SettingNavRow({ rowLabel: '下载管理', onTapRow: () => {
+              this.navPathStack.pushPathByName('downloads', '', true)
+            } })
+            SettingToggleRow({ rowLabel: '外置视频播放器', rowDesc: '调用外部播放器播放网页视频', isToggleOn: this.settings.externalPlayer, onToggleRow: (isOn: boolean) => {
+              this.settings.setExternalPlayer(isOn)
+            } })
+            SettingNavRow({ rowLabel: '退出时清除数据', rowValue: this.clearOnExitLabel(), onTapRow: () => {
+              this.pickClearOnExit()
+            } })
+            SettingNavRow({ rowLabel: '字体', rowValue: `${this.settings.textZoom}%`, onTapRow: () => {
+              this.pickFontScale()
+            } })
+            SettingNavRow({ rowLabel: '操作设定', onTapRow: () => {
+              this.navPathStack.pushPathByName('gestureSettings', '', true)
+            } })
+            SettingNavRow({ rowLabel: '导入或备份书签', onTapRow: () => {
+              this.pickBookmarkIO()
+            } })
+            SettingNavRow({ rowLabel: '导入数据', onTapRow: () => {
+              this.importData()
+            } })
+            SettingNavRow({ rowLabel: '导出数据', onTapRow: () => {
+              this.exportData()
+            } })
+            SettingToggleRow({ rowLabel: '启动时恢复未关闭标签', isToggleOn: this.settings.restoreTabs, onToggleRow: (isOn: boolean) => {
+              this.settings.setRestoreTabs(isOn)
+            } })
+            SettingToggleRow({ rowLabel: '显示撤销关闭标签的提示', isToggleOn: this.settings.undoCloseToast, onToggleRow: (isOn: boolean) => {
+              this.settings.setUndoCloseToast(isOn)
+            } })
+            SettingNavRow({ rowLabel: '设置默认浏览器', onTapRow: () => {
+              this.showDefaultBrowserGuide()
+            } })
+          }
+          .width('100%')
         }
         .width('100%')
+        .layoutWeight(1)
+        .align(Alignment.Top)
       }
       .width('100%')
       .height('100%')
-      .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('通用')
+    .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })
   }
 
-  private pickSync(): void {
+  private syncLabel(): string {
+    return this.settings.syncMode === 'webdav' ? 'WebDAV' : '华为云空间'
+  }
+
+  private uaLabel(): string {
+    if (this.settings.uaKey === 'custom') {
+      return '自定义'
+    }
+    const def = uaByKey(this.settings.uaKey)
+    return def !== null ? def.label : '默认'
+  }
+
+  private orientationLabel(): string {
+    if (this.settings.orientation === 1) {
+      return '竖屏'
+    }
+    if (this.settings.orientation === 2) {
+      return '横屏'
+    }
+    return '跟随系统'
+  }
+
+  private downloadDirLabel(): string {
+    if (this.settings.downloadDir === '') {
+      return '应用下载目录'
+    }
+    const dir = this.settings.downloadDir
+    const slash = dir.lastIndexOf('/')
+    return slash >= 0 && slash < dir.length - 1 ? dir.substring(slash + 1) : dir
+  }
+
+  private clearOnExitLabel(): string {
+    const flags = this.settings.clearOnExit
+    if (flags === '') {
+      return '关闭'
+    }
+    const labels: string[] = []
+    if (flags.includes('history')) {
+      labels.push('历史记录')
+    }
+    if (flags.includes('bookmarks')) {
+      labels.push('书签')
+    }
+    if (flags.includes('cookies')) {
+      labels.push('Cookies')
+    }
+    return labels.length > 0 ? labels.join('、') : '关闭'
+  }
+
+  private pickOrientation(): void {
     const sheets: SheetInfo[] = [
-      { title: '立即同步', action: (): void => {
-        this.syncNow()
+      { title: '跟随系统', action: (): void => {
+        this.applyOrientation(0)
       } },
-      { title: '同步设置', action: (): void => {
-        this.navPathStack.pushPathByName('syncPage', '', true)
+      { title: '竖屏', action: (): void => {
+        this.applyOrientation(1)
+      } },
+      { title: '横屏', action: (): void => {
+        this.applyOrientation(2)
       } }
     ]
     ActionSheet.show({
-      title: '同步',
-      message: '书签、历史与设置通过华为云空间同步',
+      title: '屏幕方向',
+      message: '选择应用屏幕方向',
       sheets: sheets
     })
   }
 
-  private syncNow(): void {
-    this.db.cloudSyncNow().then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.sync_done'), duration: 1500 })
-    }).catch(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.sync_failed'), duration: 1500 })
+  private applyOrientation(value: number): void {
+    this.settings.setOrientation(value)
+    const context = this.getUIContext().getHostContext()
+    if (context !== undefined) {
+      applyOrientationSetting(context)
+    }
+  }
+
+  private pickDownloadDir(): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    try {
+      const documentPicker = new picker.DocumentViewPicker(context)
+      documentPicker.select().then((uris: Array<string>) => {
+        if (uris.length > 0) {
+          this.settings.setDownloadDir(uris[0])
+        }
+      }).catch((error: BusinessError) => {
+        console.error(`pick download dir failed: ${error.message}`)
+      })
+    } catch (error) {
+      console.error('open dir picker failed')
+    }
+  }
+
+  private pickFontScale(): void {
+    const options: number[] = [80, 90, 100, 110, 120, 130]
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < options.length; i++) {
+      const value = options[i]
+      sheets.push({ title: `${value}%`, action: (): void => {
+        this.settings.setTextZoom(value)
+      } })
+    }
+    ActionSheet.show({
+      title: '字体',
+      message: '选择网页字体缩放',
+      sheets: sheets
+    })
+  }
+
+  @Local clearHistoryOnExit: boolean = false
+  @Local clearBookmarksOnExit: boolean = false
+  @Local clearCookiesOnExit: boolean = false
+  private clearOnExitDialogId: number = -1
+
+  private pickClearOnExit(): void {
+    const flags = this.settings.clearOnExit
+    this.clearHistoryOnExit = flags.includes('history')
+    this.clearBookmarksOnExit = flags.includes('bookmarks')
+    this.clearCookiesOnExit = flags.includes('cookies')
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.ClearOnExitDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center
+    }).then((dialogId: number) => {
+      this.clearOnExitDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open clear on exit dialog failed: ${error.message}`)
+    })
+  }
+
+  @Builder
+  ClearOnExitDialog() {
+    Column({ space: 12 }) {
+      Text('退出时清除数据')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+      Row() {
+        Text('历史记录').fontSize(15).layoutWeight(1)
+        Checkbox().select(this.clearHistoryOnExit).onChange((value: boolean) => {
+          this.clearHistoryOnExit = value
+        })
+      }
+      .width('100%')
+      Row() {
+        Text('书签').fontSize(15).layoutWeight(1)
+        Checkbox().select(this.clearBookmarksOnExit).onChange((value: boolean) => {
+          this.clearBookmarksOnExit = value
+        })
+      }
+      .width('100%')
+      Row() {
+        Text('Cookies').fontSize(15).layoutWeight(1)
+        Checkbox().select(this.clearCookiesOnExit).onChange((value: boolean) => {
+          this.clearCookiesOnExit = value
+        })
+      }
+      .width('100%')
+      Row({ space: 12 }) {
+        Button($r('app.string.cancel'))
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.surface'))
+          .fontColor($r('app.color.fg'))
+          .onClick(() => {
+            this.closeClearOnExitDialog()
+          })
+        Button($r('app.string.confirm'))
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.accent'))
+          .onClick(() => {
+            this.saveClearOnExit()
+            this.closeClearOnExitDialog()
+          })
+      }
+      .width('100%')
+      .margin({ top: 4 })
+    }
+    .width('86%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+  }
+
+  private saveClearOnExit(): void {
+    const flags: string[] = []
+    if (this.clearHistoryOnExit) {
+      flags.push('history')
+    }
+    if (this.clearBookmarksOnExit) {
+      flags.push('bookmarks')
+    }
+    if (this.clearCookiesOnExit) {
+      flags.push('cookies')
+    }
+    this.settings.setClearOnExit(flags.join(','))
+  }
+
+  private closeClearOnExitDialog(): void {
+    if (this.clearOnExitDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.clearOnExitDialogId)
+    this.clearOnExitDialogId = -1
+  }
+
+  private pickBookmarkIO(): void {
+    const sheets: SheetInfo[] = [
+      { title: '导出书签', action: (): void => {
+        this.exportBookmarks()
+      } },
+      { title: '导入书签', action: (): void => {
+        this.importBookmarks()
+      } }
+    ]
+    ActionSheet.show({
+      title: '导入或备份书签',
+      message: '以 HTML 书签文件与其它浏览器互通',
+      sheets: sheets
+    })
+  }
+
+  private exportBookmarks(): void {
+    BackupManager.getInstance().listBookmarksForExport().then((html: string) => {
+      this.saveTextFile('via_bookmarks.html', html)
+    }).catch((error: BusinessError) => {
+      console.error(`export bookmarks failed: ${error.message}`)
+    })
+  }
+
+  private importBookmarks(): void {
+    try {
+      const documentPicker = new picker.DocumentViewPicker()
+      documentPicker.select({ fileSuffixFilters: ['.html', '.htm'] }).then((uris: Array<string>) => {
+        if (uris.length === 0) {
+          return
+        }
+        this.readTextFile(uris[0]).then((html: string) => {
+          const bookmarks = BackupManager.getInstance().parseBookmarksHtml(html)
+          for (let i = 0; i < bookmarks.length; i++) {
+            const rec = bookmarks[i]
+            this.db.addBookmark(rec.title, rec.url).catch((error: BusinessError) => {
+              console.error(`import bookmark failed: ${error.message}`)
+            })
+          }
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+        }).catch((error: BusinessError) => {
+          console.error(`read bookmark file failed: ${error.message}`)
+        })
+      }).catch((error: BusinessError) => {
+        console.error(`select bookmark file failed: ${error.message}`)
+      })
+    } catch (error) {
+      console.error('open file picker failed')
+    }
+  }
+
+  private importData(): void {
+    try {
+      const documentPicker = new picker.DocumentViewPicker()
+      documentPicker.select({ fileSuffixFilters: ['.json'] }).then((uris: Array<string>) => {
+        if (uris.length === 0) {
+          return
+        }
+        this.readTextFile(uris[0]).then((raw: string) => {
+          BackupManager.getInstance().applyBackupJson(raw).then(() => {
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+          }).catch((error: BusinessError) => {
+            console.error(`import data failed: ${error.message}`)
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+          })
+        }).catch((error: BusinessError) => {
+          console.error(`read backup file failed: ${error.message}`)
+        })
+      }).catch((error: BusinessError) => {
+        console.error(`select backup file failed: ${error.message}`)
+      })
+    } catch (error) {
+      console.error('open file picker failed')
+    }
+  }
+
+  private exportData(): void {
+    BackupManager.getInstance().buildBackupJson().then((json: string) => {
+      this.saveTextFile('via_backup.json', json)
+    }).catch((error: BusinessError) => {
+      console.error(`export data failed: ${error.message}`)
+    })
+  }
+
+  private saveTextFile(fileName: string, content: string): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    try {
+      const documentPicker = new picker.DocumentViewPicker(context)
+      documentPicker.save({ newFileNames: [fileName] }).then((uris: Array<string>) => {
+        if (uris.length === 0) {
+          return
+        }
+        try {
+          const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC)
+          fileIo.writeSync(file.fd, content)
+          fileIo.closeSync(file)
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.export_done'), duration: 1500 })
+        } catch (error) {
+          console.error('write file failed')
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+        }
+      }).catch((error: BusinessError) => {
+        console.error(`save file failed: ${error.message}`)
+      })
+    } catch (error) {
+      console.error('open save picker failed')
+    }
+  }
+
+  private readTextFile(uri: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      try {
+        const content = fileIo.readTextSync(uri)
+        resolve(content)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  private showDefaultBrowserGuide(): void {
+    AlertDialog.show({
+      title: '设置默认浏览器',
+      message: '请在系统"设置-应用-默认应用-浏览器"中将 VIA 设为默认浏览器。',
+      confirm: {
+        value: $r('app.string.confirm'),
+        action: () => {
+        }
+      }
     })
   }
 
@@ -162,8 +535,7 @@ export struct SettingsGeneralPage {
 
   private inputHomeUrl(): void {
     this.homeUrlInput = this.settings.homeUrl
-    const promptAction = this.getUIContext().getPromptAction()
-    promptAction.openCustomDialog({
+    this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
         this.HomeUrlDialog()
       },
@@ -227,39 +599,6 @@ export struct SettingsGeneralPage {
     }
     this.getUIContext().getPromptAction().closeCustomDialog(this.homeUrlDialogId)
     this.homeUrlDialogId = -1
-  }
-
-  private uaLabel(): string {
-    if (this.settings.uaMode === UA_MODE_PC) {
-      return '电脑版'
-    }
-    if (this.settings.uaMode === UA_MODE_MOBILE) {
-      return '手机版'
-    }
-    return 'iPhone'
-  }
-
-  private notImplemented(): void {
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
-  }
-
-  private pickUa(): void {
-    const sheets: SheetInfo[] = [
-      { title: 'iPhone', action: (): void => {
-        this.settings.setUaMode(UA_MODE_DEFAULT)
-      } },
-      { title: '电脑版', action: (): void => {
-        this.settings.setUaMode(UA_MODE_PC)
-      } },
-      { title: '手机版', action: (): void => {
-        this.settings.setUaMode(UA_MODE_MOBILE)
-      } }
-    ]
-    ActionSheet.show({
-      title: '浏览器标识',
-      message: '选择网页浏览器标识',
-      sheets: sheets
-    })
   }
 
   private pickEngine(): void {

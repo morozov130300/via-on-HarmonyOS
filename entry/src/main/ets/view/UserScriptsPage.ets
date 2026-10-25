@@ -1,6 +1,7 @@
 import { UserScriptRec } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AppIcon } from '../components/AppIcon'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
 export struct UserScriptsPage {
@@ -12,6 +13,16 @@ export struct UserScriptsPage {
   build() {
     NavDestination() {
       Column() {
+        SettingsHeader({
+          headerTitle: '用户脚本',
+          rightIcon: $r('sys.symbol.plus'),
+          onBack: () => {
+            this.navPathStack.pop()
+          },
+          onRight: () => {
+            this.adding = true
+          }
+        })
         if (this.settings.userScripts.length === 0) {
           Column() {
             Text($r('app.string.no_scripts'))
@@ -81,12 +92,8 @@ export struct UserScriptsPage {
         })
       }
     }
-    .title($r('app.string.user_scripts'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
-    })
-    .menus(() => {
-      this.AddMenu()
     })
   }
 

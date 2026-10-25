@@ -1,7 +1,9 @@
 import { webview } from '@kit.ArkWeb'
 import { fileIo } from '@kit.CoreFileKit'
 import { request } from '@kit.BasicServicesKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { BrowserDb } from './Database'
+import { AppSettings } from './Settings'
 import { DownloadRec, DownloadStatus } from './Types'
 
 export class DownloadCoordinator {
@@ -88,6 +90,7 @@ export class DownloadCoordinator {
         task.on('complete', () => {
           this.db.updateDownload(id, 0, DownloadStatus.Completed).catch(() => {
           })
+          this.copyToUserDir(path)
         })
         task.on('fail', () => {
           this.db.updateDownload(id, 0, DownloadStatus.Failed).catch(() => {
@@ -138,6 +141,28 @@ export class DownloadCoordinator {
     })
   }
 
+  private copyToUserDir(sandboxPath: string): void {
+    const dir = AppSettings.getInstance().downloadDir
+    if (dir === '' || sandboxPath === '') {
+      return
+    }
+    try {
+      const slash = sandboxPath.lastIndexOf('/')
+      const name = slash >= 0 ? sandboxPath.substring(slash + 1) : ''
+      if (name === '') {
+        return
+      }
+      const destUri = dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`
+      const src = fileIo.openSync(sandboxPath, fileIo.OpenMode.READ_ONLY)
+      const dst = fileIo.openSync(destUri, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+      fileIo.copyFileSync(src.fd, dst.fd)
+      fileIo.closeSync(src)
+      fileIo.closeSync(dst)
+    } catch (error) {
+      console.error('copy download to user dir failed')
+    }
+  }
+
   private handleFinish(item: webview.WebDownloadItem): void {
     const id = this.activeIds.get(item.getGuid())
     if (id === undefined) {
@@ -145,6 +170,7 @@ export class DownloadCoordinator {
     }
     this.activeIds.delete(item.getGuid())
     this.lastWrittenPercent.delete(item.getGuid())
+    this.copyToUserDir(`${this.saveDir}/${this.fileNameFor(item)}`)
     this.db.updateDownload(id, item.getReceivedBytes(), DownloadStatus.Completed).catch((error: BusinessError) => {
       console.error(`finish download failed: ${error.message}`)
     })

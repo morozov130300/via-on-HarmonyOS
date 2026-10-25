@@ -84,17 +84,19 @@ export class TabStore {
     return true
   }
 
-  closeTab(index: number): void {
+  closeTab(index: number): string {
     if (index < 0 || index >= this.tabs.length) {
-      return
+      return ''
     }
+    const closed = this.tabs[index]
+    const closedUrl = !closed.incognito && !closed.isHomePage() ? closed.url : ''
     this.tabs.splice(index, 1)
     if (this.tabs.length === 0) {
       const tab = new TabItem(this.nextTabId, false)
       this.nextTabId = this.nextTabId + 1
       this.tabs.push(tab)
       this.currentIndex = 0
-      return
+      return closedUrl
     }
     if (index < this.currentIndex) {
       this.currentIndex = this.currentIndex - 1
@@ -103,6 +105,7 @@ export class TabStore {
         this.currentIndex = this.tabs.length - 1
       }
     }
+    return closedUrl
   }
 
   closeOthers(index: number): void {

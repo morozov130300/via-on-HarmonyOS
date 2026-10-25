@@ -1,5 +1,6 @@
 import { HomePage } from '../components/HomePage'
 import { AppSettings } from '../common/Settings'
+import { SettingsHeader } from '../components/SettingsHeader'
 import {
   HOME_ADV_AREAS,
   HOME_ADV_EFFECTS,
@@ -20,6 +21,7 @@ import {
 @ComponentV2
 export struct SettingsCustomPage {
   private settings: AppSettings = AppSettings.getInstance()
+  private navPathStack: NavPathStack = new NavPathStack()
   @Local logoDraft: string = ''
   private logoDialogId: number = -1
   @Local cssDraft: string = ''
@@ -28,6 +30,12 @@ export struct SettingsCustomPage {
   build() {
     NavDestination() {
       Column() {
+        SettingsHeader({
+          headerTitle: '定制',
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
         Column() {
           HomePage({ onSearchTap: () => {
           } })
@@ -71,7 +79,9 @@ export struct SettingsCustomPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
-    .title('定制')
+    .onReady((ctx: NavDestinationContext) => {
+      this.navPathStack = ctx.pathStack
+    })
   }
 
   @Builder

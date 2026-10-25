@@ -1,6 +1,8 @@
 import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
+import { AppSettings } from '../common/Settings'
 import { AppIcon } from './AppIcon'
+import { BusinessError } from '@kit.BasicServicesKit'
 
 const DEFAULT_TAB_TITLE: string = '新标签页'
 
@@ -8,6 +10,9 @@ const DEFAULT_TAB_TITLE: string = '新标签页'
 export struct TabPanel {
   @Event onClose: () => void = () => {}
   private tabStore: TabStore = TabStore.getInstance()
+  private settings: AppSettings = AppSettings.getInstance()
+  @Local undoDialogId: number = -1
+  @Local undoUrl: string = ''
 
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
@@ -54,7 +59,10 @@ export struct TabPanel {
                     .layoutWeight(1)
                   AppIcon({ icon: $r('sys.symbol.xmark_circle'), iconSize: 16, iconColor: $r('app.color.fg_secondary') })
                     .onClick(() => {
-                      this.tabStore.closeTab(index)
+                      const closedUrl = this.tabStore.closeTab(index)
+                      if (closedUrl !== '') {
+                        this.showUndoToast(closedUrl)
+                      }
                     })
                 }
                 .width('100%')
@@ -129,5 +137,58 @@ export struct TabPanel {
       .onClick(() => {
         action()
       })
+  }
+
+  private showUndoToast(closedUrl: string): void {
+    if (!this.settings.undoCloseToast) {
+      return
+    }
+    this.undoUrl = closedUrl
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.UndoDialog()
+      },
+      isModal: false,
+      autoCancel: false,
+      alignment: DialogAlignment.Bottom
+    }).then((dialogId: number) => {
+      this.undoDialogId = dialogId
+      setTimeout(() => {
+        this.closeUndoToast(dialogId)
+      }, 3000)
+    }).catch((error: BusinessError) => {
+      console.error(`open undo toast failed: ${error.message}`)
+    })
+  }
+
+  private closeUndoToast(dialogId: number): void {
+    if (this.undoDialogId !== dialogId) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(dialogId)
+    this.undoDialogId = -1
+  }
+
+  @Builder
+  UndoDialog() {
+    Row() {
+      Text($r('app.string.tab_closed'))
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .layoutWeight(1)
+      Text($r('app.string.undo'))
+        .fontSize(14)
+        .fontColor($r('app.color.accent'))
+        .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+        .onClick(() => {
+          const url = this.undoUrl
+          this.closeUndoToast(this.undoDialogId)
+          this.tabStore.newTabAt(url, false)
+        })
+    }
+    .width('92%')
+    .padding({ left: 16, right: 8, top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(12)
   }
 }
