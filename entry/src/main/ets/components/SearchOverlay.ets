@@ -1,4 +1,6 @@
 import { http } from '@kit.NetworkKit'
+import { pasteboard } from '@kit.BasicServicesKit'
+import { abilityAccessCtrl, Permissions } from '@kit.AbilityKit'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
@@ -13,6 +15,7 @@ export struct SearchOverlay {
   @Param initialText: string = ''
   @Local inputText: string = ''
   @Local suggestions: string[] = []
+  @Local pasteText: string = ''
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   private textController: TextInputController = new TextInputController()
@@ -21,6 +24,31 @@ export struct SearchOverlay {
 
   aboutToAppear(): void {
     this.inputText = this.initialText
+    this.readClipboard()
+  }
+
+  private async readClipboard(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext()
+      if (context === undefined) {
+        return
+      }
+      const atManager = abilityAccessCtrl.createAtManager()
+      const perms: Permissions[] = ['ohos.permission.READ_PASTEBOARD']
+      const result = await atManager.requestPermissionsFromUser(context, perms)
+      if (!result.authResults.includes(0)) {
+        return
+      }
+      const data = await pasteboard.getSystemPasteboard().getData()
+      if (data.getRecordCount() > 0) {
+        const text = data.getPrimaryText()
+        if (typeof text === 'string' && text.trim() !== '') {
+          this.pasteText = text.trim().substring(0, 120)
+        }
+      }
+    } catch (error) {
+      console.error('read clipboard failed')
+    }
   }
 
   aboutToDisappear(): void {
@@ -76,6 +104,29 @@ export struct SearchOverlay {
               this.commit(suggestion)
             })
           }, (suggestion: string, index: number) => `${suggestion}_${index}`)
+          if (this.inputText.trim() === '' && this.pasteText !== '') {
+            Row({ space: 12 }) {
+              AppIcon({ icon: $r('sys.symbol.doc_plaintext'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
+              Column({ space: 2 }) {
+                Text($r('app.string.paste_and_go'))
+                  .fontSize(13)
+                  .fontColor($r('app.color.fg_secondary'))
+                Text(this.pasteText)
+                  .fontSize(15)
+                  .fontColor($r('app.color.fg'))
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+            }
+            .width('100%')
+            .height(52)
+            .padding({ left: 16, right: 16 })
+            .onClick(() => {
+              this.commit(this.pasteText)
+            })
+          }
           if (this.suggestions.length === 0 && this.inputText.trim() === '') {
             Row() {
               Text($r('app.string.search_history'))

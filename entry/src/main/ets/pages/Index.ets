@@ -12,6 +12,10 @@ import { SearchOverlay } from '../components/SearchOverlay'
 import { TabPanel } from '../components/TabPanel'
 import { MenuSheet } from '../components/MenuSheet'
 import { FindBar } from '../components/FindBar'
+import { Reader } from '../common/Reader'
+import { TtsManager } from '../common/Tts'
+import { ReaderView } from '../components/ReaderView'
+import { QrDialog } from '../components/QrDialog'
 
 const EXIT_INTERVAL: number = 2000
 
@@ -28,13 +32,18 @@ struct Index {
   @Local showTabPanel: boolean = false
   @Local showMenu: boolean = false
   @Local showFindBar: boolean = false
+  @Local showReader: boolean = false
+  @Local readerText: string = ''
+  @Local showQr: boolean = false
   @Local exitHintTime: number = 0
+  private tts: TtsManager = TtsManager.getInstance()
 
   aboutToAppear(): void {
     this.bootstrap()
   }
 
   aboutToDisappear(): void {
+    this.tts.shutdown()
     this.tabStore.snapshot(this.settings)
     this.settings.persistAdBlockTotal()
   }
@@ -56,6 +65,15 @@ struct Index {
   onBackPress(): boolean {
     if (this.showSearch) {
       this.showSearch = false
+      return true
+    }
+    if (this.showQr) {
+      this.showQr = false
+      return true
+    }
+    if (this.showReader) {
+      this.tts.stop()
+      this.showReader = false
       return true
     }
     if (this.showMenu) {
@@ -205,6 +223,12 @@ struct Index {
           },
           onFindInPage: () => {
             this.showFindBar = true
+          },
+          onReader: () => {
+            this.openReader()
+          },
+          onQr: () => {
+            this.showQr = true
           }
         })
       }
@@ -217,9 +241,42 @@ struct Index {
         })
           .position({ x: 0, y: 0 })
       }
+      if (this.showReader) {
+        ReaderView({
+          content: this.readerText,
+          onClose: () => {
+            this.showReader = false
+          },
+          onSpeak: () => {
+            this.tts.speak(this.readerText)
+          },
+          onStopSpeak: () => {
+            this.tts.stop()
+          }
+        })
+      }
+      if (this.showQr) {
+        QrDialog({
+          url: this.tabStore.current().url,
+          onClose: () => {
+            this.showQr = false
+          }
+        })
+      }
     }
     .width('100%')
     .height('100%')
+  }
+
+  private openReader(): void {
+    Reader.extractText(this.tabStore.current()).then((text: string) => {
+      if (text.trim() === '') {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.page_failed_load'), duration: 1500 })
+        return
+      }
+      this.readerText = text
+      this.showReader = true
+    })
   }
 
   private openPage(page: string): void {

@@ -403,6 +403,22 @@
     {
       "name": "edit_script",
       "value": "编辑脚本"
+    },
+    {
+      "name": "update_subscription",
+      "value": "更新订阅"
+    },
+    {
+      "name": "rules_added",
+      "value": "已添加 %d 条规则"
+    },
+    {
+      "name": "subscription_url_hint",
+      "value": "输入 ABP 订阅地址"
+    },
+    {
+      "name": "read_pasteboard_reason",
+      "value": "用于读取剪贴板内容，提供粘贴并前往功能"
     }
   ]
 }

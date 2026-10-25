@@ -73,6 +73,15 @@ export struct BookmarkPage {
         .width('100%')
         .height('100%')
         .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
+        .onItemDragStart((event: ItemDragInfo, index: number) => {
+          return this.dragItemBuilder(this.items[index])
+        })
+        .onItemDrop((event: ItemDragInfo, itemIndex: number, insertIndex: number, isSuccess: boolean) => {
+          if (!isSuccess || insertIndex < 0 || insertIndex >= this.items.length || itemIndex === insertIndex) {
+            return
+          }
+          this.moveItem(itemIndex, insertIndex)
+        })
       }
       if (this.editing !== null || this.adding) {
         BookmarkEditOverlay({
@@ -104,6 +113,41 @@ export struct BookmarkPage {
       .onClick(() => {
         this.adding = true
       })
+  }
+
+  @Builder
+  dragItemBuilder(item: BookmarkRec) {
+    Column() {
+      Text(item.title)
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width(200)
+    .height(40)
+    .padding({ left: 12, right: 12 })
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(8)
+    .backgroundColor($r('app.color.surface'))
+  }
+
+  private moveItem(from: number, to: number): void {
+    const next: BookmarkRec[] = []
+    for (let i = 0; i < this.items.length; i++) {
+      next.push(this.items[i])
+    }
+    const moved = next[from]
+    next.splice(from, 1)
+    next.splice(to, 0, moved)
+    this.items = next
+    const ids: number[] = []
+    for (let i = 0; i < next.length; i++) {
+      ids.push(next[i].id)
+    }
+    this.db.reorderBookmarks(ids).catch((error: BusinessError) => {
+      console.error(`reorder bookmarks failed: ${error.message}`)
+    })
   }
 
   private reload(): void {

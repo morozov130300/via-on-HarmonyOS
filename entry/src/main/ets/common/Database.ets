@@ -92,6 +92,21 @@ export class BrowserDb {
     await this.rdb.delete(predicates)
   }
 
+  async reorderBookmarks(ids: number[]): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    const base = Date.now()
+    for (let i = 0; i < ids.length; i++) {
+      const bucket: relationalStore.ValuesBucket = {
+        'created': base + i
+      }
+      const predicates = new relationalStore.RdbPredicates('bookmarks')
+      predicates.equalTo('id', ids[i])
+      await this.rdb.update(bucket, predicates)
+    }
+  }
+
   async listHistory(): Promise<HistoryRec[]> {
     const result: HistoryRec[] = []
     if (this.rdb === null) {

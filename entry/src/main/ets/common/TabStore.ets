@@ -102,6 +102,14 @@ export class TabStore {
     this.currentIndex = index
   }
 
+  stepTab(delta: number): void {
+    const target = this.currentIndex + delta
+    if (target < 0 || target >= this.tabs.length) {
+      return
+    }
+    this.currentIndex = target
+  }
+
   gotoHome(): void {
     const tab = this.current()
     tab.isError = false
