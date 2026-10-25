@@ -64,6 +64,16 @@
       "name": "userScripts",
       "pageSourceFile": "src/main/ets/view/UserScriptsPage.ets",
       "buildFunction": "UserScriptsPageBuilder"
+    },
+    {
+      "name": "offlinePage",
+      "pageSourceFile": "src/main/ets/view/OfflinePage.ets",
+      "buildFunction": "OfflinePageBuilder"
+    },
+    {
+      "name": "netLog",
+      "pageSourceFile": "src/main/ets/view/NetLogPage.ets",
+      "buildFunction": "NetLogPageBuilder"
     }
   ]
 }

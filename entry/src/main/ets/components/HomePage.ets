@@ -1,4 +1,3 @@
-import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { BookmarkRec } from '../common/Types'
@@ -8,7 +7,6 @@ const HOME_BOOKMARK_LIMIT: number = 8
 
 @ComponentV2
 export struct HomePage {
-  private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
   @Event onSearchTap: () => void = () => {}
@@ -100,11 +98,6 @@ export struct HomePage {
       }
 
       Blank()
-
-      Text($r('app.string.blocked_ads_count', this.settings.adBlockTotal))
-        .fontSize(11)
-        .fontColor($r('app.color.fg_secondary'))
-        .padding({ bottom: 6 })
     }
     .width('100%')
     .height('100%')

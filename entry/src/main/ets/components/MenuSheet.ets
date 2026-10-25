@@ -117,7 +117,7 @@ export struct MenuSheet {
         }
         GridItem() {
           this.GridCell($r('app.media.via_ic_offline'), $r('app.string.offline_page'), () => {
-            this.notImplemented()
+            this.onOpenPage('offlinePage')
           })
         }
         GridItem() {
@@ -157,7 +157,7 @@ export struct MenuSheet {
         }
         GridItem() {
           this.GridCell($r('app.media.via_ic_netlog'), $r('app.string.net_log'), () => {
-            this.notImplemented()
+            this.onOpenPage('netLog')
           })
         }
       }
