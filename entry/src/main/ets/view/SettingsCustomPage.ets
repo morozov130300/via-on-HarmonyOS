@@ -23,6 +23,9 @@ export struct SettingsCustomPage {
   @Local bgIndex: number = 4
   @Local logoSizeIndex: number = 0
   @Local logoStyleIndex: number = 3
+  @Local logoText: string = 'VIA'
+  @Local logoDraft: string = 'VIA'
+  private logoDialogId: number = -1
   @Local pillCornerIndex: number = 0
   @Local pillOpacityIndex: number = 0
   @Local pillStrokeIndex: number = 0
@@ -84,7 +87,7 @@ export struct SettingsCustomPage {
       Blank()
 
       Column({ space: 8 }) {
-        Text('VIA')
+        Text(this.logoText)
           .fontSize(LOGO_FONT_SIZE_VP[this.logoSizeIndex])
           .fontColor('#FAFAFA')
           .fontWeight(this.logoStyleIndex === 1 || this.logoStyleIndex === 3 ? FontWeight.Bold : FontWeight.Normal)
@@ -168,7 +171,7 @@ export struct SettingsCustomPage {
   LogoPanel() {
     Row() {
       this.PanelItem($r('app.media.via_ic_c_logo_text'), 'Logo', '文字', () => {
-        this.notImplemented()
+        this.editLogoText()
       })
       this.PanelItem($r('app.media.via_ic_c_font_size'), '字体大小', LOGO_FONT_SIZES[this.logoSizeIndex], () => {
         this.logoSizeIndex = (this.logoSizeIndex + 1) % LOGO_FONT_SIZES.length
@@ -266,12 +269,94 @@ export struct SettingsCustomPage {
         this.notImplemented()
       })
       this.PanelItem($r('app.media.via_ic_c_reset'), '重置', '', () => {
-        this.notImplemented()
+        this.resetCustom()
       })
     }
     .width('100%')
     .height(86)
     .justifyContent(FlexAlign.Center)
+  }
+
+  private editLogoText(): void {
+    this.logoDraft = this.logoText
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.LogoInputDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center
+    }).then((dialogId: number) => {
+      this.logoDialogId = dialogId
+    }).catch(() => {
+      console.error('open logo dialog failed')
+    })
+  }
+
+  private closeLogoDialog(): void {
+    if (this.logoDialogId >= 0) {
+      try {
+        this.getUIContext().getPromptAction().closeCustomDialog(this.logoDialogId)
+      } catch (error) {
+        console.error('close logo dialog failed')
+      }
+    }
+  }
+
+  private resetCustom(): void {
+    this.bgIndex = 4
+    this.logoSizeIndex = 0
+    this.logoStyleIndex = 3
+    this.logoText = 'VIA'
+    this.pillCornerIndex = 0
+    this.pillOpacityIndex = 0
+    this.pillStrokeIndex = 0
+    this.pillStyleIndex = 0
+    this.favSizeIndex = 0
+    this.favCornerIndex = 0
+    this.favIconStyleIndex = 0
+    this.favIconColorIndex = 0
+    this.advEffectIndex = 0
+    this.advAreaIndex = 0
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.reset_done'), duration: 1500 })
+  }
+
+  @Builder
+  LogoInputDialog() {
+    Column({ space: 16 }) {
+      Text('Logo 文字')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+      TextInput({ text: this.logoDraft, placeholder: '输入 Logo 文字' })
+        .fontSize(15)
+        .height(44)
+        .onChange((value: string) => {
+          this.logoDraft = value
+        })
+      Row({ space: 12 }) {
+        Button('取消')
+          .fontSize(15)
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.page_bg'))
+          .fontColor($r('app.color.fg'))
+          .onClick(() => {
+            this.closeLogoDialog()
+          })
+        Button('确定')
+          .fontSize(15)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.logoText = this.logoDraft !== '' ? this.logoDraft : 'VIA'
+            this.closeLogoDialog()
+          })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding(20)
+    .backgroundColor($r('app.color.page_bg'))
+    .borderRadius(16)
   }
 
   private notImplemented(): void {

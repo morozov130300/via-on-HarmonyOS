@@ -1,5 +1,17 @@
+import { pasteboard } from '@kit.BasicServicesKit'
+import { TabStore } from '../common/TabStore'
+
+const CONTACT_QQ_GROUP_URL: string = 'http://viayoo.com/contact/qqgroup/'
+const CONTACT_WECHAT_URL: string = 'http://viayoo.com/contact/wechat/'
+const TERMS_OF_USE_URL: string = 'https://viayoo.com/zh-cn/docs/terms-of-use.html'
+const PRIVACY_POLICY_URL: string = 'https://viayoo.com/zh-cn/docs/privacy-policy.html'
+const CONTACT_EMAIL: string = 'yafengtu@gmail.com'
+
 @ComponentV2
 export struct SettingsAboutPage {
+  private tabStore: TabStore = TabStore.getInstance()
+  private navPathStack: NavPathStack = new NavPathStack()
+
   build() {
     NavDestination() {
       Scroll() {
@@ -16,25 +28,25 @@ export struct SettingsAboutPage {
           .margin({ top: 60, bottom: 40 })
 
           this.AboutRow('检查更新', () => {
-            this.notImplemented()
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.latest_version'), duration: 1500 })
           })
           this.AboutRow('加入 QQ 群组', () => {
-            this.notImplemented()
+            this.openLink(CONTACT_QQ_GROUP_URL)
           })
           this.AboutRow('通过邮件联系我', () => {
-            this.notImplemented()
+            this.copyEmail()
           })
           this.AboutRow('微信公众号', () => {
-            this.notImplemented()
+            this.openLink(CONTACT_WECHAT_URL)
           })
           this.AboutRow('协助翻译', () => {
             this.notImplemented()
           })
           this.AboutRow('使用协议', () => {
-            this.notImplemented()
+            this.openLink(TERMS_OF_USE_URL)
           })
           this.AboutRow('隐私政策', () => {
-            this.notImplemented()
+            this.openLink(PRIVACY_POLICY_URL)
           })
           this.AboutRow('开源许可协议', () => {
             this.notImplemented()
@@ -61,6 +73,9 @@ export struct SettingsAboutPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .title('关于')
+    .onReady((ctx: NavDestinationContext) => {
+      this.navPathStack = ctx.pathStack
+    })
   }
 
   @Builder
@@ -74,6 +89,20 @@ export struct SettingsAboutPage {
       .onClick(() => {
         action()
       })
+  }
+
+  private openLink(url: string): void {
+    this.tabStore.navigate(url)
+    this.navPathStack.pop()
+  }
+
+  private copyEmail(): void {
+    const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, CONTACT_EMAIL)
+    pasteboard.getSystemPasteboard().setData(data).then(() => {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.email_copied'), duration: 1500 })
+    }).catch(() => {
+      console.error('copy email failed')
+    })
   }
 
   private notImplemented(): void {

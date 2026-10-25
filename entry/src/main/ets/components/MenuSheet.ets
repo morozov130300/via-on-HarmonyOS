@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit'
-import { AppSettings } from '../common/Settings'
+import { print } from '@kit.BasicServicesKit'
+import { AppSettings, UA_MODE_DEFAULT, UA_MODE_PC, UA_MODE_MOBILE } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { SiteSetting } from '../common/Types'
@@ -122,7 +123,7 @@ export struct MenuSheet {
         }
         GridItem() {
           this.GridCell($r('app.media.via_ic_translate'), $r('app.string.translate'), () => {
-            this.notImplemented()
+            this.translatePage()
           })
         }
         GridItem() {
@@ -147,12 +148,12 @@ export struct MenuSheet {
         }
         GridItem() {
           this.GridCell($r('app.media.via_ic_print'), $r('app.string.print_pdf'), () => {
-            this.notImplemented()
+            this.printPage()
           })
         }
         GridItem() {
           this.GridCell($r('app.media.via_ic_ua'), $r('app.string.browser_ua'), () => {
-            this.notImplemented()
+            this.pickUa()
           })
         }
         GridItem() {
@@ -241,6 +242,62 @@ export struct MenuSheet {
     .width('100%')
     .height(38)
     .alignItems(VerticalAlign.Center)
+  }
+
+  private translatePage(): void {
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
+      this.notImplemented()
+      return
+    }
+    const target = `https://fanyi.baidu.com/transpage?query=${encodeURIComponent(tab.url)}&from=auto&to=zh`
+    this.onClose()
+    this.tabStore.navigate(target)
+  }
+
+  private printPage(): void {
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
+      this.notImplemented()
+      return
+    }
+    try {
+      const adapter = tab.controller.createWebPrintDocumentAdapter(`${hostOf(tab.url)}.pdf`)
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+      print.print('via_print_job', adapter, null, context)
+      this.onClose()
+    } catch (error) {
+      console.error('launch print failed')
+    }
+  }
+
+  private pickUa(): void {
+    const sheets: SheetInfo[] = [
+      { title: 'iPhone', action: (): void => {
+        this.applyUaMode(UA_MODE_DEFAULT)
+      } },
+      { title: '电脑版', action: (): void => {
+        this.applyUaMode(UA_MODE_PC)
+      } },
+      { title: '手机版', action: (): void => {
+        this.applyUaMode(UA_MODE_MOBILE)
+      } }
+    ]
+    ActionSheet.show({
+      title: '浏览器标识',
+      message: '选择网页浏览器标识',
+      sheets: sheets
+    })
+  }
+
+  private applyUaMode(mode: number): void {
+    this.settings.setUaMode(mode)
+    try {
+      this.tabStore.current().controller.refresh()
+    } catch (error) {
+      console.error('refresh after ua change failed')
+    }
+    this.onClose()
   }
 
   private notImplemented(): void {
