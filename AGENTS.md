@@ -175,3 +175,18 @@ HarmonyOS图标库/
 - 项目名称：VIA
 - 技术栈：HarmonyOS NEXT API 26, ArkTS
 - 目标设备：鸿蒙 PC/平板/手机
+
+### ⚠️ 项目背景（每个智能体必读，禁止脱离实际项目状态空谈）
+
+- **本项目是 Android 应用 Via 浏览器 7.4.0 向 HarmonyOS 的移植项目，正在进行中，且已有大量成型代码**
+- 参考材料：`via_v7.4.0安卓版解包内容/` 目录下的 **APK 解包产物**（classes.dex、resources.arsc、AndroidManifest.xml、assets/ 等），**没有 Kotlin/Java 源码**，本项目语境下"无源码"成立
+- 移植路径：**参照 APK 解包内容逆向分析 + ArkTS 重写外壳 + ArkWeb（Web 组件）作为渲染引擎**，不走 Dex2C/翻译层/虚拟机方案
+- 已有实现：`entry/src/main/ets/` 下约 30 个 `.ets` 文件（TabWeb、Toolbar、AddressBar、AdBlock、TabStore、HomePage、Bookmark/History/Download/Settings/Rules/UserScripts 等页面与公共模块），评估工作量前**必须先读这些现有代码**
+
+### ⚠️ 回答前先读实际目录（最高优先级）
+
+**！！！！！！所有！！！！！！** 智能体在回答任何关于本项目的判断/评估/方案前，**必须先读取工作区实际目录和现有代码**，严禁凭记忆、凭通用知识、凭上一轮对话就直接下结论。
+
+- ❌ **严禁没读项目文件就输出可行性分析、方案、判断**
+- ❌ **严禁把通用知识当成本项目事实**（例如断言"有源码/无源码"前必须先看工作区里到底有什么）
+- ✅ **先 `read`/`glob` 项目目录，再说话**

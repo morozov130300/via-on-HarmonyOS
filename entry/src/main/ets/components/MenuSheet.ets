@@ -1,19 +1,21 @@
+import { common } from '@kit.AbilityKit'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { SiteSetting } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
-import { AppIcon } from './AppIcon'
+import { ViaIcon } from './ViaIcon'
 
 @ComponentV2
 export struct MenuSheet {
   @Event onClose: () => void = () => {}
   @Event onOpenPage: (page: string) => void = (page: string) => {}
   @Event onFindInPage: () => void = () => {}
-  @Event onReader: () => void = () => {}
-  @Event onQr: () => void = () => {}
+  @Event onShare: () => void = () => {}
+  @Event onSavePage: () => void = () => {}
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
+  @Local showToolbox: boolean = false
 
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
@@ -26,154 +28,255 @@ export struct MenuSheet {
         })
 
       Column() {
-        Scroll() {
-          Column() {
-            this.MenuRow($r('sys.symbol.arrow_clockwise'), $r('app.string.refresh'), () => {
-              try {
-                this.tabStore.current().controller.refresh()
-              } catch (error) {
-                console.error('refresh failed')
-              }
-              this.onClose()
-            })
-            this.MenuRow($r('sys.symbol.house'), $r('app.string.home_page'), () => {
-              this.tabStore.gotoHome()
-              this.onClose()
-            })
-            this.MenuRow($r('sys.symbol.bookmark'), $r('app.string.add_bookmark'), () => {
-              this.addBookmark()
-              this.onClose()
-            })
-            this.MenuRow($r('sys.symbol.bookmark_fill'), $r('app.string.bookmarks'), () => {
-              this.onOpenPage('bookmarks')
-            })
-            this.MenuRow($r('sys.symbol.clock'), $r('app.string.history'), () => {
-              this.onOpenPage('history')
-            })
-            this.MenuRow($r('sys.symbol.download'), $r('app.string.downloads'), () => {
-              this.onOpenPage('downloads')
-            })
-            this.MenuRow($r('sys.symbol.magnifyingglass'), $r('app.string.find_in_page'), () => {
-              this.onClose()
-              this.onFindInPage()
-            })
-            this.MenuRow($r('sys.symbol.doc_text'), $r('app.string.reader_mode'), () => {
-              this.onClose()
-              this.onReader()
-            })
-            this.MenuRow($r('sys.symbol.qrcode'), $r('app.string.qr_code'), () => {
-              this.onClose()
-              this.onQr()
-            })
-            this.MenuRow($r('sys.symbol.info_circle'), $r('app.string.page_info'), () => {
-              this.onClose()
-              this.showPageInfo()
-            })
-            this.ToggleRow($r('sys.symbol.moon'), $r('app.string.night_mode'), this.settings.nightMode, (isOn: boolean) => {
-              this.settings.setNightMode(isOn)
-            })
-            this.ToggleRow($r('sys.symbol.eye_slash'), $r('app.string.no_image_mode'), this.settings.noImage, (isOn: boolean) => {
-              this.settings.setNoImage(isOn)
-            })
-            this.ToggleRow($r('sys.symbol.display'), $r('app.string.pc_mode'), this.sitePcMode(), (isOn: boolean) => {
-              this.toggleSitePcMode(isOn)
-            })
-            this.MenuRow($r('sys.symbol.gearshape'), $r('app.string.settings'), () => {
-              this.onOpenPage('settings')
-            })
-          }
-          .width('100%')
+        if (this.showToolbox) {
+          this.ToolboxPanel()
+        } else {
+          this.MainGrid()
+          this.HandleBar()
+          this.BottomRow()
         }
-        .layoutWeight(1)
-        .align(Alignment.Top)
-
-        Text($r('app.string.blocked_ads_count', this.settings.adBlockTotal))
-          .fontSize(12)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ top: 6, bottom: 10 })
       }
       .width('100%')
-      .height('60%')
-      .backgroundColor($r('app.color.page_bg'))
-      .borderRadius({ topLeft: 16, topRight: 16 })
-      .padding({ top: 6 })
+      .backgroundColor($r('app.color.menu_bg'))
     }
     .width('100%')
     .height('100%')
   }
 
   @Builder
-  MenuRow(icon: Resource, label: Resource, action: () => void) {
-    Row({ space: 14 }) {
-      AppIcon({ icon: icon, iconSize: 20 })
-      Text(label)
-        .fontSize(15)
-        .fontColor($r('app.color.fg'))
-        .layoutWeight(1)
+  MainGrid() {
+    Grid() {
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_bookmark'), $r('app.string.bookmarks'), () => {
+          this.onOpenPage('bookmarks')
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_history'), $r('app.string.history'), () => {
+          this.onOpenPage('history')
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_download'), $r('app.string.downloads'), () => {
+          this.onOpenPage('downloads')
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_incognito'), $r('app.string.incognito'), () => {
+          this.openIncognito()
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_share'), $r('app.string.share'), () => {
+          this.onClose()
+          this.onShare()
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_add_bookmark'), $r('app.string.add_bookmark'), () => {
+          this.addBookmark()
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_pc_mode'), $r('app.string.pc_mode'), () => {
+          this.toggleSitePcMode()
+        })
+      }
+      GridItem() {
+        this.GridCellBody($r('app.media.via_ic_save'), $r('app.string.save'), !this.tabStore.current().isHomePage(), () => {
+          this.onClose()
+          this.onSavePage()
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_toolbox'), $r('app.string.toolbox'), () => {
+          this.showToolbox = true
+        })
+      }
+      GridItem() {
+        this.GridCell($r('app.media.via_ic_settings'), $r('app.string.settings'), () => {
+          this.onOpenPage('settings')
+        })
+      }
+    }
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+    .rowsTemplate('1fr 1fr')
+    .width('100%')
+    .height(130)
+  }
+
+  @Builder
+  ToolboxPanel() {
+    Column() {
+      Grid() {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_find'), $r('app.string.find_in_page'), () => {
+            this.onClose()
+            this.onFindInPage()
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_offline'), $r('app.string.offline_page'), () => {
+            this.notImplemented()
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_translate'), $r('app.string.translate'), () => {
+            this.notImplemented()
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_add_to_desktop'), $r('app.string.add_to_desktop'), () => {
+            this.notImplemented()
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_script'), $r('app.string.scripts'), () => {
+            this.onOpenPage('userScripts')
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_adblock'), $r('app.string.ad_block'), () => {
+            this.onOpenPage('rules')
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_ai'), $r('app.string.ai'), () => {
+            this.notImplemented()
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_print'), $r('app.string.print_pdf'), () => {
+            this.notImplemented()
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_ua'), $r('app.string.browser_ua'), () => {
+            this.notImplemented()
+          })
+        }
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_netlog'), $r('app.string.net_log'), () => {
+            this.notImplemented()
+          })
+        }
+      }
+      .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+      .rowsTemplate('1fr 1fr')
+      .width('100%')
+      .height(130)
+
+      this.HandleBar()
     }
     .width('100%')
-    .height(48)
-    .padding({ left: 20, right: 20 })
+  }
+
+  @Builder
+  GridCell(icon: Resource, label: Resource, action: () => void) {
+    this.GridCellBody(icon, label, true, action)
+  }
+
+  @Builder
+  GridCellBody(icon: Resource, label: Resource, enabled: boolean, action: () => void) {
+    Column({ space: 4 }) {
+      ViaIcon({ icon: icon, iconSize: 24, iconColor: $r('app.color.menu_icon') })
+      Text(label)
+        .fontSize(11)
+        .fontColor($r('app.color.menu_text'))
+        .maxLines(1)
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .opacity(enabled ? 1 : 0.3)
     .onClick(() => {
-      action()
+      if (enabled) {
+        action()
+      }
     })
   }
 
   @Builder
-  ToggleRow(icon: Resource, label: Resource, isOn: boolean, change: (isOn: boolean) => void) {
-    Row({ space: 14 }) {
-      AppIcon({ icon: icon, iconSize: 20 })
-      Text(label)
-        .fontSize(15)
-        .fontColor($r('app.color.fg'))
-        .layoutWeight(1)
-      Toggle({ type: ToggleType.Switch, isOn: isOn })
-        .onChange((value: boolean) => {
-          change(value)
-        })
+  HandleBar() {
+    Column() {
+      Divider()
+        .strokeWidth(3)
+        .color('#4A494B')
+        .width(28)
+        .borderRadius(2)
     }
     .width('100%')
-    .height(48)
-    .padding({ left: 20, right: 20 })
+    .height(14)
+    .alignItems(HorizontalAlign.Center)
+    .margin({ top: 2 })
   }
 
-  private sitePcMode(): boolean {
-    const host = hostOf(this.tabStore.current().url)
-    const setting = this.settings.getSiteSetting(host)
-    if (setting !== null) {
-      return setting.pcMode
+  @Builder
+  BottomRow() {
+    Row() {
+      Blank()
+      Column() {
+        ViaIcon({ icon: $r('app.media.via_ic_exit'), iconSize: 22, iconColor: $r('app.color.menu_icon') })
+      }
+      .width(72)
+      .height(38)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .onClick(() => {
+        this.exitApp()
+      })
+
+      Column() {
+        ViaIcon({ icon: $r('app.media.via_ic_cancel'), iconSize: 22, iconColor: $r('app.color.menu_icon') })
+      }
+      .width(72)
+      .height(38)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .onClick(() => {
+        this.onClose()
+      })
     }
-    return false
+    .width('100%')
+    .height(38)
+    .alignItems(VerticalAlign.Center)
   }
 
-  private toggleSitePcMode(isOn: boolean): void {
+  private notImplemented(): void {
+    this.onClose()
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+  }
+
+  private openIncognito(): void {
+    this.onClose()
+    this.tabStore.newTab(true)
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.entered_incognito'), duration: 1500 })
+  }
+
+  private exitApp(): void {
+    this.tabStore.snapshot(this.settings)
+    this.settings.persistAdBlockTotal()
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    context.terminateSelf()
+  }
+
+  private toggleSitePcMode(): void {
     const host = hostOf(this.tabStore.current().url)
     if (host === '') {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
       return
     }
     const existing = this.settings.getSiteSetting(host)
     const setting: SiteSetting = existing !== null ? existing : new SiteSetting(host)
-    setting.pcMode = isOn
+    setting.pcMode = !setting.pcMode
     this.settings.upsertSiteSetting(setting)
     try {
       this.tabStore.current().controller.refresh()
     } catch (error) {
       console.error('refresh after pc mode failed')
     }
-  }
-
-  private showPageInfo(): void {
-    const tab = this.tabStore.current()
-    AlertDialog.show({
-      title: $r('app.string.page_info'),
-      message: `${tab.title}\n${tab.url}`,
-      alignment: DialogAlignment.Bottom,
-      secondaryButton: {
-        value: $r('app.string.confirm'),
-        action: () => {
-        }
-      }
-    })
+    this.onClose()
   }
 
   private addBookmark(): void {
@@ -183,6 +286,7 @@ export struct MenuSheet {
     }
     const title = tab.title !== '' ? tab.title : hostOf(tab.url)
     BrowserDb.getInstance().addBookmark(title, tab.url).then(() => {
+      this.onClose()
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.bookmark_added'), duration: 1500 })
     }).catch((error: BusinessError) => {
       console.error(`add bookmark failed: ${error.message}`)

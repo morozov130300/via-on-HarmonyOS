@@ -223,12 +223,6 @@ struct Index {
           },
           onFindInPage: () => {
             this.showFindBar = true
-          },
-          onReader: () => {
-            this.openReader()
-          },
-          onQr: () => {
-            this.showQr = true
           }
         })
       }

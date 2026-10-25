@@ -2,31 +2,35 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#FFFFFF"
+      "value": "#2F375C"
     },
     {
       "name": "page_bg",
-      "value": "#FAFAFA"
+      "value": "#000000"
+    },
+    {
+      "name": "home_bg",
+      "value": "#2F375C"
     },
     {
       "name": "surface",
-      "value": "#FFFFFF"
+      "value": "#1C1B1D"
     },
     {
       "name": "fg",
-      "value": "#1A1A1A"
+      "value": "#BEBEBE"
     },
     {
       "name": "fg_secondary",
-      "value": "#888888"
+      "value": "#858585"
     },
     {
       "name": "fg_tertiary",
-      "value": "#B0B0B0"
+      "value": "#6E6E6E"
     },
     {
       "name": "accent",
-      "value": "#00A5F6"
+      "value": "#5B8DEF"
     },
     {
       "name": "danger",
@@ -34,19 +38,19 @@
     },
     {
       "name": "divider",
-      "value": "#F0F0F0"
+      "value": "#1F1F1F"
     },
     {
       "name": "icon",
-      "value": "#444444"
+      "value": "#9F9F9F"
     },
     {
       "name": "icon_active",
-      "value": "#00A5F6"
+      "value": "#C5C5C5"
     },
     {
       "name": "icon_disabled",
-      "value": "#C8C8C8"
+      "value": "#4A4A4A"
     },
     {
       "name": "incognito_bg",
@@ -58,19 +62,19 @@
     },
     {
       "name": "search_suggestion_bg",
-      "value": "#FFFFFF"
+      "value": "#1C1B1D"
     },
     {
       "name": "chip_bg",
-      "value": "#F2F2F2"
+      "value": "#2A292B"
     },
     {
       "name": "progress_color",
-      "value": "#00A5F6"
+      "value": "#5B8DEF"
     },
     {
       "name": "badge_bg",
-      "value": "#00A5F6"
+      "value": "#5B8DEF"
     },
     {
       "name": "badge_fg",
@@ -78,7 +82,7 @@
     },
     {
       "name": "logo_blue",
-      "value": "#00A5F6"
+      "value": "#5B8DEF"
     },
     {
       "name": "logo_red",
@@ -87,6 +91,30 @@
     {
       "name": "logo_amber",
       "value": "#FFB700"
+    },
+    {
+      "name": "search_pill_bg",
+      "value": "#646986"
+    },
+    {
+      "name": "search_pill_border",
+      "value": "#84899C"
+    },
+    {
+      "name": "menu_icon",
+      "value": "#9F9F9F"
+    },
+    {
+      "name": "menu_text",
+      "value": "#C5C5C5"
+    },
+    {
+      "name": "menu_bg",
+      "value": "#1C1B1D"
+    },
+    {
+      "name": "home_title",
+      "value": "#888CA7"
     }
   ]
 }
