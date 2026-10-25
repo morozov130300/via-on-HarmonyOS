@@ -1,102 +1,121 @@
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
+import { BrowserDb } from '../common/Database'
+import { BookmarkRec } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
-import { AppIcon } from './AppIcon'
 
-class QuickSite {
-  name: string
-  url: string
-  color: string
-  initial: string
-
-  constructor(name: string, url: string, color: string, initial: string) {
-    this.name = name
-    this.url = url
-    this.color = color
-    this.initial = initial
-  }
-}
-
-const QUICK_SITES: QuickSite[] = [
-  new QuickSite('百度', 'https://www.baidu.com', '#2932E1', '百'),
-  new QuickSite('知乎', 'https://www.zhihu.com', '#0084FF', '知'),
-  new QuickSite('微博', 'https://weibo.com', '#E6162D', '微'),
-  new QuickSite('哔哩哔哩', 'https://www.bilibili.com', '#FB7299', 'B'),
-  new QuickSite('淘宝', 'https://www.taobao.com', '#FF5000', '淘'),
-  new QuickSite('京东', 'https://www.jd.com', '#E1251B', '京'),
-  new QuickSite('网易', 'https://www.163.com', '#DD1A21', '网'),
-  new QuickSite('腾讯', 'https://www.qq.com', '#12B7F5', '腾')
-]
+const HOME_BOOKMARK_LIMIT: number = 8
 
 @ComponentV2
 export struct HomePage {
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
+  private db: BrowserDb = BrowserDb.getInstance()
   @Event onSearchTap: () => void = () => {}
+  @Local bookmarks: BookmarkRec[] = []
+
+  aboutToAppear(): void {
+    this.db.listBookmarks().then((items: BookmarkRec[]) => {
+      this.bookmarks = items
+    }).catch((error: BusinessError) => {
+      console.error(`list bookmarks failed: ${error.message}`)
+    })
+  }
 
   build() {
-    Column({ space: 28 }) {
-      Blank()
-      Column({ space: 12 }) {
-        Image($rawfile('logo.svg'))
-          .width(64)
-          .height(64)
-        Text($r('app.string.logo_slogan'))
-          .fontSize(13)
-          .fontColor($r('app.color.fg_secondary'))
-      }
+    Column() {
       Row() {
-        Row({ space: 8 }) {
-          AppIcon({ icon: $r('sys.symbol.magnifyingglass'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-          Text($r('app.string.search_or_type_url'))
-            .fontSize(15)
-            .fontColor($r('app.color.fg_secondary'))
-        }
-        .height(44)
-        .padding({ left: 16, right: 16 })
-        .backgroundColor($r('app.color.surface'))
-        .borderRadius(22)
-        .constraintSize({ minWidth: '60%' })
-        .onClick(() => {
-          this.onSearchTap()
-        })
+        Text($r('app.string.home_page'))
+          .fontSize(16)
+          .fontColor($r('app.color.home_title'))
+          .maxLines(1)
       }
       .width('100%')
+      .height(38)
       .justifyContent(FlexAlign.Center)
-
-      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center }) {
-        ForEach(QUICK_SITES, (site: QuickSite) => {
-          Column({ space: 6 }) {
-            Text(site.initial)
-              .fontSize(20)
-              .fontColor(Color.White)
-              .width(48)
-              .height(48)
-              .textAlign(TextAlign.Center)
-              .borderRadius(24)
-              .backgroundColor(site.color)
-            Text(site.name)
-              .fontSize(12)
-              .fontColor($r('app.color.fg_secondary'))
-              .maxLines(1)
-          }
-          .width('25%')
-          .padding({ top: 8, bottom: 8 })
-          .onClick(() => {
-            this.tabStore.navigate(site.url)
-          })
-        }, (site: QuickSite) => site.url)
-      }
-      .width('90%')
+      .alignItems(VerticalAlign.Center)
 
       Blank()
+
+      Column({ space: 10 }) {
+        Image($rawfile('logo.svg'))
+          .width(56)
+          .height(56)
+        Text($r('app.string.logo_slogan'))
+          .fontSize(12)
+          .fontColor($r('app.color.fg_secondary'))
+      }
+
+      Row() {
+        Text($r('app.string.search'))
+          .fontSize(15)
+          .fontColor($r('app.color.search_pill_border'))
+          .maxLines(1)
+      }
+      .height(38)
+      .padding({ left: 40, right: 40 })
+      .backgroundColor($r('app.color.search_pill_bg'))
+      .borderRadius(19)
+      .margin({ top: 24 })
+      .justifyContent(FlexAlign.Center)
+      .onClick(() => {
+        this.onSearchTap()
+      })
+
+      if (this.bookmarks.length > 0) {
+        Grid() {
+          ForEach(this.bookmarks, (item: BookmarkRec) => {
+            if (this.bookmarks.indexOf(item) < HOME_BOOKMARK_LIMIT) {
+              GridItem() {
+                Column({ space: 6 }) {
+                  Text(this.shortLabel(item.title, item.url))
+                    .fontSize(18)
+                    .fontColor(Color.White)
+                    .width(42)
+                    .height(42)
+                    .textAlign(TextAlign.Center)
+                    .borderRadius(21)
+                    .backgroundColor('#646986')
+                  Text(item.title !== '' ? item.title : hostOf(item.url))
+                    .fontSize(11)
+                    .fontColor($r('app.color.fg_secondary'))
+                    .maxLines(1)
+                    .constraintSize({ maxWidth: 76 })
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+                .padding({ top: 4, bottom: 4 })
+              }
+              .onClick(() => {
+                this.tabStore.navigate(item.url)
+              })
+            }
+          }, (item: BookmarkRec) => `${item.id}_${item.title}`)
+        }
+        .columnsTemplate('1fr 1fr 1fr 1fr')
+        .columnsGap(8)
+        .rowsGap(10)
+        .width('88%')
+        .margin({ top: 28 })
+        .height(this.bookmarks.length > 4 ? 130 : 68)
+      }
+
+      Blank()
+
       Text($r('app.string.blocked_ads_count', this.settings.adBlockTotal))
-        .fontSize(12)
+        .fontSize(11)
         .fontColor($r('app.color.fg_secondary'))
-        .padding({ bottom: 8 })
+        .padding({ bottom: 6 })
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor($r('app.color.home_bg'))
+  }
+
+  private shortLabel(title: string, url: string): string {
+    const source = title.trim() !== '' ? title : hostOf(url)
+    if (source === '') {
+      return '书'
+    }
+    return source.substring(0, 1)
   }
 }

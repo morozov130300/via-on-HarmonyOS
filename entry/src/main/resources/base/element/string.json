@@ -21,6 +21,10 @@
       "value": "搜索或输入网址"
     },
     {
+      "name": "search",
+      "value": "搜索"
+    },
+    {
       "name": "blocked_ads_count",
       "value": "已拦截 %d 个广告"
     },
@@ -114,7 +118,35 @@
     },
     {
       "name": "find_in_page",
-      "value": "页面内查找"
+      "value": "页内查找"
+    },
+    {
+      "name": "offline_page",
+      "value": "离线页面"
+    },
+    {
+      "name": "translate",
+      "value": "翻译"
+    },
+    {
+      "name": "add_to_desktop",
+      "value": "添加到桌面"
+    },
+    {
+      "name": "scripts",
+      "value": "脚本"
+    },
+    {
+      "name": "ai",
+      "value": "AI"
+    },
+    {
+      "name": "print_pdf",
+      "value": "打印/PDF"
+    },
+    {
+      "name": "net_log",
+      "value": "网络日志"
     },
     {
       "name": "reader_mode",
@@ -419,6 +451,194 @@
     {
       "name": "read_pasteboard_reason",
       "value": "用于读取剪贴板内容，提供粘贴并前往功能"
+    },
+    {
+      "name": "incognito",
+      "value": "隐身"
+    },
+    {
+      "name": "toolbox",
+      "value": "工具箱"
+    },
+    {
+      "name": "exit_app",
+      "value": "退出"
+    },
+    {
+      "name": "general",
+      "value": "通用"
+    },
+    {
+      "name": "customize",
+      "value": "定制"
+    },
+    {
+      "name": "privacy",
+      "value": "隐私"
+    },
+    {
+      "name": "advanced",
+      "value": "高级"
+    },
+    {
+      "name": "script",
+      "value": "脚本"
+    },
+    {
+      "name": "sync",
+      "value": "同步"
+    },
+    {
+      "name": "browser_ua",
+      "value": "浏览器标识"
+    },
+    {
+      "name": "password_manager",
+      "value": "密码管理器"
+    },
+    {
+      "name": "toolbar_settings",
+      "value": "工具栏设置"
+    },
+    {
+      "name": "customize_menu",
+      "value": "定制菜单"
+    },
+    {
+      "name": "customize_long_press_menu",
+      "value": "定制长按菜单"
+    },
+    {
+      "name": "language",
+      "value": "语言"
+    },
+    {
+      "name": "language_value",
+      "value": "中文(简体)"
+    },
+    {
+      "name": "search_settings",
+      "value": "搜索设置"
+    },
+    {
+      "name": "ai_settings",
+      "value": "AI 设置"
+    },
+    {
+      "name": "ua_iphone",
+      "value": "iPhone"
+    },
+    {
+      "name": "ua_default",
+      "value": "默认"
+    },
+    {
+      "name": "ignore_ssl_warning",
+      "value": "忽略 SSL 证书警告"
+    },
+    {
+      "name": "disable_custom_tabs",
+      "value": "禁用 Custom Tabs"
+    },
+    {
+      "name": "disable_safe_browsing",
+      "value": "禁用安全浏览"
+    },
+    {
+      "name": "data_saver",
+      "value": "流量节省"
+    },
+    {
+      "name": "data_saver_desc",
+      "value": "请求网站节省流量"
+    },
+    {
+      "name": "allow_web_debug",
+      "value": "允许调试网页"
+    },
+    {
+      "name": "auto_sniff_button",
+      "value": "自动展示嗅探按钮"
+    },
+    {
+      "name": "do_not_sell",
+      "value": "不出售或分享数据"
+    },
+    {
+      "name": "do_not_sell_desc",
+      "value": "请求网站不出售或分享我的数据以保护隐私 (实验性)"
+    },
+    {
+      "name": "do_not_track",
+      "value": "不跟踪"
+    },
+    {
+      "name": "disable_webrtc",
+      "value": "禁用 WebRTC"
+    },
+    {
+      "name": "check_update",
+      "value": "检查更新"
+    },
+    {
+      "name": "open_source_license",
+      "value": "开源许可协议"
+    },
+    {
+      "name": "terms_of_use",
+      "value": "使用协议"
+    },
+    {
+      "name": "privacy_policy",
+      "value": "隐私政策"
+    },
+    {
+      "name": "join_qq_group",
+      "value": "加入 QQ 群组"
+    },
+    {
+      "name": "contact_by_email",
+      "value": "通过邮件联系我"
+    },
+    {
+      "name": "wechat_account",
+      "value": "微信公众号"
+    },
+    {
+      "name": "help_translate",
+      "value": "协助翻译"
+    },
+    {
+      "name": "enable_script",
+      "value": "启用脚本"
+    },
+    {
+      "name": "auto_update",
+      "value": "自动更新"
+    },
+    {
+      "name": "update_freq_daily",
+      "value": "每天"
+    },
+    {
+      "name": "web_accelerator",
+      "value": "网页加速器"
+    },
+    {
+      "name": "immersive_translate",
+      "value": "沉浸式翻译"
+    },
+    {
+      "name": "github_cn_plugin",
+      "value": "GitHub 中文化插件"
+    },
+    {
+      "name": "home_default",
+      "value": "默认"
+    },
+    {
+      "name": "feature_wip",
+      "value": "功能开发中"
     }
   ]
 }
