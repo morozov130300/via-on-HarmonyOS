@@ -41,6 +41,7 @@ export class AppSettings {
   @Trace customRules: RuleEntry[] = []
   @Trace userScripts: UserScriptRec[] = []
   @Trace scriptNextId: number = 1
+  @Trace ruleSubUrl: string = ''
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -105,6 +106,7 @@ export class AppSettings {
       this.customRules = await this.readRules()
       this.userScripts = await this.readScripts()
       this.scriptNextId = await this.readNumber('scriptNextId', 1)
+      this.ruleSubUrl = await this.readString('ruleSubUrl', '')
     } catch (error) {
       const err = error as BusinessError
       console.error(`settings init failed: ${err.code} ${err.message}`)
@@ -193,6 +195,11 @@ export class AppSettings {
   setHomeUrl(url: string): void {
     this.homeUrl = url
     this.flushKey('homeUrl', url)
+  }
+
+  setRuleSubUrl(url: string): void {
+    this.ruleSubUrl = url
+    this.flushKey('ruleSubUrl', url)
   }
 
   uaForHost(host: string): string | null {

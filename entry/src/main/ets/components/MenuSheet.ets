@@ -10,6 +10,8 @@ export struct MenuSheet {
   @Event onClose: () => void = () => {}
   @Event onOpenPage: (page: string) => void = (page: string) => {}
   @Event onFindInPage: () => void = () => {}
+  @Event onReader: () => void = () => {}
+  @Event onQr: () => void = () => {}
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
 
@@ -54,6 +56,18 @@ export struct MenuSheet {
             this.MenuRow($r('sys.symbol.magnifyingglass'), $r('app.string.find_in_page'), () => {
               this.onClose()
               this.onFindInPage()
+            })
+            this.MenuRow($r('sys.symbol.doc_text'), $r('app.string.reader_mode'), () => {
+              this.onClose()
+              this.onReader()
+            })
+            this.MenuRow($r('sys.symbol.qrcode'), $r('app.string.qr_code'), () => {
+              this.onClose()
+              this.onQr()
+            })
+            this.MenuRow($r('sys.symbol.info_circle'), $r('app.string.page_info'), () => {
+              this.onClose()
+              this.showPageInfo()
             })
             this.ToggleRow($r('sys.symbol.moon'), $r('app.string.night_mode'), this.settings.nightMode, (isOn: boolean) => {
               this.settings.setNightMode(isOn)
@@ -146,6 +160,20 @@ export struct MenuSheet {
     } catch (error) {
       console.error('refresh after pc mode failed')
     }
+  }
+
+  private showPageInfo(): void {
+    const tab = this.tabStore.current()
+    AlertDialog.show({
+      title: $r('app.string.page_info'),
+      message: `${tab.title}\n${tab.url}`,
+      alignment: DialogAlignment.Bottom,
+      secondaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+        }
+      }
+    })
   }
 
   private addBookmark(): void {

@@ -10,6 +10,7 @@ export struct Toolbar {
   @Event onTabs: () => void = () => {}
   @Event onMenu: () => void = () => {}
   private tabStore: TabStore = TabStore.getInstance()
+  private swipeOffset: number = 0
 
   build() {
     Row() {
@@ -48,6 +49,18 @@ export struct Toolbar {
     .width('100%')
     .height(48)
     .padding({ left: 8, right: 8 })
+    .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 40 })
+      .onActionUpdate((event: GestureEvent) => {
+        this.swipeOffset = event.offsetX
+      })
+      .onActionEnd(() => {
+        if (this.swipeOffset < -40) {
+          this.tabStore.stepTab(1)
+        } else if (this.swipeOffset > 40) {
+          this.tabStore.stepTab(-1)
+        }
+        this.swipeOffset = 0
+      }))
   }
 
   @Builder

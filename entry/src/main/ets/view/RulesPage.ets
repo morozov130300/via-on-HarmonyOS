@@ -2,12 +2,21 @@ import { RuleEntry } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
 import { AppIcon } from '../components/AppIcon'
+import { http } from '@kit.NetworkKit'
+
+const SUBSCRIBE_MAX_LINES: number = 20000
 
 @ComponentV2
 export struct RulesPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
   @Local domainInput: string = ''
+  @Local subInput: string = ''
+  @Local subscribing: boolean = false
+
+  aboutToAppear(): void {
+    this.subInput = this.settings.ruleSubUrl
+  }
 
   build() {
     NavDestination() {
@@ -53,6 +62,29 @@ export struct RulesPage {
           .layoutWeight(1)
           .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
         }
+        Row({ space: 8 }) {
+          TextInput({ placeholder: $r('app.string.subscription_url_hint'), text: this.subInput })
+            .layoutWeight(1)
+            .height(40)
+            .fontSize(13)
+            .backgroundColor($r('app.color.surface'))
+            .fontColor($r('app.color.fg'))
+            .placeholderColor($r('app.color.fg_secondary'))
+            .caretColor($r('app.color.accent'))
+            .onChange((value: string) => {
+              this.subInput = value
+            })
+          Button(this.subscribing ? '...' : $r('app.string.update_subscription'))
+            .fontSize(13)
+            .height(36)
+            .backgroundColor($r('app.color.surface'))
+            .fontColor($r('app.color.fg'))
+            .onClick(() => {
+              this.subscribe()
+            })
+        }
+        .width('100%')
+        .padding(12)
         Row({ space: 8 }) {
           TextInput({ placeholder: $r('app.string.rule_hint'), text: this.domainInput })
             .layoutWeight(1)
@@ -107,6 +139,67 @@ export struct RulesPage {
   private removeRule(rule: RuleEntry): void {
     this.settings.removeRule(rule.domain)
     AdBlocker.getInstance().rebuildCustomRules()
+  }
+
+  private async subscribe(): Promise<void> {
+    if (this.subscribing) {
+      return
+    }
+    const url = this.subInput.trim()
+    if (url === '') {
+      return
+    }
+    this.subscribing = true
+    this.settings.setRuleSubUrl(url)
+    const request = http.createHttp()
+    try {
+      const response = await request.request(url, {
+        method: http.RequestMethod.GET,
+        connectTimeout: 10000,
+        readTimeout: 30000,
+        usingCache: false
+      })
+      const body = response.result
+      if (typeof body !== 'string') {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_failed'), duration: 1500 })
+        this.subscribing = false
+        request.destroy()
+        return
+      }
+      const lines = body.split('\n')
+      let added = 0
+      for (let i = 0; i < lines.length && i < SUBSCRIBE_MAX_LINES; i++) {
+        const line = lines[i].trim()
+        if (line === '' || line.startsWith('!') || line.startsWith('[')) {
+          continue
+        }
+        const isAllow = line.startsWith('@@')
+        const rest = isAllow ? line.substring(2) : line
+        if (!rest.startsWith('||')) {
+          continue
+        }
+        let host = rest.substring(2).toLowerCase()
+        const cutChars = ['^', '/', '$', '|', '?', ',']
+        for (let j = 0; j < cutChars.length; j++) {
+          const pos = host.indexOf(cutChars[j])
+          if (pos >= 0) {
+            host = host.substring(0, pos)
+          }
+        }
+        if (host !== '' && host.indexOf('*') < 0 && host.indexOf('.') > 0) {
+          this.settings.addRule(host, isAllow)
+          added = added + 1
+        }
+      }
+      AdBlocker.getInstance().rebuildCustomRules()
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.rules_added', added), duration: 1500 })
+    } catch (error) {
+      const err = error as BusinessError
+      console.error(`subscribe rules failed: ${err.message}`)
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_failed'), duration: 1500 })
+    }
+    this.subscribing = false
+    request.destroy()
   }
 }
 
