@@ -1,10 +1,50 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "release",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "signing/uplayer.p12",
+          "storePassword": "000000301CBD3D1781DDE1E36E91F01FAE28EE0753C440C616DEA2064B168E41BB79B8337C4536427D9B0155C2F37FCD9175A30DFB8CE9F7E9727CF551C28A59",
+          "keyAlias": "uplayer",
+          "keyPassword": "00000030B733642B14B31C42E5CB3D70FB141969D9AD4A17221AC03FBB6ED0E01D82E7599B99681F4182748D20FC63052443000D0131583CB646C90E2A99BC2B",
+          "signAlg": "SHA256withECDSA",
+          "profile": "signing/发布Release.p7b",
+          "certpath": "signing/发布.cer"
+        }
+      },
+      {
+        "name": "debug",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "signing/uplayer.p12",
+          "storePassword": "000000301CBD3D1781DDE1E36E91F01FAE28EE0753C440C616DEA2064B168E41BB79B8337C4536427D9B0155C2F37FCD9175A30DFB8CE9F7E9727CF551C28A59",
+          "keyAlias": "uplayer",
+          "keyPassword": "00000030B733642B14B31C42E5CB3D70FB141969D9AD4A17221AC03FBB6ED0E01D82E7599B99681F4182748D20FC63052443000D0131583CB646C90E2A99BC2B",
+          "signAlg": "SHA256withECDSA",
+          "profile": "signing/调试Debug.p7b",
+          "certpath": "signing/调试.cer"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
-        "signingConfig": "default",
+        "signingConfig": "debug",
+        "targetSdkVersion": "26.0.0",
+        "compatibleSdkVersion": "26.0.0",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      },
+      {
+        "name": "release",
+        "signingConfig": "release",
         "targetSdkVersion": "26.0.0",
         "compatibleSdkVersion": "26.0.0",
         "runtimeOS": "HarmonyOS",
