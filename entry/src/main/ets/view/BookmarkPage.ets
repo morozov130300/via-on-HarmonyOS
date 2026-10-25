@@ -137,7 +137,7 @@ export struct BookmarkPage {
           .fontColor($r('app.color.fg_secondary'))
           .padding({ left: 10, right: 10, top: 10, bottom: 10 })
           .onClick(() => {
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+            this.navPathStack.pushPathByName('offlinePage', '', true)
           })
       }
       .layoutWeight(1)
