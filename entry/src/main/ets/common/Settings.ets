@@ -42,6 +42,16 @@ export class AppSettings {
   @Trace userScripts: UserScriptRec[] = []
   @Trace scriptNextId: number = 1
   @Trace ruleSubUrl: string = ''
+  @Trace scriptEnabled: boolean = true
+  @Trace doNotTrack: boolean = false
+  @Trace disableWebRtc: boolean = false
+  @Trace doNotSell: boolean = false
+  @Trace dataSaver: boolean = false
+  @Trace autoSniffButton: boolean = false
+  @Trace allowDebugWeb: boolean = false
+  @Trace disableCustomTabs: boolean = false
+  @Trace disableSafeBrowsing: boolean = false
+  @Trace ignoreSslWarning: boolean = false
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -107,6 +117,16 @@ export class AppSettings {
       this.userScripts = await this.readScripts()
       this.scriptNextId = await this.readNumber('scriptNextId', 1)
       this.ruleSubUrl = await this.readString('ruleSubUrl', '')
+      this.scriptEnabled = await this.readBoolean('scriptEnabled', true)
+      this.doNotTrack = await this.readBoolean('doNotTrack', false)
+      this.disableWebRtc = await this.readBoolean('disableWebRtc', false)
+      this.doNotSell = await this.readBoolean('doNotSell', false)
+      this.dataSaver = await this.readBoolean('dataSaver', false)
+      this.autoSniffButton = await this.readBoolean('autoSniffButton', false)
+      this.allowDebugWeb = await this.readBoolean('allowDebugWeb', false)
+      this.disableCustomTabs = await this.readBoolean('disableCustomTabs', false)
+      this.disableSafeBrowsing = await this.readBoolean('disableSafeBrowsing', false)
+      this.ignoreSslWarning = await this.readBoolean('ignoreSslWarning', false)
     } catch (error) {
       const err = error as BusinessError
       console.error(`settings init failed: ${err.code} ${err.message}`)
@@ -200,6 +220,56 @@ export class AppSettings {
   setRuleSubUrl(url: string): void {
     this.ruleSubUrl = url
     this.flushKey('ruleSubUrl', url)
+  }
+
+  setScriptEnabled(on: boolean): void {
+    this.scriptEnabled = on
+    this.flushKey('scriptEnabled', on)
+  }
+
+  setDoNotTrack(on: boolean): void {
+    this.doNotTrack = on
+    this.flushKey('doNotTrack', on)
+  }
+
+  setDisableWebRtc(on: boolean): void {
+    this.disableWebRtc = on
+    this.flushKey('disableWebRtc', on)
+  }
+
+  setDoNotSell(on: boolean): void {
+    this.doNotSell = on
+    this.flushKey('doNotSell', on)
+  }
+
+  setDataSaver(on: boolean): void {
+    this.dataSaver = on
+    this.flushKey('dataSaver', on)
+  }
+
+  setAutoSniffButton(on: boolean): void {
+    this.autoSniffButton = on
+    this.flushKey('autoSniffButton', on)
+  }
+
+  setAllowDebugWeb(on: boolean): void {
+    this.allowDebugWeb = on
+    this.flushKey('allowDebugWeb', on)
+  }
+
+  setDisableCustomTabs(on: boolean): void {
+    this.disableCustomTabs = on
+    this.flushKey('disableCustomTabs', on)
+  }
+
+  setDisableSafeBrowsing(on: boolean): void {
+    this.disableSafeBrowsing = on
+    this.flushKey('disableSafeBrowsing', on)
+  }
+
+  setIgnoreSslWarning(on: boolean): void {
+    this.ignoreSslWarning = on
+    this.flushKey('ignoreSslWarning', on)
   }
 
   uaForHost(host: string): string | null {
