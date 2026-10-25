@@ -15,6 +15,7 @@ import { FindBar } from '../components/FindBar'
 import { Reader } from '../common/Reader'
 import { TtsManager } from '../common/Tts'
 import { ReaderView } from '../components/ReaderView'
+import { AiPanel } from '../components/AiPanel'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
@@ -39,6 +40,8 @@ struct Index {
   @Local showTabPanel: boolean = false
   @Local showMenu: boolean = false
   @Local showFindBar: boolean = false
+
+  @Local showAi: boolean = false
   @Local showReader: boolean = false
   @Local readerText: string = ''
   @Local exitHintTime: number = 0
@@ -83,6 +86,10 @@ struct Index {
   onBackPress(): boolean {
     if (this.showSearch) {
       this.showSearch = false
+      return true
+    }
+    if (this.showAi) {
+      this.showAi = false
       return true
     }
     if (this.showReader) {
@@ -138,7 +145,10 @@ struct Index {
             ForEach(this.tabStore.tabs, (tab: TabItem) => {
               TabContent() {
                 Stack() {
-                  TabWeb({ tab: tab })
+                  TabWeb({ tab: tab, onAutoReader: (text: string) => {
+                    this.readerText = text
+                    this.showReader = true
+                  } })
                   if (tab.isHomePage()) {
                     HomePage({ onSearchTap: () => {
                       this.showSearch = true
@@ -245,6 +255,9 @@ struct Index {
           },
           onSavePage: () => {
             this.saveCurrentPageAsPdf()
+          },
+          onOpenAi: () => {
+            this.showAi = true
           }
         })
       }
@@ -268,6 +281,13 @@ struct Index {
           },
           onStopSpeak: () => {
             this.tts.stop()
+          }
+        })
+      }
+      if (this.showAi) {
+        AiPanel({
+          onClose: () => {
+            this.showAi = false
           }
         })
       }

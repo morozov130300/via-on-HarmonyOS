@@ -59,6 +59,11 @@ export class TabStore {
     }
     const tab = new TabItem(this.nextTabId, incognito)
     this.nextTabId = this.nextTabId + 1
+    const settings = AppSettings.getInstance()
+    if (!incognito && settings.homepageMode === 1 && settings.homeUrl !== '') {
+      tab.initialUrl = settings.homeUrl
+      tab.url = settings.homeUrl
+    }
     this.tabs.push(tab)
     this.currentIndex = this.tabs.length - 1
     return true
@@ -111,6 +116,11 @@ export class TabStore {
   }
 
   gotoHome(): void {
+    const settings = AppSettings.getInstance()
+    if (settings.homepageMode === 1 && settings.homeUrl !== '') {
+      this.navigate(settings.homeUrl)
+      return
+    }
     const tab = this.current()
     tab.isError = false
     tab.errorDesc = ''

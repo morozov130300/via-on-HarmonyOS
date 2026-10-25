@@ -26,6 +26,7 @@ export struct MenuSheet {
   @Event onFindInPage: () => void = () => {}
   @Event onShare: () => void = () => {}
   @Event onSavePage: () => void = () => {}
+  @Event onOpenAi: () => void = () => {}
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   @Local showToolbox: boolean = false
@@ -59,57 +60,77 @@ export struct MenuSheet {
   @Builder
   MainGrid() {
     Grid() {
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_bookmark'), $r('app.string.bookmarks'), () => {
-          this.onOpenPage('bookmarks')
-        })
+      if (!this.hidden('bookmarks')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_bookmark'), $r('app.string.bookmarks'), () => {
+            this.onOpenPage('bookmarks')
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_history'), $r('app.string.history'), () => {
-          this.onOpenPage('history')
-        })
+      if (!this.hidden('history')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_history'), $r('app.string.history'), () => {
+            this.onOpenPage('history')
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_download'), $r('app.string.downloads'), () => {
-          this.onOpenPage('downloads')
-        })
+      if (!this.hidden('downloads')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_download'), $r('app.string.downloads'), () => {
+            this.onOpenPage('downloads')
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_incognito'), $r('app.string.incognito'), () => {
-          this.openIncognito()
-        })
+      if (!this.hidden('incognito')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_incognito'), $r('app.string.incognito'), () => {
+            this.openIncognito()
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_share'), $r('app.string.share'), () => {
-          this.onClose()
-          this.onShare()
-        })
+      if (!this.hidden('share')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_share'), $r('app.string.share'), () => {
+            this.onClose()
+            this.onShare()
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_add_bookmark'), $r('app.string.add_bookmark'), () => {
-          this.addBookmark()
-        })
+      if (!this.hidden('add_bookmark')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_add_bookmark'), $r('app.string.add_bookmark'), () => {
+            this.addBookmark()
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_pc_mode'), $r('app.string.pc_mode'), () => {
-          this.toggleSitePcMode()
-        })
+      if (!this.hidden('pc_mode')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_pc_mode'), $r('app.string.pc_mode'), () => {
+            this.toggleSitePcMode()
+          })
+        }
       }
-      GridItem() {
-        this.GridCellBody($r('app.media.via_ic_save'), $r('app.string.save'), !this.tabStore.current().isHomePage(), () => {
-          this.onClose()
-          this.onSavePage()
-        })
+      if (!this.hidden('save')) {
+        GridItem() {
+          this.GridCellBody($r('app.media.via_ic_save'), $r('app.string.save'), !this.tabStore.current().isHomePage(), () => {
+            this.onClose()
+            this.onSavePage()
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_toolbox'), $r('app.string.toolbox'), () => {
-          this.showToolbox = true
-        })
+      if (!this.hidden('toolbox')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_toolbox'), $r('app.string.toolbox'), () => {
+            this.showToolbox = true
+          })
+        }
       }
-      GridItem() {
-        this.GridCell($r('app.media.via_ic_settings'), $r('app.string.settings'), () => {
-          this.onOpenPage('settings')
-        })
+      if (!this.hidden('settings')) {
+        GridItem() {
+          this.GridCell($r('app.media.via_ic_settings'), $r('app.string.settings'), () => {
+            this.onOpenPage('settings')
+          })
+        }
       }
     }
     .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
@@ -122,56 +143,77 @@ export struct MenuSheet {
   ToolboxPanel() {
     Column() {
       Grid() {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_find'), $r('app.string.find_in_page'), () => {
-            this.onClose()
-            this.onFindInPage()
-          })
+        if (!this.hidden('find')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_find'), $r('app.string.find_in_page'), () => {
+              this.onClose()
+              this.onFindInPage()
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_offline'), $r('app.string.offline_page'), () => {
-            this.onOpenPage('offlinePage')
-          })
+        if (!this.hidden('offline')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_offline'), $r('app.string.offline_page'), () => {
+              this.onOpenPage('offlinePage')
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_translate'), $r('app.string.translate'), () => {
-            this.translatePage()
-          })
+        if (!this.hidden('translate')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_translate'), $r('app.string.translate'), () => {
+              this.translatePage()
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_add_to_desktop'), $r('app.string.add_to_desktop'), () => {
-            this.addToDesktop()
-          })
+        if (!this.hidden('add_to_desktop')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_add_to_desktop'), $r('app.string.add_to_desktop'), () => {
+              this.addToDesktop()
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_script'), $r('app.string.scripts'), () => {
-            this.onOpenPage('settingsScript')
-          })
+        if (!this.hidden('script')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_script'), $r('app.string.scripts'), () => {
+              this.onOpenPage('settingsScript')
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_adblock'), $r('app.string.ad_block'), () => {
-            this.onOpenPage('rules')
-          })
+        if (!this.hidden('adblock')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_adblock'), $r('app.string.ad_block'), () => {
+              this.onOpenPage('rules')
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_ai'), $r('app.string.ai'), () => {
-            this.notImplemented()
-          })
+        if (!this.hidden('ai')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_ai'), $r('app.string.ai'), () => {
+              this.onClose()
+              this.onOpenAi()
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_print'), $r('app.string.print_pdf'), () => {
-            this.printPage()
-          })
+        if (!this.hidden('print')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_print'), $r('app.string.print_pdf'), () => {
+              this.printPage()
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_ua'), $r('app.string.browser_ua'), () => {
-            this.pickUa()
-          })
+        if (!this.hidden('ua')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_ua'), $r('app.string.browser_ua'), () => {
+              this.pickUa()
+            })
+          }
         }
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_netlog'), $r('app.string.net_log'), () => {
-            this.onOpenPage('netLog')
-          })
+        if (!this.hidden('netlog')) {
+          GridItem() {
+            this.GridCell($r('app.media.via_ic_netlog'), $r('app.string.net_log'), () => {
+              this.onOpenPage('netLog')
+            })
+          }
         }
       }
       .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
@@ -358,6 +400,10 @@ export struct MenuSheet {
       console.error('refresh after ua change failed')
     }
     this.onClose()
+  }
+
+  private hidden(id: string): boolean {
+    return this.settings.menuHidden.indexOf(id) >= 0
   }
 
   private notImplemented(): void {

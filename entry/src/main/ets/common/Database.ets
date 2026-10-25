@@ -227,4 +227,11 @@ export class BrowserDb {
     }
     await this.rdb.delete(new relationalStore.RdbPredicates('downloads'))
   }
+
+  async clearBookmarks(): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    await this.rdb.delete(new relationalStore.RdbPredicates('bookmarks'))
+  }
 }

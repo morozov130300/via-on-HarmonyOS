@@ -1,3 +1,5 @@
+import { http } from '@kit.NetworkKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { UserScriptRec } from '../common/Types'
 import { SettingToggleRow, SettingNavRow } from '../components/SettingRows'
@@ -5,6 +7,7 @@ import { SettingToggleRow, SettingNavRow } from '../components/SettingRows'
 @ComponentV2
 export struct SettingsScriptPage {
   private settings: AppSettings = AppSettings.getInstance()
+  @Local updating: boolean = false
 
   build() {
     NavDestination() {
@@ -13,8 +16,8 @@ export struct SettingsScriptPage {
           SettingToggleRow({ rowLabel: '启用脚本', isToggleOn: this.settings.scriptEnabled, onToggleRow: (isOn: boolean) => {
             this.settings.setScriptEnabled(isOn)
           } })
-          SettingNavRow({ rowLabel: '自动更新', rowValue: '每天', onTapRow: () => {
-            this.notImplemented()
+          SettingToggleRow({ rowLabel: '自动更新', isToggleOn: this.settings.scriptAutoUpdate, onToggleRow: (isOn: boolean) => {
+            this.settings.setScriptAutoUpdate(isOn)
           } })
           if (this.settings.userScripts.length > 0) {
             Text('脚本')
@@ -52,14 +55,61 @@ export struct SettingsScriptPage {
         value: '更新',
         icon: $r('sys.symbol.arrow_clockwise'),
         action: () => {
-          this.notImplemented()
+          this.updateScripts()
         }
       }
     ])
   }
 
-  private notImplemented(): void {
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+  private updateScripts(): void {
+    if (this.updating) {
+      return
+    }
+    let pending = 0
+    for (let i = 0; i < this.settings.userScripts.length; i++) {
+      if (this.settings.userScripts[i].sourceUrl !== '') {
+        pending++
+      }
+    }
+    if (pending === 0) {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.script_updated'), duration: 1500 })
+      return
+    }
+    this.updating = true
+    let done = 0
+    const finish = (): void => {
+      done++
+      if (done >= pending) {
+        this.updating = false
+        this.settings.markScriptsUpdated()
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.script_updated'), duration: 1500 })
+      }
+    }
+    const scripts = this.settings.userScripts
+    for (let i = 0; i < scripts.length; i++) {
+      const script = scripts[i]
+      if (script.sourceUrl === '') {
+        continue
+      }
+      const request = http.createHttp()
+      request.request(script.sourceUrl, {
+        method: http.RequestMethod.GET,
+        connectTimeout: 10000,
+        readTimeout: 20000,
+        usingCache: false
+      }).then((response: http.HttpResponse) => {
+        const body = response.result
+        if (typeof body === 'string' && body.trim() !== '') {
+          script.code = body
+          this.settings.saveScript(script)
+        }
+      }).catch((error: BusinessError) => {
+        console.error(`update script ${script.name} failed: ${error.message}`)
+      }).finally(() => {
+        request.destroy()
+        finish()
+      })
+    }
   }
 }
 

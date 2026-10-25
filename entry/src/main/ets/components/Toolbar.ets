@@ -1,5 +1,6 @@
 import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
+import { AppSettings } from '../common/Settings'
 import { ViaIcon } from './ViaIcon'
 
 @ComponentV2
@@ -11,19 +12,26 @@ export struct Toolbar {
   @Event onTabs: () => void = () => {}
   @Event onMenu: () => void = () => {}
   private tabStore: TabStore = TabStore.getInstance()
+  private settings: AppSettings = AppSettings.getInstance()
   private swipeOffset: number = 0
 
   build() {
     Row() {
-      this.ToolButton($r('app.media.via_ic_back'), this.tab.canBack, () => {
-        this.onBack()
-      })
-      this.ToolButton($r('app.media.via_ic_forward'), this.tab.canForward, () => {
-        this.onForward()
-      })
-      this.ToolButton($r('app.media.via_ic_home'), true, () => {
-        this.onHome()
-      })
+      if (!this.hidden('back')) {
+        this.ToolButton($r('app.media.via_ic_back'), this.tab.canBack, () => {
+          this.onBack()
+        })
+      }
+      if (!this.hidden('forward')) {
+        this.ToolButton($r('app.media.via_ic_forward'), this.tab.canForward, () => {
+          this.onForward()
+        })
+      }
+      if (!this.hidden('home')) {
+        this.ToolButton($r('app.media.via_ic_home'), true, () => {
+          this.onHome()
+        })
+      }
       Column() {
         Text(String(this.tabStore.tabs.length))
           .fontSize(16)
@@ -58,6 +66,10 @@ export struct Toolbar {
         }
         this.swipeOffset = 0
       }))
+  }
+
+  private hidden(id: string): boolean {
+    return this.settings.toolbarHidden.indexOf(id) >= 0
   }
 
   @Builder

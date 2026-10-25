@@ -74,6 +74,31 @@
       "name": "netLog",
       "pageSourceFile": "src/main/ets/view/NetLogPage.ets",
       "buildFunction": "NetLogPageBuilder"
+    },
+    {
+      "name": "menuCustom",
+      "pageSourceFile": "src/main/ets/view/SettingsMenuPage.ets",
+      "buildFunction": "SettingsMenuPageBuilder"
+    },
+    {
+      "name": "toolbarCustom",
+      "pageSourceFile": "src/main/ets/view/SettingsToolbarPage.ets",
+      "buildFunction": "SettingsToolbarPageBuilder"
+    },
+    {
+      "name": "longPressCustom",
+      "pageSourceFile": "src/main/ets/view/SettingsLongPressPage.ets",
+      "buildFunction": "SettingsLongPressPageBuilder"
+    },
+    {
+      "name": "aiSettings",
+      "pageSourceFile": "src/main/ets/view/SettingsAiPage.ets",
+      "buildFunction": "SettingsAiPageBuilder"
+    },
+    {
+      "name": "licensePage",
+      "pageSourceFile": "src/main/ets/view/LicensePage.ets",
+      "buildFunction": "LicensePageBuilder"
     }
   ]
 }

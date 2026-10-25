@@ -172,7 +172,7 @@ export struct BookmarkPage {
         .fontColor($r('app.color.fg'))
         .padding({ left: 14, right: 14, top: 8, bottom: 8 })
         .onClick(() => {
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+          this.showMore()
         })
       Blank()
       Text(this.editMode ? $r('app.string.done') : $r('app.string.edit'))
@@ -243,6 +243,62 @@ export struct BookmarkPage {
     }
     this.db.reorderBookmarks(ids).catch((error: BusinessError) => {
       console.error(`reorder bookmarks failed: ${error.message}`)
+    })
+  }
+
+  private showMore(): void {
+    const sheets: SheetInfo[] = [
+      { title: '按标题排序', action: (): void => {
+        this.sortByTitle()
+      } },
+      { title: '清空书签', action: (): void => {
+        this.confirmClearBookmarks()
+      } }
+    ]
+    ActionSheet.show({
+      title: $r('app.string.more'),
+      message: '',
+      sheets: sheets
+    })
+  }
+
+  private sortByTitle(): void {
+    const sorted: BookmarkRec[] = []
+    for (let i = 0; i < this.items.length; i++) {
+      sorted.push(this.items[i])
+    }
+    sorted.sort((left: BookmarkRec, right: BookmarkRec): number => {
+      return left.title.localeCompare(right.title, 'zh')
+    })
+    this.items = sorted
+    const ids: number[] = []
+    for (let i = 0; i < sorted.length; i++) {
+      ids.push(sorted[i].id)
+    }
+    this.db.reorderBookmarks(ids).catch((error: BusinessError) => {
+      console.error(`sort bookmarks failed: ${error.message}`)
+    })
+  }
+
+  private confirmClearBookmarks(): void {
+    AlertDialog.show({
+      title: '清空书签',
+      message: '将删除全部书签，且不可恢复',
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+          this.db.clearBookmarks().then(() => {
+            this.reload()
+          }).catch((error: BusinessError) => {
+            console.error(`clear bookmarks failed: ${error.message}`)
+          })
+        }
+      }
     })
   }
 

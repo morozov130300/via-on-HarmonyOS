@@ -15,6 +15,7 @@ import {
   HOME_LOGO_COLOR,
   HOME_LOGO_FONT_VP,
   HOME_LOGO_STYLES,
+  HOME_LOGO_TYPES,
   HOME_PILL_CORNER_VP,
   HOME_PILL_OPACITY_VP,
   HOME_PILL_STROKE_VP,
@@ -57,12 +58,18 @@ export struct HomePage {
 
       if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示') {
         Column({ space: 10 }) {
-          Text(this.settings.homeLogoText)
-            .fontSize(HOME_LOGO_FONT_VP[this.settings.homeLogoSize])
-            .fontColor(HOME_LOGO_COLOR)
-            .fontWeight(this.logoBold())
-            .fontStyle(this.logoItalic())
-            .maxLines(1)
+          if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
+            Text(this.settings.homeLogoText)
+              .fontSize(HOME_LOGO_FONT_VP[this.settings.homeLogoSize])
+              .fontColor(HOME_LOGO_COLOR)
+              .fontWeight(this.logoBold())
+              .fontStyle(this.logoItalic())
+              .maxLines(1)
+          } else {
+            Image($rawfile('logo.svg'))
+              .width(56)
+              .height(56)
+          }
           Text($r('app.string.logo_slogan'))
             .fontSize(12)
             .fontColor($r('app.color.fg_secondary'))

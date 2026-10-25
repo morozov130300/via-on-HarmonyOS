@@ -2,6 +2,7 @@
 
 export const HOME_BG_COLORS: string[] = ['#F8A246', '#FEC849', '#B4BE74', '#6AC4C4', '#616FBA', '#9B66AA', '#CB9E67', '#9B9FAB', '#694D35']
 
+export const HOME_LOGO_TYPES: string[] = ['图标', '文字']
 export const HOME_LOGO_FONT_LABELS: string[] = ['28vp', '22vp', '16vp']
 export const HOME_LOGO_FONT_VP: number[] = [28, 22, 16]
 export const HOME_LOGO_STYLES: string[] = ['常规', '粗体', '斜体', '粗体 斜体']
