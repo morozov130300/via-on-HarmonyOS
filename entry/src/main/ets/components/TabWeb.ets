@@ -4,11 +4,13 @@ import { AdBlocker } from '../common/AdBlock'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { hostOf } from '../common/SearchEngines'
+import { Reader } from '../common/Reader'
 import { AppIcon } from './AppIcon'
 
 @ComponentV2
 export struct TabWeb {
   @Param @Require tab: TabItem
+  @Event onAutoReader: (text: string) => void = (text: string) => {}
   private settings: AppSettings = AppSettings.getInstance()
   private adBlocker: AdBlocker = AdBlocker.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
@@ -50,6 +52,8 @@ export struct TabWeb {
           this.updateNavState()
           this.saveHistory(event.url)
           this.injectScripts(event.url)
+          this.injectCustomCss()
+          this.autoOpenReader()
           this.settings.persistAdBlockTotal()
         })
         .onProgressChange((event: OnProgressChangeEvent) => {
@@ -180,6 +184,29 @@ export struct TabWeb {
       console.error(`add history failed: ${error.message}`)
     })
     TabStore.getInstance().snapshot(this.settings)
+  }
+
+  private injectCustomCss(): void {
+    if (this.settings.customCss === '') {
+      return
+    }
+    const js = `(function(){var s=document.createElement("style");s.textContent=${JSON.stringify(this.settings.customCss)};document.head.appendChild(s);})();`
+    this.tab.controller.runJavaScript(js).catch(() => {
+      console.error('inject custom css failed')
+    })
+  }
+
+  private autoOpenReader(): void {
+    if (!this.settings.readerAuto || this.tab.incognito) {
+      return
+    }
+    Reader.extractText(this.tab).then((text: string) => {
+      if (text.trim().length > 200) {
+        this.onAutoReader(text.trim())
+      }
+    }).catch(() => {
+      console.error('auto reader extract failed')
+    })
   }
 
   private injectScripts(url: string): void {

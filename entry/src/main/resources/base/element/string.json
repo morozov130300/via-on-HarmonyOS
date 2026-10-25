@@ -671,6 +671,14 @@
     {
       "name": "email_copied",
       "value": "邮箱已复制"
+    },
+    {
+      "name": "script_updated",
+      "value": "脚本已更新"
+    },
+    {
+      "name": "ai_need_key",
+      "value": "请先在设置中配置 AI"
     }
   ]
 }

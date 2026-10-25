@@ -1,3 +1,4 @@
+import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings, UA_MODE_DEFAULT, UA_MODE_PC, UA_MODE_MOBILE } from '../common/Settings'
 import { BrowserDb } from '../common/Database'
 import { SettingNavRow, SettingToggleRow } from '../components/SettingRows'
@@ -33,29 +34,29 @@ export struct SettingsGeneralPage {
           SettingToggleRow({ rowLabel: '夜间模式', isToggleOn: this.settings.nightMode, onToggleRow: (isOn: boolean) => {
             this.settings.setNightMode(isOn)
           } })
-          SettingNavRow({ rowLabel: '阅读模式', onTapRow: () => {
-            this.notImplemented()
+          SettingToggleRow({ rowLabel: '阅读模式', isToggleOn: this.settings.readerAuto, onToggleRow: (isOn: boolean) => {
+            this.settings.setReaderAuto(isOn)
           } })
           SettingNavRow({ rowLabel: '工具栏设置', onTapRow: () => {
-            this.notImplemented()
+            this.navPathStack.pushPathByName('toolbarCustom', '', true)
           } })
           SettingNavRow({ rowLabel: '定制菜单', onTapRow: () => {
-            this.notImplemented()
+            this.navPathStack.pushPathByName('menuCustom', '', true)
           } })
           SettingNavRow({ rowLabel: '定制长按菜单', onTapRow: () => {
-            this.notImplemented()
+            this.navPathStack.pushPathByName('longPressCustom', '', true)
           } })
-          SettingNavRow({ rowLabel: '语言', rowValue: '中文(简体)', onTapRow: () => {
-            this.notImplemented()
+          SettingNavRow({ rowLabel: '语言', rowValue: this.languageLabel(), onTapRow: () => {
+            this.pickLanguage()
           } })
-          SettingNavRow({ rowLabel: '主页', rowValue: '默认', onTapRow: () => {
-            this.notImplemented()
+          SettingNavRow({ rowLabel: '主页', rowValue: this.homeLabel(), onTapRow: () => {
+            this.pickHome()
           } })
           SettingNavRow({ rowLabel: '搜索设置', onTapRow: () => {
             this.pickEngine()
           } })
           SettingNavRow({ rowLabel: 'AI 设置', onTapRow: () => {
-            this.notImplemented()
+            this.navPathStack.pushPathByName('aiSettings', '', true)
           } })
         }
         .width('100%')
@@ -69,6 +70,127 @@ export struct SettingsGeneralPage {
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })
+  }
+
+  private languageLabel(): string {
+    if (this.settings.appLanguage === 1) {
+      return '简体中文'
+    }
+    if (this.settings.appLanguage === 2) {
+      return 'English'
+    }
+    return '跟随系统'
+  }
+
+  private homeLabel(): string {
+    if (this.settings.homepageMode === 1 && this.settings.homeUrl !== '') {
+      return this.settings.homeUrl
+    }
+    return '默认'
+  }
+
+  private pickLanguage(): void {
+    const sheets: SheetInfo[] = [
+      { title: '跟随系统', action: (): void => {
+        this.settings.setAppLanguage(0)
+      } },
+      { title: '简体中文', action: (): void => {
+        this.settings.setAppLanguage(1)
+      } },
+      { title: 'English', action: (): void => {
+        this.settings.setAppLanguage(2)
+      } }
+    ]
+    ActionSheet.show({
+      title: '语言',
+      message: '选择应用语言',
+      sheets: sheets
+    })
+  }
+
+  private pickHome(): void {
+    const sheets: SheetInfo[] = [
+      { title: '默认', action: (): void => {
+        this.settings.setHomepageMode(0)
+      } },
+      { title: '自定义', action: (): void => {
+        this.inputHomeUrl()
+      } }
+    ]
+    ActionSheet.show({
+      title: '主页',
+      message: '选择主页',
+      sheets: sheets
+    })
+  }
+
+  private inputHomeUrl(): void {
+    this.homeUrlInput = this.settings.homeUrl
+    const promptAction = this.getUIContext().getPromptAction()
+    promptAction.openCustomDialog({
+      builder: (): void => {
+        this.HomeUrlDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center
+    }).then((dialogId: number) => {
+      this.homeUrlDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open home url dialog failed: ${error.message}`)
+    })
+  }
+
+  @Local homeUrlInput: string = ''
+  private homeUrlDialogId: number = -1
+
+  @Builder
+  HomeUrlDialog() {
+    Column({ space: 16 }) {
+      Text('自定义主页')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+      TextInput({ placeholder: 'https://', text: this.homeUrlInput })
+        .width('100%')
+        .height(44)
+        .fontSize(14)
+        .onChange((value: string) => {
+          this.homeUrlInput = value
+        })
+      Row({ space: 12 }) {
+        Button($r('app.string.cancel'))
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.surface'))
+          .fontColor($r('app.color.fg'))
+          .onClick(() => {
+            this.closeHomeUrlDialog()
+          })
+        Button($r('app.string.confirm'))
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.accent'))
+          .onClick(() => {
+            const url = this.homeUrlInput.trim()
+            if (url !== '') {
+              this.settings.setHomeUrl(url)
+              this.settings.setHomepageMode(1)
+            }
+            this.closeHomeUrlDialog()
+          })
+      }
+      .width('100%')
+    }
+    .width('86%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+  }
+
+  private closeHomeUrlDialog(): void {
+    if (this.homeUrlDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.homeUrlDialogId)
+    this.homeUrlDialogId = -1
   }
 
   private uaLabel(): string {

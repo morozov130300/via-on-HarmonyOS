@@ -54,6 +54,7 @@ export class AppSettings {
   @Trace ignoreSslWarning: boolean = false
   @Trace homeBgColor: string = ''
   @Trace homeLogoText: string = 'VIA'
+  @Trace homeLogoType: number = 0
   @Trace homeLogoSize: number = 0
   @Trace homeLogoStyle: number = 3
   @Trace homePillCorner: number = 0
@@ -67,6 +68,17 @@ export class AppSettings {
   @Trace homeFavIconStyle: number = 1
   @Trace homeAdvEffect: number = 1
   @Trace homeAdvArea: number = 0
+  @Trace readerAuto: boolean = false
+  @Trace customCss: string = ''
+  @Trace appLanguage: number = 1
+  @Trace menuHidden: string[] = []
+  @Trace longPressHidden: string[] = []
+  @Trace toolbarHidden: string[] = []
+  @Trace scriptAutoUpdate: boolean = false
+  @Trace lastScriptUpdate: number = 0
+  @Trace aiProvider: string = 'deepseek'
+  @Trace aiApiKey: string = ''
+  @Trace aiModel: string = 'deepseek-chat'
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -144,6 +156,7 @@ export class AppSettings {
       this.ignoreSslWarning = await this.readBoolean('ignoreSslWarning', false)
       this.homeBgColor = await this.readString('homeBgColor', '')
       this.homeLogoText = await this.readString('homeLogoText', 'VIA')
+      this.homeLogoType = await this.readNumber('homeLogoType', 0)
       this.homeLogoSize = await this.readNumber('homeLogoSize', 0)
       this.homeLogoStyle = await this.readNumber('homeLogoStyle', 3)
       this.homePillCorner = await this.readNumber('homePillCorner', 0)
@@ -157,6 +170,17 @@ export class AppSettings {
       this.homeFavIconStyle = await this.readNumber('homeFavIconStyle', 1)
       this.homeAdvEffect = await this.readNumber('homeAdvEffect', 1)
       this.homeAdvArea = await this.readNumber('homeAdvArea', 0)
+      this.readerAuto = await this.readBoolean('readerAuto', false)
+      this.customCss = await this.readString('customCss', '')
+      this.appLanguage = await this.readNumber('appLanguage', 1)
+      this.menuHidden = await this.readStringArray('menuHidden')
+      this.longPressHidden = await this.readStringArray('longPressHidden')
+      this.toolbarHidden = await this.readStringArray('toolbarHidden')
+      this.scriptAutoUpdate = await this.readBoolean('scriptAutoUpdate', false)
+      this.lastScriptUpdate = await this.readNumber('lastScriptUpdate', 0)
+      this.aiProvider = await this.readString('aiProvider', 'deepseek')
+      this.aiApiKey = await this.readString('aiApiKey', '')
+      this.aiModel = await this.readString('aiModel', 'deepseek-chat')
     } catch (error) {
       const err = error as BusinessError
       console.error(`settings init failed: ${err.code} ${err.message}`)
@@ -313,6 +337,11 @@ export class AppSettings {
     this.flushKey('homeLogoText', value)
   }
 
+  setHomeLogoType(index: number): void {
+    this.homeLogoType = index
+    this.flushKey('homeLogoType', index)
+  }
+
   setHomeLogoSize(index: number): void {
     this.homeLogoSize = index
     this.flushKey('homeLogoSize', index)
@@ -378,9 +407,65 @@ export class AppSettings {
     this.flushKey('homeAdvArea', index)
   }
 
+  setReaderAuto(on: boolean): void {
+    this.readerAuto = on
+    this.flushKey('readerAuto', on)
+  }
+
+  setCustomCss(css: string): void {
+    this.customCss = css
+    this.flushKey('customCss', css)
+  }
+
+  setAppLanguage(index: number): void {
+    this.appLanguage = index
+    this.flushKey('appLanguage', index)
+  }
+
+  setMenuHidden(list: string[]): void {
+    this.menuHidden = list
+    this.flushKey('menuHidden', JSON.stringify(list))
+  }
+
+  setLongPressHidden(list: string[]): void {
+    this.longPressHidden = list
+    this.flushKey('longPressHidden', JSON.stringify(list))
+  }
+
+  setToolbarHidden(list: string[]): void {
+    this.toolbarHidden = list
+    this.flushKey('toolbarHidden', JSON.stringify(list))
+  }
+
+  setScriptAutoUpdate(on: boolean): void {
+    this.scriptAutoUpdate = on
+    this.flushKey('scriptAutoUpdate', on)
+  }
+
+  markScriptsUpdated(): void {
+    this.lastScriptUpdate = Date.now()
+    this.flushKey('lastScriptUpdate', this.lastScriptUpdate)
+  }
+
+  setAiProvider(provider: string): void {
+    this.aiProvider = provider
+    this.flushKey('aiProvider', provider)
+  }
+
+  setAiApiKey(key: string): void {
+    this.aiApiKey = key
+    this.flushKey('aiApiKey', key)
+  }
+
+  setAiModel(model: string): void {
+    this.aiModel = model
+    this.flushKey('aiModel', model)
+  }
+
   resetHomeStyle(): void {
     this.setHomeBgColor('')
     this.setHomeLogoText('VIA')
+    this.setHomeLogoType(0)
     this.setHomeLogoSize(0)
     this.setHomeLogoStyle(3)
     this.setHomePillCorner(0)
@@ -619,6 +704,7 @@ export class AppSettings {
       entry['code'] = item.code
       entry['matchHost'] = item.matchHost
       entry['enabled'] = item.enabled
+      entry['sourceUrl'] = item.sourceUrl
       payload.push(entry)
     }
     this.flushKey('userScripts', JSON.stringify(payload))

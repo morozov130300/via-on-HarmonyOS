@@ -232,6 +232,7 @@ export class UserScriptRec {
   code: string
   matchHost: string
   enabled: boolean
+  sourceUrl: string
 
   constructor() {
     this.id = -1
@@ -239,6 +240,7 @@ export class UserScriptRec {
     this.code = ''
     this.matchHost = ''
     this.enabled = true
+    this.sourceUrl = ''
   }
 
   static fromJson(obj: Record<string, Object>): UserScriptRec | null {
@@ -248,6 +250,7 @@ export class UserScriptRec {
     const code = obj['code']
     const matchHost = obj['matchHost']
     const enabled = obj['enabled']
+    const sourceUrl = obj['sourceUrl']
     if (typeof id === 'number' && typeof name === 'string' && typeof code === 'string') {
       rec.id = id
       rec.name = name
@@ -257,6 +260,9 @@ export class UserScriptRec {
       }
       if (typeof enabled === 'boolean') {
         rec.enabled = enabled
+      }
+      if (typeof sourceUrl === 'string') {
+        rec.sourceUrl = sourceUrl
       }
       return rec
     }

@@ -49,7 +49,7 @@ export struct SettingsAboutPage {
             this.openLink(PRIVACY_POLICY_URL)
           })
           this.AboutRow('开源许可协议', () => {
-            this.notImplemented()
+            this.navPathStack.pushPathByName('licensePage', '', true)
           })
           Column() {
             Text('备案号')

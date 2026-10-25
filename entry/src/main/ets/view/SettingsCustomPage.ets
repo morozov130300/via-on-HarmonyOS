@@ -10,6 +10,7 @@ import {
   HOME_FAV_SIZES,
   HOME_LOGO_FONT_LABELS,
   HOME_LOGO_STYLES,
+  HOME_LOGO_TYPES,
   HOME_PILL_CORNERS,
   HOME_PILL_OPACITY,
   HOME_PILL_STROKE_LABELS,
@@ -21,6 +22,8 @@ export struct SettingsCustomPage {
   private settings: AppSettings = AppSettings.getInstance()
   @Local logoDraft: string = ''
   private logoDialogId: number = -1
+  @Local cssDraft: string = ''
+  private cssDialogId: number = -1
 
   build() {
     NavDestination() {
@@ -98,7 +101,10 @@ export struct SettingsCustomPage {
   @Builder
   LogoPanel() {
     Row() {
-      this.PanelItem($r('app.media.via_ic_c_logo_text'), 'Logo', this.settings.homeLogoText, () => {
+      this.PanelItem($r('app.media.via_ic_c_logo_text'), 'Logo', HOME_LOGO_TYPES[this.settings.homeLogoType], () => {
+        this.settings.setHomeLogoType((this.settings.homeLogoType + 1) % HOME_LOGO_TYPES.length)
+      })
+      this.PanelItem($r('app.media.via_ic_c_font_style'), 'Logo 文字', this.settings.homeLogoText, () => {
         this.editLogoText()
       })
       this.PanelItem($r('app.media.via_ic_c_font_size'), '字体大小', HOME_LOGO_FONT_LABELS[this.settings.homeLogoSize], () => {
@@ -191,10 +197,10 @@ export struct SettingsCustomPage {
         this.settings.setHomeAdvArea((this.settings.homeAdvArea + 1) % HOME_ADV_AREAS.length)
       })
       this.PanelItem($r('app.media.via_ic_c_adv_css'), '自定义 CSS', '', () => {
-        this.notImplemented()
+        this.editCustomCss()
       })
       this.PanelItem($r('app.media.via_ic_c_clear_icon'), '清除图标', '', () => {
-        this.notImplemented()
+        this.clearIcons()
       })
       this.PanelItem($r('app.media.via_ic_c_reset'), '重置', '', () => {
         this.settings.resetHomeStyle()
@@ -260,6 +266,84 @@ export struct SettingsCustomPage {
           .onClick(() => {
             this.settings.setHomeLogoText(this.logoDraft)
             this.closeLogoDialog()
+          })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding(20)
+    .backgroundColor($r('app.color.page_bg'))
+    .borderRadius(16)
+  }
+
+  private editCustomCss(): void {
+    this.cssDraft = this.settings.customCss
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: () => {
+        this.CustomCssDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center
+    }).then((dialogId: number) => {
+      this.cssDialogId = dialogId
+    }).catch(() => {
+      console.error('open css dialog failed')
+    })
+  }
+
+  private closeCssDialog(): void {
+    if (this.cssDialogId >= 0) {
+      try {
+        this.getUIContext().getPromptAction().closeCustomDialog(this.cssDialogId)
+      } catch (error) {
+        console.error('close css dialog failed')
+      }
+    }
+  }
+
+  private clearIcons(): void {
+    this.settings.setHomeFavIconStyle(1)
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
+  }
+
+  @Builder
+  CustomCssDialog() {
+    Column({ space: 16 }) {
+      Text('自定义 CSS')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+      TextArea({ text: this.cssDraft, placeholder: '输入 CSS 样式' })
+        .fontSize(14)
+        .height(120)
+        .onChange((value: string) => {
+          this.cssDraft = value
+        })
+      Row({ space: 12 }) {
+        Button('取消')
+          .fontSize(15)
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.page_bg'))
+          .fontColor($r('app.color.fg'))
+          .onClick(() => {
+            this.closeCssDialog()
+          })
+        Button('清空')
+          .fontSize(15)
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.page_bg'))
+          .fontColor($r('app.color.fg'))
+          .onClick(() => {
+            this.settings.setCustomCss('')
+            this.closeCssDialog()
+          })
+        Button('确定')
+          .fontSize(15)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.settings.setCustomCss(this.cssDraft)
+            this.closeCssDialog()
           })
       }
       .width('100%')
