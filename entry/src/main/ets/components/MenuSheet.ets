@@ -132,7 +132,7 @@ export struct MenuSheet {
         }
         GridItem() {
           this.GridCell($r('app.media.via_ic_script'), $r('app.string.scripts'), () => {
-            this.onOpenPage('userScripts')
+            this.onOpenPage('settingsScript')
           })
         }
         GridItem() {

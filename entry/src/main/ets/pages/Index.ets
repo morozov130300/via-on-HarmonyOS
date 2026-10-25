@@ -16,6 +16,9 @@ import { Reader } from '../common/Reader'
 import { TtsManager } from '../common/Tts'
 import { ReaderView } from '../components/ReaderView'
 import { QrDialog } from '../components/QrDialog'
+import { systemShare } from '@kit.ShareKit'
+import { uniformTypeDescriptor as utd } from '@kit.ArkData'
+import { common } from '@kit.AbilityKit'
 
 const EXIT_INTERVAL: number = 2000
 
@@ -223,6 +226,12 @@ struct Index {
           },
           onFindInPage: () => {
             this.showFindBar = true
+          },
+          onShare: () => {
+            this.shareCurrentPage()
+          },
+          onSavePage: () => {
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
           }
         })
       }
@@ -275,5 +284,24 @@ struct Index {
 
   private openPage(page: string): void {
     this.mainNavStack.pushPathByName(page, '', true)
+  }
+
+  private shareCurrentPage(): void {
+    const tab = this.tabStore.current()
+    const title = tab.title.trim() !== '' ? tab.title : tab.url
+    const shareData: systemShare.SharedData = new systemShare.SharedData({
+      utd: utd.UniformDataType.HYPERLINK,
+      content: tab.url,
+      title: title,
+      description: tab.url
+    })
+    const controller: systemShare.ShareController = new systemShare.ShareController(shareData)
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    controller.show(context, {
+      selectionMode: systemShare.SelectionMode.SINGLE,
+      previewMode: systemShare.SharePreviewMode.DETAIL
+    }).catch((error: BusinessError) => {
+      console.error(`share failed: ${error.code} ${error.message}`)
+    })
   }
 }

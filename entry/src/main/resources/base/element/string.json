@@ -25,6 +25,18 @@
       "value": "搜索"
     },
     {
+      "name": "more",
+      "value": "更多"
+    },
+    {
+      "name": "done",
+      "value": "完成"
+    },
+    {
+      "name": "edit",
+      "value": "编辑"
+    },
+    {
       "name": "blocked_ads_count",
       "value": "已拦截 %d 个广告"
     },

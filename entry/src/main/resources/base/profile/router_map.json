@@ -21,6 +21,36 @@
       "buildFunction": "SettingsPageBuilder"
     },
     {
+      "name": "settingsGeneral",
+      "pageSourceFile": "src/main/ets/view/SettingsGeneralPage.ets",
+      "buildFunction": "SettingsGeneralPageBuilder"
+    },
+    {
+      "name": "settingsCustom",
+      "pageSourceFile": "src/main/ets/view/SettingsCustomPage.ets",
+      "buildFunction": "SettingsCustomPageBuilder"
+    },
+    {
+      "name": "settingsPrivacy",
+      "pageSourceFile": "src/main/ets/view/SettingsPrivacyPage.ets",
+      "buildFunction": "SettingsPrivacyPageBuilder"
+    },
+    {
+      "name": "settingsAdvanced",
+      "pageSourceFile": "src/main/ets/view/SettingsAdvancedPage.ets",
+      "buildFunction": "SettingsAdvancedPageBuilder"
+    },
+    {
+      "name": "settingsScript",
+      "pageSourceFile": "src/main/ets/view/SettingsScriptPage.ets",
+      "buildFunction": "SettingsScriptPageBuilder"
+    },
+    {
+      "name": "settingsAbout",
+      "pageSourceFile": "src/main/ets/view/SettingsAboutPage.ets",
+      "buildFunction": "SettingsAboutPageBuilder"
+    },
+    {
       "name": "siteSettings",
       "pageSourceFile": "src/main/ets/view/SiteSettingsPage.ets",
       "buildFunction": "SiteSettingsPageBuilder"
