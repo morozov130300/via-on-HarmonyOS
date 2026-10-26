@@ -48,7 +48,11 @@ export struct TabWeb {
           this.applyAdvancedSettings()
           if (this.tab.initialUrl !== '') {
             try {
-              this.tab.controller.loadUrl(this.tab.initialUrl)
+              if (this.settings.dataSaver) {
+                this.tab.controller.loadUrl(this.tab.initialUrl, [{ headerKey: 'Save-Data', headerValue: 'on' }])
+              } else {
+                this.tab.controller.loadUrl(this.tab.initialUrl)
+              }
             } catch (error) {
               console.error('restore tab loadUrl failed')
             }
@@ -58,6 +62,7 @@ export struct TabWeb {
           this.tab.url = event.url
           this.tab.loading = true
           this.tab.isError = false
+          this.tab.sniffedMedia = []
           this.applyAdvancedSettings()
           this.applyUa(event.url)
           this.updateNavState()
@@ -108,6 +113,7 @@ export struct TabWeb {
         .onInterceptRequest((event: OnInterceptRequestEvent) => {
           if (!event.request.isMainFrame()) {
             const requestUrl = event.request.getRequestUrl()
+            this.sniffMedia(requestUrl)
             const pageHost = hostOf(this.tab.url)
             if (this.adBlocker.shouldBlock(requestUrl, pageHost)) {
               this.tab.adCount = this.tab.adCount + 1
@@ -187,6 +193,35 @@ export struct TabWeb {
       return setting.noImage
     }
     return false
+  }
+
+  private sniffMedia(url: string): void {
+    if (!this.settings.autoSniffButton) {
+      return
+    }
+    const lower = url.toLowerCase()
+    const queryIndex = lower.indexOf('?')
+    const path = queryIndex >= 0 ? lower.substring(0, queryIndex) : lower
+    const exts: string[] = ['.mp4', '.m3u8', '.mp3', '.m4a', '.webm', '.flv', '.mov', '.aac', '.ogg', '.mpd']
+    let matched = false
+    for (let i = 0; i < exts.length; i++) {
+      if (path.endsWith(exts[i])) {
+        matched = true
+        break
+      }
+    }
+    if (!matched) {
+      return
+    }
+    if (this.tab.sniffedMedia.indexOf(url) >= 0) {
+      return
+    }
+    const next: string[] = this.tab.sniffedMedia.slice()
+    next.push(url)
+    if (next.length > 20) {
+      next.splice(0, next.length - 20)
+    }
+    this.tab.sniffedMedia = next
   }
 
   private applyAdvancedSettings(): void {

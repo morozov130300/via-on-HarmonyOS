@@ -24,6 +24,7 @@ export class TabItem {
   @Trace initialUrl: string
   @Trace matchOrdinal: number
   @Trace matchCount: number
+  @Trace sniffedMedia: string[]
   controller: webview.WebviewController
 
   constructor(id: number, incognito: boolean) {
@@ -41,6 +42,7 @@ export class TabItem {
     this.initialUrl = ''
     this.matchOrdinal = 0
     this.matchCount = 0
+    this.sniffedMedia = []
     this.controller = new webview.WebviewController()
   }
 
