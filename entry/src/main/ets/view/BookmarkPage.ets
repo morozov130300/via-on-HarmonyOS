@@ -3,11 +3,13 @@ import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { ViaIcon } from '../components/ViaIcon'
 import { AppIcon } from '../components/AppIcon'
+import { UiInsets } from '../common/Immersive'
 
 @ComponentV2
 export struct BookmarkPage {
   private db: BrowserDb = BrowserDb.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
+  private insets: UiInsets = UiInsets.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
   @Local items: BookmarkRec[] = []
   @Local query: string = ''
@@ -103,6 +105,8 @@ export struct BookmarkPage {
       }
     }
     .hideTitleBar(true)
+    .padding({ top: this.insets.top })
+    .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })

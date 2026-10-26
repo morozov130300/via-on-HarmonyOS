@@ -3,6 +3,7 @@ import { BrowserDb } from '../common/Database'
 import { BookmarkRec } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
 import { AppSettings } from '../common/Settings'
+import { UiInsets } from '../common/Immersive'
 import {
   HOME_ADV_AREAS,
   HOME_ADV_EFFECTS,
@@ -32,6 +33,7 @@ export struct HomePage {
   private settings: AppSettings = AppSettings.getInstance()
   @Event onSearchTap: () => void = () => {}
   @Local bookmarks: BookmarkRec[] = []
+  private insets: UiInsets = UiInsets.getInstance()
 
   aboutToAppear(): void {
     this.db.listBookmarks().then((items: BookmarkRec[]) => {
@@ -146,6 +148,7 @@ export struct HomePage {
     }
     .width('100%')
     .height('100%')
+    .padding({ top: this.insets.top })
     .backgroundColor(this.homeBackground())
   }
 

@@ -8,6 +8,7 @@ import { BrowserDb } from '../common/Database'
 import { SiteSetting } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
 import { ViaIcon } from './ViaIcon'
+import { UiInsets } from '../common/Immersive'
 
 const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translator__){window.__via_translator__.showBanner(true);return;}`
   + `window.googleTranslateElementInit=function(){if(!window.__via_translator__){window.__via_translator__=new google.translate.TranslateElement({autoDisplay:false,floatPosition:0,multilanguagePage:true,includedLanguages:"af,sq,am,ar,hy,az,eu,be,bn,bs,bg,ca,ceb,ny,zh-CN,zh-TW,co,hr,cs,da,nl,en,eo,et,tl,fi,fr,fy,gl,ka,de,el,gu,ht,ha,haw,he,hi,hmn,hu,is,id,ga,it,ja,jv,kn,kk,km,ky,ko,ku,lo,la,lv,lt,lb,mk,mg,ms,ml,mt,mi,mr,mn,my,ne,no,ps,fa,pl,pt,pa,ro,ru,sr,st,sd,si,sk,sl,so,sm,es,su,sw,sv,tg,ta,te,th,tr,uk,ur,uz,vi,cy,xh,yi,yo,zu",pageLanguage:"auto"});}`
@@ -30,6 +31,7 @@ export struct MenuSheet {
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   @Local showToolbox: boolean = false
+  private insets: UiInsets = UiInsets.getInstance()
 
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
@@ -51,6 +53,7 @@ export struct MenuSheet {
         }
       }
       .width('100%')
+      .padding({ bottom: this.insets.bottom })
       .backgroundColor($r('app.color.menu_bg'))
     }
     .width('100%')

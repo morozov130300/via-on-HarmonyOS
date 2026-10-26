@@ -4,6 +4,7 @@ import { window } from '@kit.ArkUI';
 import { emitter } from '@kit.BasicServicesKit';
 import { AppSettings } from '../common/Settings';
 import { BrowserDb } from '../common/Database';
+import { applyImmersiveWindow } from '../common/Immersive';
 import { webview } from '@kit.ArkWeb';
 
 const DOMAIN = 0x0000;
@@ -52,12 +53,23 @@ export default class EntryAbility extends UIAbility {
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      this.setupWindow(windowStage);
     });
 
     try {
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  private setupWindow(windowStage: window.WindowStage): void {
+    try {
+      const win = windowStage.getMainWindowSync();
+      AppStorage.setOrCreate('mainWindow', win);
+      applyImmersiveWindow(win, true);
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', 'Failed to setup immersive window. Cause: %{public}s', JSON.stringify(err));
     }
   }
 

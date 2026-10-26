@@ -2,6 +2,8 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo, picker } from '@kit.CoreFileKit'
 import { webview } from '@kit.ArkWeb'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
+import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
+import { window } from '@kit.ArkUI'
 import { BrowserDb } from '../common/Database'
 import { BackupManager } from '../common/Backup'
 import { uaByKey } from '../common/UaTable'
@@ -49,6 +51,10 @@ export struct SettingsGeneralPage {
             } })
             SettingToggleRow({ rowLabel: '阅读模式', isToggleOn: this.settings.readerAuto, onToggleRow: (isOn: boolean) => {
               this.settings.setReaderAuto(isOn)
+            } })
+            SettingToggleRow({ rowLabel: '显示状态栏', rowDesc: '关闭后页面内容铺满整个屏幕', isToggleOn: this.settings.showStatusBar, onToggleRow: (isOn: boolean) => {
+              this.settings.setShowStatusBar(isOn)
+              this.applyStatusBar(isOn)
             } })
             SettingNavRow({ rowLabel: '工具栏设置', onTapRow: () => {
               this.navPathStack.pushPathByName('toolbarCustom', '', true)
@@ -201,6 +207,17 @@ export struct SettingsGeneralPage {
       message: '选择应用屏幕方向',
       sheets: sheets
     })
+  }
+
+  private applyStatusBar(visible: boolean): void {
+    const win = AppStorage.get<window.Window>('mainWindow')
+    if (win === undefined) {
+      return
+    }
+    applyStatusBarVisible(win, visible)
+    setTimeout(() => {
+      UiInsets.getInstance().refresh(win)
+    }, 200)
   }
 
   private applyOrientation(value: number): void {
