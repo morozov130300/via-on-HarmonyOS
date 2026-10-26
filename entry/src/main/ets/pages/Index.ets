@@ -16,6 +16,7 @@ import { Reader } from '../common/Reader'
 import { TtsManager } from '../common/Tts'
 import { ReaderView } from '../components/ReaderView'
 import { AiPanel } from '../components/AiPanel'
+import { MediaListPage } from '../components/MediaListPage'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
@@ -43,6 +44,8 @@ struct Index {
 
   @Local showAi: boolean = false
   @Local showReader: boolean = false
+  @Local showMediaList: boolean = false
+  @Local mediaList: string[] = []
   @Local readerText: string = ''
   @Local exitHintTime: number = 0
   private tts: TtsManager = TtsManager.getInstance()
@@ -85,6 +88,10 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.showMediaList) {
+      this.showMediaList = false
+      return true
+    }
     if (this.showSearch) {
       this.showSearch = false
       return true
@@ -171,6 +178,9 @@ struct Index {
             if (!this.tabStore.current().isHomePage()) {
               AddressBar({ tab: this.tabStore.current(), onAddressTap: () => {
                 this.showSearch = true
+              }, onOpenMedia: (urls: string[]) => {
+                this.mediaList = urls
+                this.showMediaList = true
               } })
             }
             Toolbar({
@@ -289,6 +299,14 @@ struct Index {
         AiPanel({
           onClose: () => {
             this.showAi = false
+          }
+        })
+      }
+      if (this.showMediaList) {
+        MediaListPage({
+          mediaUrls: this.mediaList,
+          onClose: () => {
+            this.showMediaList = false
           }
         })
       }

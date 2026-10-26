@@ -6,6 +6,8 @@ import { hostOf } from '../common/SearchEngines'
 export struct AddressBar {
   @Param @Require tab: TabItem
   @Event onAddressTap: () => void = () => {}
+  @Event onOpenMedia: (urls: string[]) => void = (urls: string[]) => {
+  }
 
   build() {
     Row({ space: 6 }) {
@@ -22,6 +24,12 @@ export struct AddressBar {
         .layoutWeight(1)
       if (this.tab.adCount > 0) {
         AppIcon({ icon: $r('sys.symbol.checkmark_shield'), iconSize: 14, iconColor: $r('app.color.accent') })
+      }
+      if (this.tab.sniffedMedia.length > 0) {
+        AppIcon({ icon: $r('app.media.via_ic_download'), iconSize: 16, iconColor: $r('app.color.accent') })
+          .onClick(() => {
+            this.onOpenMedia(this.tab.sniffedMedia)
+          })
       }
     }
     .height(40)

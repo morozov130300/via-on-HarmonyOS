@@ -157,7 +157,12 @@ export class TabStore {
     tab.errorDesc = ''
     tab.initialUrl = ''
     try {
-      tab.controller.loadUrl(url)
+      const settings = AppSettings.getInstance()
+      if (settings.dataSaver) {
+        tab.controller.loadUrl(url, [{ headerKey: 'Save-Data', headerValue: 'on' }])
+      } else {
+        tab.controller.loadUrl(url)
+      }
     } catch (error) {
       const err = error as BusinessError
       console.error(`navigate loadUrl failed: ${err.code} ${err.message}`)
