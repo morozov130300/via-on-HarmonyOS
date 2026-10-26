@@ -21,9 +21,11 @@ import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
 import { webview } from '@kit.ArkWeb'
+import { window } from '@kit.ArkUI'
 import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError, emitter } from '@kit.BasicServicesKit'
 import { hostOf } from '../common/SearchEngines'
+import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 
 const EXIT_INTERVAL: number = 2000
 const SHORTCUT_URL_EVENT_ID = 10001
@@ -49,6 +51,7 @@ struct Index {
   @Local readerText: string = ''
   @Local exitHintTime: number = 0
   private tts: TtsManager = TtsManager.getInstance()
+  private insets: UiInsets = UiInsets.getInstance()
 
   aboutToAppear(): void {
     this.bootstrap()
@@ -74,6 +77,7 @@ struct Index {
       return
     }
     await this.settings.init(context)
+    this.setupImmersiveWindow()
     applyOrientationSetting(context)
     await this.db.init(context)
     this.downloads.register(context)
@@ -84,6 +88,22 @@ struct Index {
     if (launchUrl !== '') {
       AppStorage.setOrCreate('via_launch_url', '')
       this.tabStore.navigate(launchUrl)
+    }
+  }
+
+  private setupImmersiveWindow(): void {
+    const win = AppStorage.get<window.Window>('mainWindow')
+    if (win === undefined) {
+      return
+    }
+    applyStatusBarVisible(win, this.settings.showStatusBar)
+    this.insets.refresh(win)
+    try {
+      win.on('avoidAreaChange', () => {
+        this.insets.refresh(win)
+      })
+    } catch (error) {
+      console.error('watch avoidAreaChange failed')
     }
   }
 
@@ -214,7 +234,7 @@ struct Index {
             })
           }
           .width('100%')
-          .padding({ bottom: 6 })
+          .padding({ bottom: 6 + this.insets.bottom })
           .backgroundColor($r('app.color.home_bg'))
         }
       }
@@ -231,16 +251,22 @@ struct Index {
           .height(2)
           .color($r('app.color.accent'))
           .backgroundColor(Color.Transparent)
-          .position({ x: 0, y: 0 })
+          .position({ x: 0, y: this.insets.top })
       }
 
       if (this.showSearch) {
-        SearchOverlay({
-          initialText: this.tabStore.current().isHomePage() ? '' : this.tabStore.current().url,
-          onClose: () => {
-            this.showSearch = false
-          }
-        })
+        Column() {
+          SearchOverlay({
+            initialText: this.tabStore.current().isHomePage() ? '' : this.tabStore.current().url,
+            onClose: () => {
+              this.showSearch = false
+            }
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .padding({ top: this.insets.top })
+        .backgroundColor($r('app.color.page_bg'))
       }
       if (this.showTabPanel) {
         TabPanel({
@@ -279,28 +305,40 @@ struct Index {
             this.showFindBar = false
           }
         })
-          .position({ x: 0, y: 0 })
+          .position({ x: 0, y: this.insets.top })
       }
       if (this.showReader) {
-        ReaderView({
-          content: this.readerText,
-          onClose: () => {
-            this.showReader = false
-          },
-          onSpeak: () => {
-            this.tts.speak(this.readerText)
-          },
-          onStopSpeak: () => {
-            this.tts.stop()
-          }
-        })
+        Column() {
+          ReaderView({
+            content: this.readerText,
+            onClose: () => {
+              this.showReader = false
+            },
+            onSpeak: () => {
+              this.tts.speak(this.readerText)
+            },
+            onStopSpeak: () => {
+              this.tts.stop()
+            }
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .padding({ top: this.insets.top })
+        .backgroundColor($r('app.color.page_bg'))
       }
       if (this.showAi) {
-        AiPanel({
-          onClose: () => {
-            this.showAi = false
-          }
-        })
+        Column() {
+          AiPanel({
+            onClose: () => {
+              this.showAi = false
+            }
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .padding({ top: this.insets.top })
+        .backgroundColor($r('app.color.page_bg'))
       }
       if (this.showMediaList) {
         MediaListPage({

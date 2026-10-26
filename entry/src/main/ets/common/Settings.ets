@@ -42,7 +42,7 @@ const SYNC_KEYS: string[] = [
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',
   'uaKey', 'customUaList', 'desktopUaKey', 'simplifyUa',
   'syncMode', 'orientation', 'externalPlayer', 'clearOnExit',
-  'volumePageFlip', 'swipeSwitchTab', 'undoCloseToast'
+  'volumePageFlip', 'swipeSwitchTab', 'undoCloseToast', 'showStatusBar'
 ]
 const SNAPSHOT_DEBOUNCE_MS: number = 1500
 
@@ -127,6 +127,7 @@ export class AppSettings {
   @Trace webdavUser: string = ''
   @Trace webdavPwd: string = ''
   @Trace orientation: number = 0
+  @Trace showStatusBar: boolean = true
   @Trace downloadDir: string = ''
   @Trace externalPlayer: boolean = false
   @Trace clearOnExit: string = ''
@@ -276,6 +277,7 @@ export class AppSettings {
       this.webdavUser = await this.readString('webdavUser', '')
       this.webdavPwd = await this.readString('webdavPwd', '')
       this.orientation = await this.readNumber('orientation', 0)
+      this.showStatusBar = await this.readBoolean('showStatusBar', true)
       this.downloadDir = await this.readString('downloadDir', '')
       this.externalPlayer = await this.readBoolean('externalPlayer', false)
       this.clearOnExit = await this.readString('clearOnExit', '')
@@ -775,6 +777,11 @@ export class AppSettings {
   setOrientation(value: number): void {
     this.orientation = value
     this.flushKey('orientation', value)
+  }
+
+  setShowStatusBar(on: boolean): void {
+    this.showStatusBar = on
+    this.flushKey('showStatusBar', on)
   }
 
   setDownloadDir(dir: string): void {

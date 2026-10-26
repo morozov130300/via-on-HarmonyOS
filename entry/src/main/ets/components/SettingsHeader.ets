@@ -1,4 +1,5 @@
 import { ViaIcon } from './ViaIcon'
+import { UiInsets } from '../common/Immersive'
 
 @ComponentV2
 export struct SettingsHeader {
@@ -9,6 +10,7 @@ export struct SettingsHeader {
   }
   @Event onRight: () => void = () => {
   }
+  private insets: UiInsets = UiInsets.getInstance()
 
   build() {
     Row() {
@@ -47,6 +49,7 @@ export struct SettingsHeader {
       }
     }
     .width('100%')
-    .height(43)
+    .height(43 + this.insets.top)
+    .padding({ top: this.insets.top })
   }
 }

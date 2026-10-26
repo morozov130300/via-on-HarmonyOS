@@ -3,6 +3,7 @@ import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import { AppIcon } from './AppIcon'
 import { BusinessError } from '@kit.BasicServicesKit'
+import { UiInsets } from '../common/Immersive'
 
 const DEFAULT_TAB_TITLE: string = '新标签页'
 
@@ -11,6 +12,7 @@ export struct TabPanel {
   @Event onClose: () => void = () => {}
   private tabStore: TabStore = TabStore.getInstance()
   private settings: AppSettings = AppSettings.getInstance()
+  private insets: UiInsets = UiInsets.getInstance()
   @Local undoDialogId: number = -1
   @Local undoUrl: string = ''
 
@@ -124,6 +126,7 @@ export struct TabPanel {
       }
       .width('100%')
       .height('72%')
+      .padding({ bottom: this.insets.bottom })
       .backgroundColor($r('app.color.page_bg'))
       .borderRadius({ topLeft: 16, topRight: 16 })
     }
