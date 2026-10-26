@@ -1,9 +1,11 @@
 import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo, picker } from '@kit.CoreFileKit'
+import { webview } from '@kit.ArkWeb'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { BrowserDb } from '../common/Database'
 import { BackupManager } from '../common/Backup'
 import { uaByKey } from '../common/UaTable'
+import { SEARCH_ENGINES, SearchEngineDef } from '../common/SearchEngines'
 import { SettingNavRow, SettingToggleRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
@@ -63,7 +65,7 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '主页', rowValue: this.homeLabel(), onTapRow: () => {
               this.pickHome()
             } })
-            SettingNavRow({ rowLabel: '搜索设置', onTapRow: () => {
+            SettingNavRow({ rowLabel: '搜索设置', rowValue: this.engineLabel(), onTapRow: () => {
               this.pickEngine()
             } })
             SettingNavRow({ rowLabel: 'AI 设置', onTapRow: () => {
@@ -135,6 +137,14 @@ export struct SettingsGeneralPage {
     }
     const def = uaByKey(this.settings.uaKey)
     return def !== null ? def.label : '默认'
+  }
+
+  private engineLabel(): string {
+    if (this.settings.engineKey === 'custom' && this.settings.customEngineTemplate !== '') {
+      return '自定义'
+    }
+    const matched = SEARCH_ENGINES.find((engine: SearchEngineDef): boolean => engine.key === this.settings.engineKey)
+    return matched !== undefined ? matched.name : '百度'
   }
 
   private orientationLabel(): string {
@@ -602,29 +612,22 @@ export struct SettingsGeneralPage {
   }
 
   private pickEngine(): void {
-    const sheets: SheetInfo[] = [
-      { title: '百度', action: (): void => {
-        this.settings.setEngineKey('baidu')
-      } },
-      { title: '必应', action: (): void => {
-        this.settings.setEngineKey('bing')
-      } },
-      { title: '搜狗', action: (): void => {
-        this.settings.setEngineKey('sogou')
-      } },
-      { title: '360搜索', action: (): void => {
-        this.settings.setEngineKey('so360')
-      } },
-      { title: '神马', action: (): void => {
-        this.settings.setEngineKey('shenma')
-      } },
-      { title: '夸克', action: (): void => {
-        this.settings.setEngineKey('quark')
-      } },
-      { title: 'Google', action: (): void => {
-        this.settings.setEngineKey('google')
-      } }
-    ]
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < SEARCH_ENGINES.length; i++) {
+      const engine = SEARCH_ENGINES[i]
+      sheets.push({ title: engine.name, action: (): void => {
+        this.settings.setEngineKey(engine.key)
+      } })
+    }
+    if (this.settings.customEngineTemplate !== '') {
+      sheets.push({ title: '自定义', action: (): void => {
+        this.inputCustomEngine()
+      } })
+    } else {
+      sheets.push({ title: '添加自定义搜索引擎', action: (): void => {
+        this.inputCustomEngine()
+      } })
+    }
     ActionSheet.show({
       title: '搜索设置',
       message: '选择默认搜索引擎',
@@ -632,10 +635,86 @@ export struct SettingsGeneralPage {
     })
   }
 
+  @Local engineTemplateInput: string = ''
+  private engineDialogId: number = -1
+
+  private inputCustomEngine(): void {
+    this.engineTemplateInput = this.settings.customEngineTemplate
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.CustomEngineDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center
+    }).then((dialogId: number) => {
+      this.engineDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open custom engine dialog failed: ${error.message}`)
+    })
+  }
+
+  @Builder
+  CustomEngineDialog() {
+    Column({ space: 14 }) {
+      Text('自定义搜索引擎')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+      Text('用 %s 代表搜索词，例如：https://example.com/search?q=%s')
+        .fontSize(13)
+        .fontColor($r('app.color.fg_secondary'))
+      TextInput({ placeholder: 'https://example.com/search?q=%s', text: this.engineTemplateInput })
+        .width('100%')
+        .height(44)
+        .fontSize(14)
+        .onChange((value: string) => {
+          this.engineTemplateInput = value
+        })
+      Row({ space: 12 }) {
+        Button($r('app.string.cancel'))
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.surface'))
+          .fontColor($r('app.color.fg'))
+          .onClick(() => {
+            this.closeEngineDialog()
+          })
+        Button($r('app.string.confirm'))
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.accent'))
+          .enabled(this.engineTemplateInput.includes('%s'))
+          .opacity(this.engineTemplateInput.includes('%s') ? 1 : 0.4)
+          .onClick(() => {
+            const template = this.engineTemplateInput.trim()
+            if (!template.includes('%s')) {
+              return
+            }
+            this.settings.setCustomEngineTemplate(template)
+            this.settings.setEngineKey('custom')
+            this.closeEngineDialog()
+          })
+      }
+      .width('100%')
+    }
+    .width('86%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+  }
+
+  private closeEngineDialog(): void {
+    if (this.engineDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.engineDialogId)
+    this.engineDialogId = -1
+  }
+
+
   private confirmClear(): void {
     AlertDialog.show({
       title: '清除数据',
-      message: '将清除历史记录、下载记录与搜索历史',
+      message: '将清除历史记录、下载记录、搜索历史与 Cookies',
       primaryButton: {
         value: $r('app.string.cancel'),
         action: () => {
@@ -650,6 +729,15 @@ export struct SettingsGeneralPage {
           this.db.clearDownloads().catch((error: BusinessError) => {
             console.error(`clear downloads failed: ${error.message}`)
           })
+          webview.WebCookieManager.clearAllCookies().catch((error: BusinessError) => {
+            console.error(`clear cookies failed: ${error.message}`)
+          })
+          try {
+            webview.WebviewController.removeAllCache(true)
+            webview.WebStorage.deleteAllData()
+          } catch (error) {
+            console.error('clear web cache failed')
+          }
           this.settings.clearSearchHistory()
           this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
         }
