@@ -15,6 +15,13 @@ export struct Toolbar {
   private settings: AppSettings = AppSettings.getInstance()
   private swipeOffset: number = 0
 
+  private toolbarBg(): ResourceColor {
+    if (this.tab.isHomePage() && this.settings.homeBgColor !== '') {
+      return this.settings.homeBgColor
+    }
+    return $r('app.color.home_bg')
+  }
+
   build() {
     Row() {
       if (!this.hidden('back')) {
@@ -52,7 +59,7 @@ export struct Toolbar {
     }
     .width('100%')
     .height(38)
-    .backgroundColor($r('app.color.home_bg'))
+    .backgroundColor(this.toolbarBg())
     .alignItems(VerticalAlign.Center)
     .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 40 })
       .onActionUpdate((event: GestureEvent) => {

@@ -40,7 +40,7 @@ const SYNC_KEYS: string[] = [
   'homeFavWidth', 'homeFavHeight',
   'homeAdvEffect', 'homeAdvArea',
   'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
-  'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
+  'menuOrder', 'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
   'nightForceDark', 'readerConfirm', 'readerTheme', 'readerFontSize', 'readerCustomCss',
   'appLayout', 'toolbarAutoHide', 'tabBarEnabled', 'addressBarContent', 'toolbarColorAdapt',
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',
@@ -142,6 +142,9 @@ export class AppSettings {
   @Trace toolbarColorAdapt: boolean = true
   @Trace appLanguage: number = 1
   @Trace menuHidden: string[] = []
+  // 菜单条目显示顺序（id 数组，仅含当前在菜单里的条目；
+  // 空数组 = 从未定制过，使用 MenuItems.MENU_DEFAULT_ORDER 兜底）
+  @Trace menuOrder: string[] = []
   @Trace longPressHidden: string[] = []
   @Trace toolbarHidden: string[] = []
   @Trace scriptAutoUpdate: boolean = false
@@ -305,6 +308,7 @@ export class AppSettings {
       this.toolbarColorAdapt = await this.readBoolean('toolbarColorAdapt', true)
       this.appLanguage = await this.readNumber('appLanguage', 1)
       this.menuHidden = await this.readStringArray('menuHidden')
+      this.menuOrder = await this.readStringArray('menuOrder')
       this.longPressHidden = await this.readStringArray('longPressHidden')
       this.toolbarHidden = await this.readStringArray('toolbarHidden')
       this.scriptAutoUpdate = await this.readBoolean('scriptAutoUpdate', false)
@@ -952,6 +956,11 @@ export class AppSettings {
   setMenuHidden(list: string[]): void {
     this.menuHidden = list
     this.flushKey('menuHidden', JSON.stringify(list))
+  }
+
+  setMenuOrder(list: string[]): void {
+    this.menuOrder = list
+    this.flushKey('menuOrder', JSON.stringify(list))
   }
 
   setLongPressHidden(list: string[]): void {

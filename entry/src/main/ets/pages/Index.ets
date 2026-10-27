@@ -203,6 +203,13 @@ struct Index {
     return true
   }
 
+  private bottomBg(): ResourceColor {
+    if (this.tabStore.current().isHomePage() && this.settings.homeBgColor !== '') {
+      return this.settings.homeBgColor
+    }
+    return $r('app.color.home_bg')
+  }
+
   build() {
     Stack() {
       Navigation(this.mainNavStack) {
@@ -274,7 +281,7 @@ struct Index {
           }
           .width('100%')
           .padding({ bottom: 6 + this.insets.bottom })
-          .backgroundColor($r('app.color.home_bg'))
+          .backgroundColor(this.bottomBg())
         }
       }
       .width('100%')
