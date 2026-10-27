@@ -87,7 +87,7 @@ export struct MenuSheet {
   @Builder
   MainPager() {
     Swiper(this.swiperController) {
-      ForEach(this.chunk(this.mainItemIds(), 5), (page: string[]) => {
+      ForEach(this.chunk(this.mainItemIds(), 10), (page: string[]) => {
         Grid() {
           ForEach(page, (id: string) => {
             GridItem() {
@@ -96,9 +96,10 @@ export struct MenuSheet {
           }, (id: string) => id)
         }
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsTemplate('1fr')
+        .rowsTemplate('1fr 1fr')
+        .rowsGap(6)
         .width('100%')
-        .height(84)
+        .height(174)
       }, (page: string[], index: number) => `page_${index}_${page.length}`)
     }
     .loop(false)
@@ -108,6 +109,7 @@ export struct MenuSheet {
     })
   }
 
+  // 视频同款：每页 5 列 × 2 行（10 个条目），工具箱页即下一页
   private chunk(list: string[], size: number): string[][] {
     const pages: string[][] = []
     for (let i = 0; i < list.length; i += size) {
@@ -202,7 +204,7 @@ export struct MenuSheet {
   @Builder
   DotsBar() {
     Row({ space: 6 }) {
-      ForEach(this.chunk(this.mainItemIds(), 5), (_: string[], index: number) => {
+      ForEach(this.chunk(this.mainItemIds(), 10), (_: string[], index: number) => {
         Circle({ width: 5, height: 5 })
           .fill(index === this.pageIndex ? '#9E9Ea3' : '#4A494B')
       }, (_: string[], index: number) => `dot_${index}`)
