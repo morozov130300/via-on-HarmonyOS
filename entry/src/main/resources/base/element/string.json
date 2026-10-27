@@ -473,8 +473,132 @@
       "value": "输入 ABP 订阅地址"
     },
     {
+      "name": "web_mask_filter",
+      "value": "网页蒙版滤镜"
+    },
+    {
+      "name": "night_force_dark",
+      "value": "强制网页暗色"
+    },
+    {
+      "name": "night_force_dark_desc",
+      "value": "为网页启用强制暗色，这可能会导致部分页面表现异常"
+    },
+    {
+      "name": "reader_confirm",
+      "value": "开启阅读模式需要二次确认"
+    },
+    {
+      "name": "reader_confirm_desc_on",
+      "value": "当点击地址栏阅读模式图标时，先展示菜单"
+    },
+    {
+      "name": "reader_confirm_desc_off",
+      "value": "当点击地址栏阅读模式图标时，开启阅读模式"
+    },
+    {
+      "name": "appearance",
+      "value": "外观"
+    },
+    {
+      "name": "font_size",
+      "value": "字体大小"
+    },
+    {
+      "name": "custom_reader_css",
+      "value": "自定义阅读模式 CSS"
+    },
+    {
+      "name": "reader_sample_text",
+      "value": "莫忧世事兼身事，须著人间比梦间。"
+    },
+    {
+      "name": "app_layout",
+      "value": "应用布局"
+    },
+    {
+      "name": "layout_traditional",
+      "value": "传统"
+    },
+    {
+      "name": "layout_toolbar_top",
+      "value": "工具栏在上"
+    },
+    {
+      "name": "layout_toolbar_bottom",
+      "value": "工具栏在下"
+    },
+    {
+      "name": "layout_double_toolbar",
+      "value": "双行工具栏"
+    },
+    {
+      "name": "auto_hide_toolbar",
+      "value": "自动隐藏操作栏"
+    },
+    {
+      "name": "auto_hide_always",
+      "value": "总是显示"
+    },
+    {
+      "name": "auto_hide_swipe",
+      "value": "滑动来显示…"
+    },
+    {
+      "name": "auto_hide_tap",
+      "value": "点击来显示…"
+    },
+    {
+      "name": "auto_hide_swipe_desc",
+      "value": "滑动来显示/隐藏"
+    },
+    {
+      "name": "auto_hide_tap_desc",
+      "value": "点击来显示/隐藏"
+    },
+    {
+      "name": "enable_tab_bar",
+      "value": "启用标签栏"
+    },
+    {
+      "name": "tab_bar_need_layout",
+      "value": "请选择另一种应用布局以启用标签栏"
+    },
+    {
+      "name": "address_content",
+      "value": "地址栏内容"
+    },
+    {
+      "name": "content_title",
+      "value": "标题"
+    },
+    {
+      "name": "content_address",
+      "value": "地址"
+    },
+    {
+      "name": "content_domain",
+      "value": "域名"
+    },
+    {
+      "name": "color_mode",
+      "value": "色彩模式"
+    },
+    {
+      "name": "color_mode_desc",
+      "value": "浏览网页时操作栏自适应色彩"
+    },
+    {
       "name": "read_pasteboard_reason",
       "value": "用于读取剪贴板内容，提供粘贴并前往功能"
+    },
+    {
+      "name": "link_interstitial_title",
+      "value": "即将通过 Via 打开链接"
+    },
+    {
+      "name": "link_interstitial_continue",
+      "value": "继续打开"
     },
     {
       "name": "incognito",

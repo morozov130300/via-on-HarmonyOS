@@ -8,17 +8,20 @@ import {
   HOME_ADV_AREAS,
   HOME_ADV_EFFECTS,
   HOME_FAV_CORNERS,
+  HOME_FAV_DIM_VP,
   HOME_FAV_ICON_COLORS,
   HOME_FAV_ICON_STYLES,
   HOME_FAV_PALETTE,
   HOME_FAV_SINGLE_COLOR,
-  HOME_FAV_SIZE_VP,
   HOME_LOGO_COLOR,
+  HOME_LOGO_CORNERS,
+  HOME_LOGO_DIM_VP,
   HOME_LOGO_FONT_VP,
   HOME_LOGO_STYLES,
   HOME_LOGO_TYPES,
   HOME_PILL_CORNER_VP,
   HOME_PILL_OPACITY_VP,
+  HOME_PILL_STROKE_OPACITY_VP,
   HOME_PILL_STROKE_VP,
   HOME_PILL_STYLES
 } from '../common/HomeStyle'
@@ -44,7 +47,14 @@ export struct HomePage {
   }
 
   build() {
-    Column() {
+    Stack() {
+      if (this.settings.homeBgImage !== '') {
+        Image(this.settings.homeBgImage)
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+      }
+      Column() {
       Row() {
         Text($r('app.string.home_page'))
           .fontSize(16)
@@ -69,8 +79,10 @@ export struct HomePage {
               .maxLines(1)
           } else {
             Image($rawfile('logo.svg'))
-              .width(56)
-              .height(56)
+              .width(this.logoSize(this.settings.homeLogoWidth))
+              .height(this.logoSize(this.settings.homeLogoHeight))
+              .borderRadius(this.logoRadius())
+              .objectFit(ImageFit.Contain)
           }
           Text($r('app.string.logo_slogan'))
             .fontSize(12)
@@ -104,7 +116,7 @@ export struct HomePage {
                 Column({ space: 6 }) {
                   Stack() {
                     Text(this.shortLabel(item.title, item.url))
-                      .fontSize(HOME_FAV_SIZE_VP[this.settings.homeFavSize] * 0.43)
+                      .fontSize(this.favSize() * 0.43)
                       .fontColor(Color.White)
                       .textAlign(TextAlign.Center)
                       .width('100%')
@@ -117,8 +129,8 @@ export struct HomePage {
                         .objectFit(ImageFit.Contain)
                     }
                   }
-                  .width(HOME_FAV_SIZE_VP[this.settings.homeFavSize])
-                  .height(HOME_FAV_SIZE_VP[this.settings.homeFavSize])
+                  .width(this.favSize())
+                  .height(this.favHeight())
                   .borderRadius(this.favRadius())
                   .backgroundColor(this.favColor(item))
                   Text(item.title !== '' ? item.title : hostOf(item.url))
@@ -145,11 +157,41 @@ export struct HomePage {
       }
 
       Blank()
+      }
+      .width('100%')
+      .height('100%')
+      .padding({ top: this.insets.top })
     }
     .width('100%')
     .height('100%')
-    .padding({ top: this.insets.top })
     .backgroundColor(this.homeBackground())
+  }
+
+  private logoSize(index: number): number {
+    const vp = HOME_LOGO_DIM_VP[index]
+    return vp === 0 ? 56 : vp
+  }
+
+  private logoRadius(): number {
+    const size = Math.min(this.logoSize(this.settings.homeLogoWidth), this.logoSize(this.settings.homeLogoHeight))
+    const corner = HOME_LOGO_CORNERS[this.settings.homeLogoCorner]
+    if (corner === '100%') {
+      return size / 2
+    }
+    if (corner === '50%') {
+      return size / 4
+    }
+    return 0
+  }
+
+  private favSize(): number {
+    const vp = HOME_FAV_DIM_VP[this.settings.homeFavWidth]
+    return vp === 0 ? 46 : vp
+  }
+
+  private favHeight(): number {
+    const vp = HOME_FAV_DIM_VP[this.settings.homeFavHeight]
+    return vp === 0 ? this.favSize() : vp
   }
 
   private homeBackground(): ResourceColor {
@@ -191,7 +233,7 @@ export struct HomePage {
   }
 
   private strokeColor(): string {
-    const alpha = Math.round(HOME_PILL_OPACITY_VP[this.settings.homePillStrokeOpacity] * 255)
+    const alpha = Math.round(HOME_PILL_STROKE_OPACITY_VP[this.settings.homePillStrokeOpacity] * 255)
     let hex = alpha.toString(16)
     if (hex.length === 1) {
       hex = `0${hex}`
@@ -200,7 +242,7 @@ export struct HomePage {
   }
 
   private favRadius(): number {
-    const size = HOME_FAV_SIZE_VP[this.settings.homeFavSize]
+    const size = Math.max(this.favSize(), this.favHeight())
     const corner = HOME_FAV_CORNERS[this.settings.homeFavCorner]
     if (corner === '100%') {
       return size / 2
