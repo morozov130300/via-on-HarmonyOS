@@ -1,4 +1,6 @@
 import { TabStore } from '../common/TabStore'
+import { AppIcon } from './AppIcon'
+import { ViaIcon } from './ViaIcon'
 import { BrowserDb } from '../common/Database'
 import { BookmarkRec } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
@@ -55,15 +57,24 @@ export struct HomePage {
           .objectFit(ImageFit.Cover)
       }
       Column() {
-      Row() {
+      Row({ space: 12 }) {
+        AppIcon({ icon: $r('sys.symbol.magnifyingglass'), iconSize: 22, iconColor: $r('app.color.home_title') })
+          .onClick(() => {
+            this.onSearchTap()
+          })
         Text($r('app.string.home_page'))
           .fontSize(16)
           .fontColor($r('app.color.home_title'))
           .maxLines(1)
+        Blank()
+        ViaIcon({ icon: $r('app.media.via_ic_scan'), iconSize: 22, iconColor: $r('app.color.home_title') })
+          .onClick(() => {
+            this.onSearchTap()
+          })
       }
       .width('100%')
-      .height(38)
-      .justifyContent(FlexAlign.Center)
+      .height(48)
+      .padding({ left: 16, right: 16 })
       .alignItems(VerticalAlign.Center)
 
       Blank()
@@ -84,9 +95,6 @@ export struct HomePage {
               .borderRadius(this.logoRadius())
               .objectFit(ImageFit.Contain)
           }
-          Text($r('app.string.logo_slogan'))
-            .fontSize(12)
-            .fontColor($r('app.color.fg_secondary'))
         }
 
         Row() {
@@ -96,7 +104,7 @@ export struct HomePage {
             .maxLines(1)
         }
         .height(HOME_PILL_HEIGHT)
-        .padding({ left: 40, right: 40 })
+        .width('92%')
         .backgroundColor($r('app.color.search_pill_bg'))
         .borderRadius(this.pillRadius())
         .opacity(this.pillOpacity())

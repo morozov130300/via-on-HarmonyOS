@@ -7,6 +7,7 @@ import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { SiteSetting } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
+import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel } from '../common/MenuItems'
 import { ViaIcon } from './ViaIcon'
 import { UiInsets } from '../common/Immersive'
 
@@ -30,7 +31,9 @@ export struct MenuSheet {
   @Event onOpenAi: () => void = () => {}
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
-  @Local showToolbox: boolean = false
+  @Local pageIndex: number = 0
+  // 统一翻页式菜单（工具箱即往后翻一页），由 SwiperController 驱动点击翻页
+  private swiperController: SwiperController = new SwiperController()
   private insets: UiInsets = UiInsets.getInstance()
 
   build() {
@@ -44,189 +47,169 @@ export struct MenuSheet {
         })
 
       Column() {
-        if (this.showToolbox) {
-          this.ToolboxPanel()
-        } else {
-          this.MainGrid()
-          this.HandleBar()
-          this.BottomRow()
-        }
+        this.MainPager()
+        this.DotsBar()
+        this.BottomRow()
       }
       .width('100%')
-      .padding({ bottom: this.insets.bottom })
+      .margin({
+        left: 12,
+        right: 12,
+        bottom: this.insets.bottom > 0 ? this.insets.bottom + 8 : 16
+      })
+      .borderRadius(24)
+      .clip(true)
+      .padding({ top: 8, bottom: 6 })
       .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.4)', offsetY: 4 })
     }
     .width('100%')
     .height('100%')
   }
 
-  @Builder
-  MainGrid() {
-    Grid() {
-      if (!this.hidden('bookmarks')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_bookmark'), $r('app.string.bookmarks'), () => {
-            this.onOpenPage('bookmarks')
-          })
-        }
-      }
-      if (!this.hidden('history')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_history'), $r('app.string.history'), () => {
-            this.onOpenPage('history')
-          })
-        }
-      }
-      if (!this.hidden('downloads')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_download'), $r('app.string.downloads'), () => {
-            this.onOpenPage('downloads')
-          })
-        }
-      }
-      if (!this.hidden('incognito')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_incognito'), $r('app.string.incognito'), () => {
-            this.openIncognito()
-          })
-        }
-      }
-      if (!this.hidden('share')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_share'), $r('app.string.share'), () => {
-            this.onClose()
-            this.onShare()
-          })
-        }
-      }
-      if (!this.hidden('add_bookmark')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_add_bookmark'), $r('app.string.add_bookmark'), () => {
-            this.addBookmark()
-          })
-        }
-      }
-      if (!this.hidden('pc_mode')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_pc_mode'), $r('app.string.pc_mode'), () => {
-            this.toggleSitePcMode()
-          })
-        }
-      }
-      if (!this.hidden('save')) {
-        GridItem() {
-          this.GridCellBody($r('app.media.via_ic_save'), $r('app.string.save'), !this.tabStore.current().isHomePage(), () => {
-            this.onClose()
-            this.onSavePage()
-          })
-        }
-      }
-      if (!this.hidden('toolbox')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_toolbox'), $r('app.string.toolbox'), () => {
-            this.showToolbox = true
-          })
-        }
-      }
-      if (!this.hidden('settings')) {
-        GridItem() {
-          this.GridCell($r('app.media.via_ic_settings'), $r('app.string.settings'), () => {
-            this.onOpenPage('settings')
-          })
-        }
+  // 菜单条目顺序：定制菜单页写入的 settings.menuOrder 为主序，
+  // 旧数据/新增条目按 MENU_DEFAULT_ORDER 补齐；隐藏条目（menuHidden）不渲染
+  private mainItemIds(): string[] {
+    const ids: string[] = []
+    for (const id of this.settings.menuOrder) {
+      if (isMenuId(id) && !this.hidden(id) && ids.indexOf(id) < 0) {
+        ids.push(id)
       }
     }
-    .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-    .rowsTemplate('1fr 1fr')
-    .width('100%')
-    .height(130)
+    for (const id of MENU_DEFAULT_ORDER) {
+      if (ids.indexOf(id) < 0 && !this.hidden(id)) {
+        ids.push(id)
+      }
+    }
+    return ids
   }
 
   @Builder
-  ToolboxPanel() {
-    Column() {
-      Grid() {
-        if (!this.hidden('find')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_find'), $r('app.string.find_in_page'), () => {
-              this.onClose()
-              this.onFindInPage()
-            })
-          }
+  MainPager() {
+    Swiper(this.swiperController) {
+      ForEach(this.chunk(this.mainItemIds(), 5), (page: string[]) => {
+        Grid() {
+          ForEach(page, (id: string) => {
+            GridItem() {
+              this.MainCell(id)
+            }
+          }, (id: string) => id)
         }
-        if (!this.hidden('offline')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_offline'), $r('app.string.offline_page'), () => {
-              this.onOpenPage('offlinePage')
-            })
-          }
-        }
-        if (!this.hidden('translate')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_translate'), $r('app.string.translate'), () => {
-              this.translatePage()
-            })
-          }
-        }
-        if (!this.hidden('add_to_desktop')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_add_to_desktop'), $r('app.string.add_to_desktop'), () => {
-              this.addToDesktop()
-            })
-          }
-        }
-        if (!this.hidden('script')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_script'), $r('app.string.scripts'), () => {
-              this.onOpenPage('settingsScript')
-            })
-          }
-        }
-        if (!this.hidden('adblock')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_adblock'), $r('app.string.ad_block'), () => {
-              this.onOpenPage('rules')
-            })
-          }
-        }
-        if (!this.hidden('ai')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_ai'), $r('app.string.ai'), () => {
-              this.onClose()
-              this.onOpenAi()
-            })
-          }
-        }
-        if (!this.hidden('print')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_print'), $r('app.string.print_pdf'), () => {
-              this.printPage()
-            })
-          }
-        }
-        if (!this.hidden('ua')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_ua'), $r('app.string.browser_ua'), () => {
-              this.pickUa()
-            })
-          }
-        }
-        if (!this.hidden('netlog')) {
-          GridItem() {
-            this.GridCell($r('app.media.via_ic_netlog'), $r('app.string.net_log'), () => {
-              this.onOpenPage('netLog')
-            })
-          }
-        }
-      }
-      .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-      .rowsTemplate('1fr 1fr')
-      .width('100%')
-      .height(130)
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+        .rowsTemplate('1fr')
+        .width('100%')
+        .height(84)
+      }, (page: string[], index: number) => `page_${index}_${page.length}`)
+    }
+    .loop(false)
+    .indicator(false)
+    .onChange((index: number) => {
+      this.pageIndex = index
+    })
+  }
 
-      this.HandleBar()
+  private chunk(list: string[], size: number): string[][] {
+    const pages: string[][] = []
+    for (let i = 0; i < list.length; i += size) {
+      pages.push(list.slice(i, i + size))
+    }
+    return pages
+  }
+
+  @Builder
+  MainCell(id: string) {
+    // 图标与文案统一走 MenuItems 映射；.save 需在家页禁用走区分分支
+    if (id === 'save') {
+      this.GridCellBody($r('app.media.via_ic_save'), $r('app.string.save'), !this.tabStore.current().isHomePage(), () => {
+        this.onClose()
+        this.onSavePage()
+      })
+    } else {
+      this.GridCell(menuIcon(id), menuLabel(id), () => {
+        this.menuAction(id)
+      })
+    }
+  }
+
+  private menuAction(id: string): void {
+    switch (id) {
+      case 'bookmarks':
+        this.onOpenPage('bookmarks')
+        break
+      case 'history':
+        this.onOpenPage('history')
+        break
+      case 'downloads':
+        this.onOpenPage('downloads')
+        break
+      case 'incognito':
+        this.openIncognito()
+        break
+      case 'share':
+        this.onClose()
+        this.onShare()
+        break
+      case 'add_bookmark':
+        this.addBookmark()
+        break
+      case 'pc_mode':
+        this.toggleSitePcMode()
+        break
+      // 工具箱即往后翻一页（与原版一致：菜单整体翻页，不存在独立的二级面板）
+      case 'toolbox':
+        this.swiperController.showNext()
+        break
+      case 'settings':
+        this.onOpenPage('settings')
+        break
+      case 'find':
+        this.onClose()
+        this.onFindInPage()
+        break
+      case 'offline':
+        this.onOpenPage('offlinePage')
+        break
+      case 'translate':
+        this.translatePage()
+        break
+      case 'add_to_desktop':
+        this.addToDesktop()
+        break
+      case 'script':
+        this.onOpenPage('settingsScript')
+        break
+      case 'adblock':
+        this.onOpenPage('rules')
+        break
+      case 'ai':
+        this.onClose()
+        this.onOpenAi()
+        break
+      case 'print':
+        this.printPage()
+        break
+      case 'ua':
+        this.pickUa()
+        break
+      case 'netlog':
+        this.onOpenPage('netLog')
+        break
+      default:
+        break
+    }
+  }
+
+  @Builder
+  DotsBar() {
+    Row({ space: 6 }) {
+      ForEach(this.chunk(this.mainItemIds(), 5), (_: string[], index: number) => {
+        Circle({ width: 5, height: 5 })
+          .fill(index === this.pageIndex ? '#9E9Ea3' : '#4A494B')
+      }, (_: string[], index: number) => `dot_${index}`)
     }
     .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .height(16)
   }
 
   @Builder
@@ -253,21 +236,6 @@ export struct MenuSheet {
         action()
       }
     })
-  }
-
-  @Builder
-  HandleBar() {
-    Column() {
-      Divider()
-        .strokeWidth(3)
-        .color('#4A494B')
-        .width(28)
-        .borderRadius(2)
-    }
-    .width('100%')
-    .height(14)
-    .alignItems(HorizontalAlign.Center)
-    .margin({ top: 2 })
   }
 
   @Builder
