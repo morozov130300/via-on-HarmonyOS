@@ -37,8 +37,8 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '清除数据', onTapRow: () => {
               this.confirmClear()
             } })
-            SettingToggleRow({ rowLabel: '广告拦截', isToggleOn: this.settings.adBlockOn, onToggleRow: (isOn: boolean) => {
-              this.settings.setAdBlockOn(isOn)
+            SettingNavRow({ rowLabel: '广告拦截', onTapRow: () => {
+              this.navPathStack.pushPathByName('settingsAdBlock', '', true)
             } })
             SettingNavRow({ rowLabel: '网站设定', onTapRow: () => {
               this.navPathStack.pushPathByName('siteSettings', '', true)
@@ -46,11 +46,11 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '密码管理器', onTapRow: () => {
               this.showPasswordVaultGuide()
             } })
-            SettingToggleRow({ rowLabel: '夜间模式', isToggleOn: this.settings.nightMode, onToggleRow: (isOn: boolean) => {
-              this.settings.setNightMode(isOn)
+            SettingNavRow({ rowLabel: '夜间模式', onTapRow: () => {
+              this.navPathStack.pushPathByName('settingsNight', '', true)
             } })
-            SettingToggleRow({ rowLabel: '阅读模式', isToggleOn: this.settings.readerAuto, onToggleRow: (isOn: boolean) => {
-              this.settings.setReaderAuto(isOn)
+            SettingNavRow({ rowLabel: '阅读模式', onTapRow: () => {
+              this.navPathStack.pushPathByName('settingsReader', '', true)
             } })
             SettingToggleRow({ rowLabel: '显示状态栏', rowDesc: '关闭后页面内容铺满整个屏幕', isToggleOn: this.settings.showStatusBar, onToggleRow: (isOn: boolean) => {
               this.settings.setShowStatusBar(isOn)
@@ -729,39 +729,164 @@ export struct SettingsGeneralPage {
 
 
   private confirmClear(): void {
-    AlertDialog.show({
-      title: '清除数据',
-      message: '将清除历史记录、下载记录、搜索历史与 Cookies',
-      primaryButton: {
-        value: $r('app.string.cancel'),
-        action: () => {
-        }
+    this.clearDataSelection = [true, true, false, false, false, false]
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.ClearDataDialog()
       },
-      secondaryButton: {
-        value: $r('app.string.confirm'),
-        action: () => {
-          this.db.clearHistory().catch((error: BusinessError) => {
-            console.error(`clear history failed: ${error.message}`)
-          })
-          this.db.clearDownloads().catch((error: BusinessError) => {
-            console.error(`clear downloads failed: ${error.message}`)
-          })
-          webview.WebCookieManager.clearAllCookies().catch((error: BusinessError) => {
-            console.error(`clear cookies failed: ${error.message}`)
-          })
-          try {
-            webview.WebviewController.removeAllCache(true)
-            webview.WebStorage.deleteAllData()
-          } catch (error) {
-            console.error('clear web cache failed')
-          }
-          this.settings.clearSearchHistory()
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
-        }
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.5)'
+    }).then((dialogId: number) => {
+      this.clearDataDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open clear data dialog failed: ${error.message}`)
+    })
+  }
+
+  @Local clearDataSelection: boolean[] = [true, true, false, false, false, false]
+  private clearDataDialogId: number = -1
+
+  @Builder
+  ClearDataItem(label: string, index: number) {
+    Row({ space: 14 }) {
+      Circle({ width: 20, height: 20 })
+        .fill(this.clearDataSelection[index] ? $r('app.color.accent') : Color.Transparent)
+        .stroke(this.clearDataSelection[index] ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+        .strokeWidth(1.5)
+      Text(label)
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+    }
+    .width('100%')
+    .height(42)
+    .onClick(() => {
+      if (!this.clearDataSelection[index]) {
+        this.clearDataSelection[index] = true
+      } else {
+        this.clearDataSelection[index] = false
       }
     })
   }
+
+  @Builder
+  ClearDataDialog() {
+    Column({ space: 10 }) {
+      Text('清除数据')
+        .fontSize(18)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+      ForEach(CLEAR_DATA_ITEMS, (label: string, index: number) => {
+        this.ClearDataItem(label, index)
+      }, (label: string) => label)
+      Row({ space: 24 }) {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(15)
+          .fontColor($r('app.color.fg_secondary'))
+          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+          .onClick(() => {
+            this.closeClearDataDialog()
+          })
+        Text($r('app.string.confirm'))
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+          .onClick(() => {
+            this.applyClearData()
+            this.closeClearDataDialog()
+          })
+      }
+      .width('100%')
+      .margin({ top: 6 })
+    }
+    .width('80%')
+    .padding(24)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+  }
+
+  private closeClearDataDialog(): void {
+    if (this.clearDataDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.clearDataDialogId)
+    this.clearDataDialogId = -1
+  }
+
+  private applyClearData(): void {
+    const selected = this.clearDataSelection
+    if (selected[0]) {
+      try {
+        webview.WebviewController.removeAllCache(true)
+      } catch (error) {
+        console.error('clear web cache failed')
+      }
+    }
+    if (selected[1]) {
+      this.db.clearHistory().catch((error: BusinessError) => {
+        console.error(`clear history failed: ${error.message}`)
+      })
+      this.settings.clearSearchHistory()
+    }
+    if (selected[2]) {
+      AppStorage.setOrCreate('via_undo_close_url', '')
+    }
+    if (selected[3]) {
+      try {
+        webview.WebStorage.deleteAllData()
+      } catch (error) {
+        console.error('clear web storage failed')
+      }
+    }
+    if (selected[4]) {
+      webview.WebCookieManager.clearAllCookies().catch((error: BusinessError) => {
+        console.error(`clear cookies failed: ${error.message}`)
+      })
+    }
+    if (selected[5]) {
+      this.clearAppCache()
+    }
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
+  }
+
+  private clearAppCache(): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    try {
+      const cacheDir = context.cacheDir
+      const names = fileIo.listFileSync(cacheDir)
+      for (let i = 0; i < names.length; i++) {
+        const path = `${cacheDir}/${names[i]}`
+        try {
+          fileIo.rmdirSync(path)
+        } catch (error) {
+          try {
+            fileIo.unlinkSync(path)
+          } catch (innerError) {
+            console.error(`clear app cache entry failed: ${names[i]}`)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('clear app cache failed')
+    }
+  }
 }
+
+const CLEAR_DATA_ITEMS: string[] = [
+  '缓存',
+  '历史',
+  '关闭的标签页',
+  '网页存储',
+  'Cookies (登录状态)',
+  '应用缓存'
+]
 
 @Builder
 export function SettingsGeneralPageBuilder() {

@@ -35,6 +35,8 @@ export class AdBlocker {
   private builtinSet: Set<string> = new Set<string>()
   private customBlockSet: Set<string> = new Set<string>()
   private customAllowSet: Set<string> = new Set<string>()
+  private subBlockSet: Set<string> = new Set<string>()
+  private subAllowSet: Set<string> = new Set<string>()
 
   private constructor() {
     for (let i = 0; i < BUILTIN_BLOCK.length; i++) {
@@ -74,6 +76,11 @@ export class AdBlocker {
     }
   }
 
+  setSubscriptionRules(blocks: Set<string>, allows: Set<string>): void {
+    this.subBlockSet = blocks
+    this.subAllowSet = allows
+  }
+
   private matches(host: string, ruleSet: Set<string>): boolean {
     let current = host
     while (true) {
@@ -103,10 +110,16 @@ export class AdBlocker {
     if (this.matches(host, this.customAllowSet)) {
       return false
     }
+    if (this.matches(host, this.subAllowSet)) {
+      return false
+    }
     if (this.matches(host, this.customBlockSet)) {
       return true
     }
-    if (this.matches(host, this.builtinSet)) {
+    if (this.matches(host, this.subBlockSet)) {
+      return true
+    }
+    if (this.settings.adBlockBuiltin && this.matches(host, this.builtinSet)) {
       return true
     }
     return false

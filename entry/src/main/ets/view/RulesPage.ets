@@ -1,205 +1,163 @@
-import { RuleEntry } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
-import { AppIcon } from '../components/AppIcon'
-import { http } from '@kit.NetworkKit'
-
-const SUBSCRIBE_MAX_LINES: number = 20000
+import { SettingsHeader } from '../components/SettingsHeader'
+import { BusinessError } from '@kit.BasicServicesKit'
+import { common } from '@kit.AbilityKit'
 
 @ComponentV2
 export struct RulesPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
-  @Local domainInput: string = ''
-  @Local subInput: string = ''
-  @Local subscribing: boolean = false
+  @Local rulesDraft: string = ''
+  @Local dirty: boolean = false
+  private helpDialogId: number = -1
 
   aboutToAppear(): void {
-    this.subInput = this.settings.ruleSubUrl
+    this.rulesDraft = this.settings.customRulesText
   }
 
   build() {
     NavDestination() {
       Column() {
-        if (this.settings.customRules.length === 0) {
-          Column() {
-            Text($r('app.string.no_rules'))
-              .fontSize(14)
-              .fontColor($r('app.color.fg_secondary'))
+        SettingsHeader({
+          headerTitle: '自定义规则',
+          rightText2: '帮助',
+          rightText: this.dirty ? '保存' : '',
+          onBack: () => {
+            this.navPathStack.pop()
+          },
+          onRight: () => {
+            this.saveRules()
+          },
+          onRight2: () => {
+            this.showHelp()
           }
+        })
+        Text('一个过滤规则一行。')
+          .fontSize(13)
+          .fontColor($r('app.color.fg_secondary'))
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 10, bottom: 6 })
+        TextArea({ text: this.rulesDraft, placeholder: '||example.com^\n@@||example.com^' })
+          .fontSize(14)
+          .fontColor($r('app.color.fg'))
+          .backgroundColor(Color.Transparent)
+          .placeholderColor($r('app.color.fg_secondary'))
+          .constraintSize({ minHeight: 200 })
           .width('100%')
           .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
-        } else {
-          List({ space: 1 }) {
-            ForEach(this.settings.customRules, (rule: RuleEntry) => {
-              ListItem() {
-                Row({ space: 12 }) {
-                  Text(rule.isAllow ? $r('app.string.allow') : $r('app.string.block'))
-                    .fontSize(11)
-                    .fontColor(rule.isAllow ? Color.White : $r('app.color.fg'))
-                    .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-                    .borderRadius(8)
-                    .backgroundColor(rule.isAllow ? $r('app.color.accent') : $r('app.color.divider'))
-                  Text(rule.domain)
-                    .fontSize(15)
-                    .fontColor($r('app.color.fg'))
-                    .layoutWeight(1)
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  AppIcon({ icon: $r('sys.symbol.trash'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-                    .onClick(() => {
-                      this.removeRule(rule)
-                    })
-                }
-                .width('100%')
-                .height(52)
-                .padding({ left: 16, right: 16 })
-              }
-            }, (rule: RuleEntry) => `${rule.domain}-${rule.isAllow}`)
-          }
-          .width('100%')
-          .layoutWeight(1)
-          .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
-        }
-        Row({ space: 8 }) {
-          TextInput({ placeholder: $r('app.string.subscription_url_hint'), text: this.subInput })
-            .layoutWeight(1)
-            .height(40)
-            .fontSize(13)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .placeholderColor($r('app.color.fg_secondary'))
-            .caretColor($r('app.color.accent'))
-            .onChange((value: string) => {
-              this.subInput = value
-            })
-          Button(this.subscribing ? '...' : $r('app.string.update_subscription'))
-            .fontSize(13)
-            .height(36)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.subscribe()
-            })
-        }
-        .width('100%')
-        .padding(12)
-        Row({ space: 8 }) {
-          TextInput({ placeholder: $r('app.string.rule_hint'), text: this.domainInput })
-            .layoutWeight(1)
-            .height(40)
-            .fontSize(14)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .placeholderColor($r('app.color.fg_secondary'))
-            .caretColor($r('app.color.accent'))
-            .onChange((value: string) => {
-              this.domainInput = value
-            })
-          Button($r('app.string.block'))
-            .fontSize(13)
-            .height(36)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.addRule(false)
-            })
-          Button($r('app.string.allow'))
-            .fontSize(13)
-            .height(36)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.addRule(true)
-            })
-        }
-        .width('100%')
-        .padding(12)
+          .padding({ left: 16, right: 16 })
+          .onChange((value: string) => {
+            this.rulesDraft = value
+            this.dirty = value !== this.settings.customRulesText
+          })
+          .onBlur(() => {
+            this.saveRules()
+          })
       }
       .width('100%')
       .height('100%')
     }
-    .title($r('app.string.custom_rules'))
+    .backgroundColor($r('app.color.page_bg'))
+    .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })
   }
 
-  private addRule(isAllow: boolean): void {
-    const domain = this.domainInput.trim().toLowerCase()
-    if (domain === '') {
+  private saveRules(): void {
+    if (this.rulesDraft === this.settings.customRulesText) {
       return
     }
-    this.settings.addRule(domain, isAllow)
+    this.settings.setCustomRulesText(this.rulesDraft)
     AdBlocker.getInstance().rebuildCustomRules()
-    this.domainInput = ''
+    this.dirty = false
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.reset_done'), duration: 1500 })
   }
 
-  private removeRule(rule: RuleEntry): void {
-    this.settings.removeRule(rule.domain)
-    AdBlocker.getInstance().rebuildCustomRules()
+  private showHelp(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.HelpDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.5)'
+    }).then((dialogId: number) => {
+      this.helpDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open help dialog failed: ${error.message}`)
+    })
   }
 
-  private async subscribe(): Promise<void> {
-    if (this.subscribing) {
+  private closeHelp(): void {
+    if (this.helpDialogId < 0) {
       return
     }
-    const url = this.subInput.trim()
-    if (url === '') {
+    this.getUIContext().getPromptAction().closeCustomDialog(this.helpDialogId)
+    this.helpDialogId = -1
+  }
+
+  private openHelpDoc(): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext | undefined
+    this.closeHelp()
+    if (context === undefined) {
       return
     }
-    this.subscribing = true
-    this.settings.setRuleSubUrl(url)
-    const request = http.createHttp()
     try {
-      const response = await request.request(url, {
-        method: http.RequestMethod.GET,
-        connectTimeout: 10000,
-        readTimeout: 30000,
-        usingCache: false
-      })
-      const body = response.result
-      if (typeof body !== 'string') {
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_failed'), duration: 1500 })
-        this.subscribing = false
-        request.destroy()
-        return
-      }
-      const lines = body.split('\n')
-      let added = 0
-      for (let i = 0; i < lines.length && i < SUBSCRIBE_MAX_LINES; i++) {
-        const line = lines[i].trim()
-        if (line === '' || line.startsWith('!') || line.startsWith('[')) {
-          continue
-        }
-        const isAllow = line.startsWith('@@')
-        const rest = isAllow ? line.substring(2) : line
-        if (!rest.startsWith('||')) {
-          continue
-        }
-        let host = rest.substring(2).toLowerCase()
-        const cutChars = ['^', '/', '$', '|', '?', ',']
-        for (let j = 0; j < cutChars.length; j++) {
-          const pos = host.indexOf(cutChars[j])
-          if (pos >= 0) {
-            host = host.substring(0, pos)
-          }
-        }
-        if (host !== '' && host.indexOf('*') < 0 && host.indexOf('.') > 0) {
-          this.settings.addRule(host, isAllow)
-          added = added + 1
-        }
-      }
-      AdBlocker.getInstance().rebuildCustomRules()
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.rules_added', added), duration: 1500 })
+      context.openLink('https://help.eyeo.com/en/adblockplus/how-to-write-filters')
     } catch (error) {
-      const err = error as BusinessError
-      console.error(`subscribe rules failed: ${err.message}`)
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_failed'), duration: 1500 })
+      console.error('open help doc failed')
     }
-    this.subscribing = false
-    request.destroy()
+  }
+
+  @Builder
+  HelpDialog() {
+    Column({ space: 14 }) {
+      Text('帮助')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+      Column({ space: 12 }) {
+        Text('Via 几乎支持所有的 Adblock Plus 规则。\n你可以这样拦截 example.com 的所有请求：\n||example.com^（或 example.com）')
+          .fontSize(13)
+          .fontColor($r('app.color.fg'))
+        Text('通配符也是支持的，比如：\n||example.com/js/ads_*.js')
+          .fontSize(13)
+          .fontColor($r('app.color.fg'))
+        Text('你也可以允许指定的请求，例如：\n@@||example.com^')
+          .fontSize(13)
+          .fontColor($r('app.color.fg'))
+        Text('对于网页的元素，规则类似：\nexample.com###ad')
+          .fontSize(13)
+          .fontColor($r('app.color.fg'))
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      Row() {
+        Text('了解更多')
+          .fontSize(14)
+          .fontColor($r('app.color.accent'))
+          .layoutWeight(1)
+          .onClick(() => {
+            this.openHelpDoc()
+          })
+        Text($r('app.string.confirm'))
+          .fontSize(14)
+          .fontColor($r('app.color.accent'))
+          .onClick(() => {
+            this.closeHelp()
+          })
+      }
+      .width('100%')
+      .margin({ top: 4 })
+    }
+    .width('80%')
+    .padding(24)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
   }
 }
 

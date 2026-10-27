@@ -290,3 +290,31 @@ export class RuleEntry {
     return null
   }
 }
+
+export class RuleSubEntry {
+  key: string
+  name: string
+  url: string
+  enabled: boolean
+  ruleCount: number
+  lastUpdate: number
+  isPreset: boolean
+
+  constructor(key: string, name: string, url: string, enabled: boolean, ruleCount: number, lastUpdate: number, isPreset: boolean) {
+    this.key = key
+    this.name = name
+    this.url = url
+    this.enabled = enabled
+    this.ruleCount = ruleCount
+    this.lastUpdate = lastUpdate
+    this.isPreset = isPreset
+  }
+}
+
+export const RULE_SUB_PRESETS: RuleSubEntry[] = [
+  new RuleSubEntry('easylist', 'Easylist', 'https://easylist.to/easylist/easylist.txt', false, 0, 0, true),
+  new RuleSubEntry('easylistchina', 'Easylist China', 'https://easylist-downloads.adblockplus.org/easylistchina.txt', false, 0, 0, true),
+  new RuleSubEntry('cjx-annoyance', "CJX's Annoyance List", 'https://raw.githubusercontent.com/cjx82630/cjxlist/master/cjx-annoyance.txt', false, 0, 0, true),
+  new RuleSubEntry('easyprivacy', 'Easylist Privacy', 'https://easylist-downloads.adblockplus.org/easyprivacy.txt', false, 0, 0, true),
+  new RuleSubEntry('antiadblock', 'Easylist Warning Removal', 'https://easylist-downloads.adblockplus.org/antiadblockfilters.txt', false, 0, 0, true)
+]

@@ -43,7 +43,7 @@ export struct TabWeb {
         .mixedMode(MixedMode.Compatible)
         .textZoomRatio(this.settings.textZoom)
         .darkMode(this.settings.nightMode ? WebDarkMode.On : WebDarkMode.Off)
-        .forceDarkAccess(this.settings.nightMode)
+        .forceDarkAccess(this.settings.nightMode && this.settings.nightForceDark)
         .onControllerAttached(() => {
           this.applyAdvancedSettings()
           if (this.tab.initialUrl !== '') {
@@ -76,6 +76,7 @@ export struct TabWeb {
           this.injectScripts(event.url)
           this.injectCustomCss()
           this.autoOpenReader()
+          this.expandFullText()
           this.settings.persistAdBlockTotal()
         })
         .onProgressChange((event: OnProgressChangeEvent) => {
@@ -396,6 +397,15 @@ export struct TabWeb {
       }
     }).catch(() => {
       console.error('auto reader extract failed')
+    })
+  }
+
+  private expandFullText(): void {
+    if (!this.settings.autoExpandFullText || this.tab.incognito || this.tab.isHomePage()) {
+      return
+    }
+    const js = '(function(){var k=/(展开全文|阅读全文|查看全文|显示全文|展开剩余|show more|read more|view more)/i;if(k.test(document.body?document.body.innerText:"")){var els=document.querySelectorAll("button,a,div,span,p");for(var i=0;i<els.length;i++){var t=(els[i].innerText||"").trim();if(t&&t.length<=10&&k.test(t)){els[i].click();break}}}})()'
+    this.tab.controller.runJavaScript(js).catch(() => {
     })
   }
 

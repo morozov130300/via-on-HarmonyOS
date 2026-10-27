@@ -1,6 +1,7 @@
-import { TabItem } from '../common/Types'
+import { TabItem, RuleSubEntry } from '../common/Types'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
+import { RuleSubManager } from '../common/RuleSubscriptions'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { DownloadCoordinator } from '../common/Downloads'
@@ -17,6 +18,7 @@ import { TtsManager } from '../common/Tts'
 import { ReaderView } from '../components/ReaderView'
 import { AiPanel } from '../components/AiPanel'
 import { MediaListPage } from '../components/MediaListPage'
+import { LinkInterstitial } from '../components/LinkInterstitial'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
@@ -29,6 +31,7 @@ import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 
 const EXIT_INTERVAL: number = 2000
 const SHORTCUT_URL_EVENT_ID = 10001
+const EXTERNAL_LINK_EVENT_ID = 10002
 
 @Entry
 @ComponentV2
@@ -50,6 +53,8 @@ struct Index {
   @Local mediaList: string[] = []
   @Local readerText: string = ''
   @Local exitHintTime: number = 0
+  @Local showLinkConfirm: boolean = false
+  @Local linkConfirmUrl: string = ''
   private tts: TtsManager = TtsManager.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
 
@@ -60,6 +65,14 @@ struct Index {
       const viaUrl = data['viaUrl']
       if (typeof viaUrl === 'string' && viaUrl !== '') {
         this.tabStore.navigate(viaUrl)
+      }
+    })
+    emitter.on({ eventId: EXTERNAL_LINK_EVENT_ID }, (event: emitter.EventData) => {
+      const data = event.data as Record<string, Object>
+      const linkUrl = data['linkUrl']
+      const external = data['external']
+      if (typeof linkUrl === 'string' && linkUrl !== '') {
+        this.openExternalLink(linkUrl, external !== false)
       }
     })
   }
@@ -82,13 +95,34 @@ struct Index {
     await this.db.init(context)
     this.downloads.register(context)
     AdBlocker.getInstance().init(this.settings)
+    RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, AdBlocker.getInstance()).then(() => {
+      RuleSubManager.getInstance().maybeAutoUpdate(context, this.settings.ruleSubscriptions, this.settings.ruleAutoUpdate).then((updated: RuleSubEntry[] | null) => {
+        if (updated !== null) {
+          for (let i = 0; i < updated.length; i++) {
+            this.settings.updateRuleSubEntry(updated[i].key, updated[i].ruleCount, updated[i].lastUpdate)
+          }
+          RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, AdBlocker.getInstance())
+        }
+      })
+    })
     await this.tabStore.init(this.settings)
     this.ready = true
     const launchUrl = AppStorage.get<string>('via_launch_url') ?? ''
     if (launchUrl !== '') {
       AppStorage.setOrCreate('via_launch_url', '')
-      this.tabStore.navigate(launchUrl)
+      const launchExternal = AppStorage.get<boolean>('via_launch_external') ?? false
+      AppStorage.setOrCreate('via_launch_external', false)
+      this.openExternalLink(launchUrl, launchExternal)
     }
+  }
+
+  private openExternalLink(url: string, external: boolean): void {
+    if (!external || this.settings.disableCustomTabs) {
+      this.tabStore.navigate(url)
+      return
+    }
+    this.linkConfirmUrl = url
+    this.showLinkConfirm = true
   }
 
   private setupImmersiveWindow(): void {
@@ -108,6 +142,11 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.showLinkConfirm) {
+      this.showLinkConfirm = false
+      this.linkConfirmUrl = ''
+      return true
+    }
     if (this.showMediaList) {
       this.showMediaList = false
       return true
@@ -345,6 +384,21 @@ struct Index {
           mediaUrls: this.mediaList,
           onClose: () => {
             this.showMediaList = false
+          }
+        })
+      }
+      if (this.showLinkConfirm) {
+        LinkInterstitial({
+          linkUrl: this.linkConfirmUrl,
+          onConfirm: () => {
+            const url = this.linkConfirmUrl
+            this.showLinkConfirm = false
+            this.linkConfirmUrl = ''
+            this.tabStore.navigate(url)
+          },
+          onClose: () => {
+            this.showLinkConfirm = false
+            this.linkConfirmUrl = ''
           }
         })
       }

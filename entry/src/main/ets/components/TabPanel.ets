@@ -147,6 +147,7 @@ export struct TabPanel {
       return
     }
     this.undoUrl = closedUrl
+    AppStorage.setOrCreate('via_undo_close_url', closedUrl)
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
         this.UndoDialog()
@@ -184,9 +185,11 @@ export struct TabPanel {
         .fontColor($r('app.color.accent'))
         .padding({ left: 12, right: 12, top: 8, bottom: 8 })
         .onClick(() => {
-          const url = this.undoUrl
+          const url = AppStorage.get<string>('via_undo_close_url') ?? this.undoUrl
           this.closeUndoToast(this.undoDialogId)
-          this.tabStore.newTabAt(url, false)
+          if (url !== '') {
+            this.tabStore.newTabAt(url, false)
+          }
         })
     }
     .width('92%')

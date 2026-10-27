@@ -86,6 +86,21 @@
       "buildFunction": "SettingsToolbarPageBuilder"
     },
     {
+      "name": "settingsNight",
+      "pageSourceFile": "src/main/ets/view/SettingsNightPage.ets",
+      "buildFunction": "SettingsNightPageBuilder"
+    },
+    {
+      "name": "settingsReader",
+      "pageSourceFile": "src/main/ets/view/SettingsReaderPage.ets",
+      "buildFunction": "SettingsReaderPageBuilder"
+    },
+    {
+      "name": "readerCss",
+      "pageSourceFile": "src/main/ets/view/ReaderCssPage.ets",
+      "buildFunction": "ReaderCssPageBuilder"
+    },
+    {
       "name": "longPressCustom",
       "pageSourceFile": "src/main/ets/view/SettingsLongPressPage.ets",
       "buildFunction": "SettingsLongPressPageBuilder"
@@ -116,9 +131,39 @@
       "buildFunction": "UaEditPageBuilder"
     },
     {
-      "name": "gestureSettings",
+      "name": "settingsGesture",
       "pageSourceFile": "src/main/ets/view/SettingsGesturePage.ets",
       "buildFunction": "SettingsGesturePageBuilder"
+    },
+    {
+      "name": "settingsAdBlock",
+      "pageSourceFile": "src/main/ets/view/SettingsAdBlockPage.ets",
+      "buildFunction": "SettingsAdBlockPageBuilder"
+    },
+    {
+      "name": "ruleSub",
+      "pageSourceFile": "src/main/ets/view/SettingsRuleSubPage.ets",
+      "buildFunction": "SettingsRuleSubPageBuilder"
+    },
+    {
+      "name": "siteAll",
+      "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
+      "buildFunction": "SiteAllPageBuilder"
+    },
+    {
+      "name": "fontSettings",
+      "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
+      "buildFunction": "FontSizePageBuilder"
+    },
+    {
+      "name": "permissionPage",
+      "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
+      "buildFunction": "PermissionPageBuilder"
+    },
+    {
+      "name": "adBlockException",
+      "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
+      "buildFunction": "AdBlockExceptionPageBuilder"
     }
   ]
 }

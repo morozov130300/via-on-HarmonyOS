@@ -8,33 +8,45 @@ import { applyImmersiveWindow } from '../common/Immersive';
 import { webview } from '@kit.ArkWeb';
 
 const DOMAIN = 0x0000;
-const SHORTCUT_URL_EVENT_ID = 10001;
+const EXTERNAL_LINK_EVENT_ID = 10002;
 
-function extractViaUrl(want: Want): string {
+interface EntryUrl {
+  url: string;
+  external: boolean;
+}
+
+function extractEntryUrl(want: Want): EntryUrl {
   const params = want.parameters
-  if (params === undefined) {
-    return ''
+  if (params !== undefined) {
+    const viaUrl = params['viaUrl']
+    if (typeof viaUrl === 'string' && viaUrl !== '') {
+      return { url: viaUrl, external: false }
+    }
   }
-  const viaUrl = params['viaUrl']
-  return typeof viaUrl === 'string' ? viaUrl : ''
+  const uri = want.uri
+  if (typeof uri === 'string' && uri !== '') {
+    return { url: uri, external: true }
+  }
+  return { url: '', external: false }
 }
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
-    const viaUrl = extractViaUrl(want)
-    if (viaUrl !== '') {
-      AppStorage.setOrCreate('via_launch_url', viaUrl)
+    const entry = extractEntryUrl(want)
+    if (entry.url !== '') {
+      AppStorage.setOrCreate('via_launch_url', entry.url)
+      AppStorage.setOrCreate('via_launch_external', entry.external)
     }
   }
 
   onNewEntry(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewEntry');
-    const viaUrl = extractViaUrl(want)
-    if (viaUrl !== '') {
+    const entry = extractEntryUrl(want)
+    if (entry.url !== '') {
       emitter.emit(
-        { eventId: SHORTCUT_URL_EVENT_ID },
-        { data: { 'viaUrl': viaUrl } }
+        { eventId: EXTERNAL_LINK_EVENT_ID },
+        { data: { 'linkUrl': entry.url, 'external': entry.external } }
       )
     }
   }

@@ -6,9 +6,13 @@ export struct SettingsHeader {
   @Param @Require headerTitle: string = ''
   @Param rightText: string = ''
   @Param rightIcon: Resource | null = null
+  @Param rightText2: string = ''
+  @Param rightIcon2: Resource | null = null
   @Event onBack: () => void = () => {
   }
   @Event onRight: () => void = () => {
+  }
+  @Event onRight2: () => void = () => {
   }
   private insets: UiInsets = UiInsets.getInstance()
 
@@ -28,6 +32,22 @@ export struct SettingsHeader {
         .layoutWeight(1)
         .textAlign(TextAlign.Center)
 
+      if (this.rightIcon2 !== null) {
+        ViaIcon({ icon: this.rightIcon2, iconSize: 22, iconColor: $r('app.color.fg') })
+          .width(44)
+          .height(43)
+          .onClick(() => {
+            this.onRight2()
+          })
+      } else if (this.rightText2 !== '') {
+        Text(this.rightText2)
+          .fontSize(15)
+          .fontColor($r('app.color.fg'))
+          .padding({ left: 12, right: 12 })
+          .onClick(() => {
+            this.onRight2()
+          })
+      }
       if (this.rightIcon !== null) {
         ViaIcon({ icon: this.rightIcon, iconSize: 22, iconColor: $r('app.color.fg') })
           .width(44)

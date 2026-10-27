@@ -1,6 +1,6 @@
 import { preferences } from '@kit.ArkData'
 import { window } from '@kit.ArkUI'
-import { SiteSetting, RuleEntry, UserScriptRec } from './Types'
+import { SiteSetting, RuleEntry, UserScriptRec, RuleSubEntry, RULE_SUB_PRESETS } from './Types'
 import { BrowserDb } from './Database'
 import { uaByKey, simplifyUaString, CustomUaEntry } from './UaTable'
 
@@ -34,17 +34,23 @@ const SYNC_KEYS: string[] = [
   'dataSaver', 'autoSniffButton', 'allowDebugWeb', 'disableCustomTabs',
   'disableSafeBrowsing', 'ignoreSslWarning',
   'homeBgColor', 'homeLogoText', 'homeLogoType', 'homeLogoSize', 'homeLogoStyle',
+  'homeLogoWidth', 'homeLogoHeight', 'homeLogoCorner', 'homeBgImage',
   'homePillCorner', 'homePillOpacity', 'homePillStrokeWidth', 'homePillStrokeOpacity',
   'homePillStyle', 'homeFavSize', 'homeFavCorner', 'homeFavColor', 'homeFavIconStyle',
+  'homeFavWidth', 'homeFavHeight',
   'homeAdvEffect', 'homeAdvArea',
   'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
   'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
+  'nightForceDark', 'readerConfirm', 'readerTheme', 'readerFontSize', 'readerCustomCss',
+  'appLayout', 'toolbarAutoHide', 'tabBarEnabled', 'addressBarContent', 'toolbarColorAdapt',
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',
+  'customRulesText', 'siteExceptions', 'desktopAllSites', 'forceZoom',
   'uaKey', 'customUaList', 'desktopUaKey', 'simplifyUa',
   'syncMode', 'orientation', 'externalPlayer', 'clearOnExit',
   'volumePageFlip', 'swipeSwitchTab', 'undoCloseToast', 'showStatusBar'
 ]
 const SNAPSHOT_DEBOUNCE_MS: number = 1500
+const AD_BLOCK_ESTIMATED_BYTES: number = 20 * 1024
 
 export class SavedTab {
   url: string
@@ -66,7 +72,10 @@ export class AppSettings {
   @Trace engineKey: string = 'baidu'
   @Trace customEngineTemplate: string = ''
   @Trace adBlockOn: boolean = true
+  @Trace adBlockBuiltin: boolean = true
   @Trace adBlockTotal: number = 0
+  @Trace adBlockSavedBytes: number = 0
+  @Trace autoExpandFullText: boolean = true
   @Trace textZoom: number = 100
   @Trace nightMode: boolean = false
   @Trace uaMode: number = UA_MODE_DEFAULT
@@ -78,9 +87,15 @@ export class AppSettings {
   @Trace searchHistory: string[] = []
   @Trace siteSettings: SiteSetting[] = []
   @Trace customRules: RuleEntry[] = []
+  @Trace customRulesText: string = ''
+  @Trace siteExceptions: string[] = []
+  @Trace desktopAllSites: number = 0
+  @Trace forceZoom: boolean = false
   @Trace userScripts: UserScriptRec[] = []
   @Trace scriptNextId: number = 1
   @Trace ruleSubUrl: string = ''
+  @Trace ruleSubscriptions: RuleSubEntry[] = []
+  @Trace ruleAutoUpdate: number = 0
   @Trace scriptEnabled: boolean = true
   @Trace doNotTrack: boolean = false
   @Trace disableWebRtc: boolean = false
@@ -97,18 +112,34 @@ export class AppSettings {
   @Trace homeLogoSize: number = 0
   @Trace homeLogoStyle: number = 3
   @Trace homePillCorner: number = 0
-  @Trace homePillOpacity: number = 2
-  @Trace homePillStrokeWidth: number = 2
-  @Trace homePillStrokeOpacity: number = 2
-  @Trace homePillStyle: number = 1
+  @Trace homePillOpacity: number = 0
+  @Trace homePillStrokeWidth: number = 1
+  @Trace homePillStrokeOpacity: number = 1
+  @Trace homePillStyle: number = 0
+  @Trace homeLogoWidth: number = 0
+  @Trace homeLogoHeight: number = 0
+  @Trace homeLogoCorner: number = 1
+  @Trace homeBgImage: string = ''
   @Trace homeFavSize: number = 0
   @Trace homeFavCorner: number = 0
+  @Trace homeFavWidth: number = 1
+  @Trace homeFavHeight: number = 0
   @Trace homeFavColor: number = 1
   @Trace homeFavIconStyle: number = 1
   @Trace homeAdvEffect: number = 1
   @Trace homeAdvArea: number = 0
   @Trace readerAuto: boolean = false
   @Trace customCss: string = ''
+  @Trace nightForceDark: boolean = false
+  @Trace readerConfirm: boolean = false
+  @Trace readerTheme: number = 0
+  @Trace readerFontSize: number = 17
+  @Trace readerCustomCss: string = ''
+  @Trace appLayout: number = 0
+  @Trace toolbarAutoHide: number = 0
+  @Trace tabBarEnabled: boolean = false
+  @Trace addressBarContent: number = 0
+  @Trace toolbarColorAdapt: boolean = true
   @Trace appLanguage: number = 1
   @Trace menuHidden: string[] = []
   @Trace longPressHidden: string[] = []
@@ -204,7 +235,10 @@ export class AppSettings {
       this.engineKey = await this.readString('engineKey', 'baidu')
       this.customEngineTemplate = await this.readString('customEngineTemplate', '')
       this.adBlockOn = await this.readBoolean('adBlockOn', true)
+      this.adBlockBuiltin = await this.readBoolean('adBlockBuiltin', true)
       this.adBlockTotal = await this.readNumber('adBlockTotal', 0)
+      this.adBlockSavedBytes = await this.readNumber('adBlockSavedBytes', 0)
+      this.autoExpandFullText = await this.readBoolean('autoExpandFullText', true)
       this.textZoom = await this.readNumber('textZoom', 100)
       this.nightMode = await this.readBoolean('nightMode', false)
       this.uaMode = await this.readNumber('uaMode', UA_MODE_DEFAULT)
@@ -215,10 +249,16 @@ export class AppSettings {
       this.homeUrl = await this.readString('homeUrl', '')
       this.searchHistory = await this.readStringArray('searchHistory')
       this.siteSettings = await this.readSiteSettings()
+      this.siteExceptions = await this.readStringArray('siteExceptions')
+      this.desktopAllSites = await this.readNumber('desktopAllSites', 0)
+      this.forceZoom = await this.readBoolean('forceZoom', false)
       this.customRules = await this.readRules()
+      this.customRulesText = await this.readCustomRulesText()
       this.userScripts = await this.readScripts()
       this.scriptNextId = await this.readNumber('scriptNextId', 1)
       this.ruleSubUrl = await this.readString('ruleSubUrl', '')
+      this.ruleAutoUpdate = await this.readNumber('ruleAutoUpdate', 0)
+      this.ruleSubscriptions = await this.readRuleSubs()
       this.scriptEnabled = await this.readBoolean('scriptEnabled', true)
       this.doNotTrack = await this.readBoolean('doNotTrack', false)
       this.disableWebRtc = await this.readBoolean('disableWebRtc', false)
@@ -235,18 +275,34 @@ export class AppSettings {
       this.homeLogoSize = await this.readNumber('homeLogoSize', 0)
       this.homeLogoStyle = await this.readNumber('homeLogoStyle', 3)
       this.homePillCorner = await this.readNumber('homePillCorner', 0)
-      this.homePillOpacity = await this.readNumber('homePillOpacity', 2)
-      this.homePillStrokeWidth = await this.readNumber('homePillStrokeWidth', 2)
-      this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 2)
-      this.homePillStyle = await this.readNumber('homePillStyle', 1)
+      this.homePillOpacity = await this.readNumber('homePillOpacity', 0)
+      this.homePillStrokeWidth = await this.readNumber('homePillStrokeWidth', 1)
+      this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 1)
+      this.homePillStyle = await this.readNumber('homePillStyle', 0)
+      this.homeLogoWidth = await this.readNumber('homeLogoWidth', 0)
+      this.homeLogoHeight = await this.readNumber('homeLogoHeight', 0)
+      this.homeLogoCorner = await this.readNumber('homeLogoCorner', 1)
+      this.homeBgImage = await this.readString('homeBgImage', '')
       this.homeFavSize = await this.readNumber('homeFavSize', 0)
       this.homeFavCorner = await this.readNumber('homeFavCorner', 0)
+      this.homeFavWidth = await this.readNumber('homeFavWidth', 1)
+      this.homeFavHeight = await this.readNumber('homeFavHeight', 0)
       this.homeFavColor = await this.readNumber('homeFavColor', 1)
       this.homeFavIconStyle = await this.readNumber('homeFavIconStyle', 1)
       this.homeAdvEffect = await this.readNumber('homeAdvEffect', 1)
       this.homeAdvArea = await this.readNumber('homeAdvArea', 0)
       this.readerAuto = await this.readBoolean('readerAuto', false)
       this.customCss = await this.readString('customCss', '')
+      this.nightForceDark = await this.readBoolean('nightForceDark', false)
+      this.readerConfirm = await this.readBoolean('readerConfirm', false)
+      this.readerTheme = await this.readNumber('readerTheme', 0)
+      this.readerFontSize = await this.readNumber('readerFontSize', 17)
+      this.readerCustomCss = await this.readString('readerCustomCss', '')
+      this.appLayout = await this.readNumber('appLayout', 0)
+      this.toolbarAutoHide = await this.readNumber('toolbarAutoHide', 0)
+      this.tabBarEnabled = await this.readBoolean('tabBarEnabled', false)
+      this.addressBarContent = await this.readNumber('addressBarContent', 0)
+      this.toolbarColorAdapt = await this.readBoolean('toolbarColorAdapt', true)
       this.appLanguage = await this.readNumber('appLanguage', 1)
       this.menuHidden = await this.readStringArray('menuHidden')
       this.longPressHidden = await this.readStringArray('longPressHidden')
@@ -433,11 +489,26 @@ export class AppSettings {
     this.flushKey('adBlockOn', on)
   }
 
+  setAdBlockBuiltin(on: boolean): void {
+    this.adBlockBuiltin = on
+    this.flushKey('adBlockBuiltin', on)
+  }
+
+  setAutoExpandFullText(on: boolean): void {
+    this.autoExpandFullText = on
+    this.flushKey('autoExpandFullText', on)
+  }
+
   addAdBlocked(count: number): void {
     this.adBlockTotal = this.adBlockTotal + count
+    // ArkWeb 拦截请求拿不到响应体积，按单个广告请求平均约 20KB 估算节省流量
+    this.adBlockSavedBytes = this.adBlockSavedBytes + count * AD_BLOCK_ESTIMATED_BYTES
     if (this.store !== null) {
       this.store.put('adBlockTotal', this.adBlockTotal).catch((error: BusinessError) => {
         console.error(`settings put adBlockTotal failed: ${error.message}`)
+      })
+      this.store.put('adBlockSavedBytes', this.adBlockSavedBytes).catch((error: BusinessError) => {
+        console.error(`settings put adBlockSavedBytes failed: ${error.message}`)
       })
     }
   }
@@ -450,6 +521,90 @@ export class AppSettings {
     }
   }
 
+  private async readRuleSubs(): Promise<RuleSubEntry[]> {
+    const result: RuleSubEntry[] = []
+    for (let i = 0; i < RULE_SUB_PRESETS.length; i++) {
+      const p = RULE_SUB_PRESETS[i]
+      result.push(new RuleSubEntry(p.key, p.name, p.url, p.enabled, p.ruleCount, p.lastUpdate, p.isPreset))
+    }
+    const raw = await this.readString('ruleSubscriptions', '')
+    if (raw === '') {
+      return result
+    }
+    try {
+      const arr = JSON.parse(raw) as Object[]
+      for (let i = 0; i < arr.length; i++) {
+        const obj = arr[i] as Record<string, Object>
+        const key = obj['key']
+        if (typeof key !== 'string') {
+          continue
+        }
+        const name = typeof obj['name'] === 'string' ? obj['name'] as string : ''
+        const url = typeof obj['url'] === 'string' ? obj['url'] as string : ''
+        const enabled = typeof obj['enabled'] === 'boolean' ? obj['enabled'] as boolean : false
+        const ruleCount = typeof obj['ruleCount'] === 'number' ? obj['ruleCount'] as number : 0
+        const lastUpdate = typeof obj['lastUpdate'] === 'number' ? obj['lastUpdate'] as number : 0
+        const isPreset = typeof obj['isPreset'] === 'boolean' ? obj['isPreset'] as boolean : false
+        const existing = result.find((s: RuleSubEntry): boolean => s.key === key)
+        if (existing !== undefined) {
+          existing.enabled = enabled
+          existing.ruleCount = ruleCount
+          existing.lastUpdate = lastUpdate
+        } else {
+          result.push(new RuleSubEntry(key, name, url, enabled, ruleCount, lastUpdate, isPreset))
+        }
+      }
+    } catch (error) {
+      console.error('parse ruleSubscriptions failed')
+    }
+    return result
+  }
+
+  private saveRuleSubs(): void {
+    const payload = this.ruleSubscriptions.map((s: RuleSubEntry): Record<string, Object> => {
+      return { 'key': s.key, 'name': s.name, 'url': s.url, 'enabled': s.enabled, 'ruleCount': s.ruleCount, 'lastUpdate': s.lastUpdate, 'isPreset': s.isPreset } as Record<string, Object>
+    })
+    this.flushKey('ruleSubscriptions', JSON.stringify(payload))
+  }
+
+  setRuleSubEnabled(key: string, enabled: boolean): void {
+    const sub = this.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === key)
+    if (sub !== undefined) {
+      sub.enabled = enabled
+      this.saveRuleSubs()
+    }
+  }
+
+  updateRuleSubEntry(key: string, ruleCount: number, lastUpdate: number): void {
+    const sub = this.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === key)
+    if (sub !== undefined) {
+      sub.ruleCount = ruleCount
+      sub.lastUpdate = lastUpdate
+      this.saveRuleSubs()
+    }
+  }
+
+  addRuleSub(name: string, url: string): void {
+    this.ruleSubscriptions.push(new RuleSubEntry(`c${Date.now()}`, name, url, false, 0, 0, false))
+    this.saveRuleSubs()
+  }
+
+  removeRuleSub(key: string): void {
+    const next: RuleSubEntry[] = []
+    for (let i = 0; i < this.ruleSubscriptions.length; i++) {
+      if (this.ruleSubscriptions[i].key !== key) {
+        next.push(this.ruleSubscriptions[i])
+      }
+    }
+    this.ruleSubscriptions = next
+    this.saveRuleSubs()
+  }
+
+  setRuleAutoUpdate(days: number): void {
+    this.ruleAutoUpdate = days
+    this.flushKey('ruleAutoUpdate', days)
+  }
+
   setTextZoom(zoom: number): void {
     this.textZoom = zoom
     this.flushKey('textZoom', zoom)
@@ -458,6 +613,56 @@ export class AppSettings {
   setNightMode(on: boolean): void {
     this.nightMode = on
     this.flushKey('nightMode', on)
+  }
+
+  setNightForceDark(on: boolean): void {
+    this.nightForceDark = on
+    this.flushKey('nightForceDark', on)
+  }
+
+  setReaderConfirm(on: boolean): void {
+    this.readerConfirm = on
+    this.flushKey('readerConfirm', on)
+  }
+
+  setReaderTheme(theme: number): void {
+    this.readerTheme = theme
+    this.flushKey('readerTheme', theme)
+  }
+
+  setReaderFontSize(size: number): void {
+    this.readerFontSize = size
+    this.flushKey('readerFontSize', size)
+  }
+
+  setReaderCustomCss(css: string): void {
+    this.readerCustomCss = css
+    this.flushKey('readerCustomCss', css)
+  }
+
+  setAppLayout(layout: number): void {
+    this.appLayout = layout
+    this.flushKey('appLayout', layout)
+  }
+
+  setToolbarAutoHide(mode: number): void {
+    this.toolbarAutoHide = mode
+    this.flushKey('toolbarAutoHide', mode)
+  }
+
+  setTabBarEnabled(on: boolean): void {
+    this.tabBarEnabled = on
+    this.flushKey('tabBarEnabled', on)
+  }
+
+  setAddressBarContent(mode: number): void {
+    this.addressBarContent = mode
+    this.flushKey('addressBarContent', mode)
+  }
+
+  setToolbarColorAdapt(on: boolean): void {
+    this.toolbarColorAdapt = on
+    this.flushKey('toolbarColorAdapt', on)
   }
 
   setUaMode(mode: number): void {
@@ -621,6 +826,36 @@ export class AppSettings {
   setHomeBgColor(color: string): void {
     this.homeBgColor = color
     this.flushKey('homeBgColor', color)
+  }
+
+  setHomeBgImage(uri: string): void {
+    this.homeBgImage = uri
+    this.flushKey('homeBgImage', uri)
+  }
+
+  setHomeLogoWidth(index: number): void {
+    this.homeLogoWidth = index
+    this.flushKey('homeLogoWidth', index)
+  }
+
+  setHomeLogoHeight(index: number): void {
+    this.homeLogoHeight = index
+    this.flushKey('homeLogoHeight', index)
+  }
+
+  setHomeLogoCorner(index: number): void {
+    this.homeLogoCorner = index
+    this.flushKey('homeLogoCorner', index)
+  }
+
+  setHomeFavWidth(index: number): void {
+    this.homeFavWidth = index
+    this.flushKey('homeFavWidth', index)
+  }
+
+  setHomeFavHeight(index: number): void {
+    this.homeFavHeight = index
+    this.flushKey('homeFavHeight', index)
   }
 
   setHomeLogoText(text: string): void {
@@ -816,25 +1051,35 @@ export class AppSettings {
 
   resetHomeStyle(): void {
     this.setHomeBgColor('')
+    this.setHomeBgImage('')
     this.setHomeLogoText('VIA')
     this.setHomeLogoType(0)
     this.setHomeLogoSize(0)
     this.setHomeLogoStyle(3)
+    this.setHomeLogoWidth(0)
+    this.setHomeLogoHeight(0)
+    this.setHomeLogoCorner(1)
     this.setHomePillCorner(0)
-    this.setHomePillOpacity(2)
-    this.setHomePillStrokeWidth(2)
-    this.setHomePillStrokeOpacity(2)
-    this.setHomePillStyle(1)
+    this.setHomePillOpacity(0)
+    this.setHomePillStrokeWidth(1)
+    this.setHomePillStrokeOpacity(1)
+    this.setHomePillStyle(0)
     this.setHomeFavSize(0)
     this.setHomeFavCorner(0)
-    this.setHomeFavColor(1)
-    this.setHomeFavIconStyle(1)
+    this.setHomeFavWidth(1)
+    this.setHomeFavHeight(0)
+    this.setHomeFavColor(0)
+    this.setHomeFavIconStyle(0)
     this.setHomeAdvEffect(1)
     this.setHomeAdvArea(0)
   }
 
   uaForHost(host: string): string | null {
     const site = this.getSiteSetting(host)
+    if (this.desktopAllSites === 1) {
+      const globalDef = uaByKey(this.desktopUaKey)
+      return globalDef !== null ? globalDef.ua : null
+    }
     let key = this.uaKey
     if (site !== null && site.pcMode) {
       key = this.desktopUaKey
@@ -1020,6 +1265,105 @@ export class AppSettings {
       console.error('parse customRules failed')
     }
     return result
+  }
+
+  private async readCustomRulesText(): Promise<string> {
+    const raw = await this.readString('customRulesText', '')
+    if (raw !== '') {
+      return raw
+    }
+    // 旧版本仅存结构化规则时，从规则数组合成文本
+    const lines: string[] = []
+    for (let i = 0; i < this.customRules.length; i++) {
+      lines.push(this.customRules[i].isAllow ? `@@||${this.customRules[i].domain}^` : `||${this.customRules[i].domain}^`)
+    }
+    return lines.join('\n')
+  }
+
+  setCustomRulesText(text: string): void {
+    this.customRulesText = text
+    this.flushKey('customRulesText', text)
+    const next: RuleEntry[] = []
+    const lines = text.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (line === '' || line.startsWith('!') || line.startsWith('[')) {
+        continue
+      }
+      const isAllow = line.startsWith('@@')
+      const rest = isAllow ? line.substring(2) : line
+      if (!rest.startsWith('||')) {
+        continue
+      }
+      let host = rest.substring(2).toLowerCase()
+      const cutChars = ['^', '/', '$', '|', '?', ',']
+      for (let j = 0; j < cutChars.length; j++) {
+        const pos = host.indexOf(cutChars[j])
+        if (pos >= 0) {
+          host = host.substring(0, pos)
+        }
+      }
+      if (host !== '' && host.indexOf('*') < 0 && host.indexOf('.') > 0) {
+        let duplicated = false
+        for (let j = 0; j < next.length; j++) {
+          if (next[j].domain === host && next[j].isAllow === isAllow) {
+            duplicated = true
+            break
+          }
+        }
+        if (!duplicated) {
+          next.push(new RuleEntry(host, isAllow))
+        }
+      }
+    }
+    this.customRules = next
+    this.flushKey('customRules', JSON.stringify(next.map((r: RuleEntry): Record<string, Object> => {
+      return { 'domain': r.domain, 'isAllow': r.isAllow } as Record<string, Object>
+    })))
+  }
+
+  getExceptions(kind: string): string[] {
+    const result: string[] = []
+    for (let i = 0; i < this.siteExceptions.length; i++) {
+      const item = this.siteExceptions[i]
+      if (item.startsWith(kind + '|')) {
+        result.push(item.substring(kind.length + 1))
+      }
+    }
+    return result
+  }
+
+  addException(kind: string, host: string): void {
+    const value = kind + '|' + host
+    if (this.siteExceptions.indexOf(value) >= 0) {
+      return
+    }
+    const next = this.siteExceptions.slice(0)
+    next.push(value)
+    this.siteExceptions = next
+    this.flushKey('siteExceptions', JSON.stringify(next))
+  }
+
+  removeException(kind: string, host: string): void {
+    const value = kind + '|' + host
+    const next: string[] = []
+    for (let i = 0; i < this.siteExceptions.length; i++) {
+      if (this.siteExceptions[i] !== value) {
+        next.push(this.siteExceptions[i])
+      }
+    }
+    this.siteExceptions = next
+    this.flushKey('siteExceptions', JSON.stringify(next))
+  }
+
+  setDesktopAllSites(value: number): void {
+    this.desktopAllSites = value
+    this.flushKey('desktopAllSites', value)
+  }
+
+  setForceZoom(on: boolean): void {
+    this.forceZoom = on
+    this.flushKey('forceZoom', on)
   }
 
   saveScript(script: UserScriptRec): void {
