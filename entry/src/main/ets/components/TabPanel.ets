@@ -6,6 +6,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
 
 const DEFAULT_TAB_TITLE: string = '新标签页'
+const PANEL_FG: ResourceColor = '#E6E6E6'
 
 @ComponentV2
 export struct TabPanel {
@@ -27,78 +28,37 @@ export struct TabPanel {
         })
 
       Column() {
-        Row({ space: 14 }) {
-          Text(`${this.tabStore.tabs.length} ${$r('app.string.tab_count_unit')}`)
-            .fontSize(16)
-            .fontColor($r('app.color.fg'))
-            .layoutWeight(1)
-          this.HeaderAction($r('sys.symbol.plus'), () => {
-            this.tabStore.newTab(false)
-          })
-          this.HeaderAction($r('sys.symbol.plus_circle'), () => {
-            this.tabStore.newTab(true)
-          })
-          this.HeaderAction($r('sys.symbol.xmark'), () => {
-            this.onClose()
-          })
-        }
-        .width('100%')
-        .padding({ left: 16, right: 16, top: 14, bottom: 10 })
-
         Scroll() {
-          Flex({ wrap: FlexWrap.Wrap }) {
+          Column() {
             ForEach(this.tabStore.tabs, (tab: TabItem, index: number) => {
-              Column() {
-                Row() {
-                  if (tab.incognito) {
-                    AppIcon({ icon: $r('sys.symbol.moon_fill'), iconSize: 12, iconColor: $r('app.color.fg_secondary') })
-                  }
-                  Text(tab.displayTitle(DEFAULT_TAB_TITLE))
-                    .fontSize(13)
-                    .fontColor($r('app.color.fg'))
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    .layoutWeight(1)
-                  AppIcon({ icon: $r('sys.symbol.xmark_circle'), iconSize: 16, iconColor: $r('app.color.fg_secondary') })
-                    .onClick(() => {
-                      const closedUrl = this.tabStore.closeTab(index)
-                      if (closedUrl !== '') {
-                        this.showUndoToast(closedUrl)
-                      }
-                    })
-                }
-                .width('100%')
-                .height(36)
-                .padding({ left: 10, right: 10 })
-
-                if (tab.isHomePage()) {
-                  Column({ space: 6 }) {
-                    AppIcon({ icon: $r('sys.symbol.house'), iconSize: 28, iconColor: $r('app.color.fg_secondary') })
-                    Text(tab.incognito ? $r('app.string.incognito_hint') : $r('app.string.new_tab'))
-                      .fontSize(11)
-                      .fontColor($r('app.color.fg_secondary'))
-                      .maxLines(1)
-                  }
-                  .width('100%')
-                  .layoutWeight(1)
-                  .justifyContent(FlexAlign.Center)
+              Row({ space: 16 }) {
+                if (tab.incognito) {
+                  AppIcon({ icon: $r('sys.symbol.moon_fill'), iconSize: 24, iconColor: PANEL_FG })
+                } else if (tab.isHomePage()) {
+                  AppIcon({ icon: $r('sys.symbol.house'), iconSize: 24, iconColor: PANEL_FG })
                 } else {
-                  Text(tab.displayTitle(DEFAULT_TAB_TITLE))
-                    .fontSize(12)
-                    .fontColor($r('app.color.fg_secondary'))
-                    .maxLines(4)
-                    .padding(8)
-                    .width('100%')
-                    .layoutWeight(1)
-                    .alignSelf(ItemAlign.Start)
+                  Image(this.faviconUrl(tab.url))
+                    .width(24)
+                    .height(24)
+                    .objectFit(ImageFit.Contain)
                 }
+                Text(tab.displayTitle(DEFAULT_TAB_TITLE))
+                  .fontSize(16)
+                  .fontColor(index === this.tabStore.currentIndex ? $r('app.color.accent') : PANEL_FG)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+                AppIcon({ icon: $r('sys.symbol.xmark'), iconSize: 20, iconColor: PANEL_FG })
+                  .onClick(() => {
+                    const closedUrl = this.tabStore.closeTab(index)
+                    if (closedUrl !== '') {
+                      this.showUndoToast(closedUrl)
+                    }
+                  })
               }
-              .width('47%')
-              .height(120)
-              .margin(4)
-              .backgroundColor($r('app.color.surface'))
-              .borderRadius(10)
-              .clip(true)
+              .width('100%')
+              .height(56)
+              .padding({ left: 18, right: 18 })
               .onClick(() => {
                 this.tabStore.switchTo(index)
                 this.onClose()
@@ -106,27 +66,25 @@ export struct TabPanel {
             }, (tab: TabItem) => tab.id.toString())
           }
           .width('100%')
-          .padding({ left: 8, right: 8, bottom: 12 })
         }
-        .layoutWeight(1)
-        .align(Alignment.Top)
+        .width('100%')
+        .align(Alignment.Bottom)
+        .scrollBar(BarState.Off)
 
-        Button($r('app.string.close_all_tabs'))
-          .fontSize(13)
-          .height(34)
-          .width('94%')
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .margin({ bottom: 12 })
-          .onClick(() => {
-            for (let i = this.tabStore.tabs.length - 1; i > 0; i--) {
-              this.tabStore.closeTab(i)
-            }
-          })
+        Row() {
+          AppIcon({ icon: $r('sys.symbol.plus'), iconSize: 24, iconColor: PANEL_FG })
+            .padding(12)
+            .onClick(() => {
+              this.tabStore.newTab(false)
+              this.onClose()
+            })
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
       }
       .width('100%')
-      .height('72%')
-      .padding({ bottom: this.insets.bottom })
+      .constraintSize({ maxHeight: '68%' })
+      .padding({ top: 8, bottom: this.insets.bottom })
       .backgroundColor($r('app.color.page_bg'))
       .borderRadius({ topLeft: 16, topRight: 16 })
     }
@@ -134,12 +92,12 @@ export struct TabPanel {
     .height('100%')
   }
 
-  @Builder
-  HeaderAction(icon: Resource, action: () => void) {
-    AppIcon({ icon: icon, iconSize: 22 })
-      .onClick(() => {
-        action()
-      })
+  private faviconUrl(url: string): string {
+    const host = url.replace(/^https?:\/\//, '').split('/')[0]
+    if (host === '') {
+      return ''
+    }
+    return `https://${host}/favicon.ico`
   }
 
   private showUndoToast(closedUrl: string): void {

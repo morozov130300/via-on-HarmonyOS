@@ -45,6 +45,7 @@ export struct SettingsPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })
