@@ -1,6 +1,7 @@
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
-import { webview } from '@kit.ArkWeb'
+import { webview, WebNetErrorList } from '@kit.ArkWeb'
+import { http } from '@kit.NetworkKit'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { TabItem } from '../common/Types'
@@ -21,8 +22,11 @@ export struct TabWeb {
   private adBlocker: AdBlocker = AdBlocker.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
+  @Local privacyScripts: Array<ScriptItem> = []
+  private schemeHandler: webview.WebSchemeHandler = new webview.WebSchemeHandler()
 
   aboutToAppear(): void {
+    this.refreshPrivacyScripts()
     try {
       webview.WebviewController.setWebDebuggingAccess(this.settings.allowDebugWeb)
     } catch (error) {
@@ -44,7 +48,9 @@ export struct TabWeb {
         .textZoomRatio(this.settings.textZoom)
         .darkMode(this.settings.nightMode ? WebDarkMode.On : WebDarkMode.Off)
         .forceDarkAccess(this.settings.nightMode && this.settings.nightForceDark)
+        .runJavaScriptOnDocumentStart(this.privacyScripts)
         .onControllerAttached(() => {
+          this.setupSchemeHandler()
           this.applyAdvancedSettings()
           if (this.tab.initialUrl !== '') {
             try {
@@ -63,6 +69,7 @@ export struct TabWeb {
           this.tab.loading = true
           this.tab.isError = false
           this.tab.sniffedMedia = []
+          this.refreshPrivacyScripts()
           this.applyAdvancedSettings()
           this.applyUa(event.url)
           this.updateNavState()
@@ -73,6 +80,7 @@ export struct TabWeb {
           this.tab.progress = 100
           this.updateNavState()
           this.saveHistory(event.url)
+          this.injectPrivacy(event.url)
           this.injectScripts(event.url)
           this.injectCustomCss()
           this.autoOpenReader()
@@ -249,8 +257,7 @@ export struct TabWeb {
     }
   }
 
-  private updateNavState(): void {
-    try {
+  private updateNavState(): void {    try {
       this.tab.canBack = this.tab.controller.accessBackward()
       this.tab.canForward = this.tab.controller.accessForward()
     } catch (error) {
@@ -409,8 +416,150 @@ export struct TabWeb {
     })
   }
 
-  private injectScripts(url: string): void {
-    const host = hostOf(url)
+  // 隐私设置注入脚本：defineProperty 只读属性，页面脚本无法读取真实值或提前缓存。
+  // documentStart（API 15+）在文档根元素创建后、页面任何脚本执行前注入；
+  // onPageEnd 兜底再执行一次，覆盖设置变更后已打开页面的补生效场景
+  private buildPrivacyScript(): string {
+    let js = ''
+    if (this.settings.doNotTrack) {
+      js += 'try{Object.defineProperty(navigator,"doNotTrack",{get:function(){return "1";},configurable:true});}catch(e){}'
+    }
+    if (this.settings.doNotSell) {
+      js += 'try{Object.defineProperty(navigator,"globalPrivacyControl",{get:function(){return true;},configurable:true});}catch(e){}'
+    }
+    if (this.settings.disableWebRtc) {
+      js += 'try{window.RTCPeerConnection=undefined;window.webkitRTCPeerConnection=undefined;'
+        + 'if(navigator.mediaDevices){navigator.mediaDevices.getUserMedia=function(){return Promise.reject(new Error("disabled"))}}}catch(e){}'
+    }
+    return js
+  }
+
+  private refreshPrivacyScripts(): void {
+    const script = this.buildPrivacyScript()
+    if (script === '') {
+      this.privacyScripts = []
+      return
+    }
+    this.privacyScripts = [{ script: script, scriptRules: ['*'] }]
+  }
+
+  // 隐私设置注入：JS 层暴露 DNT/GPC 并屏蔽 WebRTC（引擎级开关 ArkWeb 未提供），
+  // 请求级的 DNT/Sec-GPC 头需 WebSchemeHandler 全量代理，涉及网络栈接管另行决策
+  private injectPrivacy(url: string): void {
+    if (url.startsWith('http') === false) {
+      return
+    }
+    const js = this.buildPrivacyScript()
+    if (js !== '') {
+      this.tab.controller.runJavaScript(js).catch(() => {
+      })
+    }
+  }
+
+  // 请求头代理（实验性，settings.privacyProxy 开关默认关闭）：
+  // 拦截 http/https 请求由应用侧转发并附加 DNT/Sec-GPC 头，服务器可感知。
+  // 代价：全量流量走应用网络栈，Cookie 与内核不互通（登录态可能受影响）、POST 体不透传、
+  // Range/流式场景降级，性能开销大。注册一次、回调内按开关动态放行，无需重建 Web
+  private setupSchemeHandler(): void {
+    try {
+      this.schemeHandler.onRequestStart((request: webview.WebSchemeHandlerRequest,
+        resourceHandler: webview.WebResourceHandler): boolean => {
+        if (!this.settings.privacyProxy || (!this.settings.doNotTrack && !this.settings.doNotSell)) {
+          return false
+        }
+        this.proxyRequest(request, resourceHandler)
+        return true
+      })
+      this.tab.controller.setWebSchemeHandler('http', this.schemeHandler)
+      this.tab.controller.setWebSchemeHandler('https', this.schemeHandler)
+    } catch (error) {
+      console.error('setup scheme handler failed')
+    }
+  }
+
+  private proxyRequest(request: webview.WebSchemeHandlerRequest,
+    resourceHandler: webview.WebResourceHandler): void {
+    const httpRequest = http.createHttp()
+    const header: Record<string, string> = {}
+    if (this.settings.doNotTrack) {
+      header['DNT'] = '1'
+    }
+    if (this.settings.doNotSell) {
+      header['Sec-GPC'] = '1'
+    }
+    const originHeaders = request.getHeader()
+    for (let i = 0; i < originHeaders.length; i++) {
+      const key = originHeaders[i].headerKey
+      if (key !== 'DNT' && key !== 'Sec-GPC') {
+        header[key] = originHeaders[i].headerValue
+      }
+    }
+    const options: http.HttpRequestOptions = {
+      method: this.toHttpMethod(request.getRequestMethod()),
+      header: header,
+      expectDataType: http.HttpDataType.ARRAY_BUFFER,
+      usingCache: false
+    }
+    httpRequest.request(request.getRequestUrl(), options).then((resp: http.HttpResponse) => {
+      this.deliverProxyResponse(resp, resourceHandler)
+    }).catch(() => {
+      try {
+        resourceHandler.didFail(WebNetErrorList.ERR_FAILED)
+      } catch (error) {
+        console.error('didFail failed')
+      }
+    }).finally(() => {
+      httpRequest.destroy()
+    })
+  }
+
+  private toHttpMethod(method: string): http.RequestMethod {
+    if (method === 'POST') {
+      return http.RequestMethod.POST
+    }
+    if (method === 'PUT') {
+      return http.RequestMethod.PUT
+    }
+    if (method === 'DELETE') {
+      return http.RequestMethod.DELETE
+    }
+    if (method === 'HEAD') {
+      return http.RequestMethod.HEAD
+    }
+    return http.RequestMethod.GET
+  }
+
+  private deliverProxyResponse(resp: http.HttpResponse, resourceHandler: webview.WebResourceHandler): void {
+    const response = new webview.WebSchemeHandlerResponse()
+    response.setStatus(resp.responseCode)
+    response.setStatusText('OK')
+    response.setNetErrorCode(WebNetErrorList.NET_OK)
+    response.setMimeType(this.responseMime(resp.header))
+    const headers = resp.header as Record<string, string>
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() !== 'content-length' && key.toLowerCase() !== 'transfer-encoding'
+        && key.toLowerCase() !== 'content-encoding') {
+        response.setHeaderByName(key, headers[key], true)
+      }
+    }
+    const body = resp.result instanceof ArrayBuffer ? resp.result : new ArrayBuffer(0)
+    try {
+      resourceHandler.didReceiveResponse(response)
+      resourceHandler.didReceiveResponseBody(body)
+      resourceHandler.didFinish()
+    } catch (error) {
+      console.error('deliver proxy response failed')
+    }
+  }
+
+  private responseMime(header: Object): string {
+    const headers = header as Record<string, string>
+    const contentType = headers['content-type'] ?? headers['Content-Type'] ?? ''
+    const mime = contentType.split(';')[0].trim()
+    return mime !== '' ? mime : 'text/html'
+  }
+
+  private injectScripts(url: string): void {    const host = hostOf(url)
     const scripts = this.settings.userScripts
     for (let i = 0; i < scripts.length; i++) {
       const script = scripts[i]

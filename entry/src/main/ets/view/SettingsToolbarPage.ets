@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { SettingToggleRow, SettingNavRow } from '../components/SettingRows'
+import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 import { ViaIcon } from '../components/ViaIcon'
 
@@ -84,10 +84,10 @@ export struct SettingsToolbarPage {
                 this.openAutoHideDialog()
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: $r('app.string.enable_tab_bar'),
-              isToggleOn: this.settings.tabBarEnabled,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.tabBarEnabled,
+              onCheckRow: (isOn: boolean) => {
                 this.toggleTabBar(isOn)
               }
             })
@@ -98,11 +98,11 @@ export struct SettingsToolbarPage {
                 this.openAddressContentDialog()
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: $r('app.string.color_mode'),
               rowDesc: $r('app.string.color_mode_desc'),
-              isToggleOn: this.settings.toolbarColorAdapt,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.toolbarColorAdapt,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setToolbarColorAdapt(isOn)
               }
             })

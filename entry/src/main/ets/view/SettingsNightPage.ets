@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { SettingToggleRow } from '../components/SettingRows'
+import { SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -23,11 +23,11 @@ export struct SettingsNightPage {
               .fontColor($r('app.color.fg_secondary'))
               .width('100%')
               .padding({ left: 16, right: 16, top: 16, bottom: 4 })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: $r('app.string.night_force_dark'),
               rowDesc: $r('app.string.night_force_dark_desc'),
-              isToggleOn: this.settings.nightForceDark,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.nightForceDark,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setNightForceDark(isOn)
               }
             })

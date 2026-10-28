@@ -30,14 +30,16 @@ const SNAPSHOT_TS_KEY: string = 'via_snapshot_ts'
 const SYNC_KEYS: string[] = [
   'engineKey', 'customEngineTemplate', 'adBlockOn', 'textZoom', 'nightMode',
   'uaMode', 'customUa', 'noImage', 'homepageMode', 'homeUrl',
-  'ruleSubUrl', 'scriptEnabled', 'doNotTrack', 'disableWebRtc', 'doNotSell',
+  'ruleSubUrl', 'scriptEnabled', 'doNotTrack', 'disableWebRtc', 'doNotSell', 'privacyProxy',
   'dataSaver', 'autoSniffButton', 'allowDebugWeb', 'disableCustomTabs',
   'disableSafeBrowsing', 'ignoreSslWarning',
   'homeBgColor', 'homeLogoText', 'homeLogoType', 'homeLogoSize', 'homeLogoStyle',
   'homeLogoWidth', 'homeLogoHeight', 'homeLogoCorner', 'homeBgImage',
+  'homeLogoImage', 'homeLogoHtml',
   'homePillCorner', 'homePillOpacity', 'homePillStrokeWidth', 'homePillStrokeOpacity',
-  'homePillStyle', 'homeFavSize', 'homeFavCorner', 'homeFavColor', 'homeFavIconStyle',
+  'homePillStyle', 'homeFavCorner', 'homeFavShadow', 'homeFavIconStyle',
   'homeFavWidth', 'homeFavHeight',
+  'homeBgOpacity', 'homeThemeColor', 'homeIconEpoch',
   'homeAdvEffect', 'homeAdvArea',
   'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
   'menuOrder', 'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
@@ -71,7 +73,7 @@ export class AppSettings {
 
   @Trace engineKey: string = 'baidu'
   @Trace customEngineTemplate: string = ''
-  @Trace adBlockOn: boolean = true
+  @Trace adBlockOn: boolean = false
   @Trace adBlockBuiltin: boolean = true
   @Trace adBlockTotal: number = 0
   @Trace adBlockSavedBytes: number = 0
@@ -96,10 +98,11 @@ export class AppSettings {
   @Trace ruleSubUrl: string = ''
   @Trace ruleSubscriptions: RuleSubEntry[] = []
   @Trace ruleAutoUpdate: number = 0
-  @Trace scriptEnabled: boolean = true
+  @Trace scriptEnabled: boolean = false
   @Trace doNotTrack: boolean = false
   @Trace disableWebRtc: boolean = false
   @Trace doNotSell: boolean = false
+  @Trace privacyProxy: boolean = false
   @Trace dataSaver: boolean = false
   @Trace autoSniffButton: boolean = false
   @Trace allowDebugWeb: boolean = false
@@ -109,24 +112,28 @@ export class AppSettings {
   @Trace homeBgColor: string = ''
   @Trace homeLogoText: string = 'VIA'
   @Trace homeLogoType: number = 0
-  @Trace homeLogoSize: number = 0
-  @Trace homeLogoStyle: number = 3
-  @Trace homePillCorner: number = 0
+  @Trace homeLogoSize: number = 28
+  @Trace homeLogoStyle: number = 0
+  @Trace homePillCorner: number = 100
   @Trace homePillOpacity: number = 0
   @Trace homePillStrokeWidth: number = 1
-  @Trace homePillStrokeOpacity: number = 1
+  @Trace homePillStrokeOpacity: number = 24
   @Trace homePillStyle: number = 0
   @Trace homeLogoWidth: number = 0
   @Trace homeLogoHeight: number = 0
-  @Trace homeLogoCorner: number = 1
+  @Trace homeLogoCorner: number = 50
   @Trace homeBgImage: string = ''
-  @Trace homeFavSize: number = 0
-  @Trace homeFavCorner: number = 0
-  @Trace homeFavWidth: number = 1
+  @Trace homeLogoImage: string = ''
+  @Trace homeLogoHtml: string = ''
+  @Trace homeFavCorner: number = 100
+  @Trace homeFavShadow: number = 0
+  @Trace homeFavWidth: number = 0
   @Trace homeFavHeight: number = 0
-  @Trace homeFavColor: number = 1
-  @Trace homeFavIconStyle: number = 1
-  @Trace homeAdvEffect: number = 1
+  @Trace homeFavIconStyle: number = 0
+  @Trace homeBgOpacity: number = 0
+  @Trace homeThemeColor: string = ''
+  @Trace homeIconEpoch: number = 0
+  @Trace homeAdvEffect: number = 0
   @Trace homeAdvArea: number = 0
   @Trace readerAuto: boolean = false
   @Trace customCss: string = ''
@@ -237,7 +244,7 @@ export class AppSettings {
     try {
       this.engineKey = await this.readString('engineKey', 'baidu')
       this.customEngineTemplate = await this.readString('customEngineTemplate', '')
-      this.adBlockOn = await this.readBoolean('adBlockOn', true)
+      this.adBlockOn = await this.readBoolean('adBlockOn', false)
       this.adBlockBuiltin = await this.readBoolean('adBlockBuiltin', true)
       this.adBlockTotal = await this.readNumber('adBlockTotal', 0)
       this.adBlockSavedBytes = await this.readNumber('adBlockSavedBytes', 0)
@@ -262,10 +269,11 @@ export class AppSettings {
       this.ruleSubUrl = await this.readString('ruleSubUrl', '')
       this.ruleAutoUpdate = await this.readNumber('ruleAutoUpdate', 0)
       this.ruleSubscriptions = await this.readRuleSubs()
-      this.scriptEnabled = await this.readBoolean('scriptEnabled', true)
+      this.scriptEnabled = await this.readBoolean('scriptEnabled', false)
       this.doNotTrack = await this.readBoolean('doNotTrack', false)
       this.disableWebRtc = await this.readBoolean('disableWebRtc', false)
       this.doNotSell = await this.readBoolean('doNotSell', false)
+      this.privacyProxy = await this.readBoolean('privacyProxy', false)
       this.dataSaver = await this.readBoolean('dataSaver', false)
       this.autoSniffButton = await this.readBoolean('autoSniffButton', false)
       this.allowDebugWeb = await this.readBoolean('allowDebugWeb', false)
@@ -275,24 +283,28 @@ export class AppSettings {
       this.homeBgColor = await this.readString('homeBgColor', '')
       this.homeLogoText = await this.readString('homeLogoText', 'VIA')
       this.homeLogoType = await this.readNumber('homeLogoType', 0)
-      this.homeLogoSize = await this.readNumber('homeLogoSize', 0)
-      this.homeLogoStyle = await this.readNumber('homeLogoStyle', 3)
-      this.homePillCorner = await this.readNumber('homePillCorner', 0)
+      this.homeLogoSize = await this.readNumber('homeLogoSize', 28)
+      this.homeLogoStyle = await this.readNumber('homeLogoStyle', 0)
+      this.homePillCorner = await this.readNumber('homePillCorner', 100)
       this.homePillOpacity = await this.readNumber('homePillOpacity', 0)
       this.homePillStrokeWidth = await this.readNumber('homePillStrokeWidth', 1)
-      this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 1)
+      this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 24)
       this.homePillStyle = await this.readNumber('homePillStyle', 0)
       this.homeLogoWidth = await this.readNumber('homeLogoWidth', 0)
       this.homeLogoHeight = await this.readNumber('homeLogoHeight', 0)
-      this.homeLogoCorner = await this.readNumber('homeLogoCorner', 1)
+      this.homeLogoCorner = await this.readNumber('homeLogoCorner', 50)
       this.homeBgImage = await this.readString('homeBgImage', '')
-      this.homeFavSize = await this.readNumber('homeFavSize', 0)
-      this.homeFavCorner = await this.readNumber('homeFavCorner', 0)
-      this.homeFavWidth = await this.readNumber('homeFavWidth', 1)
+      this.homeLogoImage = await this.readString('homeLogoImage', '')
+      this.homeLogoHtml = await this.readString('homeLogoHtml', '')
+      this.homeFavCorner = await this.readNumber('homeFavCorner', 100)
+      this.homeFavShadow = await this.readNumber('homeFavShadow', 0)
+      this.homeFavWidth = await this.readNumber('homeFavWidth', 0)
       this.homeFavHeight = await this.readNumber('homeFavHeight', 0)
-      this.homeFavColor = await this.readNumber('homeFavColor', 1)
-      this.homeFavIconStyle = await this.readNumber('homeFavIconStyle', 1)
-      this.homeAdvEffect = await this.readNumber('homeAdvEffect', 1)
+      this.homeFavIconStyle = await this.readNumber('homeFavIconStyle', 0)
+      this.homeBgOpacity = await this.readNumber('homeBgOpacity', 0)
+      this.homeThemeColor = await this.readString('homeThemeColor', '')
+      this.homeIconEpoch = await this.readNumber('homeIconEpoch', 0)
+      this.homeAdvEffect = await this.readNumber('homeAdvEffect', 0)
       this.homeAdvArea = await this.readNumber('homeAdvArea', 0)
       this.readerAuto = await this.readBoolean('readerAuto', false)
       this.customCss = await this.readString('customCss', '')
@@ -797,6 +809,11 @@ export class AppSettings {
     this.flushKey('doNotSell', on)
   }
 
+  setPrivacyProxy(on: boolean): void {
+    this.privacyProxy = on
+    this.flushKey('privacyProxy', on)
+  }
+
   setDataSaver(on: boolean): void {
     this.dataSaver = on
     this.flushKey('dataSaver', on)
@@ -837,29 +854,55 @@ export class AppSettings {
     this.flushKey('homeBgImage', uri)
   }
 
-  setHomeLogoWidth(index: number): void {
-    this.homeLogoWidth = index
-    this.flushKey('homeLogoWidth', index)
+  setHomeLogoImage(uri: string): void {
+    this.homeLogoImage = uri
+    this.flushKey('homeLogoImage', uri)
   }
 
-  setHomeLogoHeight(index: number): void {
-    this.homeLogoHeight = index
-    this.flushKey('homeLogoHeight', index)
+  setHomeLogoHtml(html: string): void {
+    this.homeLogoHtml = html
+    this.flushKey('homeLogoHtml', html)
   }
 
-  setHomeLogoCorner(index: number): void {
-    this.homeLogoCorner = index
-    this.flushKey('homeLogoCorner', index)
+  setHomeBgOpacity(pct: number): void {
+    this.homeBgOpacity = pct
+    this.flushKey('homeBgOpacity', pct)
   }
 
-  setHomeFavWidth(index: number): void {
-    this.homeFavWidth = index
-    this.flushKey('homeFavWidth', index)
+  setHomeThemeColor(color: string): void {
+    this.homeThemeColor = color
+    this.flushKey('homeThemeColor', color)
   }
 
-  setHomeFavHeight(index: number): void {
-    this.homeFavHeight = index
-    this.flushKey('homeFavHeight', index)
+  // 清除网站图标缓存：递增代数使主页收藏的 favicon URL 变化，强制重新下载
+  bumpIconEpoch(): void {
+    this.homeIconEpoch = this.homeIconEpoch + 1
+    this.flushKey('homeIconEpoch', this.homeIconEpoch)
+  }
+
+  setHomeLogoWidth(value: number): void {
+    this.homeLogoWidth = value
+    this.flushKey('homeLogoWidth', value)
+  }
+
+  setHomeLogoHeight(value: number): void {
+    this.homeLogoHeight = value
+    this.flushKey('homeLogoHeight', value)
+  }
+
+  setHomeLogoCorner(pct: number): void {
+    this.homeLogoCorner = pct
+    this.flushKey('homeLogoCorner', pct)
+  }
+
+  setHomeFavWidth(value: number): void {
+    this.homeFavWidth = value
+    this.flushKey('homeFavWidth', value)
+  }
+
+  setHomeFavHeight(value: number): void {
+    this.homeFavHeight = value
+    this.flushKey('homeFavHeight', value)
   }
 
   setHomeLogoText(text: string): void {
@@ -873,9 +916,9 @@ export class AppSettings {
     this.flushKey('homeLogoType', index)
   }
 
-  setHomeLogoSize(index: number): void {
-    this.homeLogoSize = index
-    this.flushKey('homeLogoSize', index)
+  setHomeLogoSize(px: number): void {
+    this.homeLogoSize = px
+    this.flushKey('homeLogoSize', px)
   }
 
   setHomeLogoStyle(index: number): void {
@@ -883,24 +926,24 @@ export class AppSettings {
     this.flushKey('homeLogoStyle', index)
   }
 
-  setHomePillCorner(index: number): void {
-    this.homePillCorner = index
-    this.flushKey('homePillCorner', index)
+  setHomePillCorner(pct: number): void {
+    this.homePillCorner = pct
+    this.flushKey('homePillCorner', pct)
   }
 
-  setHomePillOpacity(index: number): void {
-    this.homePillOpacity = index
-    this.flushKey('homePillOpacity', index)
+  setHomePillOpacity(pct: number): void {
+    this.homePillOpacity = pct
+    this.flushKey('homePillOpacity', pct)
   }
 
-  setHomePillStrokeWidth(index: number): void {
-    this.homePillStrokeWidth = index
-    this.flushKey('homePillStrokeWidth', index)
+  setHomePillStrokeWidth(px: number): void {
+    this.homePillStrokeWidth = px
+    this.flushKey('homePillStrokeWidth', px)
   }
 
-  setHomePillStrokeOpacity(index: number): void {
-    this.homePillStrokeOpacity = index
-    this.flushKey('homePillStrokeOpacity', index)
+  setHomePillStrokeOpacity(pct: number): void {
+    this.homePillStrokeOpacity = pct
+    this.flushKey('homePillStrokeOpacity', pct)
   }
 
   setHomePillStyle(index: number): void {
@@ -908,19 +951,14 @@ export class AppSettings {
     this.flushKey('homePillStyle', index)
   }
 
-  setHomeFavSize(index: number): void {
-    this.homeFavSize = index
-    this.flushKey('homeFavSize', index)
+  setHomeFavCorner(pct: number): void {
+    this.homeFavCorner = pct
+    this.flushKey('homeFavCorner', pct)
   }
 
-  setHomeFavCorner(index: number): void {
-    this.homeFavCorner = index
-    this.flushKey('homeFavCorner', index)
-  }
-
-  setHomeFavColor(index: number): void {
-    this.homeFavColor = index
-    this.flushKey('homeFavColor', index)
+  setHomeFavShadow(index: number): void {
+    this.homeFavShadow = index
+    this.flushKey('homeFavShadow', index)
   }
 
   setHomeFavIconStyle(index: number): void {
@@ -1063,23 +1101,26 @@ export class AppSettings {
     this.setHomeBgImage('')
     this.setHomeLogoText('VIA')
     this.setHomeLogoType(0)
-    this.setHomeLogoSize(0)
-    this.setHomeLogoStyle(3)
+    this.setHomeLogoSize(28)
+    this.setHomeLogoStyle(0)
     this.setHomeLogoWidth(0)
     this.setHomeLogoHeight(0)
-    this.setHomeLogoCorner(1)
-    this.setHomePillCorner(0)
+    this.setHomeLogoCorner(50)
+    this.setHomeLogoImage('')
+    this.setHomeLogoHtml('')
+    this.setHomePillCorner(100)
     this.setHomePillOpacity(0)
     this.setHomePillStrokeWidth(1)
-    this.setHomePillStrokeOpacity(1)
+    this.setHomePillStrokeOpacity(24)
     this.setHomePillStyle(0)
-    this.setHomeFavSize(0)
-    this.setHomeFavCorner(0)
-    this.setHomeFavWidth(1)
+    this.setHomeFavCorner(100)
+    this.setHomeFavShadow(0)
+    this.setHomeFavWidth(0)
     this.setHomeFavHeight(0)
-    this.setHomeFavColor(0)
     this.setHomeFavIconStyle(0)
-    this.setHomeAdvEffect(1)
+    this.setHomeBgOpacity(0)
+    this.setHomeThemeColor('')
+    this.setHomeAdvEffect(0)
     this.setHomeAdvArea(0)
   }
 

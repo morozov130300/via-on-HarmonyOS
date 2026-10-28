@@ -29,7 +29,7 @@ export struct SettingsPage {
               this.navPathStack.pushPathByName('settingsAdvanced', '', true)
             } })
             SettingNavRow({ rowLabel: '脚本', onTapRow: () => {
-              this.navPathStack.pushPathByName('settingsScript', '', true)
+              this.navPathStack.pushPathByName('userScripts', '', true)
             } })
             SettingNavRow({ rowLabel: '关于', onTapRow: () => {
               this.navPathStack.pushPathByName('settingsAbout', '', true)

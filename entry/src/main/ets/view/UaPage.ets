@@ -1,6 +1,6 @@
 import { AppSettings } from '../common/Settings'
 import { UA_TABLE, UaDef, uaByKey, CustomUaEntry } from '../common/UaTable'
-import { SettingNavRow, SettingRadioRow, SettingToggleRow } from '../components/SettingRows'
+import { SettingNavRow, SettingRadioRow, SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -53,11 +53,11 @@ export struct UaPage {
             SettingNavRow({ rowLabel: '电脑模式下的浏览器标识', rowValue: this.desktopUaLabel(), onTapRow: () => {
               this.pickDesktopUa()
             } })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '简化浏览器标识',
               rowDesc: '从浏览器标识中移除设备信息及次要版本信息',
-              isToggleOn: this.settings.simplifyUa,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.simplifyUa,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setSimplifyUa(isOn)
               }
             })

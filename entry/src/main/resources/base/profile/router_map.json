@@ -101,6 +101,11 @@
       "buildFunction": "ReaderCssPageBuilder"
     },
     {
+      "name": "homeCss",
+      "pageSourceFile": "src/main/ets/view/HomeCssPage.ets",
+      "buildFunction": "HomeCssPageBuilder"
+    },
+    {
       "name": "longPressCustom",
       "pageSourceFile": "src/main/ets/view/SettingsLongPressPage.ets",
       "buildFunction": "SettingsLongPressPageBuilder"

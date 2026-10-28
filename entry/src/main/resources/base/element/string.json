@@ -859,6 +859,62 @@
     {
       "name": "restore_done",
       "value": "恢复完成"
+    },
+    {
+      "name": "view_source",
+      "value": "源码"
+    },
+    {
+      "name": "res_sniffer",
+      "value": "资源嗅探"
+    },
+    {
+      "name": "res_sniffer_empty",
+      "value": "这个页面没有资源。\n注：音乐或视频在播放时更容易被获取。资源嗅探不支持部分网站。"
+    },
+    {
+      "name": "screen_orientation",
+      "value": "屏幕方向"
+    },
+    {
+      "name": "mark_ad",
+      "value": "标记广告"
+    },
+    {
+      "name": "scan_qr",
+      "value": "扫描二维码"
+    },
+    {
+      "name": "refresh_page",
+      "value": "刷新网页"
+    },
+    {
+      "name": "read_aloud_menu",
+      "value": "朗读网页"
+    },
+    {
+      "name": "report_site",
+      "value": "举报网站"
+    },
+    {
+      "name": "fullscreen",
+      "value": "全屏"
+    },
+    {
+      "name": "image_mode",
+      "value": "有图模式"
+    },
+    {
+      "name": "open_with",
+      "value": "其它应用打开"
+    },
+    {
+      "name": "game_mode",
+      "value": "游戏模式"
+    },
+    {
+      "name": "add_home_fav",
+      "value": "添加主页收藏"
     }
   ]
 }

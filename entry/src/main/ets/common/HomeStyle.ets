@@ -1,36 +1,51 @@
 // 首页定制样式的唯一数据源：首页与定制页共用，保证两边永远一致。
+// 数值型参数（px/百分比）与原版录屏一致，由定制页的主题色导轨滑杆连续调节。
 
-export const HOME_BG_COLORS: string[] = ['#3D6FF2', '#2E3A59', '#8A6E5A', '#E08E45', '#F0C8A0', '#6B6F76', '#D94A44', '#F09A3E', '#F7C325', '#9BBF65', '#5BC8C0', '#5A6FC0', '#9B66AA']
+// 背景色板（视频 71-80s 底部调色板）
+export const HOME_BG_COLORS: string[] = [
+  '#F5CBA8', '#3A3F4A', '#C0392B', '#E67E22', '#F1C40F', '#A3C962', '#4ECDC4',
+  '#4A69BD', '#9B66AA', '#C8A27A', '#95A5A6', '#6D4C41', '#8E3B3B', '#E8A0A8', '#F5A623'
+]
+// 主题色板（背景图片模式下，视频 90s）
+export const HOME_THEME_COLORS: string[] = [
+  '#F5CBA8', '#3A3F4A', '#C0392B', '#E67E22', '#F1C40F', '#A3C962', '#4ECDC4',
+  '#4A69BD', '#9B66AA', '#C8A27A', '#95A5A6', '#6D4C41', '#8E3B3B', '#E8A0A8', '#F5A623'
+]
 
-export const HOME_LOGO_TYPES: string[] = ['图标', '文字']
-export const HOME_LOGO_FONT_LABELS: string[] = ['28vp', '22vp', '16vp']
-export const HOME_LOGO_FONT_VP: number[] = [28, 22, 16]
+// Logo 类型：0 默认图标 1 图片 2 文字 3 HTML 代码 4 无（视频 3s 单选弹窗）
+export const HOME_LOGO_TYPES: string[] = ['默认', '图片', '文字', 'HTML 代码', '无']
+// 字体风格（视频 15-16s：粗体 斜体 循环切换）
 export const HOME_LOGO_STYLES: string[] = ['常规', '粗体', '斜体', '粗体 斜体']
-export const HOME_LOGO_DIMENSIONS: string[] = ['自适应', '40px', '56px', '72px', '96px']
-export const HOME_LOGO_DIM_VP: number[] = [0, 40, 56, 72, 96]
-export const HOME_LOGO_CORNERS: string[] = ['100%', '50%', '0%']
 
-export const HOME_PILL_CORNERS: string[] = ['100%', '50%', '0%']
-export const HOME_PILL_CORNER_VP: number[] = [19, 9, 0]
-export const HOME_PILL_OPACITY: string[] = ['0%', '25%', '50%', '100%']
-export const HOME_PILL_OPACITY_VP: number[] = [0, 0.25, 0.5, 1]
-export const HOME_PILL_STROKE_LABELS: string[] = ['0px', '1px', '3px', '7px']
-export const HOME_PILL_STROKE_VP: number[] = [0, 1, 3, 7]
-export const HOME_PILL_STROKE_OPACITY: string[] = ['0%', '24%', '50%', '100%']
-export const HOME_PILL_STROKE_OPACITY_VP: number[] = [0, 0.24, 0.5, 1]
-export const HOME_PILL_STYLES: string[] = ['矩形', '胶囊']
-
-export const HOME_FAV_SIZES: string[] = ['42vp', '34vp', '50vp']
-export const HOME_FAV_SIZE_VP: number[] = [42, 34, 50]
-export const HOME_FAV_DIMENSIONS: string[] = ['自适应', '42px', '46px', '50px']
-export const HOME_FAV_DIM_VP: number[] = [0, 42, 46, 50]
-export const HOME_FAV_CORNERS: string[] = ['100%', '50%', '0%']
-export const HOME_FAV_ICON_STYLES: string[] = ['图标优先', '文字优先']
-export const HOME_FAV_ICON_COLORS: string[] = ['多彩', '单色']
-
-export const HOME_ADV_EFFECTS: string[] = ['透明', '不透明']
-export const HOME_ADV_AREAS: string[] = ['展示', '隐藏']
-
-export const HOME_FAV_PALETTE: string[] = ['#5B8DEF', '#F8A246', '#6AC4C4', '#9B66AA', '#B4BE74']
-export const HOME_FAV_SINGLE_COLOR: string = '#646986'
 export const HOME_LOGO_COLOR: string = '#FAFAFA'
+// Logo 尺寸滑杆范围（px），0 表示自适应
+export const HOME_DIM_MIN: number = 40
+export const HOME_DIM_MAX: number = 128
+export const HOME_LOGO_FONT_MIN: number = 20
+export const HOME_LOGO_FONT_MAX: number = 64
+
+// 搜索框样式：0 矩形 1 线条（视频 54-58s）
+export const HOME_PILL_STYLES: string[] = ['矩形', '线条']
+export const HOME_PILL_HEIGHT: number = 38
+// 描边粗细滑杆范围（px）
+export const HOME_STROKE_MAX: number = 7
+// 百分比滑杆范围
+export const HOME_PCT_MIN: number = 0
+export const HOME_PCT_MAX: number = 100
+
+// 收藏图标：阴影风格（视频 100-108s：多彩/凄暗）
+export const HOME_FAV_ICON_STYLES: string[] = ['图标优先', '文字']
+export const HOME_FAV_SHADOWS: string[] = ['多彩', '凄暗']
+export const HOME_FAV_PALETTE: string[] = ['#5B8DEF', '#F8A246', '#6AC4C4', '#9B66AA', '#B4BE74']
+export const HOME_FAV_DIM_COLOR: string = '#4A4E5C'
+
+// 高级：搜索框效果（透明/模糊）、搜索区域（提示/隐藏）
+export const HOME_ADV_EFFECTS: string[] = ['透明', '模糊']
+export const HOME_ADV_AREAS: string[] = ['提示', '隐藏']
+
+// 清除网站图标缓存确认弹窗文案（视频 116s）
+export const HOME_CLEAR_ICON_TITLE: string = '清除网站图标缓存'
+export const HOME_CLEAR_ICON_DESC: string = '请注意，这会清除所有主页收藏的图标。图标将会在你下次访问该网站时下载。'
+// 重置确认弹窗文案（视频 125s）
+export const HOME_RESET_TITLE: string = '重置为默认设置'
+export const HOME_RESET_DESC: string = '你确定继续吗?'

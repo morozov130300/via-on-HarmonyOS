@@ -43,6 +43,7 @@ struct Index {
   private mainNavStack: NavPathStack = new NavPathStack()
   @Local ready: boolean = false
   @Local showSearch: boolean = false
+  @Local searchInitialText: string = ''
   @Local showTabPanel: boolean = false
   @Local showMenu: boolean = false
   @Local showFindBar: boolean = false
@@ -224,9 +225,16 @@ struct Index {
                     this.showReader = true
                   } })
                   if (tab.isHomePage()) {
-                    HomePage({ onSearchTap: () => {
-                      this.showSearch = true
-                    } })
+                    HomePage({
+                      onSearchTap: () => {
+                        this.searchInitialText = ''
+                        this.showSearch = true
+                      },
+                      onScanResult: (text: string) => {
+                        this.searchInitialText = text
+                        this.showSearch = true
+                      }
+                    })
                   }
                 }
               }
@@ -243,6 +251,7 @@ struct Index {
           Column() {
             if (!this.tabStore.current().isHomePage()) {
               AddressBar({ tab: this.tabStore.current(), onAddressTap: () => {
+                this.searchInitialText = this.tabStore.current().url
                 this.showSearch = true
               }, onOpenMedia: (urls: string[]) => {
                 this.mediaList = urls
@@ -269,6 +278,11 @@ struct Index {
                   } catch (error) {
                     console.error('forward failed')
                   }
+                }
+              },
+              onHome: () => {
+                if (!this.tabStore.current().isHomePage()) {
+                  this.tabStore.gotoHome()
                 }
               },
               onTabs: () => {
@@ -303,7 +317,7 @@ struct Index {
       if (this.showSearch) {
         Column() {
           SearchOverlay({
-            initialText: this.tabStore.current().isHomePage() ? '' : this.tabStore.current().url,
+            initialText: this.searchInitialText,
             onClose: () => {
               this.showSearch = false
             }

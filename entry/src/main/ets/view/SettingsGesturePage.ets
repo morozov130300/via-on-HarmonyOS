@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { SettingToggleRow } from '../components/SettingRows'
+import { SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -18,10 +18,10 @@ export struct SettingsGesturePage {
         })
         Scroll() {
           Column() {
-            SettingToggleRow({ rowLabel: '音量键翻页', rowDesc: '使用音量键上下翻动网页', isToggleOn: this.settings.volumePageFlip, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '音量键翻页', rowDesc: '使用音量键上下翻动网页', isChecked: this.settings.volumePageFlip, onCheckRow: (isOn: boolean) => {
               this.settings.setVolumePageFlip(isOn)
             } })
-            SettingToggleRow({ rowLabel: '滑动切换标签', rowDesc: '在网页上左右滑动切换标签页', isToggleOn: this.settings.swipeSwitchTab, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '滑动切换标签', rowDesc: '在网页上左右滑动切换标签页', isChecked: this.settings.swipeSwitchTab, onCheckRow: (isOn: boolean) => {
               this.settings.setSwipeSwitchTab(isOn)
             } })
           }

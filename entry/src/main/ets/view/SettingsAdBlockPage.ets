@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { SettingNavRow, SettingToggleRow } from '../components/SettingRows'
+import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -18,19 +18,19 @@ export struct SettingsAdBlockPage {
         })
         Scroll() {
           Column() {
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '广告拦截',
               rowDesc: `已拦截 ${this.settings.adBlockTotal} 个广告，共节省 ${this.formatBytes(this.settings.adBlockSavedBytes)}`,
-              isToggleOn: this.settings.adBlockOn,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.adBlockOn,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setAdBlockOn(isOn)
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '启用内建规则',
               rowDesc: '内建规则仅拦截常见广告',
-              isToggleOn: this.settings.adBlockBuiltin,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.adBlockBuiltin,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setAdBlockBuiltin(isOn)
               }
             })
@@ -48,11 +48,11 @@ export struct SettingsAdBlockPage {
                 this.navPathStack.pushPathByName('ruleSub', '', true)
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '自动展开网页全文',
               rowDesc: '打开网页时自动展开网页中折叠的内容',
-              isToggleOn: this.settings.autoExpandFullText,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.autoExpandFullText,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setAutoExpandFullText(isOn)
               }
             })
