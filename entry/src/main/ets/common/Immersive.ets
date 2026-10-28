@@ -38,7 +38,9 @@ export class UiInsets {
  */
 export function applyImmersiveWindow(win: window.Window, showStatusBar: boolean): void {
   try {
-    win.setWindowLayoutFullScreen(true)
+    win.setWindowLayoutFullScreen(true).catch(() => {
+      // PC/2in1 自由多窗模式下该接口禁用，忽略即可
+    })
   } catch (error) {
     console.error('setWindowLayoutFullScreen failed')
   }
@@ -57,7 +59,9 @@ export function applyImmersiveWindow(win: window.Window, showStatusBar: boolean)
 
 export function applyStatusBarVisible(win: window.Window, visible: boolean): void {
   try {
-    win.setSpecificSystemBarEnabled('status', visible)
+    win.setSpecificSystemBarEnabled('status', visible).catch(() => {
+      // PC/2in1 自由多窗模式下该接口禁用，忽略即可
+    })
   } catch (error) {
     console.error('setSpecificSystemBarEnabled failed')
   }

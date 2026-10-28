@@ -315,6 +315,15 @@ struct Index {
       }
 
       if (this.showSearch) {
+        // 原版同款明暗变化：主页/网页留在原地，整体压暗，点击暗区收起搜索
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor('rgba(0,0,0,0.5)')
+          .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
+          .onClick(() => {
+            this.showSearch = false
+          })
         Column() {
           SearchOverlay({
             initialText: this.searchInitialText,
@@ -326,7 +335,10 @@ struct Index {
         .width('100%')
         .height('100%')
         .padding({ top: this.insets.top })
-        .backgroundColor($r('app.color.page_bg'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
+        .onClick(() => {
+          this.showSearch = false
+        })
       }
       if (this.showTabPanel) {
         TabPanel({

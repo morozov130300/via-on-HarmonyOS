@@ -62,22 +62,24 @@ export struct SearchOverlay {
   }
 
   build() {
+    // 原版同款：背景透明，主页/网页留在原地仅被压暗，顶部为搜索输入条
     Column() {
       Row({ space: 10 }) {
-        AppIcon({ icon: $r('sys.symbol.chevron_left'), iconSize: 24 })
-          .onClick(() => {
-            this.onClose()
-          })
-        TextInput({ text: this.inputText, placeholder: $r('app.string.search_or_type_url'), controller: this.textController })
+        AppIcon({ icon: $r('sys.symbol.magnifyingglass'), iconSize: 22, iconColor: $r('app.color.fg') })
+        TextInput({ text: this.inputText, placeholder: $r('app.string.search'), controller: this.textController })
           .layoutWeight(1)
           .height(40)
-          .fontSize(15)
-          .backgroundColor($r('app.color.surface'))
+          .fontSize(16)
+          .backgroundColor(Color.Transparent)
           .fontColor($r('app.color.fg'))
           .placeholderColor($r('app.color.fg_secondary'))
           .caretColor($r('app.color.accent'))
           .enterKeyType(EnterKeyType.Search)
           .defaultFocus(true)
+          .id('search_overlay_input')
+          .onAppear(() => {
+            this.getUIContext().getFocusController().requestFocus('search_overlay_input')
+          })
           .onChange((value: string) => {
             this.inputText = value
             this.fetchSuggestions(value)
@@ -89,15 +91,15 @@ export struct SearchOverlay {
           .onClick(() => {
             this.startScan()
           })
-        Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg'))
+        AppIcon({ icon: $r('sys.symbol.chevron_right'), iconSize: 22, iconColor: $r('app.color.fg') })
           .onClick(() => {
-            this.onClose()
+            this.commit(this.inputText)
           })
       }
       .width('100%')
-      .padding({ left: 14, right: 14, top: 10 })
+      .height(48)
+      .padding({ left: 16, right: 16 })
+      .alignItems(VerticalAlign.Center)
 
       Scroll() {
         Column() {
@@ -168,7 +170,7 @@ export struct SearchOverlay {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor(Color.Transparent)
   }
 
   @Builder
