@@ -1,6 +1,7 @@
 import { DownloadRec, DownloadStatus } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { AppIcon } from '../components/AppIcon'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 function downloadStatusText(status: DownloadStatus): string {
   if (status === DownloadStatus.Completed) {
@@ -44,6 +45,12 @@ export struct DownloadPage {
   build() {
     NavDestination() {
       Column() {
+        SettingsHeader({
+          headerTitle: $r('app.string.downloads'),
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
         if (this.items.length === 0) {
           Column() {
             Text($r('app.string.empty_downloads'))
@@ -110,7 +117,8 @@ export struct DownloadPage {
       .width('100%')
       .height('100%')
     }
-    .title($r('app.string.downloads'))
+    .hideTitleBar(true)
+    .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })

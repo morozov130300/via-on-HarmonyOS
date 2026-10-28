@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { SettingNavRow, SettingToggleRow } from '../components/SettingRows'
+import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -20,41 +20,41 @@ export struct SettingsAdvancedPage {
         })
         Scroll() {
           Column() {
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '流量节省',
               rowDesc: '请求网站节省流量',
-              isToggleOn: this.settings.dataSaver,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.dataSaver,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setDataSaver(isOn)
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '自动展示嗅探按钮',
-              isToggleOn: this.settings.autoSniffButton,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.autoSniffButton,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setAutoSniffButton(isOn)
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '允许调试网页',
-              isToggleOn: this.settings.allowDebugWeb,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.allowDebugWeb,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setAllowDebugWeb(isOn)
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '禁用 Custom Tabs',
               rowDesc: '跳过第三方应用通过 Custom Tabs 打开链接时的中转页',
-              isToggleOn: this.settings.disableCustomTabs,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.disableCustomTabs,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setDisableCustomTabs(isOn)
               }
             })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '禁用安全浏览',
               rowDesc: '安全浏览允许 WebView 通过验证链接来防止恶意软件和网络钓鱼攻击',
-              isToggleOn: this.settings.disableSafeBrowsing,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.disableSafeBrowsing,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setDisableSafeBrowsing(isOn)
               }
             })

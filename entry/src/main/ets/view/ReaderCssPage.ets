@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { ViaIcon } from '../components/ViaIcon'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
 export struct ReaderCssPage {
@@ -10,29 +10,17 @@ export struct ReaderCssPage {
   build() {
     NavDestination() {
       Column() {
-        Row() {
-          ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
-            .onClick(() => {
-              this.navPathStack.pop()
-            })
-          Text($r('app.string.custom_reader_css'))
-            .fontSize(17)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.fg'))
-            .layoutWeight(1)
-            .margin({ left: 4 })
-          Text($r('app.string.save'))
-            .fontSize(15)
-            .fontColor($r('app.color.accent'))
-            .padding({ left: 10, right: 4, top: 8, bottom: 8 })
-            .onClick(() => {
-              this.settings.setReaderCustomCss(this.cssText)
-              this.getUIContext().getPromptAction().showToast({ message: $r('app.string.save'), duration: 1500 })
-            })
-        }
-        .width('100%')
-        .height(52)
-        .padding({ left: 12, right: 12 })
+        SettingsHeader({
+          headerTitle: $r('app.string.custom_reader_css'),
+          rightText: $r('app.string.save'),
+          onBack: () => {
+            this.navPathStack.pop()
+          },
+          onRight: () => {
+            this.settings.setReaderCustomCss(this.cssText)
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.save'), duration: 1500 })
+          }
+        })
 
         TextArea({ text: this.cssText, placeholder: 'body { font-family: serif; }' })
           .width('100%')

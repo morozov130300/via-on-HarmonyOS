@@ -2,7 +2,7 @@ import { http } from '@kit.NetworkKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { UserScriptRec } from '../common/Types'
-import { SettingToggleRow, SettingNavRow } from '../components/SettingRows'
+import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -26,10 +26,10 @@ export struct SettingsScriptPage {
         })
         Scroll() {
         Column() {
-          SettingToggleRow({ rowLabel: '启用脚本', isToggleOn: this.settings.scriptEnabled, onToggleRow: (isOn: boolean) => {
+          SettingCheckRow({ rowLabel: '启用脚本', isChecked: this.settings.scriptEnabled, onCheckRow: (isOn: boolean) => {
             this.settings.setScriptEnabled(isOn)
           } })
-          SettingToggleRow({ rowLabel: '自动更新', isToggleOn: this.settings.scriptAutoUpdate, onToggleRow: (isOn: boolean) => {
+          SettingCheckRow({ rowLabel: '自动更新', isChecked: this.settings.scriptAutoUpdate, onCheckRow: (isOn: boolean) => {
             this.settings.setScriptAutoUpdate(isOn)
           } })
           if (this.settings.userScripts.length > 0) {

@@ -3,10 +3,10 @@ import { UiInsets } from '../common/Immersive'
 
 @ComponentV2
 export struct SettingsHeader {
-  @Param @Require headerTitle: string = ''
-  @Param rightText: string = ''
+  @Param @Require headerTitle: ResourceStr = ''
+  @Param rightText: ResourceStr = ''
   @Param rightIcon: Resource | null = null
-  @Param rightText2: string = ''
+  @Param rightText2: ResourceStr = ''
   @Param rightIcon2: Resource | null = null
   @Event onBack: () => void = () => {
   }

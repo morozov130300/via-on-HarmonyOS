@@ -2,10 +2,9 @@
 import { print } from '@kit.BasicServicesKit'
 import { productViewManager } from '@kit.AppGalleryKit'
 import { fileIo } from '@kit.CoreFileKit'
-import { AppSettings, UA_MODE_DEFAULT, UA_MODE_PC, UA_MODE_MOBILE } from '../common/Settings'
+import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
-import { SiteSetting } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel } from '../common/MenuItems'
 import { ViaIcon } from './ViaIcon'
@@ -21,6 +20,29 @@ const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translator__){w
   + `else{t=document.createElement("script");t.id=id;t.src="https://fastly.jsdelivr.net/gh/xnx3/translate@v3.14.0/translate.js/translate.min.js";`
   + `t.onload=function(){translate.selectLanguageTag.show=false;translate.service.use("client.edge");translate.changeLanguage("zh-CN");};document.head.appendChild(t);}});})();`
 
+// 「浏览器标识」弹窗选项：文案与原版录屏逐字一致
+class UaChoice {
+  key: string
+  label: string
+
+  constructor(key: string, label: string) {
+    this.key = key
+    this.label = label
+  }
+}
+
+const UA_CHOICES: UaChoice[] = [
+  new UaChoice('default', '默认'),
+  new UaChoice('android_phone', 'Android (手机)'),
+  new UaChoice('android_tablet', 'Android (平板)'),
+  new UaChoice('win_chrome', 'Windows (Chrome)'),
+  new UaChoice('win_ie11', 'Windows (IE 11)'),
+  new UaChoice('mac', 'macOS'),
+  new UaChoice('iphone', 'iPhone'),
+  new UaChoice('ipad', 'iPad'),
+  new UaChoice('symbian', '塞班 (Symbian)')
+]
+
 @ComponentV2
 export struct MenuSheet {
   @Event onClose: () => void = () => {}
@@ -32,6 +54,7 @@ export struct MenuSheet {
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   @Local pageIndex: number = 0
+  @Local showUaDialog: boolean = false
   // 统一翻页式菜单（工具箱即往后翻一页），由 SwiperController 驱动点击翻页
   private swiperController: SwiperController = new SwiperController()
   private insets: UiInsets = UiInsets.getInstance()
@@ -62,9 +85,63 @@ export struct MenuSheet {
       .padding({ top: 8, bottom: 6 })
       .backgroundColor($r('app.color.menu_bg'))
       .shadow({ radius: 24, color: 'rgba(0,0,0,0.4)', offsetY: 4 })
+
+      if (this.showUaDialog) {
+        this.UaDialog()
+      }
     }
     .width('100%')
     .height('100%')
+  }
+
+  // 「浏览器标识」居中弹窗：视频同款标题 + 单选列表
+  @Builder
+  UaDialog() {
+    Stack({ alignContent: Alignment.Center }) {
+      Column() {
+        Text($r('app.string.browser_ua'))
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.fg'))
+          .width('100%')
+          .padding({ left: 20, top: 18, bottom: 8 })
+        Scroll() {
+          Column() {
+            ForEach(UA_CHOICES, (choice: UaChoice) => {
+              Row({ space: 14 }) {
+                Circle({ width: 18, height: 18 })
+                  .fill(this.settings.uaKey === choice.key ? '#4C6FFF' : Color.Transparent)
+                  .stroke(this.settings.uaKey === choice.key ? '#4C6FFF' : '#8A8A8E')
+                  .strokeWidth(1.5)
+                Text(choice.label)
+                  .fontSize(15)
+                  .fontColor($r('app.color.fg'))
+              }
+              .width('100%')
+              .height(44)
+              .padding({ left: 20, right: 20 })
+              .onClick(() => {
+                this.applyUaChoice(choice.key)
+              })
+            }, (choice: UaChoice) => choice.key)
+          }
+          .width('100%')
+        }
+        .width('100%')
+        .padding({ bottom: 12 })
+      }
+      .width('82%')
+      .constraintSize({ maxHeight: '70%' })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('rgba(0,0,0,0.35)')
+    .onClick(() => {
+      this.showUaDialog = false
+    })
   }
 
   // 菜单条目顺序：定制菜单页写入的 settings.menuOrder 为主序，
@@ -154,8 +231,9 @@ export struct MenuSheet {
       case 'add_bookmark':
         this.addBookmark()
         break
+      // 视频同款：电脑模式打开「浏览器标识」弹窗
       case 'pc_mode':
-        this.toggleSitePcMode()
+        this.showUaDialog = true
         break
       // 工具箱即往后翻一页（与原版一致：菜单整体翻页，不存在独立的二级面板）
       case 'toolbox':
@@ -163,6 +241,20 @@ export struct MenuSheet {
         break
       case 'settings':
         this.onOpenPage('settings')
+        break
+      case 'night_mode':
+        this.onClose()
+        this.onOpenPage('settingsNight')
+        break
+      case 'customize_menu':
+        this.onClose()
+        this.onOpenPage('menuCustom')
+        break
+      case 'refresh_page':
+        this.refreshCurrent()
+        break
+      case 'res_sniffer':
+        this.sniffResources()
         break
       case 'find':
         this.onClose()
@@ -178,7 +270,7 @@ export struct MenuSheet {
         this.addToDesktop()
         break
       case 'script':
-        this.onOpenPage('settingsScript')
+        this.onOpenPage('userScripts')
         break
       case 'adblock':
         this.onOpenPage('rules')
@@ -190,13 +282,19 @@ export struct MenuSheet {
       case 'print':
         this.printPage()
         break
-      case 'ua':
-        this.pickUa()
-        break
       case 'netlog':
         this.onOpenPage('netLog')
         break
+      case 'ua':
+        this.showUaDialog = true
+        break
       default:
+        // 视频之外尚未实现的条目：主页提示无页面，其余提示暂未支持
+        if (this.tabStore.current().isHomePage()) {
+          this.homePageGuard()
+        } else {
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+        }
         break
     }
   }
@@ -346,33 +444,39 @@ export struct MenuSheet {
     }
   }
 
-  private pickUa(): void {
-    const sheets: SheetInfo[] = [
-      { title: 'iPhone', action: (): void => {
-        this.applyUaMode(UA_MODE_DEFAULT)
-      } },
-      { title: '电脑版', action: (): void => {
-        this.applyUaMode(UA_MODE_PC)
-      } },
-      { title: '手机版', action: (): void => {
-        this.applyUaMode(UA_MODE_MOBILE)
-      } }
-    ]
-    ActionSheet.show({
-      title: '浏览器标识',
-      message: '选择网页浏览器标识',
-      sheets: sheets
-    })
-  }
-
-  private applyUaMode(mode: number): void {
-    this.settings.setUaMode(mode)
+  // 选中浏览器标识：与 UaPage 一致仅持久化 uaKey 并刷新页面
+  private applyUaChoice(key: string): void {
+    this.settings.setUaKey(key)
+    this.showUaDialog = false
     try {
       this.tabStore.current().controller.refresh()
     } catch (error) {
       console.error('refresh after ua change failed')
     }
     this.onClose()
+  }
+
+  private refreshCurrent(): void {
+    if (this.tabStore.current().isHomePage()) {
+      this.homePageGuard()
+      return
+    }
+    try {
+      this.tabStore.current().controller.refresh()
+      this.onClose()
+    } catch (error) {
+      console.error('refresh failed')
+    }
+  }
+
+  // 资源嗅探：视频同款空结果提示（页面无资源时的 Snackbar 文案逐字一致）
+  private sniffResources(): void {
+    if (this.tabStore.current().isHomePage()) {
+      this.homePageGuard()
+      return
+    }
+    this.onClose()
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_empty'), duration: 2500 })
   }
 
   private hidden(id: string): boolean {
@@ -395,24 +499,6 @@ export struct MenuSheet {
     this.settings.persistAdBlockTotal()
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
     context.terminateSelf()
-  }
-
-  private toggleSitePcMode(): void {
-    const host = hostOf(this.tabStore.current().url)
-    if (host === '') {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
-      return
-    }
-    const existing = this.settings.getSiteSetting(host)
-    const setting: SiteSetting = existing !== null ? existing : new SiteSetting(host)
-    setting.pcMode = !setting.pcMode
-    this.settings.upsertSiteSetting(setting)
-    try {
-      this.tabStore.current().controller.refresh()
-    } catch (error) {
-      console.error('refresh after pc mode failed')
-    }
-    this.onClose()
   }
 
   private addBookmark(): void {

@@ -1,6 +1,6 @@
 import { SiteSetting } from '../common/Types'
 import { AppSettings } from '../common/Settings'
-import { SettingToggleRow } from '../components/SettingRows'
+import { SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 import { AppIcon } from '../components/AppIcon'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -154,10 +154,10 @@ export struct FontSizePage {
             .borderRadius(12)
             .backgroundColor($r('app.color.surface'))
 
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '强制缩放',
-              isToggleOn: this.settings.forceZoom,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.forceZoom,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setForceZoom(isOn)
               }
             })

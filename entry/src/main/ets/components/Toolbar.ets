@@ -39,11 +39,20 @@ export struct Toolbar {
           this.onHome()
         })
       }
+      // 视频同款：多标签按钮为圆角方框内嵌标签数
       Column() {
-        Text(String(this.tabStore.tabs.length))
-          .fontSize(16)
-          .fontColor($r('app.color.icon'))
-          .maxLines(1)
+        Column() {
+          Text(String(this.tabStore.tabs.length))
+            .fontSize(12)
+            .fontColor($r('app.color.icon'))
+            .maxLines(1)
+        }
+        .width(22)
+        .height(22)
+        .borderRadius(6)
+        .border({ width: 1.5, color: $r('app.color.icon') })
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
       }
       .layoutWeight(1)
       .height('100%')

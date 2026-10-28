@@ -8,7 +8,7 @@ import { BrowserDb } from '../common/Database'
 import { BackupManager } from '../common/Backup'
 import { uaByKey } from '../common/UaTable'
 import { SEARCH_ENGINES, SearchEngineDef } from '../common/SearchEngines'
-import { SettingNavRow, SettingToggleRow } from '../components/SettingRows'
+import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -52,7 +52,7 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '阅读模式', onTapRow: () => {
               this.navPathStack.pushPathByName('settingsReader', '', true)
             } })
-            SettingToggleRow({ rowLabel: '显示状态栏', rowDesc: '关闭后页面内容铺满整个屏幕', isToggleOn: this.settings.showStatusBar, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '显示状态栏', rowDesc: '关闭后页面内容铺满整个屏幕', isChecked: this.settings.showStatusBar, onCheckRow: (isOn: boolean) => {
               this.settings.setShowStatusBar(isOn)
               this.applyStatusBar(isOn)
             } })
@@ -86,7 +86,7 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '下载管理', onTapRow: () => {
               this.navPathStack.pushPathByName('downloads', '', true)
             } })
-            SettingToggleRow({ rowLabel: '外置视频播放器', rowDesc: '调用外部播放器播放网页视频', isToggleOn: this.settings.externalPlayer, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '外置视频播放器', rowDesc: '调用外部播放器播放网页视频', isChecked: this.settings.externalPlayer, onCheckRow: (isOn: boolean) => {
               this.settings.setExternalPlayer(isOn)
             } })
             SettingNavRow({ rowLabel: '退出时清除数据', rowValue: this.clearOnExitLabel(), onTapRow: () => {
@@ -107,10 +107,10 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '导出数据', onTapRow: () => {
               this.exportData()
             } })
-            SettingToggleRow({ rowLabel: '启动时恢复未关闭标签', isToggleOn: this.settings.restoreTabs, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '启动时恢复未关闭标签', isChecked: this.settings.restoreTabs, onCheckRow: (isOn: boolean) => {
               this.settings.setRestoreTabs(isOn)
             } })
-            SettingToggleRow({ rowLabel: '显示撤销关闭标签的提示', isToggleOn: this.settings.undoCloseToast, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '显示撤销关闭标签的提示', isChecked: this.settings.undoCloseToast, onCheckRow: (isOn: boolean) => {
               this.settings.setUndoCloseToast(isOn)
             } })
             SettingNavRow({ rowLabel: '设置默认浏览器', onTapRow: () => {

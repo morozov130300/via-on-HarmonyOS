@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { SettingToggleRow, SettingNavRow } from '../components/SettingRows'
+import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 class ReaderThemeDef {
@@ -36,13 +36,13 @@ export struct SettingsReaderPage {
         })
         Scroll() {
           Column() {
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: $r('app.string.reader_confirm'),
               rowDesc: this.settings.readerConfirm
                 ? $r('app.string.reader_confirm_desc_on')
                 : $r('app.string.reader_confirm_desc_off'),
-              isToggleOn: this.settings.readerConfirm,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.readerConfirm,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setReaderConfirm(isOn)
               }
             })

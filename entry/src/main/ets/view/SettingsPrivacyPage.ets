@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { SettingToggleRow } from '../components/SettingRows'
+import { SettingCheckRow } from '../components/SettingRows'
 import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
@@ -18,18 +18,26 @@ export struct SettingsPrivacyPage {
         })
         Scroll() {
           Column() {
-            SettingToggleRow({ rowLabel: '不跟踪', isToggleOn: this.settings.doNotTrack, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '不跟踪', isChecked: this.settings.doNotTrack, onCheckRow: (isOn: boolean) => {
               this.settings.setDoNotTrack(isOn)
             } })
-            SettingToggleRow({ rowLabel: '禁用 WebRTC', isToggleOn: this.settings.disableWebRtc, onToggleRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '禁用 WebRTC', isChecked: this.settings.disableWebRtc, onCheckRow: (isOn: boolean) => {
               this.settings.setDisableWebRtc(isOn)
             } })
-            SettingToggleRow({
+            SettingCheckRow({
               rowLabel: '不出售或分享数据',
               rowDesc: '请求网站不出售或分享我的数据以保护隐私 (实验性)',
-              isToggleOn: this.settings.doNotSell,
-              onToggleRow: (isOn: boolean) => {
+              isChecked: this.settings.doNotSell,
+              onCheckRow: (isOn: boolean) => {
                 this.settings.setDoNotSell(isOn)
+              }
+            })
+            SettingCheckRow({
+              rowLabel: '请求头代理',
+              rowDesc: '拦截网页请求由应用转发以附加 DNT/GPC 请求头 (实验性，可能影响登录与视频播放)',
+              isChecked: this.settings.privacyProxy,
+              onCheckRow: (isOn: boolean) => {
+                this.settings.setPrivacyProxy(isOn)
               }
             })
           }

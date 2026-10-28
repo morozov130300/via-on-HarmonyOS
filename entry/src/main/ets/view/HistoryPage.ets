@@ -2,6 +2,7 @@ import { HistoryRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { AppIcon } from '../components/AppIcon'
+import { SettingsHeader } from '../components/SettingsHeader'
 
 @ComponentV2
 export struct HistoryPage {
@@ -17,6 +18,12 @@ export struct HistoryPage {
   build() {
     NavDestination() {
       Column() {
+        SettingsHeader({
+          headerTitle: $r('app.string.history'),
+          onBack: () => {
+            this.navPathStack.pop()
+          }
+        })
         if (this.items.length === 0) {
           Column() {
             Text($r('app.string.empty_history'))
@@ -88,7 +95,8 @@ export struct HistoryPage {
       .width('100%')
       .height('100%')
     }
-    .title($r('app.string.history'))
+    .hideTitleBar(true)
+    .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })

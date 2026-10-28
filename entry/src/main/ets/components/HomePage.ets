@@ -6,37 +6,28 @@ import { BookmarkRec } from '../common/Types'
 import { hostOf } from '../common/SearchEngines'
 import { AppSettings } from '../common/Settings'
 import { UiInsets } from '../common/Immersive'
+import { scanBarcode } from '@kit.ScanKit'
 import {
   HOME_ADV_AREAS,
-  HOME_ADV_EFFECTS,
-  HOME_FAV_CORNERS,
-  HOME_FAV_DIM_VP,
-  HOME_FAV_ICON_COLORS,
+  HOME_FAV_DIM_COLOR,
   HOME_FAV_ICON_STYLES,
   HOME_FAV_PALETTE,
-  HOME_FAV_SINGLE_COLOR,
+  HOME_FAV_SHADOWS,
   HOME_LOGO_COLOR,
-  HOME_LOGO_CORNERS,
-  HOME_LOGO_DIM_VP,
-  HOME_LOGO_FONT_VP,
   HOME_LOGO_STYLES,
   HOME_LOGO_TYPES,
-  HOME_PILL_CORNER_VP,
-  HOME_PILL_OPACITY_VP,
-  HOME_PILL_STROKE_OPACITY_VP,
-  HOME_PILL_STROKE_VP,
+  HOME_PILL_HEIGHT,
   HOME_PILL_STYLES
 } from '../common/HomeStyle'
 
 const HOME_BOOKMARK_LIMIT: number = 8
-const HOME_PILL_HEIGHT: number = 38
-
 @ComponentV2
 export struct HomePage {
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
   private settings: AppSettings = AppSettings.getInstance()
   @Event onSearchTap: () => void = () => {}
+  @Event onScanResult: (text: string) => void = (text: string) => {}
   @Local bookmarks: BookmarkRec[] = []
   private insets: UiInsets = UiInsets.getInstance()
 
@@ -48,6 +39,22 @@ export struct HomePage {
     })
   }
 
+  // 调起系统扫码，识别结果回填地址栏
+  private startScan(): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    scanBarcode.startScanForResult(context).then((data: scanBarcode.ScanResult) => {
+      const scanned = data.originalValue.trim()
+      if (scanned !== '') {
+        this.onScanResult(scanned)
+      }
+    }).catch((error: BusinessError) => {
+      console.error(`scan failed: ${error.code}`)
+    })
+  }
+
   build() {
     Stack() {
       if (this.settings.homeBgImage !== '') {
@@ -55,6 +62,10 @@ export struct HomePage {
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(`#${this.bgOverlayAlpha()}000000`)
       }
       Column() {
       Row({ space: 12 }) {
@@ -69,7 +80,7 @@ export struct HomePage {
         Blank()
         ViaIcon({ icon: $r('app.media.via_ic_scan'), iconSize: 22, iconColor: $r('app.color.home_title') })
           .onClick(() => {
-            this.onSearchTap()
+            this.startScan()
           })
       }
       .width('100%')
@@ -79,19 +90,31 @@ export struct HomePage {
 
       Blank()
 
-      if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示') {
+      if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '提示') {
         Column({ space: 10 }) {
           if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
             Text(this.settings.homeLogoText)
-              .fontSize(HOME_LOGO_FONT_VP[this.settings.homeLogoSize])
+              .fontSize(this.settings.homeLogoSize)
               .fontColor(HOME_LOGO_COLOR)
               .fontWeight(this.logoBold())
               .fontStyle(this.logoItalic())
               .maxLines(1)
-          } else {
+          } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '图片'
+            && this.settings.homeLogoImage !== '') {
+            Image(this.settings.homeLogoImage)
+              .width(this.logoWidth())
+              .height(this.logoHeight())
+              .borderRadius(this.logoRadius())
+              .objectFit(ImageFit.Contain)
+          } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === 'HTML 代码'
+            && this.settings.homeLogoHtml !== '') {
+            RichText(this.settings.homeLogoHtml)
+              .width(this.logoWidth())
+              .height(this.logoHeight())
+          } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '默认') {
             Image($rawfile('logo.svg'))
-              .width(this.logoSize(this.settings.homeLogoWidth))
-              .height(this.logoSize(this.settings.homeLogoHeight))
+              .width(this.logoWidth())
+              .height(this.logoHeight())
               .borderRadius(this.logoRadius())
               .objectFit(ImageFit.Contain)
           }
@@ -105,9 +128,9 @@ export struct HomePage {
         }
         .height(HOME_PILL_HEIGHT)
         .width('92%')
-        .backgroundColor($r('app.color.search_pill_bg'))
+        .backgroundColor(this.pillBackground())
+        .backgroundBlurStyle(this.settings.homeAdvEffect === 1 ? BlurStyle.COMPONENT_THICK : BlurStyle.NONE)
         .borderRadius(this.pillRadius())
-        .opacity(this.pillOpacity())
         .border(this.pillBorder())
         .margin({ top: 24 })
         .justifyContent(FlexAlign.Center)
@@ -175,38 +198,24 @@ export struct HomePage {
     .backgroundColor(this.homeBackground())
   }
 
-  private logoSize(index: number): number {
-    const vp = HOME_LOGO_DIM_VP[index]
-    return vp === 0 ? 56 : vp
-  }
-
-  private logoRadius(): number {
-    const size = Math.min(this.logoSize(this.settings.homeLogoWidth), this.logoSize(this.settings.homeLogoHeight))
-    const corner = HOME_LOGO_CORNERS[this.settings.homeLogoCorner]
-    if (corner === '100%') {
-      return size / 2
-    }
-    if (corner === '50%') {
-      return size / 4
-    }
-    return 0
-  }
-
-  private favSize(): number {
-    const vp = HOME_FAV_DIM_VP[this.settings.homeFavWidth]
-    return vp === 0 ? 46 : vp
-  }
-
-  private favHeight(): number {
-    const vp = HOME_FAV_DIM_VP[this.settings.homeFavHeight]
-    return vp === 0 ? this.favSize() : vp
-  }
-
   private homeBackground(): ResourceColor {
+    if (this.settings.homeBgImage !== '') {
+      return Color.Transparent
+    }
     if (this.settings.homeBgColor !== '') {
       return this.settings.homeBgColor
     }
     return $r('app.color.home_bg')
+  }
+
+  // 背景图片遮罩不透明度（0-100 → 00-FF 黑色遮罩 alpha）
+  private bgOverlayAlpha(): string {
+    const alpha = Math.round(this.settings.homeBgOpacity * 2.55)
+    let hex = alpha.toString(16)
+    if (hex.length === 1) {
+      hex = `0${hex}`
+    }
+    return hex
   }
 
   private logoBold(): FontWeight {
@@ -219,51 +228,74 @@ export struct HomePage {
     return style === '斜体' || style === '粗体 斜体' ? FontStyle.Italic : FontStyle.Normal
   }
 
-  private pillRadius(): number {
-    if (HOME_PILL_STYLES[this.settings.homePillStyle] === '胶囊') {
-      return HOME_PILL_HEIGHT / 2
-    }
-    return HOME_PILL_CORNER_VP[this.settings.homePillCorner]
+  private logoWidth(): number {
+    return this.settings.homeLogoWidth === 0 ? 56 : this.settings.homeLogoWidth
   }
 
-  private pillOpacity(): number {
-    if (HOME_ADV_EFFECTS[this.settings.homeAdvEffect] === '不透明') {
-      return 1
+  private logoHeight(): number {
+    return this.settings.homeLogoHeight === 0 ? 56 : this.settings.homeLogoHeight
+  }
+
+  private logoRadius(): number {
+    const size = Math.min(this.logoWidth(), this.logoHeight())
+    return size / 2 * (this.settings.homeLogoCorner / 100)
+  }
+
+  private favSize(): number {
+    return this.settings.homeFavWidth === 0 ? 46 : this.settings.homeFavWidth
+  }
+
+  private favHeight(): number {
+    return this.settings.homeFavHeight === 0 ? this.favSize() : this.settings.homeFavHeight
+  }
+
+  private pillRadius(): number {
+    if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
+      return 0
     }
-    return HOME_PILL_OPACITY_VP[this.settings.homePillOpacity]
+    return HOME_PILL_HEIGHT / 2 * (this.settings.homePillCorner / 100)
+  }
+
+  // 不透明度滑杆：0% 用默认底色，>0% 向白色过渡（视频 40-41s）
+  private pillBackground(): ResourceColor {
+    const pct = this.settings.homePillOpacity
+    if (pct > 0) {
+      return `rgba(255,255,255,${pct / 100})`
+    }
+    return $r('app.color.search_pill_bg')
   }
 
   private pillBorder(): BorderOptions {
+    if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
+      return {
+        width: { bottom: this.settings.homePillStrokeWidth },
+        color: this.strokeColor()
+      }
+    }
     return {
-      width: HOME_PILL_STROKE_VP[this.settings.homePillStrokeWidth],
+      width: this.settings.homePillStrokeWidth,
       color: this.strokeColor()
     }
   }
 
   private strokeColor(): string {
-    const alpha = Math.round(HOME_PILL_STROKE_OPACITY_VP[this.settings.homePillStrokeOpacity] * 255)
+    const alpha = Math.round(this.settings.homePillStrokeOpacity * 2.55)
     let hex = alpha.toString(16)
     if (hex.length === 1) {
       hex = `0${hex}`
     }
-    return `#${hex}84899C`
+    const base = this.settings.homeThemeColor !== '' ? this.settings.homeThemeColor : '#84899C'
+    return `#${hex}${base}`
   }
 
   private favRadius(): number {
     const size = Math.max(this.favSize(), this.favHeight())
-    const corner = HOME_FAV_CORNERS[this.settings.homeFavCorner]
-    if (corner === '100%') {
-      return size / 2
-    }
-    if (corner === '50%') {
-      return size / 4
-    }
-    return 0
+    return size / 2 * (this.settings.homeFavCorner / 100)
   }
 
   private favColor(item: BookmarkRec): string {
-    if (HOME_FAV_ICON_COLORS[this.settings.homeFavColor] === '单色') {
-      return HOME_FAV_SINGLE_COLOR
+    if (HOME_FAV_SHADOWS[this.settings.homeFavShadow] === '凄暗') {
+      return HOME_FAV_DIM_COLOR
     }
     const source = item.title !== '' ? item.title : item.url
     let sum = 0
@@ -282,7 +314,7 @@ export struct HomePage {
     if (host === '') {
       return ''
     }
-    return `https://${host}/favicon.ico`
+    return `https://${host}/favicon.ico?v=${this.settings.homeIconEpoch}`
   }
 
   private shortLabel(title: string, url: string): string {
