@@ -4,7 +4,7 @@ import { BrowserDb } from '../common/Database'
 import { AppSettings } from '../common/Settings'
 import { WebDavClient } from '../common/WebDav'
 import { SettingNavRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 const CLOUD_SPACE_LINK: string = 'hicloud://cloudDrive/getInfo?path=MainActivity'
 
@@ -21,19 +21,23 @@ export struct SyncPage {
     this.mode = this.settings.syncMode
   }
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '同步',
+      rightText: this.mode === 'cloud' ? 'WebDAV' : '云同步',
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight: () => {
+        this.switchMode()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '同步',
-          rightText: this.mode === 'cloud' ? 'WebDAV' : '云同步',
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight: () => {
-            this.switchMode()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             if (this.mode === 'cloud') {
@@ -54,6 +58,13 @@ export struct SyncPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 
@@ -115,6 +126,7 @@ export struct SyncPage {
 
   private switchMode(): void {
     this.mode = this.mode === 'cloud' ? 'webdav' : 'cloud'
+    this.bindAppBar()
     this.settings.setSyncMode(this.mode)
   }
 

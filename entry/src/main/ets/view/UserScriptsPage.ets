@@ -3,7 +3,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { UserScriptRec } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AppIcon } from '../components/AppIcon'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct UserScriptsPage {
@@ -13,23 +13,27 @@ export struct UserScriptsPage {
   @Local adding: boolean = false
   @Local updating: boolean = false
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '脚本',
+      rightIcon2: $r('sys.symbol.plus'),
+      rightText: '更新',
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight2: () => {
+        this.adding = true
+      },
+      onRight: () => {
+        this.updateScripts()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '脚本',
-          rightIcon2: $r('sys.symbol.plus'),
-          rightText: '更新',
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight2: () => {
-            this.adding = true
-          },
-          onRight: () => {
-            this.updateScripts()
-          }
-        })
+        AppBarSpacer()
         if (this.settings.userScripts.length === 0) {
           Column() {
             Text('¯\\_(ツ)_/¯')
@@ -101,6 +105,13 @@ export struct UserScriptsPage {
     }
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

@@ -9,7 +9,7 @@ import { BackupManager } from '../common/Backup'
 import { uaByKey } from '../common/UaTable'
 import { SEARCH_ENGINES, SearchEngineDef } from '../common/SearchEngines'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct SettingsGeneralPage {
@@ -17,15 +17,19 @@ export struct SettingsGeneralPage {
   private db: BrowserDb = BrowserDb.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '通用',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '通用',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             SettingNavRow({ rowLabel: '同步', rowValue: this.syncLabel(), onTapRow: () => {
@@ -130,6 +134,13 @@ export struct SettingsGeneralPage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

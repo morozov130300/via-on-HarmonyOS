@@ -5,7 +5,7 @@
 // 背景色/主题色条目展开调色板；清除图标/重置弹确认框；自定义 CSS 跳独立编辑页。
 import { HomePage } from '../components/HomePage'
 import { AppSettings } from '../common/Settings'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
 import { UiInsets } from '../common/Immersive'
 import { picker } from '@kit.CoreFileKit'
@@ -70,15 +70,19 @@ export struct SettingsCustomPage {
 
   private tabs: string[] = ['Logo', '搜索框', '背景', '收藏', '高级']
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '定制',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '定制',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Column() {
           HomePage({ onSearchTap: () => {
           } })
@@ -110,6 +114,13 @@ export struct SettingsCustomPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

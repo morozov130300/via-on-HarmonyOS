@@ -3,7 +3,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { UserScriptRec } from '../common/Types'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct SettingsScriptPage {
@@ -11,19 +11,23 @@ export struct SettingsScriptPage {
   private navPathStack: NavPathStack = new NavPathStack()
   @Local updating: boolean = false
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '脚本',
+      rightText: '更新',
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight: () => {
+        this.updateScripts()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '脚本',
-          rightText: '更新',
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight: () => {
-            this.updateScripts()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
         Column() {
           SettingCheckRow({ rowLabel: '启用脚本', isChecked: this.settings.scriptEnabled, onCheckRow: (isOn: boolean) => {
@@ -76,6 +80,13 @@ export struct SettingsScriptPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

@@ -1,6 +1,6 @@
 import { AppSettings } from '../common/Settings'
 import { CustomUaEntry } from '../common/UaTable'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct UaEditPage {
@@ -10,19 +10,23 @@ export struct UaEditPage {
   @Local uaInput: string = ''
   @Local isNew: boolean = true
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '自定义浏览器标识',
+      rightText: '保存',
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight: () => {
+        this.save()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '自定义浏览器标识',
-          rightText: '保存',
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight: () => {
-            this.save()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             Text('标题')
@@ -89,6 +93,13 @@ export struct UaEditPage {
           this.isNew = false
         }
       }
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

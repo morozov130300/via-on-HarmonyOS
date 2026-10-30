@@ -2,7 +2,7 @@ import { RuleSubEntry } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { RuleSubManager } from '../common/RuleSubscriptions'
 import { AdBlocker } from '../common/AdBlock'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { BusinessError } from '@kit.BasicServicesKit'
 
 @ComponentV2
@@ -15,23 +15,27 @@ export struct SettingsRuleSubPage {
   @Local newUrl: string = ''
   private addDialogId: number = -1
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '规则订阅',
+      rightText: '更新',
+      rightIcon: $r('sys.symbol.plus'),
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight: () => {
+        this.updateAll()
+      },
+      onRight2: () => {
+        this.openAddDialog()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '规则订阅',
-          rightText: '更新',
-          rightIcon: $r('sys.symbol.plus'),
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight: () => {
-            this.updateAll()
-          },
-          onRight2: () => {
-            this.openAddDialog()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             Column() {
@@ -117,6 +121,13 @@ export struct SettingsRuleSubPage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

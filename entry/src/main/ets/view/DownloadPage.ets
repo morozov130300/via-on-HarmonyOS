@@ -1,7 +1,7 @@
 import { DownloadRec, DownloadStatus } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { AppIcon } from '../components/AppIcon'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 function downloadStatusText(status: DownloadStatus): string {
   if (status === DownloadStatus.Completed) {
@@ -42,15 +42,19 @@ export struct DownloadPage {
     this.reload()
   }
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: $r('app.string.downloads'),
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: $r('app.string.downloads'),
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         if (this.items.length === 0) {
           Column() {
             Text($r('app.string.empty_downloads'))
@@ -121,6 +125,13 @@ export struct DownloadPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

@@ -1,6 +1,6 @@
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
 
 const LAYOUT_TRADITIONAL: number = 0
@@ -57,15 +57,19 @@ export struct SettingsToolbarPage {
   @Local addressContentDialogId: number = -1
   @Local tabBarPickDialogId: number = -1
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '工具栏设置',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '工具栏设置',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             this.PreviewCard()
@@ -119,6 +123,13 @@ export struct SettingsToolbarPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

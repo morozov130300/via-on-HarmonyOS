@@ -11,6 +11,7 @@ import { AddressBar } from '../components/AddressBar'
 import { Toolbar } from '../components/Toolbar'
 import { SearchOverlay } from '../components/SearchOverlay'
 import { TabPanel } from '../components/TabPanel'
+import { AppBarHeader } from '../components/AppBar'
 import { MenuSheet } from '../components/MenuSheet'
 import { FindBar } from '../components/FindBar'
 import { Reader } from '../common/Reader'
@@ -304,6 +305,10 @@ struct Index {
       }
       .hideTitleBar(true)
       .mode(NavigationMode.Stack)
+
+      // 全局唯一标题栏：由各 NavDestination 页面在 onReady/onWillAppear 时改写其内容
+      AppBarHeader()
+        .position({ x: 0, y: 0 })
 
       if (this.tabStore.current().loading) {
         Progress({ value: this.tabStore.current().progress, total: 100, type: ProgressType.Linear })

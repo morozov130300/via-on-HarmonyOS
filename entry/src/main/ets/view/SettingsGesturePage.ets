@@ -1,21 +1,24 @@
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
-
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 @ComponentV2
 export struct SettingsGesturePage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '操作设定',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '操作设定',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             SettingCheckRow({ rowLabel: '音量键翻页', rowDesc: '使用音量键上下翻动网页', isChecked: this.settings.volumePageFlip, onCheckRow: (isOn: boolean) => {
@@ -38,6 +41,13 @@ export struct SettingsGesturePage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 }
