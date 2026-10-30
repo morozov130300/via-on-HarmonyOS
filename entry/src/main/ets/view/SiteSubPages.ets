@@ -1,7 +1,7 @@
 import { SiteSetting } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
 import { BusinessError } from '@kit.BasicServicesKit'
 
@@ -12,15 +12,19 @@ export struct SiteAllPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '所有网站',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '所有网站',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         if (this.settings.siteSettings.length === 0) {
           Column() {
             Text('¯\\_(ツ)_/¯')
@@ -84,6 +88,13 @@ export struct SiteAllPage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 
@@ -112,15 +123,19 @@ export struct FontSizePage {
   @Local exceptionDialogId: number = -1
   @Local hostInput: string = ''
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '字体大小',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '字体大小',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             Row() {
@@ -177,6 +192,13 @@ export struct FontSizePage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 
@@ -284,12 +306,7 @@ export struct PermissionPage {
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: this.pageTitle,
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             Text(this.pageTitle)
@@ -330,7 +347,23 @@ export struct PermissionPage {
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.readParams(ctx)
+      this.bindAppBar()
     })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
+    })
+  }
+
+  private bindAppBar(): void {
+    AppBar.show({
+      title: this.pageTitle,
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
   }
 
   private readParams(ctx: NavDestinationContext): void {
@@ -456,15 +489,19 @@ export struct AdBlockExceptionPage {
   @Local exceptionDialogId: number = -1
   @Local hostInput: string = ''
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '广告拦截',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '广告拦截',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             this.SiteList()
@@ -494,6 +531,13 @@ export struct AdBlockExceptionPage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

@@ -1,18 +1,22 @@
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct OfflinePage {
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: $r('app.string.offline_page'),
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: $r('app.string.offline_page'),
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Column() {
           Text($r('app.string.empty_page_placeholder'))
             .fontSize(14)
@@ -29,6 +33,13 @@ export struct OfflinePage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 }

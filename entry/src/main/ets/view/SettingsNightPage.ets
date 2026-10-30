@@ -1,21 +1,25 @@
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct SettingsNightPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '夜间模式',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '夜间模式',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             Text($r('app.string.web_mask_filter'))
@@ -44,6 +48,13 @@ export struct SettingsNightPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 }

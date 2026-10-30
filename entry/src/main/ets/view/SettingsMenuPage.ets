@@ -6,7 +6,7 @@
 // 分隔提示行用 GridLayoutOptions.irregularIndexes 占一整行（API 参考示例3），
 // 整体拖拽排序用 API 26 的 ForEach.onMove（支持跨不规则节点的宫格拖拽）。
 import { AppSettings } from '../common/Settings'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
 import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel } from '../common/MenuItems'
 
@@ -184,19 +184,23 @@ export struct SettingsMenuPage {
     this.loadFromSettings()
   }
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '定制菜单',
+      rightText: '重置',
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight: () => {
+        this.resetToDefault()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '定制菜单',
-          rightText: '重置',
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight: () => {
-            this.resetToDefault()
-          }
-        })
+        AppBarSpacer()
         Text('按住并拖动即可重新排列条目')
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
@@ -254,6 +258,13 @@ export struct SettingsMenuPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 }

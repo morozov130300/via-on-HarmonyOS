@@ -1,21 +1,25 @@
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct SettingsAdBlockPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '广告拦截',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '广告拦截',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             SettingCheckRow({
@@ -70,6 +74,13 @@ export struct SettingsAdBlockPage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

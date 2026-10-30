@@ -1,26 +1,30 @@
 import { AppSettings } from '../common/Settings'
 import { UA_TABLE, UaDef, uaByKey, CustomUaEntry } from '../common/UaTable'
 import { SettingNavRow, SettingRadioRow, SettingCheckRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct UaPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '浏览器标识',
+      rightIcon: $r('sys.symbol.plus'),
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight: () => {
+        this.navPathStack.pushPathByName('uaEditPage', 'new', true)
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '浏览器标识',
-          rightIcon: $r('sys.symbol.plus'),
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight: () => {
-            this.navPathStack.pushPathByName('uaEditPage', 'new', true)
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             ForEach(UA_TABLE, (def: UaDef) => {
@@ -116,6 +120,13 @@ export struct UaPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

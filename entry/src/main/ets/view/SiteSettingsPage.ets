@@ -1,7 +1,7 @@
 import { AppSettings } from '../common/Settings'
 import { uaByKey } from '../common/UaTable'
 import { SettingNavRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 @ComponentV2
 export struct SiteSettingsPage {
@@ -11,15 +11,19 @@ export struct SiteSettingsPage {
   @Local imageDialogId: number = -1
   @Local jsDialogId: number = -1
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '网站设定',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '网站设定',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
           Column() {
             SettingNavRow({
@@ -175,6 +179,13 @@ export struct SiteSettingsPage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

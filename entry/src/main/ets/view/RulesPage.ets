@@ -1,6 +1,6 @@
 import { AppSettings } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 
@@ -16,23 +16,27 @@ export struct RulesPage {
     this.rulesDraft = this.settings.customRulesText
   }
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '自定义规则',
+      rightText2: '帮助',
+      rightText: this.dirty ? '保存' : '',
+      onBack: () => {
+        this.navPathStack.pop()
+      },
+      onRight: () => {
+        this.saveRules()
+      },
+      onRight2: () => {
+        this.showHelp()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '自定义规则',
-          rightText2: '帮助',
-          rightText: this.dirty ? '保存' : '',
-          onBack: () => {
-            this.navPathStack.pop()
-          },
-          onRight: () => {
-            this.saveRules()
-          },
-          onRight2: () => {
-            this.showHelp()
-          }
-        })
+        AppBarSpacer()
         Text('一个过滤规则一行。')
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
@@ -50,6 +54,7 @@ export struct RulesPage {
           .onChange((value: string) => {
             this.rulesDraft = value
             this.dirty = value !== this.settings.customRulesText
+            this.bindAppBar()
           })
           .onBlur(() => {
             this.saveRules()
@@ -62,6 +67,13 @@ export struct RulesPage {
     .hideTitleBar(true)
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 
@@ -72,6 +84,7 @@ export struct RulesPage {
     this.settings.setCustomRulesText(this.rulesDraft)
     AdBlocker.getInstance().rebuildCustomRules()
     this.dirty = false
+    this.bindAppBar()
     this.getUIContext().getPromptAction().showToast({ message: $r('app.string.reset_done'), duration: 1500 })
   }
 

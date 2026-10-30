@@ -1,6 +1,6 @@
 import { pasteboard } from '@kit.BasicServicesKit'
 import { TabStore } from '../common/TabStore'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 const CONTACT_QQ_GROUP_URL: string = 'http://viayoo.com/contact/qqgroup/'
 const CONTACT_WECHAT_URL: string = 'http://viayoo.com/contact/wechat/'
@@ -13,15 +13,19 @@ export struct SettingsAboutPage {
   private tabStore: TabStore = TabStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: '关于',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: '关于',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
         Column() {
           Column({ space: 6 }) {
@@ -85,6 +89,13 @@ export struct SettingsAboutPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 

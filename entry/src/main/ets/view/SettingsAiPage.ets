@@ -1,7 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
-import { SettingsHeader } from '../components/SettingsHeader'
+import { AppBar, AppBarSpacer } from '../components/AppBar'
 
 const AI_PROVIDER_LABELS: Record<string, string> = {
   'deepseek': 'DeepSeek',
@@ -18,15 +18,19 @@ export struct SettingsAiPage {
   private keyDialogId: number = -1
   private modelDialogId: number = -1
 
+  private bindAppBar(): void {
+    AppBar.show({
+      title: 'AI 设置',
+      onBack: () => {
+        this.navPathStack.pop()
+      }
+    }, this)
+  }
+
   build() {
     NavDestination() {
       Column() {
-        SettingsHeader({
-          headerTitle: 'AI 设置',
-          onBack: () => {
-            this.navPathStack.pop()
-          }
-        })
+        AppBarSpacer()
         Scroll() {
         Column() {
           SettingNavRow({ rowLabel: '服务商', rowValue: this.providerLabel(), onTapRow: () => {
@@ -51,6 +55,13 @@ export struct SettingsAiPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.bindAppBar()
+    })
+    .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onWillDisappear(() => {
+      AppBar.maybeHide(this)
     })
   }
 
