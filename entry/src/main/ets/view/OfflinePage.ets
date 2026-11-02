@@ -38,6 +38,9 @@ export struct OfflinePage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })

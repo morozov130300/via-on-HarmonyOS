@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#000000"
+      "value": "#1C1B1D"
     },
     {
       "name": "page_bg",
@@ -26,11 +26,11 @@
     },
     {
       "name": "accent",
-      "value": "#00A5F6"
+      "value": "#617AC1"
     },
     {
       "name": "danger",
-      "value": "#FF3E00"
+      "value": "#D64146"
     },
     {
       "name": "divider",
@@ -42,7 +42,7 @@
     },
     {
       "name": "icon_active",
-      "value": "#00A5F6"
+      "value": "#617AC1"
     },
     {
       "name": "icon_disabled",
@@ -66,11 +66,11 @@
     },
     {
       "name": "progress_color",
-      "value": "#00A5F6"
+      "value": "#617AC1"
     },
     {
       "name": "badge_bg",
-      "value": "#00A5F6"
+      "value": "#617AC1"
     },
     {
       "name": "badge_fg",
@@ -87,6 +87,50 @@
     {
       "name": "logo_amber",
       "value": "#FFB700"
+    },
+    {
+      "name": "appbar_text",
+      "value": "#BEFFFFFF"
+    },
+    {
+      "name": "appbar_icon",
+      "value": "#FF9E9E9E"
+    },
+    {
+      "name": "appbar_divider",
+      "value": "#30808080"
+    },
+    {
+      "name": "home_bg",
+      "value": "#1C1B1D"
+    },
+    {
+      "name": "home_text",
+      "value": "#FAFAFA"
+    },
+    {
+      "name": "search_pill_border",
+      "value": "#AFAFAF"
+    },
+    {
+      "name": "menu_bg",
+      "value": "#1C1B1D"
+    },
+    {
+      "name": "menu_icon",
+      "value": "#C2C2C2"
+    },
+    {
+      "name": "menu_text",
+      "value": "#EAEAEA"
+    },
+    {
+      "name": "search_toolbar_text",
+      "value": "#9F9F9F"
+    },
+    {
+      "name": "search_toolbar_icon_tint",
+      "value": "#BEFFFFFF"
     }
   ]
 }

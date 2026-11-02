@@ -24,7 +24,10 @@ export struct SettingsAdBlockPage {
           Column() {
             SettingCheckRow({
               rowLabel: '广告拦截',
-              rowDesc: `已拦截 ${this.settings.adBlockTotal} 个广告，共节省 ${this.formatBytes(this.settings.adBlockSavedBytes)}`,
+              // 原版 z7/d.java:45：关→「未启用」(g_)；开→「已拦截 %1$d 个广告，共节省 %2$s」(b6)
+              rowDesc: this.settings.adBlockOn
+                ? `已拦截 ${this.settings.adBlockTotal} 个广告，共节省 ${this.formatBytes(this.settings.adBlockSavedBytes)}`
+                : '未启用',
               isChecked: this.settings.adBlockOn,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setAdBlockOn(isOn)
@@ -77,6 +80,9 @@ export struct SettingsAdBlockPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {

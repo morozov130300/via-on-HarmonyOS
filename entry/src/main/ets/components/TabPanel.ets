@@ -1,11 +1,13 @@
+import { display, curves } from '@kit.ArkUI'
 import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import { AppIcon } from './AppIcon'
-import { BusinessError } from '@kit.BasicServicesKit'
+import { ViaIcon } from './ViaIcon'
+import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
+import { menuTransition, dimTransition } from '../common/Transitions'
 
-const DEFAULT_TAB_TITLE: string = '新标签页'
 const PANEL_FG: ResourceColor = '#E6E6E6'
 
 @ComponentV2
@@ -16,13 +18,31 @@ export struct TabPanel {
   private insets: UiInsets = UiInsets.getInstance()
   @Local undoDialogId: number = -1
   @Local undoUrl: string = ''
+  @Local swipeOffsets: Record<number, number> = {}
+  @Local longPressIndex: number = -1
+  @Local panelMaxHeight: number = 120
+  // 原版 f8/y.java：行首图标按下触发 ItemTouchHelper 拖拽（l0.b3：列表 <2 不启动）
+  @Local dragFromIndex: number = -1
+  @Local dragToIndex: number = -1
+  // 原版 f8/y.java：favicon 加载失败回退 e9 默认图标（tint k.f13662h）
+  @Local faviconFailed: Record<number, boolean> = {}
+  // 原版共用插值器 x8/h.b()：cubic-bezier(0.2,0.2,0.8,0.8)
+  private panelCurve = curves.cubicBezier(0.2, 0.2, 0.8, 0.8)
+
+  aboutToAppear(): void {
+    // 原版 f8/l0.p3：面板高度 ValueAnimator 350ms bezier 展开
+    this.getUIContext().animateTo({ duration: 350, curve: this.panelCurve }, () => {
+      this.panelMaxHeight = Math.min(this.tabStore.tabs.length * 48, Math.max(0, this.maxPanelHeight() - 64))
+    })
+  }
 
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('rgba(0,0,0,0.35)')
+        .backgroundColor('rgba(0,0,0,0.5)')
+        .transition(dimTransition(160))
         .onClick(() => {
           this.onClose()
         })
@@ -32,18 +52,67 @@ export struct TabPanel {
           Column() {
             ForEach(this.tabStore.tabs, (tab: TabItem, index: number) => {
               Row({ space: 16 }) {
-                if (tab.incognito) {
-                  AppIcon({ icon: $r('sys.symbol.moon_fill'), iconSize: 24, iconColor: PANEL_FG })
-                } else if (tab.isHomePage()) {
-                  AppIcon({ icon: $r('sys.symbol.house'), iconSize: 24, iconColor: PANEL_FG })
-                } else {
-                  Image(this.faviconUrl(tab.url))
-                    .width(24)
-                    .height(24)
-                    .objectFit(ImageFit.Contain)
+                // 原版 f8/y.b()：行首图标 = 标签 icon ?: favicon ?: e9 默认（无隐身月亮）；
+                // onTouch ACTION_DOWN → startDrag（f8/l0.b3）
+                Column() {
+                  if (tab.isHomePage()) {
+                    // 原版主页标签 favicon 为地球图标 22dp（f8/y.java iD=22dp）
+                    ViaIcon({ icon: $r('app.media.via_ic_globe'), iconSize: 22, iconColor: PANEL_FG })
+                  } else if (tab.icon !== null) {
+                    // 原版 p4/c.java:110 onReceivedIcon：优先显示捕获的站点图标
+                    Image(tab.icon)
+                      .width(22)
+                      .height(22)
+                      .objectFit(ImageFit.Contain)
+                  } else if (this.faviconFailed[tab.id] === true) {
+                    // 原版 e9（L1）默认网页图标
+                    ViaIcon({ icon: $r('app.media.via_ic_webpage'), iconSize: 22, iconColor: PANEL_FG })
+                  } else {
+                    Image(this.faviconUrl(tab.url))
+                      .width(22)
+                      .height(22)
+                      .objectFit(ImageFit.Contain)
+                      .onError(() => {
+                        this.faviconFailed[tab.id] = true
+                      })
+                  }
                 }
-                Text(tab.displayTitle(DEFAULT_TAB_TITLE))
+                .justifyContent(FlexAlign.Center)
+                // 原版 y.java:108 行首图标 ACTION_DOWN → l0.b3（<2 不启动）→ ItemTouchHelper.H 拖拽重排
+                .gesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 8 })
+                  .onActionStart(() => {
+                    if (this.tabStore.tabs.length < 2) {
+                      return
+                    }
+                    this.dragFromIndex = index
+                    this.dragToIndex = index
+                  })
+                  .onActionUpdate((event: GestureEvent) => {
+                    if (this.dragFromIndex < 0) {
+                      return
+                    }
+                    const steps = Math.round(px2vp(event.offsetY) / 48)
+                    const total = this.tabStore.tabs.length
+                    let target = this.dragFromIndex + steps
+                    if (target < 0) {
+                      target = 0
+                    }
+                    if (target > total - 1) {
+                      target = total - 1
+                    }
+                    if (target !== this.dragToIndex) {
+                      // 原版 j.i(3,48) 垂直拖拽 + y() onMoved
+                      this.tabStore.moveTab(this.dragToIndex, target)
+                      this.dragToIndex = target
+                    }
+                  })
+                  .onActionEnd(() => {
+                    this.dragFromIndex = -1
+                    this.dragToIndex = -1
+                  }))
+                Text(tab.isHomePage() ? $r('app.string.home_page') : tab.displayTitle(''))
                   .fontSize(16)
+                  .fontWeight(index === this.tabStore.currentIndex ? FontWeight.Bold : FontWeight.Normal)
                   .fontColor(index === this.tabStore.currentIndex ? $r('app.color.accent') : PANEL_FG)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -57,12 +126,39 @@ export struct TabPanel {
                   })
               }
               .width('100%')
-              .height(56)
-              .padding({ left: 18, right: 18 })
+              .height(48)
+              .padding({ left: 16, right: 16 })
+              .translate({ x: this.swipeOffsets[index] ?? 0 })
               .onClick(() => {
                 this.tabStore.switchTo(index)
                 this.onClose()
               })
+              // 原版：左右滑动标签行移除该标签
+              .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 12 })
+                .onActionUpdate((event: GestureEvent) => {
+                  this.swipeOffsets[index] = event.offsetX
+                })
+                .onActionEnd((event: GestureEvent) => {
+                  const offset = this.swipeOffsets[index] ?? 0
+                  this.swipeOffsets[index] = 0
+                  if (Math.abs(offset) > 80) {
+                    this.removeTab(index)
+                  }
+                }))
+              // 原版 f8.l0.t3：长按弹行操作菜单
+              .bindPopup(this.longPressIndex === index, {
+                builder: (): void => {
+                  this.TabMenu(index)
+                },
+                placement: Placement.Top,
+                popupColor: '#F01C1B1D',
+                onStateChange: (_e: object) => {
+                }
+              })
+              .gesture(LongPressGesture({ repeat: false, duration: 500 })
+                .onAction(() => {
+                  this.longPressIndex = index
+                }))
             }, (tab: TabItem) => tab.id.toString())
           }
           .width('100%')
@@ -75,7 +171,8 @@ export struct TabPanel {
           AppIcon({ icon: $r('sys.symbol.plus'), iconSize: 24, iconColor: PANEL_FG })
             .padding(12)
             .onClick(() => {
-              this.tabStore.newTab(false)
+              // 原版隐身会话中新建标签同为隐身（k6.cb/l8 会话模型）
+              this.tabStore.newTab(this.tabStore.sessionIncognito)
               this.onClose()
             })
         }
@@ -83,13 +180,107 @@ export struct TabPanel {
         .justifyContent(FlexAlign.Center)
       }
       .width('100%')
-      .constraintSize({ maxHeight: '68%' })
+      // 原版 f8/l0.n3()：min(48dp*条数, max_height-48dp-2*8dp)，max_height=窗口高-16dp（k6:3748）
+      .constraintSize({ maxHeight: this.panelMaxHeight })
       .padding({ top: 8, bottom: this.insets.bottom })
-      .backgroundColor($r('app.color.page_bg'))
+      // 原版面板悬于底部工具栏之上，工具栏保持可见
+      .margin({ bottom: 48 })
+      .backgroundColor($r('app.color.menu_bg'))
       .borderRadius({ topLeft: 16, topRight: 16 })
+      .transition(menuTransition())
     }
     .width('100%')
     .height('100%')
+  }
+
+  // 原版 k6:3748：max_height = 窗口高度 - 16dp
+  private maxPanelHeight(): number {
+    try {
+      const d = display.getDefaultDisplaySync()
+      return d.height / d.densityPixels
+    } catch (error) {
+      return 800
+    }
+  }
+
+  private removeTab(index: number): void {
+    const closedUrl = this.tabStore.closeTab(index)
+    if (closedUrl !== '') {
+      this.showUndoToast(closedUrl)
+    }
+  }
+
+  // 原版 f8.l0.t3 长按菜单项与顺序
+  @Builder
+  TabMenu(index: number) {
+    Column() {
+      if (this.tabStore.tabs.length > 1) {
+        this.MenuItem($r('app.string.close_all_tabs'), (): void => {
+          this.tabStore.closeAll()
+          this.onClose()
+        })
+        this.MenuItem($r('app.string.close_other_tabs'), (): void => {
+          this.tabStore.closeOthers(index)
+        })
+      }
+      // 原版 t3：该行既非首也非尾才同时给「关闭上方/下方」（f8/l0.java:459）
+      if (index > 0 && index < this.tabStore.tabs.length - 1) {
+        this.MenuItem($r('app.string.close_tabs_above'), (): void => {
+          this.tabStore.closeAbove(index)
+        })
+        this.MenuItem($r('app.string.close_tabs_below'), (): void => {
+          this.tabStore.closeBelow(index)
+        })
+      }
+      if (this.isHttpTab(index)) {
+        this.MenuItem($r('app.string.duplicate_tab'), (): void => {
+          this.tabStore.duplicateTab(index)
+        })
+      }
+      if (this.isCopyableTab(index)) {
+        this.MenuItem($r('app.string.copy_link'), (): void => {
+          this.copyLink(this.tabStore.tabs[index].url)
+        })
+      }
+    }
+    .width(180)
+  }
+
+  @Builder
+  MenuItem(label: ResourceStr, action: () => void) {
+    Text(label)
+      .fontSize(14)
+      .fontColor($r('app.color.fg'))
+      .width('100%')
+      .height(38)
+      .padding({ left: 14, right: 14 })
+      .textAlign(TextAlign.Start)
+      .onClick(() => {
+        action()
+        this.longPressIndex = -1
+      })
+  }
+
+  // 原版：复制标签页条件 URL 为 http(s)（i0.s）
+  private isHttpTab(index: number): boolean {
+    const url = this.tabStore.tabs[index].url
+    return url.startsWith('http://') || url.startsWith('https://')
+  }
+
+  // 原版：复制链接条件非 file://（i0.l）
+  private isCopyableTab(index: number): boolean {
+    const url = this.tabStore.tabs[index].url
+    return !url.startsWith('file://') && url !== ''
+  }
+
+  private copyLink(url: string): void {
+    try {
+      pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, url))
+      // 原版 case5：g6.n.a 弹「已复制链接」（f8/l0.java:131）
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied_link') })
+    } catch (error) {
+      console.error('copy link failed')
+    }
   }
 
   private faviconUrl(url: string): string {

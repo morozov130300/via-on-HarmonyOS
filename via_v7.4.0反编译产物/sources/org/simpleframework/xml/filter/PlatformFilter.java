@@ -1,0 +1,17 @@
+package org.simpleframework.xml.filter;
+
+import java.util.Map;
+
+/* compiled from: r8-map-id-751751c23d83be85ef57d175c5469894c696c5ed63f45cf86a3b6e4238664d4a */
+/* loaded from: classes.dex */
+public class PlatformFilter extends StackFilter {
+    public PlatformFilter() {
+        this(null);
+    }
+
+    public PlatformFilter(Map map) {
+        push(new EnvironmentFilter());
+        push(new SystemFilter());
+        push(new MapFilter(map));
+    }
+}

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="a" parent="@style/o">
+    </style>
+    <style name="b" parent="@style/p">
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="a">@drawable/g</item>
+        <item name="i">@color/d</item>
+        <item name="a4">@drawable/s</item>
+        <item name="a7">@color/q</item>
+        <item name="a8">@color/r</item>
+        <item name="a_">@color/w</item>
+        <item name="aa">@drawable/z</item>
+        <item name="au">@drawable/i</item>
+        <item name="b0">@drawable/k</item>
+        <item name="bc">@drawable/m</item>
+    </style>
+    <style name="c" parent="@style/a">
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="a">@drawable/f</item>
+        <item name="i">@color/c</item>
+        <item name="a4">@drawable/r</item>
+        <item name="a7">@color/p</item>
+        <item name="a8">@color/s</item>
+        <item name="a_">@color/v</item>
+        <item name="aa">@drawable/y</item>
+        <item name="au">@drawable/h</item>
+        <item name="b0">@drawable/j</item>
+        <item name="bc">@drawable/l</item>
+    </style>
+    <style name="d" parent="@android:style/Theme.DeviceDefault">
+        <item name="c">8dp</item>
+        <item name="e">16dp</item>
+    </style>
+    <style name="e" parent="@style/d">
+        <item name="d">16dp</item>
+    </style>
+    <style name="f" parent="">
+    </style>
+    <style name="g" parent="">
+        <item name="android:textSize">@dimen/a_</item>
+        <item name="android:textColor">?attr/b0</item>
+        <item name="android:ellipsize">3</item>
+        <item name="android:gravity">0x11</item>
+        <item name="android:background">@drawable/p</item>
+        <item name="android:padding">2dp</item>
+        <item name="android:button">@null</item>
+        <item name="android:maxLines">1</item>
+    </style>
+    <style name="h" parent="@android:style/Widget.EditText">
+        <item name="android:typeface">0</item>
+        <item name="android:textStyle">0x0</item>
+    </style>
+    <style name="i" parent="@style/f">
+        <item name="android:textSize">@dimen/a_</item>
+        <item name="android:textColor">?attr/ac</item>
+        <item name="android:textColorHint">?attr/ad</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:lines">1</item>
+    </style>
+    <style name="j" parent="">
+        <item name="android:background">@drawable/w</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:scrollbars">0x0</item>
+        <item name="android:layout_marginLeft">16dp</item>
+        <item name="android:layout_marginRight">16dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
+    </style>
+    <style name="k" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@anim/a</item>
+        <item name="android:windowExitAnimation">@anim/b</item>
+    </style>
+    <style name="l" parent="@android:style/Theme.Holo.Dialog.NoActionBar">
+    </style>
+    <style name="m" parent="@android:style/Theme.Light">
+    </style>
+    <style name="n" parent="@style/l">
+        <item name="android:backgroundDimAmount">0.4</item>
+        <item name="android:windowBackground">?attr/a5</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@style/k</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
+    <style name="o" parent="@style/m">
+        <item name="android:windowBackground">@color/h</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:editTextStyle">@style/h</item>
+        <item name="a2">@color/h</item>
+        <item name="a3">@color/k</item>
+        <item name="a5">@drawable/t</item>
+        <item name="a6">@color/m</item>
+        <item name="a9">@color/t</item>
+        <item name="ab">@color/z</item>
+        <item name="ac">@color/a1</item>
+        <item name="ad">@color/a3</item>
+        <item name="ae">@color/a6</item>
+    </style>
+    <style name="p" parent="@style/aa">
+        <item name="android:windowBackground">@color/i</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:editTextStyle">@style/h</item>
+        <item name="a2">@color/i</item>
+        <item name="a3">@color/j</item>
+        <item name="a5">@drawable/u</item>
+        <item name="a6">@color/n</item>
+        <item name="a9">@color/u</item>
+        <item name="ab">@color/a0</item>
+        <item name="ac">@color/a2</item>
+        <item name="ad">@color/a4</item>
+        <item name="ae">@color/a7</item>
+    </style>
+    <style name="q" parent="">
+        <item name="android:windowEnterAnimation">@anim/m</item>
+        <item name="android:windowExitAnimation">@anim/l</item>
+    </style>
+    <style name="r" parent="">
+        <item name="android:windowEnterAnimation">@anim/k</item>
+        <item name="android:windowExitAnimation">@anim/n</item>
+    </style>
+    <style name="s" parent="">
+        <item name="android:maxHeight">3dp</item>
+        <item name="android:minHeight">3dp</item>
+    </style>
+    <style name="t" parent="@style/c">
+    </style>
+    <style name="u" parent="@android:style/TextAppearance.StatusBar.EventContent">
+    </style>
+    <style name="v" parent="@style/u">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+    <style name="w" parent="@style/u">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+    <style name="x" parent="">
+        <item name="android:textSize">@dimen/a_</item>
+        <item name="android:textColor">@color/p</item>
+        <item name="android:gravity">0x11</item>
+        <item name="android:background">@drawable/o</item>
+        <item name="android:minWidth">56dp</item>
+    </style>
+    <style name="y" parent="@style/x">
+        <item name="android:ellipsize">3</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:lines">1</item>
+    </style>
+    <style name="z" parent="@style/a1">
+        <item name="android:layout_marginLeft">16dp</item>
+        <item name="android:layout_marginRight">16dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
+    </style>
+    <style name="a0" parent="@style/a7">
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:layout_marginLeft">16dp</item>
+        <item name="android:layout_marginRight">16dp</item>
+        <item name="android:layout_marginBottom">6dp</item>
+    </style>
+    <style name="a1" parent="@style/f">
+        <item name="android:textSize">@dimen/a_</item>
+        <item name="android:textColor">?attr/ac</item>
+        <item name="android:textColorHint">?attr/ad</item>
+        <item name="android:background">@drawable/w</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:lines">1</item>
+    </style>
+    <style name="a2" parent="">
+        <item name="android:scrollbarSize">@dimen/a7</item>
+        <item name="android:scrollbarThumbVertical">@color/x</item>
+        <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
+        <item name="android:scrollbars">0x200</item>
+        <item name="android:overScrollMode">2</item>
+    </style>
+    <style name="a3" parent="">
+        <item name="android:textSize">@dimen/aa</item>
+        <item name="android:textColor">?attr/ad</item>
+    </style>
+    <style name="a4" parent="">
+        <item name="android:textSize">@dimen/aa</item>
+        <item name="android:textColor">?attr/ad</item>
+        <item name="android:ellipsize">3</item>
+        <item name="android:maxLines">2</item>
+    </style>
+    <style name="a5" parent="">
+        <item name="android:textSize">@dimen/a_</item>
+        <item name="android:textColor">?attr/ac</item>
+        <item name="android:ellipsize">3</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:lines">1</item>
+    </style>
+    <style name="a6" parent="">
+        <item name="android:textSize">@dimen/a_</item>
+        <item name="android:textColor">?attr/ac</item>
+        <item name="android:lineSpacingExtra">4dp</item>
+    </style>
+    <style name="a7" parent="">
+        <item name="android:textSize">@dimen/a8</item>
+        <item name="android:textStyle">0x1</item>
+        <item name="android:textColor">?attr/ac</item>
+        <item name="android:ellipsize">3</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:lines">1</item>
+    </style>
+    <style name="a8" parent="">
+    </style>
+    <style name="a9" parent="">
+    </style>
+    <style name="a_" parent="">
+        <item name="android:tint">@color/a1</item>
+    </style>
+</resources>

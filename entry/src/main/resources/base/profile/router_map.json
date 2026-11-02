@@ -46,6 +46,11 @@
       "buildFunction": "SettingsScriptPageBuilder"
     },
     {
+      "name": "settingsExperimental",
+      "pageSourceFile": "src/main/ets/view/SettingsExperimentalPage.ets",
+      "buildFunction": "SettingsExperimentalPageBuilder"
+    },
+    {
       "name": "settingsAbout",
       "pageSourceFile": "src/main/ets/view/SettingsAboutPage.ets",
       "buildFunction": "SettingsAboutPageBuilder"
@@ -114,6 +119,26 @@
       "name": "aiSettings",
       "pageSourceFile": "src/main/ets/view/SettingsAiPage.ets",
       "buildFunction": "SettingsAiPageBuilder"
+    },
+    {
+      "name": "aiPrompts",
+      "pageSourceFile": "src/main/ets/view/SettingsAiPromptsPage.ets",
+      "buildFunction": "SettingsAiPromptsPageBuilder"
+    },
+    {
+      "name": "aiPromptEdit",
+      "pageSourceFile": "src/main/ets/view/SettingsAiPromptEditPage.ets",
+      "buildFunction": "SettingsAiPromptEditPageBuilder"
+    },
+    {
+      "name": "settingsSearch",
+      "pageSourceFile": "src/main/ets/view/SettingsSearchPage.ets",
+      "buildFunction": "SettingsSearchPageBuilder"
+    },
+    {
+      "name": "settingsSearchToolbar",
+      "pageSourceFile": "src/main/ets/view/SettingsSearchToolbarPage.ets",
+      "buildFunction": "SettingsSearchToolbarPageBuilder"
     },
     {
       "name": "licensePage",

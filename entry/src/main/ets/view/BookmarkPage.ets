@@ -1,9 +1,21 @@
-import { BookmarkRec } from '../common/Types'
+import { BookmarkRec, BookmarkFolderRec } from '../common/Types'
+import { dialogTransition, dimTransition } from '../common/Transitions'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { ViaIcon } from '../components/ViaIcon'
 import { AppIcon } from '../components/AppIcon'
 import { UiInsets } from '../common/Immersive'
+
+// 文件夹层级导航状态（原版 fp「%1$s 文件夹」/ tb 选择文件夹）
+class FolderStackEntry {
+  id: number
+  title: string
+
+  constructor(id: number, title: string) {
+    this.id = id
+    this.title = title
+  }
+}
 
 @ComponentV2
 export struct BookmarkPage {
@@ -12,9 +24,14 @@ export struct BookmarkPage {
   private insets: UiInsets = UiInsets.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
   @Local items: BookmarkRec[] = []
+  @Local folders: BookmarkFolderRec[] = []
   @Local query: string = ''
   @Local editing: BookmarkRec | null = null
   @Local editMode: boolean = false
+  @Local creatingFolder: boolean = false
+  // 0=根目录；非 0 表示当前浏览的文件夹
+  @Local currentFolderId: number = 0
+  @Local folderStack: FolderStackEntry[] = []
 
   aboutToAppear(): void {
     this.reload()
@@ -26,6 +43,31 @@ export struct BookmarkPage {
         this.HeaderBar()
         this.SearchField()
         List({ space: 0 }) {
+          ForEach(this.folders, (folder: BookmarkFolderRec) => {
+            ListItem() {
+              Row({ space: 12 }) {
+                AppIcon({ icon: $r('sys.symbol.folder'), iconSize: 22, iconColor: $r('app.color.fg') })
+                Text(folder.title)
+                  .fontSize(15)
+                  .fontColor($r('app.color.fg'))
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+                if (this.editMode) {
+                  AppIcon({ icon: $r('sys.symbol.trash'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
+                    .onClick(() => {
+                      this.confirmDeleteFolder(folder)
+                    })
+                }
+              }
+              .width('100%')
+              .height(43)
+              .padding({ left: 14, right: 14 })
+              .onClick(() => {
+                this.enterFolder(folder)
+              })
+            }
+          }, (folder: BookmarkFolderRec) => `${folder.id}_${folder.title}`)
           ForEach(this.filteredItems(), (item: BookmarkRec) => {
             ListItem() {
               Row({ space: 12 }) {
@@ -65,6 +107,8 @@ export struct BookmarkPage {
                 if (this.editMode) {
                   this.editing = item
                 } else {
+                  // 原版点击书签记录热度（ea/b click_times）
+                  this.db.clickBookmark(item.id)
                   this.tabStore.navigate(item.url)
                   this.navPathStack.pop()
                 }
@@ -76,13 +120,14 @@ export struct BookmarkPage {
         .layoutWeight(1)
         .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
         .onItemDragStart((event: ItemDragInfo, index: number) => {
-          return this.dragItemBuilder(this.filteredItems()[index])
+          const dragged = this.filteredItems()[index - this.folders.length]
+          return this.dragItemBuilder(dragged === undefined ? '' : dragged.title)
         })
         .onItemDrop((event: ItemDragInfo, itemIndex: number, insertIndex: number, isSuccess: boolean) => {
           if (!isSuccess || insertIndex < 0 || itemIndex === insertIndex) {
             return
           }
-          this.moveItem(itemIndex, insertIndex)
+          this.moveItem(itemIndex - this.folders.length, insertIndex - this.folders.length)
         })
 
         this.BottomBar()
@@ -94,11 +139,24 @@ export struct BookmarkPage {
       if (this.editing !== null) {
         BookmarkEditOverlay({
           bookmark: this.editing,
+          folderId: this.currentFolderId,
           onClose: () => {
             this.editing = null
           },
           onSaved: () => {
             this.editing = null
+            this.reload()
+          }
+        })
+      }
+      if (this.creatingFolder) {
+        NewFolderOverlay({
+          folderId: this.currentFolderId,
+          onClose: () => {
+            this.creatingFolder = false
+          },
+          onSaved: () => {
+            this.creatingFolder = false
             this.reload()
           }
         })
@@ -115,34 +173,40 @@ export struct BookmarkPage {
   @Builder
   HeaderBar() {
     Row() {
-      ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
+      Stack({ alignContent: Alignment.Center }) {
+        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
+      }
         .width(44)
         .height(43)
         .onClick(() => {
-          this.navPathStack.pop()
+          this.navigateBack()
         })
 
       Row() {
-        Text($r('app.string.bookmarks'))
+        Text(this.currentFolderId === 0 ? $r('app.string.bookmarks') : this.currentFolderTitle())
           .fontSize(15)
           .fontColor($r('app.color.fg'))
           .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .onClick(() => {
           })
-        Text($r('app.string.history'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-          .onClick(() => {
-            this.navPathStack.replacePathByName('history', '', true)
-          })
-        Text($r('app.string.offline_page'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-          .onClick(() => {
-            this.navPathStack.pushPathByName('offlinePage', '', true)
-          })
+        if (this.currentFolderId === 0) {
+          Text($r('app.string.history'))
+            .fontSize(15)
+            .fontColor($r('app.color.fg_secondary'))
+            .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.navPathStack.replacePathByName('history', '', true)
+            })
+          Text($r('app.string.offline_page'))
+            .fontSize(15)
+            .fontColor($r('app.color.fg_secondary'))
+            .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.navPathStack.pushPathByName('offlinePage', '', true)
+            })
+        }
       }
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
@@ -179,6 +243,16 @@ export struct BookmarkPage {
           this.showMore()
         })
       Blank()
+      // 原版书签页底部新建入口（ac 新建）：新建书签
+      Text($r('app.string.new_bookmark'))
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+        .padding({ left: 14, right: 14, top: 8, bottom: 8 })
+        .onClick(() => {
+          const rec = new BookmarkRec()
+          rec.folderId = this.currentFolderId
+          this.editing = rec
+        })
       Text(this.editMode ? $r('app.string.done') : $r('app.string.edit'))
         .fontSize(15)
         .fontColor($r('app.color.fg'))
@@ -193,9 +267,9 @@ export struct BookmarkPage {
   }
 
   @Builder
-  dragItemBuilder(item: BookmarkRec) {
+  dragItemBuilder(title: string) {
     Column() {
-      Text(item.title)
+      Text(title)
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .maxLines(1)
@@ -207,6 +281,32 @@ export struct BookmarkPage {
     .justifyContent(FlexAlign.Center)
     .borderRadius(8)
     .backgroundColor($r('app.color.surface'))
+  }
+
+  private currentFolderTitle(): string {
+    if (this.folderStack.length === 0) {
+      return ''
+    }
+    return this.folderStack[this.folderStack.length - 1].title
+  }
+
+  // 原版文件夹层级：进入子文件夹（fp %1$s 文件夹），返回上级或退出页面
+  private enterFolder(folder: BookmarkFolderRec): void {
+    this.folderStack.push(new FolderStackEntry(folder.id, folder.title))
+    this.currentFolderId = folder.id
+    this.query = ''
+    this.reload()
+  }
+
+  private navigateBack(): void {
+    if (this.folderStack.length > 0) {
+      this.folderStack.pop()
+      const parent = this.folderStack.length > 0 ? this.folderStack[this.folderStack.length - 1] : null
+      this.currentFolderId = parent !== null ? parent.id : 0
+      this.reload()
+      return
+    }
+    this.navPathStack.pop()
   }
 
   private filteredItems(): BookmarkRec[] {
@@ -233,6 +333,9 @@ export struct BookmarkPage {
   }
 
   private moveItem(from: number, to: number): void {
+    if (from < 0 || to < 0 || from >= this.items.length || to >= this.items.length || from === to) {
+      return
+    }
     const next: BookmarkRec[] = []
     for (let i = 0; i < this.items.length; i++) {
       next.push(this.items[i])
@@ -254,6 +357,9 @@ export struct BookmarkPage {
     const sheets: SheetInfo[] = [
       { title: '按标题排序', action: (): void => {
         this.sortByTitle()
+      } },
+      { title: '新建文件夹', action: (): void => {
+        this.creatingFolder = true
       } },
       { title: '清空书签', action: (): void => {
         this.confirmClearBookmarks()
@@ -306,18 +412,48 @@ export struct BookmarkPage {
     })
   }
 
+  // 原版 nz「你想要删除此文件夹吗？」：递归删除子文件夹与内含书签
+  private confirmDeleteFolder(folder: BookmarkFolderRec): void {
+    AlertDialog.show({
+      title: folder.title,
+      message: $r('app.string.delete_folder_confirm'),
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+          this.db.deleteBookmarkFolder(folder.id).then(() => {
+            this.reload()
+          }).catch((error: BusinessError) => {
+            console.error(`delete folder failed: ${error.message}`)
+          })
+        }
+      }
+    })
+  }
+
   private reload(): void {
-    this.db.listBookmarks().then((items: BookmarkRec[]) => {
+    this.db.listBookmarks(this.currentFolderId).then((items: BookmarkRec[]) => {
       this.items = items
     }).catch((error: BusinessError) => {
       console.error(`list bookmarks failed: ${error.message}`)
     })
+    this.db.listBookmarkFolders(this.currentFolderId).then((folders: BookmarkFolderRec[]) => {
+      this.folders = folders
+    }).catch((error: BusinessError) => {
+      console.error(`list folders failed: ${error.message}`)
+    })
   }
 }
 
+// 书签编辑/新建弹层（新建：bookmark.id === -1 时入库到 folderId）
 @ComponentV2
 struct BookmarkEditOverlay {
   @Param bookmark: BookmarkRec | null = null
+  @Param folderId: number = 0
   @Event onClose: () => void = () => {}
   @Event onSaved: () => void = () => {}
   @Local name: string = ''
@@ -334,7 +470,8 @@ struct BookmarkEditOverlay {
   build() {
     Column() {
       Column({ space: 16 }) {
-        Text($r('app.string.edit_bookmark'))
+        Text(this.bookmark !== null && this.bookmark.id === -1
+          ? $r('app.string.new_bookmark') : $r('app.string.edit_bookmark'))
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
@@ -391,11 +528,13 @@ struct BookmarkEditOverlay {
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
+      .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .backgroundColor('rgba(0,0,0,0.5)')
+    .transition(dimTransition(240))
     .onClick(() => {
       this.onClose()
     })
@@ -409,6 +548,14 @@ struct BookmarkEditOverlay {
       return
     }
     const url = /^https?:\/\//i.test(address) ? address : `https://${address}`
+    if (this.bookmark !== null && this.bookmark.id === -1) {
+      this.db.addBookmark(name, url, this.folderId).then(() => {
+        this.onSaved()
+      }).catch((error: BusinessError) => {
+        console.error(`add bookmark failed: ${error.message}`)
+      })
+      return
+    }
     if (this.bookmark !== null) {
       this.db.updateBookmark(this.bookmark.id, name, url).then(() => {
         this.onSaved()
@@ -416,6 +563,83 @@ struct BookmarkEditOverlay {
         console.error(`update bookmark failed: ${error.message}`)
       })
     }
+  }
+}
+
+// 原版 o6「新建文件夹」弹层：输入名称在当前目录创建
+@ComponentV2
+struct NewFolderOverlay {
+  @Param folderId: number = 0
+  @Event onClose: () => void = () => {}
+  @Event onSaved: () => void = () => {}
+  @Local name: string = ''
+  private db: BrowserDb = BrowserDb.getInstance()
+
+  build() {
+    Column() {
+      Column({ space: 16 }) {
+        Text($r('app.string.new_folder'))
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.fg'))
+        TextInput({ placeholder: $r('app.string.name_label') })
+          .height(40)
+          .fontSize(14)
+          .backgroundColor($r('app.color.surface'))
+          .fontColor($r('app.color.fg'))
+          .caretColor($r('app.color.accent'))
+          .onChange((value: string) => {
+            this.name = value
+          })
+        Row({ space: 12 }) {
+          Button($r('app.string.cancel'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.surface'))
+            .fontColor($r('app.color.fg'))
+            .onClick(() => {
+              this.onClose()
+            })
+          Button($r('app.string.save'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.accent'))
+            .fontColor(Color.White)
+            .onClick(() => {
+              this.save()
+            })
+        }
+        .width('100%')
+      }
+      .width('80%')
+      .padding(20)
+      .borderRadius(16)
+      .backgroundColor($r('app.color.page_bg'))
+      .transition(dialogTransition())
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor('rgba(0,0,0,0.5)')
+    .transition(dimTransition(240))
+    .onClick(() => {
+      this.onClose()
+    })
+  }
+
+  private save(): void {
+    const name = this.name.trim()
+    if (name === '') {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.invalid_input'), duration: 1500 })
+      return
+    }
+    this.db.addBookmarkFolder(name, this.folderId).then(() => {
+      this.onSaved()
+    }).catch((error: BusinessError) => {
+      console.error(`add folder failed: ${error.message}`)
+    })
   }
 }
 

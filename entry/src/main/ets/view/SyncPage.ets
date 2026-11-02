@@ -2,6 +2,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
 import { AppSettings } from '../common/Settings'
+import { dialogTransition } from '../common/Transitions'
 import { WebDavClient } from '../common/WebDav'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -61,6 +62,9 @@ export struct SyncPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {
@@ -220,6 +224,7 @@ export struct SyncPage {
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
+    .transition(dialogTransition())
   }
 
   private fieldTitle(fieldKey: string): string {

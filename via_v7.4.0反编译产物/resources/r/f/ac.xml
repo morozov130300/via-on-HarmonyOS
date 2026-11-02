@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView
+        android:textColor="@color/ak"
+        android:layout_gravity="bottom|center_horizontal"
+        android:id="@+id/g4"
+        android:background="@color/al"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <com.tuyafeng.scanner.BarcodeView
+        android:id="@+id/fv"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+    <com.tuyafeng.scanner.MyViewfinderView
+        android:id="@+id/g5"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+</merge>

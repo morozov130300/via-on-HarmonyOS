@@ -60,14 +60,14 @@ export struct SiteSettingsPage {
             })
             SettingNavRow({
               rowLabel: '图像',
-              rowValue: this.settings.noImage ? '阻止' : '允许',
+              rowValue: this.settings.noImage ? '已禁止' : '允许',
               onTapRow: () => {
                 this.pickImage()
               }
             })
             SettingNavRow({
               rowLabel: 'JavaScript',
-              rowValue: this.settings.scriptEnabled ? '允许' : '阻止',
+              rowValue: this.settings.jsEnabled ? '允许' : '已禁止',
               onTapRow: () => {
                 this.pickJs()
               }
@@ -184,6 +184,9 @@ export struct SiteSettingsPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
@@ -218,7 +221,7 @@ export struct SiteSettingsPage {
       { title: '允许', action: (): void => {
         this.settings.setNoImage(false)
       } },
-      { title: '阻止', action: (): void => {
+      { title: '已禁止', action: (): void => {
         this.settings.setNoImage(true)
       } }
     ]
@@ -232,10 +235,10 @@ export struct SiteSettingsPage {
   private pickJs(): void {
     const sheets: SheetInfo[] = [
       { title: '允许', action: (): void => {
-        this.settings.setScriptEnabled(true)
+        this.settings.setJsEnabled(true)
       } },
-      { title: '阻止', action: (): void => {
-        this.settings.setScriptEnabled(false)
+      { title: '已禁止', action: (): void => {
+        this.settings.setJsEnabled(false)
       } }
     ]
     ActionSheet.show({

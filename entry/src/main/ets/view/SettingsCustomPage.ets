@@ -7,6 +7,7 @@ import { HomePage } from '../components/HomePage'
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
+import { ViaIcon } from '../components/ViaIcon'
 import { UiInsets } from '../common/Immersive'
 import { picker } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -84,11 +85,17 @@ export struct SettingsCustomPage {
       Column() {
         AppBarSpacer()
         Column() {
+          // 原版预览为带边距圆角描边卡片（非全宽贴合）
           HomePage({ onSearchTap: () => {
           } })
         }
         .width('100%')
         .layoutWeight(1)
+        .padding({ left: 12, right: 12, top: 12 })
+        .borderRadius(18)
+        .border({ width: 1, color: $r('app.color.appbar_divider') })
+        .backgroundColor($r('app.color.page_bg'))
+        .clip(true)
 
         this.SliderRail()
         if (this.paletteKey !== '') {
@@ -117,6 +124,9 @@ export struct SettingsCustomPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {
@@ -180,7 +190,9 @@ export struct SettingsCustomPage {
     params.push(new CustomParam('bg_color', $r('app.media.via_ic_c_opacity'), '背景色', KIND_ACTION))
     params.push(new CustomParam('bg_image', $r('app.media.via_ic_c_adv_area'), '背景图片', KIND_ACTION))
     params.push(new CustomParam('theme_color', $r('app.media.via_ic_c_fav_icon_color'), '主题色', KIND_ACTION))
-    params.push(this.pctParam('bg_opacity', $r('app.media.via_ic_c_opacity'), '不透明度', this.settings.homeBgOpacity))
+    const bgOpacity = this.pctParam('bg_opacity', $r('app.media.via_ic_c_opacity'), '不透明度', this.settings.homeBgOpacity)
+    bgOpacity.max = 80
+    params.push(bgOpacity)
     return params
   }
 
@@ -190,7 +202,7 @@ export struct SettingsCustomPage {
     params.push(this.dimParam('fav_height', $r('app.media.via_ic_c_fav_height'), '高度', this.settings.homeFavHeight))
     params.push(this.pctParam('fav_corner', $r('app.media.via_ic_c_fav_corner'), '圆角值', this.settings.homeFavCorner))
     params.push(new CustomParam('fav_icon_style', $r('app.media.via_ic_c_fav_icon_style'), '图标样式', KIND_ACTION))
-    params.push(new CustomParam('fav_shadow', $r('app.media.via_ic_c_fav_icon_color'), '图标阴影', KIND_ACTION))
+    params.push(new CustomParam('fav_shadow', $r('app.media.via_ic_c_fav_icon_color'), '图标色彩', KIND_ACTION))
     return params
   }
 
@@ -292,9 +304,9 @@ export struct SettingsCustomPage {
       case 'bg_opacity':
         return this.settings.homeBgOpacity
       case 'fav_width':
-        return this.settings.homeFavWidth === 0 ? 49 : this.settings.homeFavWidth
+        return this.settings.homeFavWidth === 0 ? 24 : this.settings.homeFavWidth
       case 'fav_height':
-        return this.settings.homeFavHeight === 0 ? 59 : this.settings.homeFavHeight
+        return this.settings.homeFavHeight === 0 ? 24 : this.settings.homeFavHeight
       case 'fav_corner':
         return this.settings.homeFavCorner
       default:
@@ -474,6 +486,29 @@ export struct SettingsCustomPage {
         ForEach(this.paletteKey === 'bg' ? HOME_BG_COLORS : HOME_THEME_COLORS, (colorHex: string) => {
           this.PaletteDot(colorHex, colorHex)
         }, (colorHex: string) => colorHex)
+        // 原版背景调色板尾部：选择图片色块（点按跳相册选图，与「背景图片」行同一入口）
+        if (this.paletteKey === 'bg') {
+          Stack() {
+            Column()
+              .width(30)
+              .height(30)
+              .borderRadius(6)
+              .backgroundColor($r('app.color.surface'))
+              .border({ width: 1, color: $r('app.color.fg_tertiary') })
+            ViaIcon({ icon: $r('app.media.via_ic_c_adv_area'), iconSize: 16, iconColor: $r('app.color.fg_secondary') })
+            if (this.settings.homeBgImage !== '') {
+              Circle({ width: 40, height: 40 })
+                .fill(Color.Transparent)
+                .stroke($r('app.color.fg'))
+                .strokeWidth(1.5)
+            }
+          }
+          .width(44)
+          .height(44)
+          .onClick(() => {
+            this.pickImage(false)
+          })
+        }
       }
       .padding({ left: 16, right: 16 })
     }

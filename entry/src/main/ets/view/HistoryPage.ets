@@ -10,6 +10,8 @@ export struct HistoryPage {
   private tabStore: TabStore = TabStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
   @Local items: HistoryRec[] = []
+  // 原版历史页搜索框（sz 搜索历史同款交互）
+  @Local query: string = ''
 
   aboutToAppear(): void {
     this.reload()
@@ -28,6 +30,19 @@ export struct HistoryPage {
     NavDestination() {
       Column() {
         AppBarSpacer()
+        TextInput({ placeholder: $r('app.string.search') })
+          .height(33)
+          .fontSize(14)
+          .placeholderFont({ size: 14 })
+          .placeholderColor($r('app.color.fg_secondary'))
+          .fontColor($r('app.color.fg'))
+          .caretColor($r('app.color.accent'))
+          .backgroundColor($r('app.color.surface'))
+          .borderRadius(17)
+          .margin({ left: 12, right: 12, top: 5, bottom: 5 })
+          .onChange((value: string) => {
+            this.query = value
+          })
         if (this.items.length === 0) {
           Column() {
             Text($r('app.string.empty_history'))
@@ -39,7 +54,7 @@ export struct HistoryPage {
           .justifyContent(FlexAlign.Center)
         } else {
           List({ space: 1 }) {
-            ForEach(this.items, (item: HistoryRec) => {
+            ForEach(this.filteredItems(), (item: HistoryRec) => {
               ListItem() {
                 Row({ space: 12 }) {
                   AppIcon({ icon: $r('sys.symbol.clock'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
@@ -74,7 +89,7 @@ export struct HistoryPage {
                   this.navPathStack.pop()
                 })
               }
-            }, (item: HistoryRec) => item.id.toString())
+            }, (item: HistoryRec) => `${item.id}_${item.title}`)
           }
           .width('100%')
           .layoutWeight(1)
@@ -88,11 +103,7 @@ export struct HistoryPage {
             .backgroundColor($r('app.color.surface'))
             .fontColor($r('app.color.danger'))
             .onClick(() => {
-              this.db.clearHistory().then(() => {
-                this.reload()
-              }).catch((error: BusinessError) => {
-                console.error(`clear history failed: ${error.message}`)
-              })
+              this.confirmClearHistory()
             })
         }
       }
@@ -108,8 +119,54 @@ export struct HistoryPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
+    })
+  }
+
+  private filteredItems(): HistoryRec[] {
+    const keyword = this.query.trim().toLowerCase()
+    if (keyword === '') {
+      return this.items
+    }
+    const result: HistoryRec[] = []
+    for (let i = 0; i < this.items.length; i++) {
+      const item = this.items[i]
+      if (item.title.toLowerCase().includes(keyword) || item.url.toLowerCase().includes(keyword)) {
+        result.push(item)
+      }
+    }
+    return result
+  }
+
+  // 原版清除历史确认框：标题 fk「清除浏览历史」+ fm「你确定删除 %1$d 个条目吗?」
+  private confirmClearHistory(): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    const message = context.resourceManager.getStringSync($r('app.string.delete_items_confirm').id, this.items.length)
+    AlertDialog.show({
+      title: $r('app.string.clear_history_title'),
+      message: message,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+          this.db.clearHistory().then(() => {
+            this.reload()
+          }).catch((error: BusinessError) => {
+            console.error(`clear history failed: ${error.message}`)
+          })
+        }
+      }
     })
   }
 

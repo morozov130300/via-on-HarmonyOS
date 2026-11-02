@@ -18,7 +18,28 @@
         "name": "ohos.permission.INTERNET"
       },
       {
+        "name": "ohos.permission.GET_NETWORK_INFO"
+      },
+      {
         "name": "ohos.permission.PRINT"
+      },
+      {
+        "name": "ohos.permission.CAMERA",
+        "reason": "$string:perm_camera_reason",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.MICROPHONE",
+        "reason": "$string:perm_microphone_reason",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.APPROXIMATELY_LOCATION",
+        "reason": "$string:perm_location_reason",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.VIBRATE"
       },
       {
         "name": "ohos.permission.READ_PASTEBOARD",
@@ -60,7 +81,19 @@
             ],
             "uris": [
               { "scheme": "http" },
-              { "scheme": "https" }
+              { "scheme": "https" },
+              { "scheme": "via" }
+            ]
+          },
+          {
+            "entities": [
+              "entity.system.browsable"
+            ],
+            "actions": [
+              "ohos.want.action.sendData"
+            ],
+            "uris": [
+              { "type": "text/plain" }
             ]
           }
         ]

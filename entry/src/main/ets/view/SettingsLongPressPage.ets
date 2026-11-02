@@ -1,6 +1,9 @@
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
+// 原版 i8/w.j3()：长按菜单 14 项（顺序与文案逐项对齐，
+// id 沿用 TabWeb 已消费的 open_new_tab/open_background/copy_link/share，
+// 其余为图片/链接长按动作，见原版 a6.n(id, label) 列表）
 class LongPressEntry {
   id: string
   label: string
@@ -12,12 +15,20 @@ class LongPressEntry {
 }
 
 const LONG_PRESS_ENTRIES: LongPressEntry[] = [
-  new LongPressEntry('open', '打开'),
-  new LongPressEntry('open_new_tab', '新标签页打开'),
   new LongPressEntry('open_background', '后台打开'),
+  new LongPressEntry('open_new_tab', '新标签打开'),
+  new LongPressEntry('view_image', '查看图片'),
+  new LongPressEntry('save_image', '保存图片'),
+  new LongPressEntry('download_image', '下载图片'),
+  new LongPressEntry('share_image', '分享图片'),
+  new LongPressEntry('search_by_image', '以图搜图'),
+  new LongPressEntry('picture_mode', '看图模式'),
+  new LongPressEntry('page_info', '页面信息'),
+  new LongPressEntry('mark_ad', '标记广告'),
+  new LongPressEntry('copy_link_text', '复制链接文本'),
+  new LongPressEntry('scan_qr', '扫描二维码'),
   new LongPressEntry('copy_link', '复制链接'),
-  new LongPressEntry('download', '下载链接'),
-  new LongPressEntry('share', '分享链接')
+  new LongPressEntry('share', '分享')
 ]
 
 @ComponentV2
@@ -28,6 +39,11 @@ export struct SettingsLongPressPage {
   private bindAppBar(): void {
     AppBar.show({
       title: '定制长按菜单',
+      // 原版 i8/w.a3()：AppBar 右上「重置」，弹确认框后恢复默认（仅隐藏 保存图片）
+      rightText: '重置',
+      onRight: () => {
+        this.confirmReset()
+      },
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -74,6 +90,9 @@ export struct SettingsLongPressPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
@@ -94,6 +113,27 @@ export struct SettingsLongPressPage {
       next.push(id)
     }
     this.settings.setLongPressHidden(next)
+  }
+
+  // 原版 i8/w.a3()：「重置为默认设置」/「你确定继续吗？」→ U1(null) 恢复默认（仅隐藏 保存图片）
+  private confirmReset(): void {
+    this.getUIContext().showAlertDialog({
+      title: '重置为默认设置',
+      message: '你确定继续吗？',
+      primaryButton: {
+        value: '重置',
+        action: () => {
+          this.settings.setLongPressHidden(['save_image'])
+        }
+      },
+      secondaryButton: {
+        value: '取消',
+        action: () => {
+        }
+      },
+      cancel: () => {
+      }
+    })
   }
 }
 

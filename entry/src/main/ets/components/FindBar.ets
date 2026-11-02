@@ -1,12 +1,29 @@
 import { TabItem } from '../common/Types'
 import { AppIcon } from './AppIcon'
+import { AppSettings } from '../common/Settings'
 
 @ComponentV2
 export struct FindBar {
   @Param @Require tab: TabItem
   @Event onClose: () => void = () => {}
   @Local query: string = ''
+  private settings: AppSettings = AppSettings.getInstance()
   private inputController: TextInputController = new TextInputController()
+
+  aboutToAppear(): void {
+    // 原版 f8/h.e3()：从 FIND_CACHE 恢复上次查找词（TTL 180 天）
+    this.settings.readFindCache().then((text: string) => {
+      if (text !== '') {
+        this.query = text
+        this.search(text)
+      }
+    })
+  }
+
+  aboutToDisappear(): void {
+    // 原版 f8/h.f3()：销毁时缓存当前查找词
+    this.settings.saveFindCache(this.query)
+  }
 
   build() {
     Row({ space: 8 }) {
@@ -27,8 +44,9 @@ export struct FindBar {
         .onSubmit(() => {
           this.jump(true)
         })
-      if (this.tab.matchCount > 0) {
-        Text(`${this.tab.matchOrdinal + 1}/${this.tab.matchCount}`)
+      if (this.query.length > 0 && this.tab.matchOrdinal !== -1) {
+        // 原版 f8/h.h3：i11>0 时 i10++ 再展示 "i10/i11"，否则 "i10/0"
+        Text(`${this.tab.matchCount > 0 ? this.tab.matchOrdinal + 1 : this.tab.matchOrdinal}/${this.tab.matchCount}`)
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .maxLines(1)

@@ -29,29 +29,25 @@ export class CustomUaEntry {
   }
 }
 
+// 原版内置 UA 清单（z8/b4.java:28-35，1:1）；'default' 为空 UA = 系统 WebView 默认
 export const UA_TABLE: UaDef[] = [
-  new UaDef('default', '默认',
-    'Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Via/7.4.0.beta'),
-  new UaDef('android_phone', '安卓手机',
-    'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'),
-  new UaDef('android_tablet', '安卓平板',
+  new UaDef('default', '默认', ''),
+  new UaDef('android_phone', 'Android (手机)',
+    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36'),
+  new UaDef('android_tablet', 'Android (平板)',
     'Mozilla/5.0 (Linux; Android 8.1.0; SM-T837A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'),
-  new UaDef('win_chrome', 'Windows Chrome',
+  new UaDef('win_chrome', 'Chrome (PC)',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'),
-  new UaDef('win_ie11', 'Windows IE11',
+  new UaDef('win_ie11', 'IE11 (PC)',
     'Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko'),
-  new UaDef('mac', 'MAC OS',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15'),
+  new UaDef('mac', 'macOS',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'),
   new UaDef('iphone', 'iPhone',
     'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'),
   new UaDef('ipad', 'iPad',
-    'Mozilla/5.0 (iPad; CPU iPadOS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'),
-  new UaDef('symbian', '塞班',
-    'Mozilla/5.0 (Symbian/3; Series60/5.2 NokiaN8-00/012.002; Profile/MIDP-2.1 Configuration/CLDC-1.1 ) AppleWebKit/533.4 (KHTML, like Gecko) NokiaBrowser/7.3.0 Mobile Safari/533.4 3gpp-gba'),
-  new UaDef('spider', '蜘蛛',
-    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/120.0.0.0 Safari/537.36'),
-  new UaDef('edge', 'Edge',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0')
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15'),
+  new UaDef('symbian', '塞班 (Symbian)',
+    'Mozilla/5.0 (Symbian/3; Series60/5.2 NokiaN8-00/012.002; Profile/MIDP-2.1 Configuration/CLDC-1.1 ) AppleWebKit/533.4 (KHTML, like Gecko) NokiaBrowser/7.3.0 Mobile Safari/533.4 3gpp-gba')
 ]
 
 export function uaByKey(key: string): UaDef | null {
@@ -63,27 +59,59 @@ export function uaByKey(key: string): UaDef | null {
   return null
 }
 
+// z8/b4.h()：1:1 移植——"Android" 后接 ") AppleWebKit" 时替换为 " 10; K"，
+// Chrome 版本号截断到首点后补 ".0.0"
 export function simplifyUaString(ua: string): string {
-  let result = ua
-  const parenStart = result.indexOf('(')
-  if (parenStart >= 0) {
-    const parenEnd = result.indexOf(')', parenStart)
-    if (parenEnd > parenStart) {
-      result = result.substring(0, parenStart) + result.substring(parenEnd + 1)
+  if (ua === null || ua.length < 8) {
+    return ua
+  }
+  const androidIdx = ua.indexOf('Android')
+  if (androidIdx < 0) {
+    return ua
+  }
+  const webkitIdx = ua.indexOf(') AppleWebKit', androidIdx)
+  if (webkitIdx < 0) {
+    return ua
+  }
+  let result = ua.substring(0, androidIdx + 7) + ' 10; K'
+  const chromeIdx = ua.indexOf('Chrome/', webkitIdx)
+  if (chromeIdx < 0) {
+    result += ua.substring(webkitIdx)
+  } else {
+    const dotIdx = ua.indexOf('.', chromeIdx + 7)
+    result += ua.substring(webkitIdx, dotIdx + 1) + '0.0.0'
+    const spaceIdx = ua.indexOf(' ', dotIdx)
+    if (spaceIdx > 0) {
+      result += ua.substring(spaceIdx)
     }
   }
-  const buildIdx = result.indexOf('Build/')
-  if (buildIdx >= 0) {
-    const semiIdx = result.indexOf(';', buildIdx)
-    if (semiIdx >= 0) {
-      result = result.substring(0, buildIdx) + result.substring(semiIdx + 1)
-    } else {
-      result = result.substring(0, buildIdx)
+  return result
+}
+
+// z8/b4.g()：[\t\n\r]+ → 空格 + trim
+export function cleanUaInput(ua: string): string {
+  return ua.replace(/[\t\n\r]+/g, ' ').trim()
+}
+
+// z8/b4.i()：去 "; wv" 与 " Version/x.y"
+export function uaCleanWv(ua: string): string {
+  if (ua === null || ua === '') {
+    return ua
+  }
+  const wvIdx = ua.indexOf('; wv')
+  if (wvIdx < 0) {
+    return ua
+  }
+  let result = ua.substring(0, wvIdx) + ua.substring(wvIdx + 4)
+  const versionIdx = result.indexOf(' Version/')
+  if (versionIdx >= 0) {
+    let endIdx = result.indexOf(' ', versionIdx + 1)
+    if (endIdx < 0) {
+      endIdx = result.length
+    }
+    if (endIdx > versionIdx) {
+      result = result.substring(0, versionIdx) + result.substring(endIdx)
     }
   }
-  result = result.replace(/Chrome\/(\d+)(\.\d+)+/g, 'Chrome/$1')
-  result = result.replace(/Safari\/(\d+)(\.\d+)+/g, 'Safari/$1')
-  result = result.replace(/Edg\/(\d+)(\.\d+)+/g, 'Edg/$1')
-  result = result.replace(/Version\/(\d+)(\.\d+)+/g, 'Version/$1')
-  return result.replace(/\s+/g, ' ').trim()
+  return result
 }

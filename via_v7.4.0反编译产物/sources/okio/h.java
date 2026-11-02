@@ -1,0 +1,66 @@
+package okio;
+
+import java.io.InterruptedIOException;
+import java.util.concurrent.TimeUnit;
+
+/* compiled from: r8-map-id-751751c23d83be85ef57d175c5469894c696c5ed63f45cf86a3b6e4238664d4a */
+/* loaded from: classes.dex */
+public class h extends r {
+
+    /* renamed from: e, reason: collision with root package name */
+    public r f10836e;
+
+    public h(r rVar) {
+        if (rVar == null) {
+            throw new IllegalArgumentException("delegate == null");
+        }
+        this.f10836e = rVar;
+    }
+
+    @Override // okio.r
+    public r a() {
+        return this.f10836e.a();
+    }
+
+    @Override // okio.r
+    public r b() {
+        return this.f10836e.b();
+    }
+
+    @Override // okio.r
+    public long c() {
+        return this.f10836e.c();
+    }
+
+    @Override // okio.r
+    public r d(long j10) {
+        return this.f10836e.d(j10);
+    }
+
+    @Override // okio.r
+    public boolean e() {
+        return this.f10836e.e();
+    }
+
+    @Override // okio.r
+    public void f() throws InterruptedIOException {
+        this.f10836e.f();
+    }
+
+    @Override // okio.r
+    public r g(long j10, TimeUnit timeUnit) {
+        return this.f10836e.g(j10, timeUnit);
+    }
+
+    public final r i() {
+        return this.f10836e;
+    }
+
+    public final h j(r rVar) {
+        if (rVar == null) {
+            throw new IllegalArgumentException("delegate == null");
+        }
+        this.f10836e = rVar;
+        return this;
+    }
+}

@@ -38,6 +38,9 @@ export struct NetLogPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
