@@ -96,7 +96,7 @@ export struct TabWeb {
         .multiWindowAccess(true)
         .imageAccess(this.imageAllowedNow())
         .mixedMode(MixedMode.Compatible)
-        .textZoomRatio(this.settings.textZoom)
+        .textZoomRatio(this.textZoomForTab(this.tab.url))
         // 原版 nightcss「强制网页暗色」：引擎级强制暗色（旧内核路径由 CSS 注入承担，ArkWeb 用 forceDark 等价实现）
         .darkMode(this.settings.nightCss ? WebDarkMode.On : WebDarkMode.Off)
         .forceDarkAccess(this.settings.nightCss)
@@ -150,6 +150,8 @@ export struct TabWeb {
           this.tab.loading = true
           this.tab.isError = false
           this.tab.sniffedMedia = []
+          // 原版 e8/i.M() 页面开始重新应用正式缩放，qb 预览值失效
+          this.tab.liveZoom = 0
           this.refreshPrivacyScripts()
           this.applyAdvancedSettings()
           this.applyUa(event.url)
@@ -407,6 +409,23 @@ export struct TabWeb {
       return setting.noImage
     }
     return false
+  }
+
+  // 原版 e8/i.M()：内部页 100；有站点缩放（ba.b.i(F0)）用站点值否则全局 F0()；
+  // liveZoom>0 时为 qb 弹窗拖动实时预览（k6.g.onProgressChanged setTextZoom）
+  private textZoomForTab(url: string): number {
+    if (this.tab.liveZoom > 0) {
+      return this.tab.liveZoom
+    }
+    if (!url.startsWith('http')) {
+      return 100
+    }
+    const host = hostOf(url)
+    const siteZoom = this.settings.getSiteFontZoom(host)
+    if (siteZoom > 0) {
+      return siteZoom
+    }
+    return this.settings.textZoom
   }
 
   private sniffMedia(url: string): void {
@@ -668,6 +687,10 @@ export struct TabWeb {
     if (this.settings.disableWebRtc) {
       js += 'try{window.RTCPeerConnection=undefined;window.webkitRTCPeerConnection=undefined;'
         + 'if(navigator.mediaDevices){navigator.mediaDevices.getUserMedia=function(){return Promise.reject(new Error("disabled"))}}}catch(e){}'
+    }
+    // 原版 c8/kc.b（k6.Ja runAt=1：w9.p bit 524288 forceZoom 时注入）
+    if (this.settings.forceZoom) {
+      js += '(function(){var b=document.querySelector("meta[name=viewport]");if(b){for(var d=b.getAttribute("content").split(","),e=[],c=0;c<d.length;c++){var a=d[c].trim();(a.startsWith("width")||a.startsWith("initial-scale")||a.startsWith("minimum-scale"))&&e.push(a)}b.setAttribute("content",e.join(",").trim())}})();'
     }
     return js
   }

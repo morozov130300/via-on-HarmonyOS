@@ -27,6 +27,9 @@ export class TabItem {
   @Trace matchOrdinal: number
   @Trace matchCount: number
   @Trace sniffedMedia: string[]
+  // 原版 k6.g 拖动实时预览：onProgressChanged 直接对当前 WebView setTextZoom，
+  // 不落库；页面跳转后由 e8/i.M() 重新应用正式缩放（此处 onPageBegin 清零）
+  @Trace liveZoom: number = 0
   // 原版 p4/c.java:110 onReceivedIcon：标签捕获的站点图标
   @Trace icon: image.PixelMap | null
   controller: webview.WebviewController

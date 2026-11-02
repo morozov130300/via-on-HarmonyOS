@@ -52,7 +52,7 @@ const SYNC_KEYS: string[] = [
   'readerConfirm', 'readerTheme', 'readerFontSize', 'readerCustomCss',
   'appLayout', 'toolbarAutoHide', 'tabBarEnabled', 'addressBarContent', 'toolbarColorAdapt',
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',
-  'customRulesText', 'siteExceptions', 'desktopAllSites', 'forceZoom',
+  'customRulesText', 'siteExceptions', 'desktopAllSites', 'forceZoom', 'siteFontZooms',
   'uaKey', 'customUaList', 'desktopUaKey', 'desktopCustomUa', 'simplifyUa',
   'syncMode', 'orientation', 'videoPlayer', 'dlManager', 'clearOnExit',
   'volumePageFlip', 'swipeSwitchTab', 'undoCloseToast', 'showStatusBar',
@@ -181,6 +181,8 @@ export class AppSettings {
   @Trace siteExceptions: string[] = []
   @Trace desktopAllSites: number = 0
   @Trace forceZoom: boolean = false
+  // 原版 jb/l5.n()：每站字体缩放 map（站点 DB 行 s()+d0(zoom)），host → 缩放百分比
+  @Trace siteFontZooms: Map<string, number> = new Map()
   @Trace userScripts: UserScriptRec[] = []
   @Trace scriptNextId: number = 1
   @Trace ruleSubUrl: string = ''
@@ -388,6 +390,7 @@ export class AppSettings {
       this.siteExceptions = await this.readStringArray('siteExceptions')
       this.desktopAllSites = await this.readNumber('desktopAllSites', 0)
       this.forceZoom = await this.readBoolean('forceZoom', false)
+      this.siteFontZooms = await this.readSiteFontZooms()
       this.customRules = await this.readRules()
       this.customRulesText = await this.readCustomRulesText()
       this.userScripts = await this.readScripts()
@@ -2034,6 +2037,106 @@ export class AppSettings {
   setForceZoom(on: boolean): void {
     this.forceZoom = on
     this.flushKey('forceZoom', on)
+  }
+
+  // ---- 每站字体缩放（原版 jb/l5：l() 设置 / r() 移除 / n() 读取 / m() 全局）----
+
+  private persistSiteFontZooms(): void {
+    const payload: Record<string, Object> = {}
+    this.siteFontZooms.forEach((zoom: number, host: string) => {
+      payload[host] = zoom
+    })
+    this.flushKey('siteFontZooms', JSON.stringify(payload))
+  }
+
+  private async readSiteFontZooms(): Promise<Map<string, number>> {
+    const raw = await this.readString('siteFontZooms', '{}')
+    const result = new Map<string, number>()
+    try {
+      const parsed = JSON.parse(raw) as Record<string, Object>
+      const keys = Object.keys(parsed)
+      for (let i = 0; i < keys.length; i++) {
+        const host = keys[i]
+        const value = parsed[host]
+        if (typeof value === 'number' && value > 0) {
+          result.set(host, value)
+        }
+      }
+    } catch (error) {
+      console.error('parse siteFontZooms failed')
+    }
+    return result
+  }
+
+  // 原版 f2580m0.T0(url)：站点缩放，无则 0
+  getSiteFontZoom(host: string): number {
+    const value = this.siteFontZooms.get(host)
+    return value !== undefined ? value : 0
+  }
+
+  hasSiteFontZoom(host: string): boolean {
+    return this.siteFontZooms.get(host) !== undefined
+  }
+
+  // 原版 jb/l5.l(host, zoom)：规范化域名后写入（kb/c.a：trim + 小写）
+  setSiteFontZoom(host: string, zoom: number): void {
+    const normalized = host.trim().toLowerCase()
+    if (normalized === '' || zoom <= 0) {
+      return
+    }
+    this.siteFontZooms.set(normalized, zoom)
+    this.persistSiteFontZooms()
+  }
+
+  // 原版 jb/l5.r(host)：移除站点缩放
+  removeSiteFontZoom(host: string): void {
+    const normalized = host.trim().toLowerCase()
+    if (this.siteFontZooms.get(normalized) === undefined) {
+      return
+    }
+    this.siteFontZooms.delete(normalized)
+    this.persistSiteFontZooms()
+  }
+
+  // 原版 jb/k5.s3：Collections.sort(hosts, new k8.p())——按域名标签从 TLD 往前逐段比较
+  static compareDomainLabels(a: string, b: string): number {
+    let length = a.length
+    let length2 = b.length
+    let i11 = length
+    let i10 = length2
+    while (length > 0 && length2 > 0) {
+      const iLastIndexOf = a.lastIndexOf('.', length)
+      const i12 = iLastIndexOf + 1
+      const iLastIndexOf2 = b.lastIndexOf('.', length2)
+      const i13 = iLastIndexOf2 + 1
+      const i14 = length - i12
+      const iMin = Math.min(i14, length2 - i13)
+      for (let i15 = 0; i15 < iMin; i15++) {
+        const diff = a.charAt(i12 + i15).charCodeAt(0) - b.charAt(i13 + i15).charCodeAt(0)
+        if (diff !== 0) {
+          return diff
+        }
+      }
+      const i16 = (i14 - length2) + i13
+      if (i16 !== 0) {
+        return i16
+      }
+      length = iLastIndexOf - 1
+      length2 = iLastIndexOf2 - 1
+      i11 = i12
+      i10 = i13
+    }
+    return i11 - i10
+  }
+
+  // 原版 jb/k5.s3：键排序后逐行展示
+  siteFontZoomHosts(): string[] {
+    const hosts: string[] = []
+    this.siteFontZooms.forEach((zoom: number, host: string) => {
+      hosts.push(host)
+    })
+    hosts.sort((a: string, b: string): number => AppSettings.compareDomainLabels(a, b))
+    return hosts
   }
 
   saveScript(script: UserScriptRec): void {
