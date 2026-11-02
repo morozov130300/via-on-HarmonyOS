@@ -1,16 +1,22 @@
 import { preferences } from '@kit.ArkData'
 import { window } from '@kit.ArkUI'
+import { ConfigurationConstant, common } from '@kit.AbilityKit'
+import { resourceManager, i18n } from '@kit.LocalizationKit'
 import { SiteSetting, RuleEntry, UserScriptRec, RuleSubEntry, RULE_SUB_PRESETS } from './Types'
+import { builtinEngineId } from './SearchEngines'
 import { BrowserDb } from './Database'
 import { uaByKey, simplifyUaString, CustomUaEntry } from './UaTable'
 
+// 原版 f4/Q0 语义：orientation 存 1..4（1=跟随系统 2=自动 3=竖屏 4=横屏）
 export function applyOrientationSetting(context: Context): void {
   const settings = AppSettings.getInstance()
   window.getLastWindow(context).then((win: window.Window) => {
-    if (settings.orientation === 1) {
+    if (settings.orientation === 3) {
       win.setPreferredOrientation(window.Orientation.PORTRAIT)
-    } else if (settings.orientation === 2) {
+    } else if (settings.orientation === 4) {
       win.setPreferredOrientation(window.Orientation.LANDSCAPE)
+    } else if (settings.orientation === 2) {
+      win.setPreferredOrientation(window.Orientation.AUTO_ROTATION)
     } else {
       win.setPreferredOrientation(window.Orientation.UNSPECIFIED)
     }
@@ -28,7 +34,7 @@ export const MOBILE_UA: string = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/53
 
 const SNAPSHOT_TS_KEY: string = 'via_snapshot_ts'
 const SYNC_KEYS: string[] = [
-  'engineKey', 'customEngineTemplate', 'adBlockOn', 'textZoom', 'nightMode',
+  'engineKey', 'customEngineTemplate', 'customEngines', 'searchsuggestion', 'adBlockOn', 'textZoom', 'nightMode2', 'nightFilter', 'nightCss',
   'uaMode', 'customUa', 'noImage', 'homepageMode', 'homeUrl',
   'ruleSubUrl', 'scriptEnabled', 'doNotTrack', 'disableWebRtc', 'doNotSell', 'privacyProxy',
   'dataSaver', 'autoSniffButton', 'allowDebugWeb', 'disableCustomTabs',
@@ -43,13 +49,18 @@ const SYNC_KEYS: string[] = [
   'homeAdvEffect', 'homeAdvArea',
   'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
   'menuOrder', 'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
-  'nightForceDark', 'readerConfirm', 'readerTheme', 'readerFontSize', 'readerCustomCss',
+  'readerConfirm', 'readerTheme', 'readerFontSize', 'readerCustomCss',
   'appLayout', 'toolbarAutoHide', 'tabBarEnabled', 'addressBarContent', 'toolbarColorAdapt',
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',
   'customRulesText', 'siteExceptions', 'desktopAllSites', 'forceZoom',
-  'uaKey', 'customUaList', 'desktopUaKey', 'simplifyUa',
-  'syncMode', 'orientation', 'externalPlayer', 'clearOnExit',
-  'volumePageFlip', 'swipeSwitchTab', 'undoCloseToast', 'showStatusBar'
+  'uaKey', 'customUaList', 'desktopUaKey', 'desktopCustomUa', 'simplifyUa',
+  'syncMode', 'orientation', 'videoPlayer', 'dlManager', 'clearOnExit',
+  'volumePageFlip', 'swipeSwitchTab', 'undoCloseToast', 'showStatusBar',
+  'fullScreen', 'gameMode', 'wifiOnlyImages', 'cleardata2', 'labflag',
+  'aiPrompts', 'aiPromptNextId', 'jsEnabled',
+  'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled',
+  'keyback', 'keyforward', 'keyhome', 'keytab', 'keymenu',
+  'gesturetoolbarleft', 'gesturetoolbarright', 'restoreclosedtabs', 'scriptNextId'
 ]
 const SNAPSHOT_DEBOUNCE_MS: number = 1500
 const AD_BLOCK_ESTIMATED_BYTES: number = 20 * 1024
@@ -57,10 +68,65 @@ const AD_BLOCK_ESTIMATED_BYTES: number = 20 * 1024
 export class SavedTab {
   url: string
   incognito: boolean
+  // 原版 tabs 表 title（na/c.java:24）：恢复标签需回填标题
+  title: string = ''
 
-  constructor(url: string, incognito: boolean) {
+  constructor(url: string, incognito: boolean, title: string = '') {
     this.url = url
     this.incognito = incognito
+    this.title = title
+  }
+}
+
+// 自定义搜索引擎记录（原版 settings 表 type=2 行：title=名称、content=URL 模板；
+// id=记录主键（原版 ja/c.d()，DB 自增 ≥1），用于 search2/searchtoolbarorder 等引擎 id 引用
+export class CustomEngineRec {
+  name: string
+  template: string
+  id: number
+
+  constructor(name: string, template: string, id: number = 0) {
+    this.name = name
+    this.template = template
+    this.id = id
+  }
+}
+
+// AI 提示词记录（原版 p9/q 实体 + p9.o DAO；移植以偏好 JSON 数组替代数据库表）
+export class AiPromptRec {
+  id: number
+  name: string
+  content: string
+  // 原版 type：1=系统提示词（a9/z 分组 Md）、2=消息模板（分组 nk）
+  type: number
+
+  constructor(id: number, name: string, content: string, type: number) {
+    this.id = id
+    this.name = name
+    this.content = content
+    this.type = type
+  }
+
+  static fromJson(obj: Record<string, Object>): AiPromptRec | null {
+    const id = obj['id']
+    const name = obj['name']
+    const content = obj['content']
+    const type = obj['type']
+    if (typeof id === 'number' && typeof name === 'string'
+      && typeof content === 'string' && typeof type === 'number') {
+      return new AiPromptRec(id, name, content, type)
+    }
+    return null
+  }
+}
+
+// 原版 z8/v2.a()：默认搜索引擎 = CN（中文）环境百度，否则谷歌
+export function defaultEngineKeyForSystem(): string {
+  try {
+    const lang = i18n.System.getSystemLanguage()
+    return lang.startsWith('zh') ? 'baidu' : 'google'
+  } catch (error) {
+    return 'baidu'
   }
 }
 
@@ -68,22 +134,44 @@ export class SavedTab {
 export class AppSettings {
   private static instance: AppSettings | null = null
   private store: preferences.Preferences | null = null
+  private appContext: common.ApplicationContext | null = null
+  private lastAppliedColorMode: ConfigurationConstant.ColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET
+  // 原版 w9.k：工具栏按钮长按动作（keyback/keyforward/keyhome/keytab/keymenu）
+  @Trace keyback: number = 2
+  @Trace keyforward: number = 3
+  @Trace keyhome: number = 4
+  @Trace keytab: number = 5
+  @Trace keymenu: number = 1
+  // 原版 w9.k：工具栏横滑左右方向动作（gesturetoolbarleft=10 上一标签 / gesturetoolbarright=11 下一标签）
+  @Trace gesturetoolbarleft: number = 10
+  @Trace gesturetoolbarright: number = 11
+  private abilityContext: common.UIAbilityContext | null = null
+  private nightListeners: Array<() => void> = []
   private snapshotTimer: number = -1
   private applyingSnapshot: boolean = false
 
   @Trace engineKey: string = 'baidu'
   @Trace customEngineTemplate: string = ''
+  // 原版 ja/c（settings 表 type=2）：多个自定义搜索引擎（名称 + URL 模板），id 为列表下标
+  @Trace customEngines: CustomEngineRec[] = []
+  // 原版 w9/k.X1()：searchsuggestion 位掩码，默认 31（1 标签页|2 书签|4 自定义|8 历史|16 网络建议）
+  @Trace searchSuggestion: number = 31
   @Trace adBlockOn: boolean = false
   @Trace adBlockBuiltin: boolean = true
   @Trace adBlockTotal: number = 0
   @Trace adBlockSavedBytes: number = 0
-  @Trace autoExpandFullText: boolean = true
+  @Trace autoExpandFullText: boolean = false
   @Trace textZoom: number = 100
-  @Trace nightMode: boolean = false
+  // 原版 nightmode2（w9/k n3/d/m0/T0）：0=手动关 1=手动开 2=跟随系统(当前浅) 3=跟随系统(当前深)，默认 2
+  @Trace nightMode2: number = 2
+  // 原版 nightfilter（w9/k n2/Y0）：网页蒙版黑色滤镜不透明度，默认 77
+  @Trace nightFilter: number = 77
+  // 原版 nightcss「强制网页暗色」（w9/k S2），默认取 Webview forceDark 可用性（现代内核恒 true）
+  @Trace nightCss: boolean = true
   @Trace uaMode: number = UA_MODE_DEFAULT
   @Trace customUa: string = ''
   @Trace noImage: boolean = false
-  @Trace restoreTabs: boolean = true
+  @Trace restoreTabsMode: number = 0
   @Trace homepageMode: number = 0
   @Trace homeUrl: string = ''
   @Trace searchHistory: string[] = []
@@ -99,6 +187,8 @@ export class AppSettings {
   @Trace ruleSubscriptions: RuleSubEntry[] = []
   @Trace ruleAutoUpdate: number = 0
   @Trace scriptEnabled: boolean = false
+  // 原版 w9/k.t（网站设定 JavaScript 全局默认，jb/y4 id8），默认允许
+  @Trace jsEnabled: boolean = true
   @Trace doNotTrack: boolean = false
   @Trace disableWebRtc: boolean = false
   @Trace doNotSell: boolean = false
@@ -113,7 +203,7 @@ export class AppSettings {
   @Trace homeLogoText: string = 'VIA'
   @Trace homeLogoType: number = 0
   @Trace homeLogoSize: number = 28
-  @Trace homeLogoStyle: number = 0
+  @Trace homeLogoStyle: number = 1
   @Trace homePillCorner: number = 100
   @Trace homePillOpacity: number = 0
   @Trace homePillStrokeWidth: number = 1
@@ -137,7 +227,6 @@ export class AppSettings {
   @Trace homeAdvArea: number = 0
   @Trace readerAuto: boolean = false
   @Trace customCss: string = ''
-  @Trace nightForceDark: boolean = false
   @Trace readerConfirm: boolean = false
   @Trace readerTheme: number = 0
   @Trace readerFontSize: number = 17
@@ -145,6 +234,11 @@ export class AppSettings {
   @Trace appLayout: number = 0
   @Trace toolbarAutoHide: number = 0
   @Trace tabBarEnabled: boolean = false
+  // 搜索工具栏（原版 w9.a bit32768 默认启用；searchtoolbarorder/searchtoolbardisabled
+  // 为引擎 id 逗号串，默认禁用表 "-1,-10"）
+  @Trace searchToolbarEnabled: boolean = true
+  @Trace searchToolbarOrder: string = ''
+  @Trace searchToolbarDisabled: string = '-1,-10'
   @Trace addressBarContent: number = 0
   @Trace toolbarColorAdapt: boolean = true
   @Trace appLanguage: number = 1
@@ -154,7 +248,7 @@ export class AppSettings {
   @Trace menuOrder: string[] = []
   @Trace longPressHidden: string[] = []
   @Trace toolbarHidden: string[] = []
-  @Trace scriptAutoUpdate: boolean = false
+  @Trace scriptAutoUpdate: number = 0
   @Trace lastScriptUpdate: number = 0
   @Trace aiProvider: string = 'deepseek'
   @Trace aiApiKey: string = ''
@@ -162,6 +256,7 @@ export class AppSettings {
   @Trace uaKey: string = 'default'
   @Trace customUaList: CustomUaEntry[] = []
   @Trace desktopUaKey: string = 'win_chrome'
+  @Trace desktopCustomUa: string = ''
   @Trace simplifyUa: boolean = false
   @Trace syncMode: string = 'cloud'
   @Trace webdavUrl: string = ''
@@ -170,11 +265,28 @@ export class AppSettings {
   @Trace orientation: number = 0
   @Trace showStatusBar: boolean = true
   @Trace downloadDir: string = ''
-  @Trace externalPlayer: boolean = false
-  @Trace clearOnExit: string = ''
+  // 原版 w9/k.w0（videoplayer）：''=关闭（内置播放），'share'=系统分享；HarmonyOS 无法枚举第三方播放器
+  @Trace videoPlayer: string = ''
+  // 原版 w9/k.K2（dlmanager）：下载器选择，'builtin'=内建下载器
+  @Trace dlManager: string = 'builtin'
+  // 原版 w9/k.l（clearonexit 位掩码）：[1 缓存,2 表单数据,4 历史,64 关闭的标签页,8 网页存储,16 Cookies,32 应用缓存]
+  @Trace clearOnExit: number = 0
   @Trace volumePageFlip: boolean = false
-  @Trace swipeSwitchTab: boolean = false
+  @Trace swipeSwitchTab: boolean = true
   @Trace undoCloseToast: boolean = false
+  // 原版 i3/k6:2806：全屏模式开关（菜单「全屏」）
+  @Trace fullScreen: boolean = false
+  // 原版 bb/k6:6074：游戏模式开关（菜单「游戏模式」，隐藏工具栏）
+  @Trace gameMode: boolean = false
+  // 原版 w9/p：位 r「仅 Wi-Fi 有图」；与 noImage（位 q 取反）共同构成图片三态
+  @Trace wifiOnlyImages: boolean = false
+  // 原版 cleardata2（w9/k e2）：清除数据多选位掩码，默认 7 = 缓存|表单数据|历史
+  @Trace clearData2: number = 7
+  // 原版 labflag（w9/d）：位1=设置根页「实验」入口（hb/o6 五连点切换）、位2=模糊效果（hb/y1）
+  @Trace labFlag: number = 0
+  // AI 提示词（原版 prompt 表）
+  @Trace aiPrompts: AiPromptRec[] = []
+  @Trace aiPromptNextId: number = 1
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -221,6 +333,8 @@ export class AppSettings {
       return
     }
     try {
+      this.appContext = context.getApplicationContext() as common.ApplicationContext
+      this.abilityContext = context as common.UIAbilityContext
       this.store = await preferences.getPreferences(context, 'via_settings')
       const db = BrowserDb.getInstance()
       const remote = await this.parseRemoteSnapshot()
@@ -242,19 +356,31 @@ export class AppSettings {
       return
     }
     try {
-      this.engineKey = await this.readString('engineKey', 'baidu')
+      this.engineKey = await this.readString('engineKey', defaultEngineKeyForSystem())
       this.customEngineTemplate = await this.readString('customEngineTemplate', '')
+      this.customEngines = await this.readCustomEngines()
+      // 迁移：旧版单个 customEngineTemplate → customEngines[0]
+      if (this.customEngines.length === 0 && this.customEngineTemplate !== '') {
+        this.customEngines = [new CustomEngineRec('自定义', this.customEngineTemplate)]
+        this.persistCustomEngines()
+      }
+      this.searchSuggestion = await this.readNumber('searchsuggestion', 31)
       this.adBlockOn = await this.readBoolean('adBlockOn', false)
       this.adBlockBuiltin = await this.readBoolean('adBlockBuiltin', true)
       this.adBlockTotal = await this.readNumber('adBlockTotal', 0)
       this.adBlockSavedBytes = await this.readNumber('adBlockSavedBytes', 0)
-      this.autoExpandFullText = await this.readBoolean('autoExpandFullText', true)
+      this.autoExpandFullText = await this.readBoolean('autoExpandFullText', false)
       this.textZoom = await this.readNumber('textZoom', 100)
-      this.nightMode = await this.readBoolean('nightMode', false)
+      // 原版 nightmode2 迁移：旧布尔 nightMode → 手动开(1)/跟随系统(2)（w9/k n3 默认 2）
+      const legacyNight = await this.readBoolean('nightMode', false)
+      const rawNight = await this.readNumber('nightMode2', -1)
+      this.nightMode2 = rawNight === -1 ? (legacyNight ? 1 : 2) : rawNight
+      this.nightFilter = await this.readNumber('nightFilter', 77)
+      this.nightCss = await this.readBoolean('nightCss', true)
       this.uaMode = await this.readNumber('uaMode', UA_MODE_DEFAULT)
       this.customUa = await this.readString('customUa', '')
       this.noImage = await this.readBoolean('noImage', false)
-      this.restoreTabs = await this.readBoolean('restoreTabs', true)
+      this.restoreTabsMode = await this.readNumber('restoreclosedtabs', 0)
       this.homepageMode = await this.readNumber('homepageMode', 0)
       this.homeUrl = await this.readString('homeUrl', '')
       this.searchHistory = await this.readStringArray('searchHistory')
@@ -270,6 +396,7 @@ export class AppSettings {
       this.ruleAutoUpdate = await this.readNumber('ruleAutoUpdate', 0)
       this.ruleSubscriptions = await this.readRuleSubs()
       this.scriptEnabled = await this.readBoolean('scriptEnabled', false)
+      this.jsEnabled = await this.readBoolean('jsEnabled', true)
       this.doNotTrack = await this.readBoolean('doNotTrack', false)
       this.disableWebRtc = await this.readBoolean('disableWebRtc', false)
       this.doNotSell = await this.readBoolean('doNotSell', false)
@@ -284,7 +411,7 @@ export class AppSettings {
       this.homeLogoText = await this.readString('homeLogoText', 'VIA')
       this.homeLogoType = await this.readNumber('homeLogoType', 0)
       this.homeLogoSize = await this.readNumber('homeLogoSize', 28)
-      this.homeLogoStyle = await this.readNumber('homeLogoStyle', 0)
+      this.homeLogoStyle = await this.readNumber('homeLogoStyle', 1)
       this.homePillCorner = await this.readNumber('homePillCorner', 100)
       this.homePillOpacity = await this.readNumber('homePillOpacity', 0)
       this.homePillStrokeWidth = await this.readNumber('homePillStrokeWidth', 1)
@@ -302,13 +429,19 @@ export class AppSettings {
       this.homeFavHeight = await this.readNumber('homeFavHeight', 0)
       this.homeFavIconStyle = await this.readNumber('homeFavIconStyle', 0)
       this.homeBgOpacity = await this.readNumber('homeBgOpacity', 0)
+      this.keyback = await this.readNumber('keyback', 2)
+      this.keyforward = await this.readNumber('keyforward', 3)
+      this.keyhome = await this.readNumber('keyhome', 4)
+      this.keytab = await this.readNumber('keytab', 5)
+      this.keymenu = await this.readNumber('keymenu', 1)
+      this.gesturetoolbarleft = await this.readNumber('gesturetoolbarleft', 10)
+      this.gesturetoolbarright = await this.readNumber('gesturetoolbarright', 11)
       this.homeThemeColor = await this.readString('homeThemeColor', '')
       this.homeIconEpoch = await this.readNumber('homeIconEpoch', 0)
       this.homeAdvEffect = await this.readNumber('homeAdvEffect', 0)
       this.homeAdvArea = await this.readNumber('homeAdvArea', 0)
       this.readerAuto = await this.readBoolean('readerAuto', false)
       this.customCss = await this.readString('customCss', '')
-      this.nightForceDark = await this.readBoolean('nightForceDark', false)
       this.readerConfirm = await this.readBoolean('readerConfirm', false)
       this.readerTheme = await this.readNumber('readerTheme', 0)
       this.readerFontSize = await this.readNumber('readerFontSize', 17)
@@ -316,14 +449,22 @@ export class AppSettings {
       this.appLayout = await this.readNumber('appLayout', 0)
       this.toolbarAutoHide = await this.readNumber('toolbarAutoHide', 0)
       this.tabBarEnabled = await this.readBoolean('tabBarEnabled', false)
+      this.searchToolbarEnabled = await this.readBoolean('searchToolbarEnabled', true)
+      // 原版 searchtoolbarorder/searchtoolbardisabled：引擎 int id 逗号串（如 "-1,-10"）；
+      // 旧版存引擎 key（'baidu'/'custom:0'）时迁移为 id 串（'custom:<下标>'→下标+1）
+      this.searchToolbarOrder = await this.migrateEngineIdList(
+        await this.readString('searchToolbarOrder', ''), 'searchToolbarOrder')
+      this.searchToolbarDisabled = await this.migrateEngineIdList(
+        await this.readString('searchToolbarDisabled', '-1,-10'), 'searchToolbarDisabled', '-1,-10')
       this.addressBarContent = await this.readNumber('addressBarContent', 0)
       this.toolbarColorAdapt = await this.readBoolean('toolbarColorAdapt', true)
       this.appLanguage = await this.readNumber('appLanguage', 1)
       this.menuHidden = await this.readStringArray('menuHidden')
       this.menuOrder = await this.readStringArray('menuOrder')
-      this.longPressHidden = await this.readStringArray('longPressHidden')
+      // 原版 hiddenctxmenus 默认 {6}（保存图片隐藏），未写入过时用默认值
+      this.longPressHidden = this.parseStringArray(await this.readString('longPressHidden', '["save_image"]'), 'longPressHidden')
       this.toolbarHidden = await this.readStringArray('toolbarHidden')
-      this.scriptAutoUpdate = await this.readBoolean('scriptAutoUpdate', false)
+      this.scriptAutoUpdate = await this.readNumber('scriptautoupdate', 0)
       this.lastScriptUpdate = await this.readNumber('lastScriptUpdate', 0)
       this.aiProvider = await this.readString('aiProvider', 'deepseek')
       this.aiApiKey = await this.readString('aiApiKey', '')
@@ -343,22 +484,175 @@ export class AppSettings {
         this.flushKey('uaKey', this.uaKey)
       }
       this.desktopUaKey = await this.readString('desktopUaKey', 'win_chrome')
+      this.desktopCustomUa = await this.readString('desktopCustomUa', '')
       this.simplifyUa = await this.readBoolean('simplifyUa', false)
       this.syncMode = await this.readString('syncMode', 'cloud')
       this.webdavUrl = await this.readString('webdavUrl', '')
       this.webdavUser = await this.readString('webdavUser', '')
       this.webdavPwd = await this.readString('webdavPwd', '')
-      this.orientation = await this.readNumber('orientation', 0)
+      // 旧数据迁移：0(跟随系统)→1、1(竖屏)→3、2(横屏)→4（原版 1..4 语义）
+      const rawOrientation = await this.readNumber('orientation', 1)
+      if (rawOrientation === 0) {
+        this.orientation = 1
+      } else if (rawOrientation === 1) {
+        this.orientation = 3
+      } else if (rawOrientation === 2) {
+        this.orientation = 4
+      } else {
+        this.orientation = rawOrientation
+      }
       this.showStatusBar = await this.readBoolean('showStatusBar', true)
       this.downloadDir = await this.readString('downloadDir', '')
-      this.externalPlayer = await this.readBoolean('externalPlayer', false)
-      this.clearOnExit = await this.readString('clearOnExit', '')
+      this.videoPlayer = await this.readString('videoPlayer', '')
+      // 旧版布尔 externalPlayer 迁移：true → 系统分享
+      if (await this.readBoolean('externalPlayer', false)) {
+        this.videoPlayer = 'share'
+      }
+      this.dlManager = await this.readString('dlManager', 'builtin')
+      this.clearOnExit = await this.readNumber('clearOnExit', 0)
+      // 旧版字符串 clearOnExit（history/bookmarks/cookies）迁移为位掩码：历史=4、Cookies=16
+      if (this.clearOnExit === 0) {
+        const legacy = await this.readString('clearOnExit', '')
+        if (legacy.includes('history') || legacy.includes('cookies')) {
+          let mask = 0
+          if (legacy.includes('history')) {
+            mask |= 4
+          }
+          if (legacy.includes('cookies')) {
+            mask |= 16
+          }
+          this.clearOnExit = mask
+          this.flushKey('clearOnExit', mask)
+        }
+      }
       this.volumePageFlip = await this.readBoolean('volumePageFlip', false)
-      this.swipeSwitchTab = await this.readBoolean('swipeSwitchTab', false)
+      this.swipeSwitchTab = await this.readBoolean('swipeSwitchTab', true)
       this.undoCloseToast = await this.readBoolean('undoCloseToast', false)
+      this.fullScreen = await this.readBoolean('fullScreen', false)
+      this.gameMode = await this.readBoolean('gameMode', false)
+      this.wifiOnlyImages = await this.readBoolean('wifiOnlyImages', false)
+      this.clearData2 = await this.readNumber('cleardata2', 7)
+      this.labFlag = await this.readNumber('labflag', 0)
+      this.aiPrompts = await this.readAiPrompts()
+      this.aiPromptNextId = await this.readNumber('aiPromptNextId', 1)
+      this.applyAppTheme()
     } catch (error) {
       const err = error as BusinessError
       console.error(`settings load failed: ${err.code} ${err.message}`)
+    }
+  }
+
+  // 原版 g6/q.a()：系统当前是否深色
+  getSystemDark(): boolean {
+    try {
+      if (this.appContext !== null) {
+        return this.appContext.resourceManager.getConfigurationSync().colorMode
+          === resourceManager.ColorMode.DARK
+      }
+    } catch (error) {
+      return false
+    }
+    return false
+  }
+
+  // 原版 w9/k d()：nightmode2 为 1（手动开）或 3（跟随且系统深）时夜间生效
+  isNightActive(): boolean {
+    return this.nightMode2 === 1 || this.nightMode2 === 3
+  }
+
+  // 原版 w9/k m0(z)（BrowserApp::onConfigurationChanged → shouldNightMode2Change）：
+  // 仅跟随系统态(2/3)时随系统深浅切换 2↔3，持久化并重设主题
+  onSystemConfigChange(systemDark: boolean): void {
+    if (this.nightMode2 !== 2 && this.nightMode2 !== 3) {
+      return
+    }
+    if (systemDark !== (this.nightMode2 === 3)) {
+      this.nightMode2 = systemDark ? 3 : 2
+      this.flushKey('nightMode2', this.nightMode2)
+      this.applyAppTheme()
+    }
+  }
+
+  // 原版 k6 O9 case1：目标态与系统深浅一致时进入跟随模式（2/3），否则手动开/关（1/0）
+  // 返回是否进入跟随模式（用于 toast「跟随系统暗模式已启用」）
+  toggleNightMode(): boolean {
+    const target = !this.isNightActive()
+    const systemDark = this.getSystemDark()
+    if (target === systemDark) {
+      this.nightMode2 = systemDark ? 3 : 2
+    } else {
+      this.nightMode2 = target ? 1 : 0
+    }
+    this.flushKey('nightMode2', this.nightMode2)
+    this.applyAppTheme()
+    return target === systemDark
+  }
+
+  // 原版 k6.Hb()：夜间模式对主页自设背景色叠加黑色滤镜后用于工具栏/窗口背景
+  // alpha = max(背景亮度>=192 ? 128 : 64, 遮罩强度% * 255)（g6.y.C 亮度判定）
+  nightBlend(hexColor: string): string {
+    if (!this.isNightActive()) {
+      return hexColor
+    }
+    let hex = hexColor.replace('#', '')
+    if (hex.length === 8) {
+      hex = hex.substring(2)
+    }
+    if (hex.length !== 6) {
+      return hexColor
+    }
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+    const lum = r * 0.299 + g * 0.587 + b * 0.114
+    const dimAlpha = Math.round(this.homeBgOpacity * 2.55)
+    const alpha = Math.max(lum >= 192 ? 128 : 64, dimAlpha) / 255
+    const mix = (c: number): number => Math.round(c * (1 - alpha))
+    const to2 = (v: number): string => {
+      const h = v.toString(16)
+      return h.length === 1 ? `0${h}` : h
+    }
+    return `#${to2(mix(r))}${to2(mix(g))}${to2(mix(b))}`
+  }
+
+  applyAppTheme(): void {
+    this.notifyNightChanged()
+    if (this.appContext === null) {
+      return
+    }
+    try {
+      // 值未变化时不调用：setColorMode 即便同值也会触发全局 configuration change → 页面重建卡顿
+      const target = this.isNightActive()
+        ? ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+        : ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET
+      if (this.lastAppliedColorMode === target) {
+        return
+      }
+      this.lastAppliedColorMode = target
+      this.appContext.setColorMode(target)
+    } catch (error) {
+      console.error('set color mode failed')
+    }
+  }
+
+  addNightListener(cb: () => void): void {
+    this.nightListeners.push(cb)
+  }
+
+  removeNightListener(cb: () => void): void {
+    const i = this.nightListeners.indexOf(cb)
+    if (i >= 0) {
+      this.nightListeners.splice(i, 1)
+    }
+  }
+
+  private notifyNightChanged(): void {
+    for (const cb of this.nightListeners) {
+      try {
+        cb()
+      } catch (error) {
+        console.error('night listener failed')
+      }
     }
   }
 
@@ -495,9 +789,140 @@ export class AppSettings {
     this.flushKey('engineKey', key)
   }
 
+  // engineKey 解析：'custom:<id>'（id=记录主键，≥1）优先按 id 匹配；
+  // 兼容旧版 'custom:<下标>'（下标入列表）与单引擎时代 'custom'
+  resolveCustomEngineKey(key: string): CustomEngineRec | null {
+    if (key === 'custom') {
+      return this.customEngines.length > 0 ? this.customEngines[0] : null
+    }
+    if (key.startsWith('custom:')) {
+      const n = Number(key.substring('custom:'.length))
+      if (!Number.isNaN(n)) {
+        const byId = this.customEngines.find((rec: CustomEngineRec): boolean => rec.id === n)
+        if (byId !== undefined) {
+          return byId
+        }
+        if (n >= 0 && n < this.customEngines.length) {
+          return this.customEngines[n]
+        }
+      }
+    }
+    return null
+  }
+
+  // engineKey 为 'custom:<id>' / 旧版 'custom:<下标>' / 'custom' 时返回对应模板
+  activeEngineTemplate(): string {
+    const rec = this.resolveCustomEngineKey(this.engineKey)
+    return rec !== null ? rec.template : ''
+  }
+
   setCustomEngineTemplate(template: string): void {
     this.customEngineTemplate = template
     this.flushKey('customEngineTemplate', template)
+  }
+
+  // 原版 ka/g.q 网络建议开关：searchsuggestion 位 16
+  isNetworkSuggestOn(): boolean {
+    return (this.searchSuggestion & 16) !== 0
+  }
+
+  setSearchSuggestion(flags: number): void {
+    this.searchSuggestion = flags
+    this.flushKey('searchsuggestion', flags)
+  }
+
+  setNetworkSuggest(on: boolean): void {
+    const flags = on ? this.searchSuggestion | 16 : this.searchSuggestion & ~16
+    this.setSearchSuggestion(flags)
+  }
+
+  // 原版 ja/c 记录主键自增：新 id = 现有最大 id + 1；返回新记录 id
+  addCustomEngine(name: string, template: string): number {
+    let maxId = 0
+    for (const rec of this.customEngines) {
+      if (rec.id > maxId) {
+        maxId = rec.id
+      }
+    }
+    const id = maxId + 1
+    const next = this.customEngines.slice(0)
+    next.push(new CustomEngineRec(name, template, id))
+    this.customEngines = next
+    this.persistCustomEngines()
+    return id
+  }
+
+  updateCustomEngine(index: number, name: string, template: string): void {
+    if (index < 0 || index >= this.customEngines.length) {
+      return
+    }
+    const next = this.customEngines.slice(0)
+    next[index] = new CustomEngineRec(name, template)
+    this.customEngines = next
+    this.persistCustomEngines()
+  }
+
+  removeCustomEngine(index: number): void {
+    if (index < 0 || index >= this.customEngines.length) {
+      return
+    }
+    const next: CustomEngineRec[] = []
+    for (let i = 0; i < this.customEngines.length; i++) {
+      if (i !== index) {
+        next.push(this.customEngines[i])
+      }
+    }
+    this.customEngines = next
+    this.persistCustomEngines()
+  }
+
+  private persistCustomEngines(): void {
+    const payload: Record<string, Object>[] = []
+    for (const item of this.customEngines) {
+      const entry: Record<string, Object> = {}
+      entry['id'] = item.id
+      entry['name'] = item.name
+      entry['template'] = item.template
+      payload.push(entry)
+    }
+    this.flushKey('customEngines', JSON.stringify(payload))
+  }
+
+  // 读取自定义引擎；旧数据无 id 时按下标+1 补齐（一次性迁移并回写）
+  private async readCustomEngines(): Promise<CustomEngineRec[]> {
+    const raw = await this.readString('customEngines', '[]')
+    const result: CustomEngineRec[] = []
+    let migrated = false
+    try {
+      const parsed = JSON.parse(raw) as Object[]
+      for (let i = 0; i < parsed.length; i++) {
+        const rec = parsed[i] as Record<string, Object>
+        const name = rec['name']
+        const template = rec['template']
+        if (typeof name === 'string' && typeof template === 'string') {
+          const id = rec['id']
+          if (typeof id === 'number' && id >= 1) {
+            result.push(new CustomEngineRec(name, template, id))
+          } else {
+            result.push(new CustomEngineRec(name, template, i + 1))
+            migrated = true
+          }
+        }
+      }
+    } catch (error) {
+      console.error('parse customEngines failed')
+    }
+    if (migrated && result.length > 0) {
+      const payload: Record<string, Object>[] = []
+      for (const item of result) {
+        payload.push({ 'id': item.id, 'name': item.name, 'template': item.template })
+      }
+      if (this.store !== null) {
+        this.store.put('customEngines', JSON.stringify(payload)).catch(() => {})
+        this.store.flush().catch(() => {})
+      }
+    }
+    return result
   }
 
   setAdBlockOn(on: boolean): void {
@@ -537,6 +962,11 @@ export class AppSettings {
     }
   }
 
+  private isZhLocale(): boolean {
+    // 系统语言判定（i18n.System.getSystemLanguage）
+    return i18n.System.getSystemLanguage().startsWith('zh')
+  }
+
   private async readRuleSubs(): Promise<RuleSubEntry[]> {
     const result: RuleSubEntry[] = []
     for (let i = 0; i < RULE_SUB_PRESETS.length; i++) {
@@ -545,6 +975,15 @@ export class AppSettings {
     }
     const raw = await this.readString('ruleSubscriptions', '')
     if (raw === '') {
+      // 原版 b5/d.java b()：首次启动 Easylist 恒选，中文环境追加 easylistchina
+      for (let i = 0; i < result.length; i++) {
+        if (result[i].key === 'easylist') {
+          result[i].enabled = true
+        }
+        if (result[i].key === 'easylistchina' && this.isZhLocale()) {
+          result[i].enabled = true
+        }
+      }
       return result
     }
     try {
@@ -576,7 +1015,7 @@ export class AppSettings {
     return result
   }
 
-  private saveRuleSubs(): void {
+  saveRuleSubs(): void {
     const payload = this.ruleSubscriptions.map((s: RuleSubEntry): Record<string, Object> => {
       return { 'key': s.key, 'name': s.name, 'url': s.url, 'enabled': s.enabled, 'ruleCount': s.ruleCount, 'lastUpdate': s.lastUpdate, 'isPreset': s.isPreset } as Record<string, Object>
     })
@@ -626,14 +1065,16 @@ export class AppSettings {
     this.flushKey('textZoom', zoom)
   }
 
-  setNightMode(on: boolean): void {
-    this.nightMode = on
-    this.flushKey('nightMode', on)
+  setNightFilter(value: number): void {
+    this.nightFilter = value
+    this.flushKey('nightFilter', value)
+    this.notifyNightChanged()
   }
 
-  setNightForceDark(on: boolean): void {
-    this.nightForceDark = on
-    this.flushKey('nightForceDark', on)
+  setNightCss(on: boolean): void {
+    this.nightCss = on
+    this.flushKey('nightCss', on)
+    this.notifyNightChanged()
   }
 
   setReaderConfirm(on: boolean): void {
@@ -671,6 +1112,59 @@ export class AppSettings {
     this.flushKey('tabBarEnabled', on)
   }
 
+  setSearchToolbarEnabled(on: boolean): void {
+    this.searchToolbarEnabled = on
+    this.flushKey('searchToolbarEnabled', on)
+  }
+
+  setSearchToolbarOrder(order: string): void {
+    this.searchToolbarOrder = order
+    this.flushKey('searchToolbarOrder', order)
+  }
+
+  // 旧版 order/disabled 存引擎 key（'baidu'、'custom:0'），原版/新版存 int id 逗号串；
+  // 逐 token 迁移：内置 key→负 id、'custom:<下标>'→下标+1；纯数字 token 原样保留
+  private async migrateEngineIdList(raw: string, key: string, defaultValue: string = ''): Promise<string> {
+    if (raw === '' || raw === defaultValue) {
+      return raw
+    }
+    const tokens = raw.split(',')
+    const out: string[] = []
+    let changed = false
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i]
+      if (/^-?\d+$/.test(token)) {
+        out.push(token)
+        continue
+      }
+      changed = true
+      const id = builtinEngineId(token)
+      if (id !== null) {
+        out.push(String(id))
+        continue
+      }
+      if (token.startsWith('custom:')) {
+        const n = Number(token.substring('custom:'.length))
+        if (!Number.isNaN(n) && n >= 0) {
+          out.push(String(n + 1))
+        }
+      }
+    }
+    const result = out.join(',')
+    if (changed && this.store !== null) {
+      this.store.put(key, result).catch(() => {
+      })
+      this.store.flush().catch(() => {
+      })
+    }
+    return result
+  }
+
+  setSearchToolbarDisabled(disabled: string): void {
+    this.searchToolbarDisabled = disabled
+    this.flushKey('searchToolbarDisabled', disabled)
+  }
+
   setAddressBarContent(mode: number): void {
     this.addressBarContent = mode
     this.flushKey('addressBarContent', mode)
@@ -699,6 +1193,11 @@ export class AppSettings {
   setDesktopUaKey(key: string): void {
     this.desktopUaKey = key
     this.flushKey('desktopUaKey', key)
+  }
+
+  setDesktopCustomUa(ua: string): void {
+    this.desktopCustomUa = ua
+    this.flushKey('desktopCustomUa', ua)
   }
 
   setSimplifyUa(on: boolean): void {
@@ -769,9 +1268,9 @@ export class AppSettings {
     this.flushKey('noImage', on)
   }
 
-  setRestoreTabs(on: boolean): void {
-    this.restoreTabs = on
-    this.flushKey('restoreTabs', on)
+  setRestoreTabsMode(mode: number): void {
+    this.restoreTabsMode = mode
+    this.flushKey('restoreclosedtabs', mode)
   }
 
   setHomepageMode(mode: number): void {
@@ -792,6 +1291,12 @@ export class AppSettings {
   setScriptEnabled(on: boolean): void {
     this.scriptEnabled = on
     this.flushKey('scriptEnabled', on)
+  }
+
+  // 原版 w9/k.t（网站设定 JavaScript 全局默认）
+  setJsEnabled(on: boolean): void {
+    this.jsEnabled = on
+    this.flushKey('jsEnabled', on)
   }
 
   setDoNotTrack(on: boolean): void {
@@ -1011,9 +1516,9 @@ export class AppSettings {
     this.flushKey('toolbarHidden', JSON.stringify(list))
   }
 
-  setScriptAutoUpdate(on: boolean): void {
-    this.scriptAutoUpdate = on
-    this.flushKey('scriptAutoUpdate', on)
+  setScriptAutoUpdate(days: number): void {
+    this.scriptAutoUpdate = days
+    this.flushKey('scriptautoupdate', days)
   }
 
   markScriptsUpdated(): void {
@@ -1071,14 +1576,19 @@ export class AppSettings {
     this.flushKey('downloadDir', dir)
   }
 
-  setExternalPlayer(on: boolean): void {
-    this.externalPlayer = on
-    this.flushKey('externalPlayer', on)
+  setVideoPlayer(value: string): void {
+    this.videoPlayer = value
+    this.flushKey('videoPlayer', value)
   }
 
-  setClearOnExit(flags: string): void {
-    this.clearOnExit = flags
-    this.flushKey('clearOnExit', flags)
+  setDlManager(value: string): void {
+    this.dlManager = value
+    this.flushKey('dlManager', value)
+  }
+
+  setClearOnExit(mask: number): void {
+    this.clearOnExit = mask
+    this.flushKey('clearOnExit', mask)
   }
 
   setVolumePageFlip(on: boolean): void {
@@ -1096,6 +1606,103 @@ export class AppSettings {
     this.flushKey('undoCloseToast', on)
   }
 
+  setFullScreen(on: boolean): void {
+    this.fullScreen = on
+    this.flushKey('fullScreen', on)
+  }
+
+  setGameMode(on: boolean): void {
+    this.gameMode = on
+    this.flushKey('gameMode', on)
+  }
+
+  setWifiOnlyImages(on: boolean): void {
+    this.wifiOnlyImages = on
+    this.flushKey('wifiOnlyImages', on)
+  }
+
+  setClearData2(flags: number): void {
+    this.clearData2 = flags
+    this.flushKey('cleardata2', flags)
+  }
+
+  // 原版 w9/d：labflag 位1 = 设置根页「实验」入口（hb/o6 五连点切换 f()）
+  isLabEntryVisible(): boolean {
+    return (this.labFlag & 1) !== 0
+  }
+
+  // 原版 w9/d：labflag 位2 = 模糊效果（hb/y1「模糊效果」开关 e()）
+  isBlurEffect(): boolean {
+    return (this.labFlag & 2) !== 0
+  }
+
+  setLabFlag(flags: number): void {
+    this.labFlag = flags
+    this.flushKey('labflag', flags)
+  }
+
+  setBlurEffect(on: boolean): void {
+    this.setLabFlag(on ? (this.labFlag | 2) : (this.labFlag & ~2))
+  }
+
+  saveAiPrompt(prompt: AiPromptRec): void {
+    const next: AiPromptRec[] = []
+    let replaced = false
+    for (let i = 0; i < this.aiPrompts.length; i++) {
+      if (this.aiPrompts[i].id === prompt.id) {
+        next.push(prompt)
+        replaced = true
+      } else {
+        next.push(this.aiPrompts[i])
+      }
+    }
+    if (!replaced) {
+      next.push(prompt)
+      this.aiPromptNextId = this.aiPromptNextId + 1
+      this.flushKey('aiPromptNextId', this.aiPromptNextId)
+    }
+    this.aiPrompts = next
+    this.persistAiPrompts()
+  }
+
+  removeAiPrompt(id: number): void {
+    const next: AiPromptRec[] = []
+    for (let i = 0; i < this.aiPrompts.length; i++) {
+      if (this.aiPrompts[i].id !== id) {
+        next.push(this.aiPrompts[i])
+      }
+    }
+    this.aiPrompts = next
+    this.persistAiPrompts()
+  }
+
+  private persistAiPrompts(): void {
+    const payload: Record<string, Object>[] = []
+    for (let i = 0; i < this.aiPrompts.length; i++) {
+      const item = this.aiPrompts[i]
+      payload.push({ 'id': item.id, 'name': item.name, 'content': item.content, 'type': item.type })
+    }
+    this.flushKey('aiPrompts', JSON.stringify(payload))
+  }
+
+  private async readAiPrompts(): Promise<AiPromptRec[]> {
+    const raw = await this.readString('aiPrompts', '[]')
+    const result: AiPromptRec[] = []
+    try {
+      const parsed = JSON.parse(raw) as Object[]
+      for (let i = 0; i < parsed.length; i++) {
+        const element = parsed[i] as Record<string, Object>
+        const item = AiPromptRec.fromJson(element)
+        if (item !== null) {
+          result.push(item)
+        }
+      }
+    } catch (error) {
+      console.error('parse aiPrompts failed')
+    }
+    return result
+  }
+
   resetHomeStyle(): void {
     this.setHomeBgColor('')
     this.setHomeBgImage('')
@@ -1111,7 +1718,7 @@ export class AppSettings {
     this.setHomePillCorner(100)
     this.setHomePillOpacity(0)
     this.setHomePillStrokeWidth(1)
-    this.setHomePillStrokeOpacity(24)
+    this.setHomePillStrokeOpacity(50)
     this.setHomePillStyle(0)
     this.setHomeFavCorner(100)
     this.setHomeFavShadow(0)
@@ -1126,20 +1733,32 @@ export class AppSettings {
 
   uaForHost(host: string): string | null {
     const site = this.getSiteSetting(host)
-    if (this.desktopAllSites === 1) {
-      const globalDef = uaByKey(this.desktopUaKey)
-      return globalDef !== null ? globalDef.ua : null
+    const desktop = this.desktopAllSites === 1 || (site !== null && site.pcMode)
+    if (desktop) {
+      // 原版 r3/v3：电脑模式 UA 可选内置 {默认, Chrome(PC), IE11(PC), macOS} 或自定义
+      let ua: string | null = null
+      if (this.desktopUaKey === 'custom') {
+        ua = this.desktopCustomUa !== '' ? this.desktopCustomUa : null
+      } else {
+        const globalDef = uaByKey(this.desktopUaKey)
+        ua = globalDef !== null && globalDef.ua !== '' ? globalDef.ua : null
+      }
+      if (ua === null) {
+        return null
+      }
+      if (this.simplifyUa) {
+        return simplifyUaString(ua)
+      }
+      return ua
     }
     let key = this.uaKey
-    if (site !== null && site.pcMode) {
-      key = this.desktopUaKey
-    }
     let ua: string | null = null
     if (key === 'custom') {
       ua = this.customUa !== '' ? this.customUa : null
     } else {
       const def = uaByKey(key)
-      ua = def !== null ? def.ua : null
+      // 原版 uachoice=0 → 传 null 用系统 WebView 默认 UA（w9/k.java:1127）
+      ua = def !== null && def.ua !== '' ? def.ua : null
     }
     if (ua === null) {
       return null
@@ -1231,6 +1850,7 @@ export class AppSettings {
       entry['noImage'] = item.noImage
       entry['allowAds'] = item.allowAds
       entry['forceDark'] = item.forceDark
+      entry['javaScript'] = item.javaScript
       payload.push(entry)
     }
     this.flushKey('siteSettings', JSON.stringify(payload))
@@ -1453,9 +2073,16 @@ export class AppSettings {
       entry['id'] = item.id
       entry['name'] = item.name
       entry['code'] = item.code
-      entry['matchHost'] = item.matchHost
       entry['enabled'] = item.enabled
-      entry['sourceUrl'] = item.sourceUrl
+      entry['includes'] = item.includes
+      entry['excludes'] = item.excludes
+      entry['runAt'] = item.runAt
+      entry['grantBits'] = item.grantBits
+      entry['unwrap'] = item.unwrap
+      entry['downloadUrl'] = item.downloadUrl
+      entry['homepageUrl'] = item.homepageUrl
+      entry['version'] = item.version
+      entry['requires'] = item.requires
       payload.push(entry)
     }
     this.flushKey('userScripts', JSON.stringify(payload))
@@ -1480,8 +2107,7 @@ export class AppSettings {
     return result
   }
 
-  private async readStringArray(key: string): Promise<string[]> {
-    const raw = await this.readString(key, '[]')
+  private parseStringArray(raw: string, key: string): string[] {
     const result: string[] = []
     try {
       const parsed = JSON.parse(raw) as Object[]
@@ -1497,12 +2123,18 @@ export class AppSettings {
     return result
   }
 
+  private async readStringArray(key: string): Promise<string[]> {
+    const raw = await this.readString(key, '[]')
+    return this.parseStringArray(raw, key)
+  }
+
   saveTabsSnapshot(tabs: SavedTab[], activeIndex: number): void {
     const payload: Record<string, Object>[] = []
     for (let i = 0; i < tabs.length; i++) {
       const entry: Record<string, Object> = {}
       entry['url'] = tabs[i].url
       entry['incognito'] = tabs[i].incognito
+      entry['title'] = tabs[i].title
       payload.push(entry)
     }
     this.flushKey('tabsSnapshot', JSON.stringify(payload))
@@ -1518,8 +2150,13 @@ export class AppSettings {
         const element = parsed[i] as Record<string, Object>
         const url = element['url']
         const incognito = element['incognito']
+        const title = element['title']
         if (typeof url === 'string' && typeof incognito === 'boolean') {
-          result.push(new SavedTab(url, incognito))
+          const tab = new SavedTab(url, incognito)
+          if (typeof title === 'string') {
+            tab.title = title
+          }
+          result.push(tab)
         }
       }
     } catch (error) {
@@ -1530,5 +2167,19 @@ export class AppSettings {
 
   async readTabsSnapshotIndex(): Promise<number> {
     return await this.readNumber('tabsSnapshotIndex', 0)
+  }
+
+  // 原版 f8/h.f3()：FIND_CACHE 缓存页内查找词，TTL 180 天
+  saveFindCache(text: string): void {
+    this.flushKey('findCachedText', text)
+    this.flushKey('findCachedTs', Date.now())
+  }
+
+  async readFindCache(): Promise<string> {
+    const ts = await this.readNumber('findCachedTs', 0)
+    if (ts === 0 || Date.now() - ts > 180 * 24 * 3600 * 1000) {
+      return ''
+    }
+    return await this.readString('findCachedText', '')
   }
 }

@@ -69,11 +69,15 @@ export struct SettingsMenuPage {
         activeOrder.push(id)
       }
     }
+    // 原版 i8/s.p3：设置（id 10）不可移出，始终保留在当前菜单
+    if (activeOrder.indexOf('settings') < 0) {
+      activeOrder.push('settings')
+    }
     // 可添加区：menuHidden 里的条目保持用户排过的序，再补齐其余缺漏
     const pool: string[] = []
     for (let i = 0; i < this.settings.menuHidden.length; i++) {
       const id = this.settings.menuHidden[i]
-      if (isMenuId(id) && activeOrder.indexOf(id) < 0 && pool.indexOf(id) < 0) {
+      if (id !== 'settings' && isMenuId(id) && activeOrder.indexOf(id) < 0 && pool.indexOf(id) < 0) {
         pool.push(id)
       }
     }
@@ -123,6 +127,13 @@ export struct SettingsMenuPage {
       return
     }
     const item = this.items[from]
+    // 原版 i8/s.x3：设置（id 10）不允许拖到可添加区
+    if (item.id === 'settings') {
+      const sepIndexAfterRemove = this.separatorIndex() - (from < this.separatorIndex() ? 1 : 0)
+      if (to > sepIndexAfterRemove) {
+        return
+      }
+    }
     this.items.splice(from, 1)
     this.items.splice(to, 0, item)
     this.refreshSeparatorIndex()
@@ -173,6 +184,10 @@ export struct SettingsMenuPage {
       } else if (item.kind === KIND_POOL) {
         hidden.push(item.id)
       }
+    }
+    // 原版 i8/s.z3→p3：保存前确保设置仍在当前菜单
+    if (order.indexOf('settings') < 0) {
+      order.push('settings')
     }
     this.settings.setMenuOrder(order)
     this.settings.setMenuHidden(hidden)
@@ -261,6 +276,9 @@ export struct SettingsMenuPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {

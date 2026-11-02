@@ -1,4 +1,5 @@
 import { pasteboard } from '@kit.BasicServicesKit'
+import { common, Want } from '@kit.AbilityKit'
 import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
@@ -32,7 +33,7 @@ export struct SettingsAboutPage {
             Text('Via')
               .fontSize(24)
               .fontColor($r('app.color.fg'))
-            Text('7.3.3')
+            Text('7.4.0.b13.edf6737e')
               .fontSize(14)
               .fontColor($r('app.color.fg_secondary'))
           }
@@ -94,6 +95,9 @@ export struct SettingsAboutPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
@@ -117,12 +121,22 @@ export struct SettingsAboutPage {
     this.navPathStack.pop()
   }
 
+  // 原版 hb/d case 13（z8/f1.g）：通过邮件联系我 → 拉起邮件应用写信；
+  // 鸿蒙无邮件应用时回退为复制邮箱并提示
   private copyEmail(): void {
-    const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, CONTACT_EMAIL)
-    pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.email_copied'), duration: 1500 })
-    }).catch(() => {
-      console.error('copy email failed')
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const want: Want = {
+      action: 'ohos.want.action.sendData',
+      uri: `mailto:${CONTACT_EMAIL}`,
+      type: 'text/plain'
+    }
+    context.startAbility(want).catch(() => {
+      const data = pasteboard.createData('text/plain', CONTACT_EMAIL)
+      pasteboard.getSystemPasteboard().setData(data).then(() => {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.email_copied'), duration: 1500 })
+      }).catch(() => {
+        console.error('copy email failed')
+      })
     })
   }
 

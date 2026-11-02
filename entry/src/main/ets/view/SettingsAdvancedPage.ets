@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
@@ -43,7 +44,7 @@ export struct SettingsAdvancedPage {
               rowLabel: '允许调试网页',
               isChecked: this.settings.allowDebugWeb,
               onCheckRow: (isOn: boolean) => {
-                this.settings.setAllowDebugWeb(isOn)
+                this.toggleDebugWeb(isOn)
               }
             })
             SettingCheckRow({
@@ -89,9 +90,28 @@ export struct SettingsAdvancedPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
+  }
+
+  // 原版 hb/z.java:107-114：开启「允许调试网页」后弹说明对话框（u.Oh + u.Ph）
+  private toggleDebugWeb(isOn: boolean): void {
+    this.settings.setAllowDebugWeb(isOn)
+    if (isOn) {
+      AlertDialog.show({
+        title: '允许调试网页',
+        message: '现在你可以将手机连上电脑，然后在 Chrome 电脑版上通过 "chrome://inspect" 来调试网页。别忘了先开启设置中开发者选项里的 USB 调试。',
+        confirm: {
+          value: '确定',
+          action: () => {
+          }
+        }
+      })
+    }
   }
 
   private toggleSslWarning(): void {
@@ -179,6 +199,7 @@ export struct SettingsAdvancedPage {
     .padding(20)
     .backgroundColor($r('app.color.page_bg'))
     .borderRadius(16)
+    .transition(dialogTransition())
   }
 }
 

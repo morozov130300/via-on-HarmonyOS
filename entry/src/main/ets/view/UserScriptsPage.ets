@@ -1,91 +1,150 @@
 import { http } from '@kit.NetworkKit'
-import { BusinessError } from '@kit.BasicServicesKit'
-import { UserScriptRec } from '../common/Types'
+import { fileIo, picker } from '@kit.CoreFileKit'
+import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
+import { UserScriptRec, parseUserScriptMeta } from '../common/Types'
 import { AppSettings } from '../common/Settings'
-import { AppIcon } from '../components/AppIcon'
+import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { AppIcon } from '../components/AppIcon'
+
+// 原版 x7/j 数组 j + strings o4/i2/i1/i3/i0（sa/d1.java:315）
+const SCRIPT_UPDATE_DAYS: number[] = [0, 1, 3, 7, 15]
+const SCRIPT_INTERVAL_LABELS: string[] = ['从不', '每天', '每 3 天', '每周', '每 15 天']
 
 @ComponentV2
 export struct UserScriptsPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  @Local updating: boolean = false
   @Local editing: UserScriptRec | null = null
   @Local adding: boolean = false
-  @Local updating: boolean = false
+  @Local downloadInputShow: boolean = false
+
+  // X3：z10 = 存在带下载地址的脚本（决定「更新」入口与「自动更新」行）
+  private anyScriptWithUrl(): boolean {
+    for (let i = 0; i < this.settings.userScripts.length; i++) {
+      if (this.settings.userScripts[i].downloadUrl !== '') {
+        return true
+      }
+    }
+    return false
+  }
+
+  private intervalLabel(): string {
+    const days = this.settings.scriptAutoUpdate
+    for (let i = SCRIPT_UPDATE_DAYS.length - 1; i >= 0; i--) {
+      if (days >= SCRIPT_UPDATE_DAYS[i]) {
+        return SCRIPT_INTERVAL_LABELS[i]
+      }
+    }
+    return SCRIPT_INTERVAL_LABELS[0]
+  }
 
   private bindAppBar(): void {
     AppBar.show({
       title: '脚本',
       rightIcon2: $r('sys.symbol.plus'),
-      rightText: '更新',
+      rightText: this.anyScriptWithUrl() ? '更新' : '',
       onBack: () => {
         this.navPathStack.pop()
       },
       onRight2: () => {
-        this.adding = true
+        this.showAddMenu()
       },
       onRight: () => {
-        this.updateScripts()
+        this.updateAll()
       }
     }, this)
+  }
+
+  // U3：添加菜单 [添加脚本/下载脚本/导入脚本]（sa/d1.java:533-540）
+  private showAddMenu(): void {
+    ActionSheet.show({
+      title: '脚本',
+      message: '',
+      sheets: [
+        { title: '添加脚本', action: (): void => { this.adding = true } },
+        { title: '下载脚本', action: (): void => { this.downloadInputShow = true } },
+        { title: '导入脚本', action: (): void => { this.importScript() } }
+      ]
+    })
   }
 
   build() {
     NavDestination() {
       Column() {
         AppBarSpacer()
-        if (this.settings.userScripts.length === 0) {
+        Scroll() {
           Column() {
-            Text('¯\\_(ツ)_/¯')
-              .fontSize(26)
-              .fontColor($r('app.color.fg_secondary'))
-          }
-          .width('100%')
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
-        } else {
-          List({ space: 1 }) {
-            ForEach(this.settings.userScripts, (script: UserScriptRec) => {
-              ListItem() {
-                Row({ space: 12 }) {
-                  Column({ space: 2 }) {
-                    Text(script.name)
-                      .fontSize(15)
-                      .fontColor($r('app.color.fg'))
-                      .maxLines(1)
-                      .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    Text(script.matchHost === '' ? $r('app.string.all_sites') : script.matchHost)
-                      .fontSize(12)
-                      .fontColor($r('app.color.fg_secondary'))
-                      .maxLines(1)
-                      .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  }
+            // a6.n(1)：启用脚本
+            Row() {
+              Text('启用脚本')
+                .fontSize(15)
+                .fontColor($r('app.color.fg'))
+                .layoutWeight(1)
+              Toggle({ type: ToggleType.Switch, isOn: this.settings.scriptEnabled })
+                .onChange((value: boolean) => {
+                  this.settings.setScriptEnabled(value)
+                })
+            }
+            .width('100%')
+            .height(48)
+            .padding({ left: 16, right: 16 })
+            // a6.q(2)：自动更新（仅有带源地址脚本时显示）
+            if (this.anyScriptWithUrl()) {
+              Row() {
+                Text('自动更新')
+                  .fontSize(15)
+                  .fontColor($r('app.color.fg'))
                   .layoutWeight(1)
-                  .alignItems(HorizontalAlign.Start)
-                  Toggle({ type: ToggleType.Switch, isOn: script.enabled })
-                    .onChange((value: boolean) => {
-                      script.enabled = value
-                      this.settings.saveScript(script)
-                    })
-                  AppIcon({ icon: $r('sys.symbol.pencil_line'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-                    .onClick(() => {
-                      this.editing = script
-                    })
-                  AppIcon({ icon: $r('sys.symbol.trash'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-                    .onClick(() => {
-                      this.settings.removeScript(script.id)
-                    })
-                }
-                .width('100%')
-                .height(56)
-                .padding({ left: 16, right: 16 })
+                Text(this.intervalLabel())
+                  .fontSize(14)
+                  .fontColor($r('app.color.fg_secondary'))
+                AppIcon({ icon: $r('sys.symbol.chevron_right'), iconSize: 16, iconColor: $r('app.color.fg_secondary') })
               }
-            }, (script: UserScriptRec) => script.id.toString())
+              .width('100%')
+              .height(48)
+              .padding({ left: 16, right: 16 })
+              .onClick(() => {
+                this.pickAutoUpdate()
+              })
+            }
+            // a6.l：脚本分区标题
+            Text('脚本')
+              .fontSize(13)
+              .fontColor($r('app.color.fg_secondary'))
+              .width('100%')
+              .padding({ left: 16, top: 10, bottom: 6 })
+            ForEach(this.settings.userScripts, (script: UserScriptRec) => {
+              Row() {
+                Text(script.name)
+                  .fontSize(15)
+                  .fontColor($r('app.color.fg'))
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+                  .onClick(() => {
+                    this.editing = script
+                  })
+                Toggle({ type: ToggleType.Switch, isOn: script.enabled })
+                  .onChange((value: boolean) => {
+                    script.enabled = value
+                    this.settings.saveScript(script)
+                  })
+              }
+              .width('100%')
+              .height(48)
+              .padding({ left: 16, right: 16 })
+              .gesture(LongPressGesture().onActionEnd(() => {
+                this.showScriptMenu(script)
+              }))
+            }, (script: UserScriptRec) => `${script.id}_${script.enabled}_${script.name}_${script.code.length}`)
           }
           .width('100%')
-          .layoutWeight(1)
-          .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
         }
+        .layoutWeight(1)
+        .align(Alignment.Top)
+        .width('100%')
       }
       .width('100%')
       .height('100%')
@@ -102,6 +161,17 @@ export struct UserScriptsPage {
           }
         })
       }
+      if (this.downloadInputShow) {
+        ScriptDownloadOverlay({
+          onClose: () => {
+            this.downloadInputShow = false
+          },
+          onConfirm: (url: string) => {
+            this.downloadInputShow = false
+            this.downloadAndInstall(url, 0)
+          }
+        })
+      }
     }
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
@@ -110,52 +180,252 @@ export struct UserScriptsPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
   }
 
-  @Builder
-  AddMenu() {
-    AppIcon({ icon: $r('sys.symbol.plus'), iconSize: 22 })
-      .onClick(() => {
-        this.adding = true
+  // r4/x3：自动更新间隔 {0,1,3,7,15} 天
+  private pickAutoUpdate(): void {
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < SCRIPT_UPDATE_DAYS.length; i++) {
+      const value = SCRIPT_UPDATE_DAYS[i]
+      const label = SCRIPT_INTERVAL_LABELS[i]
+      sheets.push({
+        title: this.settings.scriptAutoUpdate === value ? `${label} ✓` : label,
+        action: (): void => {
+          this.settings.setScriptAutoUpdate(value)
+        }
       })
+    }
+    ActionSheet.show({
+      title: '自动更新',
+      message: '',
+      sheets: sheets
+    })
   }
 
-  // 「更新」：重新拉取所有带源地址的脚本代码（与原版一致，无源地址脚本直接跳过）
-  private updateScripts(): void {
+  // P3/T3：长按菜单 [编辑/更新/主页/复制链接/删除]（sa/d1.java:209-274）
+  private showScriptMenu(script: UserScriptRec): void {
+    const sheets: SheetInfo[] = []
+    sheets.push({
+      title: '编辑',
+      action: (): void => {
+        this.editing = script
+      }
+    })
+    if (script.downloadUrl !== '') {
+      sheets.push({
+        title: '更新',
+        action: (): void => {
+          this.confirmUpdateSingle(script)
+        }
+      })
+    }
+    if (script.homepageUrl !== '') {
+      sheets.push({
+        title: '主页',
+        action: (): void => {
+          this.openHomepage(script)
+        }
+      })
+    }
+    // P3:4：复制链接无条件显示
+    sheets.push({
+      title: '复制链接',
+      action: (): void => {
+        this.copyLink(script)
+      }
+    })
+    sheets.push({
+      title: '删除',
+      action: (): void => {
+        this.confirmDelete(script)
+      }
+    })
+    ActionSheet.show({
+      title: script.name,
+      message: '',
+      sheets: sheets
+    })
+  }
+
+  private openHomepage(script: UserScriptRec): void {
+    // z8.b0.P：在浏览器内打开脚本主页
+    TabStore.getInstance().newTabAt(script.homepageUrl, false)
+  }
+
+  private copyLink(script: UserScriptRec): void {
+    // T3:4：复制下载链接（zd 已复制链接）
+    const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, script.downloadUrl)
+    pasteboard.getSystemPasteboard().setData(data).then(() => {
+      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: 1500 })
+    }).catch(() => {
+    })
+  }
+
+  // Y3：删除确认 fl「你确定删除 %s 吗？」
+  private confirmDelete(script: UserScriptRec): void {
+    this.getUIContext().showAlertDialog({
+      message: `你确定删除 ${script.name} 吗？`,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.done'),
+        action: () => {
+          this.settings.removeScript(script.id)
+        }
+      }
+    })
+  }
+
+  // C3/V3：单脚本更新确认 rn「你确认更新 %s 吗？」
+  private confirmUpdateSingle(script: UserScriptRec): void {
+    this.getUIContext().showAlertDialog({
+      message: `你确认更新 ${script.name} 吗？`,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.done'),
+        action: () => {
+          this.downloadAndInstall(script.downloadUrl, script.id)
+        }
+      }
+    })
+  }
+
+  // g4：导入脚本（文件选择 → j4 解析）
+  private importScript(): void {
+    try {
+      const docPicker = new picker.DocumentViewPicker()
+      docPicker.select({ fileSuffixFilters: ['.txt', '.js', '.user.js'] }).then((uris: Array<string>) => {
+        if (uris.length === 0) {
+          return
+        }
+        try {
+          const content = fileIo.readTextSync(uris[0])
+          this.installFromCode(content, '', 0)
+        } catch (error) {
+          this.toast('解析脚本失败！')
+        }
+      }).catch((error: BusinessError) => {
+        console.error(`select script file failed: ${error.message}`)
+      })
+    } catch (error) {
+      console.error('open file picker failed')
+    }
+  }
+
+  // l4/k4：下载并安装脚本（yg 解析脚本中… → zh/zi/zj）
+  private downloadAndInstall(url: string, id: number): void {
+    if (!url.startsWith('http')) {
+      this.toast('链接无效。')
+      return
+    }
+    this.toast('解析脚本中…')
+    const request = http.createHttp()
+    request.request(url, {
+      method: http.RequestMethod.GET,
+      connectTimeout: 10000,
+      readTimeout: 20000,
+      usingCache: false
+    }).then((response: http.HttpResponse) => {
+      const body = response.result
+      if (typeof body === 'string' && body.trim() !== '') {
+        this.installFromCode(body, url, id)
+      } else {
+        this.toast('解析脚本失败！')
+      }
+    }).catch((error: BusinessError) => {
+      console.error(`download script failed: ${error.message}`)
+      this.toast('解析脚本失败！')
+    }).finally(() => {
+      request.destroy()
+    })
+  }
+
+  // G3/H3：解析元数据并落库；失败 toast tg，成功 toast zi/zj
+  private installFromCode(code: string, sourceUrl: string, id: number): void {
+    const parsed = parseUserScriptMeta(code, sourceUrl)
+    if (parsed === null) {
+      this.toast('解析脚本失败！')
+      return
+    }
+    const rec = parsed
+    if (id > 0) {
+      const existing = this.settings.userScripts.find((s: UserScriptRec): boolean => s.id === id)
+      if (existing !== undefined) {
+        rec.id = existing.id
+        rec.enabled = existing.enabled
+      } else {
+        this.toast(`安装 "${rec.name}" 失败！`)
+        return
+      }
+    } else {
+      rec.id = Date.now()
+      rec.enabled = true
+    }
+    this.settings.saveScript(rec)
+    this.toast(`安装 "${rec.name}" 成功！`)
+  }
+
+  // q4/w4：更新全部（ch 更新 → a0q 开始更新… → a0r 脚本更新完成。）
+  private updateAll(): void {
     if (this.updating) {
       return
     }
-    let pending = 0
+    const targets: UserScriptRec[] = []
     for (let i = 0; i < this.settings.userScripts.length; i++) {
-      if (this.settings.userScripts[i].sourceUrl !== '') {
-        pending++
+      const script = this.settings.userScripts[i]
+      if (script.enabled && script.downloadUrl.startsWith('http')) {
+        targets.push(script)
       }
     }
-    if (pending === 0) {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.script_updated'), duration: 1500 })
+    if (targets.length === 0) {
       return
     }
+    this.getUIContext().showAlertDialog({
+      message: targets.length === 1 ? `你确认更新 ${targets[0].name} 吗？`
+        : targets.map((s: UserScriptRec): string => s.name).join('\n'),
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.done'),
+        action: () => {
+          this.runUpdateAll(targets)
+        }
+      }
+    })
+  }
+
+  private runUpdateAll(targets: UserScriptRec[]): void {
     this.updating = true
+    this.toast('开始更新…')
     let done = 0
     const finish = (): void => {
       done++
-      if (done >= pending) {
+      if (done >= targets.length) {
         this.updating = false
         this.settings.markScriptsUpdated()
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.script_updated'), duration: 1500 })
+        this.toast('脚本更新完成。')
       }
     }
-    const scripts = this.settings.userScripts
-    for (let i = 0; i < scripts.length; i++) {
-      const script = scripts[i]
-      if (script.sourceUrl === '') {
-        continue
-      }
+    for (let i = 0; i < targets.length; i++) {
+      const script = targets[i]
       const request = http.createHttp()
-      request.request(script.sourceUrl, {
+      request.request(script.downloadUrl, {
         method: http.RequestMethod.GET,
         connectTimeout: 10000,
         readTimeout: 20000,
@@ -163,8 +433,12 @@ export struct UserScriptsPage {
       }).then((response: http.HttpResponse) => {
         const body = response.result
         if (typeof body === 'string' && body.trim() !== '') {
-          script.code = body
-          this.settings.saveScript(script)
+          const parsed = parseUserScriptMeta(body, script.downloadUrl)
+          if (parsed !== null) {
+            parsed.id = script.id
+            parsed.enabled = script.enabled
+            this.settings.saveScript(parsed)
+          }
         }
       }).catch((error: BusinessError) => {
         console.error(`update script ${script.name} failed: ${error.message}`)
@@ -174,25 +448,94 @@ export struct UserScriptsPage {
       })
     }
   }
+
+  private toast(message: string): void {
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: 1500 })
+  }
 }
 
+// h4：下载脚本输入对话框（P6 下载脚本，kh 地址）
+@ComponentV2
+struct ScriptDownloadOverlay {
+  @Event onClose: () => void = () => {}
+  @Event onConfirm: (url: string) => void = (url: string) => {}
+  @Local url: string = ''
+
+  build() {
+    Column() {
+      Column({ space: 16 }) {
+        Text('下载脚本')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.fg'))
+        TextInput({ text: this.url, placeholder: '地址' })
+          .height(40)
+          .fontSize(14)
+          .backgroundColor($r('app.color.surface'))
+          .fontColor($r('app.color.fg'))
+          .placeholderColor($r('app.color.fg_secondary'))
+          .caretColor($r('app.color.accent'))
+          .onChange((value: string) => {
+            this.url = value
+          })
+        Row({ space: 12 }) {
+          Button($r('app.string.cancel'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.surface'))
+            .fontColor($r('app.color.fg'))
+            .onClick(() => {
+              this.onClose()
+            })
+          Button($r('app.string.done'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.accent'))
+            .fontColor(Color.White)
+            .onClick(() => {
+              const url = this.url.trim()
+              if (url === '') {
+                this.onClose()
+                return
+              }
+              this.onConfirm(url)
+            })
+        }
+        .width('100%')
+      }
+      .width('90%')
+      .padding(20)
+      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(16)
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor('rgba(0,0,0,0.5)')
+    .onClick(() => {
+      this.onClose()
+    })
+  }
+}
+
+// ta/u：脚本编辑器（新增/编辑，保存时解析元数据）
 @ComponentV2
 struct ScriptEditOverlay {
   @Param script: UserScriptRec | null = null
   @Event onClose: () => void = () => {}
   @Event onSaved: () => void = () => {}
   @Local name: string = ''
-  @Local matchHost: string = ''
+  @Local downloadUrl: string = ''
   @Local code: string = ''
-  @Local sourceUrl: string = ''
   private settings: AppSettings = AppSettings.getInstance()
 
   aboutToAppear(): void {
     if (this.script !== null) {
       this.name = this.script.name
-      this.matchHost = this.script.matchHost
+      this.downloadUrl = this.script.downloadUrl
       this.code = this.script.code
-      this.sourceUrl = this.script.sourceUrl
     }
   }
 
@@ -217,23 +560,10 @@ struct ScriptEditOverlay {
               .onChange((value: string) => {
                 this.name = value
               })
-            Text($r('app.string.match_host'))
-              .fontSize(12)
-              .fontColor($r('app.color.fg_secondary'))
-            TextInput({ text: this.matchHost, placeholder: $r('app.string.all_sites') })
-              .height(40)
-              .fontSize(14)
-              .backgroundColor($r('app.color.surface'))
-              .fontColor($r('app.color.fg'))
-              .placeholderColor($r('app.color.fg_secondary'))
-              .caretColor($r('app.color.accent'))
-              .onChange((value: string) => {
-                this.matchHost = value
-              })
             Text('源地址')
               .fontSize(12)
               .fontColor($r('app.color.fg_secondary'))
-            TextInput({ text: this.sourceUrl, placeholder: 'https:// （可选，供「更新」拉取）' })
+            TextInput({ text: this.downloadUrl, placeholder: 'https:// （可选，供「更新」拉取）' })
               .height(40)
               .fontSize(14)
               .backgroundColor($r('app.color.surface'))
@@ -241,7 +571,7 @@ struct ScriptEditOverlay {
               .placeholderColor($r('app.color.fg_secondary'))
               .caretColor($r('app.color.accent'))
               .onChange((value: string) => {
-                this.sourceUrl = value
+                this.downloadUrl = value
               })
             Text($r('app.string.script_code'))
               .fontSize(12)
@@ -294,22 +624,26 @@ struct ScriptEditOverlay {
   }
 
   private save(): void {
-    const name = this.name.trim()
-    if (name === '' || this.code.trim() === '') {
+    if (this.code.trim() === '') {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.invalid_input'), duration: 1500 })
       return
     }
-    const rec = new UserScriptRec()
+    const parsed = parseUserScriptMeta(this.code, this.downloadUrl.trim())
+    if (parsed === null) {
+      this.getUIContext().getPromptAction().showToast({ message: '解析脚本失败！', duration: 1500 })
+      return
+    }
+    const rec = parsed
     if (this.script !== null) {
       rec.id = this.script.id
+      rec.enabled = this.script.enabled
     } else {
       rec.id = Date.now()
+      rec.enabled = true
     }
-    rec.name = name
-    rec.matchHost = this.matchHost.trim().toLowerCase()
-    rec.code = this.code
-    rec.sourceUrl = this.sourceUrl.trim()
-    rec.enabled = this.script !== null ? this.script.enabled : true
+    if (this.name.trim() !== '') {
+      rec.name = this.name.trim()
+    }
     this.settings.saveScript(rec)
     this.onSaved()
   }

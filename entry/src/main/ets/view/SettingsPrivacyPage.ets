@@ -36,14 +36,6 @@ export struct SettingsPrivacyPage {
                 this.settings.setDoNotSell(isOn)
               }
             })
-            SettingCheckRow({
-              rowLabel: '请求头代理',
-              rowDesc: '拦截网页请求由应用转发以附加 DNT/GPC 请求头 (实验性，可能影响登录与视频播放)',
-              isChecked: this.settings.privacyProxy,
-              onCheckRow: (isOn: boolean) => {
-                this.settings.setPrivacyProxy(isOn)
-              }
-            })
           }
           .width('100%')
         }
@@ -60,6 +52,9 @@ export struct SettingsPrivacyPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {

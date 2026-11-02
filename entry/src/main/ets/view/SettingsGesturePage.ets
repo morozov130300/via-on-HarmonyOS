@@ -24,7 +24,7 @@ export struct SettingsGesturePage {
             SettingCheckRow({ rowLabel: '音量键翻页', rowDesc: '使用音量键上下翻动网页', isChecked: this.settings.volumePageFlip, onCheckRow: (isOn: boolean) => {
               this.settings.setVolumePageFlip(isOn)
             } })
-            SettingCheckRow({ rowLabel: '滑动切换标签', rowDesc: '在网页上左右滑动切换标签页', isChecked: this.settings.swipeSwitchTab, onCheckRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: '滑动屏幕前进后退', rowDesc: '在网页上左右滑动切换前进与后退', isChecked: this.settings.swipeSwitchTab, onCheckRow: (isOn: boolean) => {
               this.settings.setSwipeSwitchTab(isOn)
             } })
           }
@@ -44,6 +44,9 @@ export struct SettingsGesturePage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {

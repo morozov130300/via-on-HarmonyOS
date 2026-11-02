@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="a" parent="@style/o">
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <style name="l" parent="@android:style/Theme.Material.Dialog.NoActionBar">
+    </style>
+    <style name="m" parent="@android:style/Theme.Material.Light">
+        <item name="android:statusBarColor">@color/y</item>
+    </style>
+    <style name="aa" parent="@android:style/Theme.Material">
+        <item name="android:statusBarColor">@color/i</item>
+    </style>
+    <style name="u" parent="@android:style/TextAppearance.Material.Notification">
+    </style>
+    <style name="v" parent="@android:style/TextAppearance.Material.Notification.Info">
+    </style>
+    <style name="w" parent="@android:style/TextAppearance.Material.Notification.Time">
+    </style>
+    <style name="a8" parent="">
+        <item name="android:background">@drawable/ap</item>
+    </style>
+    <style name="a9" parent="">
+        <item name="android:textAppearance">?android:attr/textAppearanceButton</item>
+        <item name="android:textSize">@dimen/ao</item>
+        <item name="android:textColor">@color/b</item>
+    </style>
+</resources>

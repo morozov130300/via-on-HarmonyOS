@@ -18,7 +18,7 @@
     },
     {
       "name": "search_or_type_url",
-      "value": "搜索或输入网址"
+      "value": "输入网址"
     },
     {
       "name": "search",
@@ -39,6 +39,18 @@
     {
       "name": "blocked_ads_count",
       "value": "已拦截 %d 个广告"
+    },
+    {
+      "name": "block_page_blocked",
+      "value": "Via 阻止了以下页面加载:"
+    },
+    {
+      "name": "block_page_reason",
+      "value": "因为如下过滤规则:"
+    },
+    {
+      "name": "block_page_continue",
+      "value": "继续加载"
     },
     {
       "name": "press_back_again_exit",
@@ -82,7 +94,7 @@
     },
     {
       "name": "history",
-      "value": "历史记录"
+      "value": "历史"
     },
     {
       "name": "downloads",
@@ -98,11 +110,27 @@
     },
     {
       "name": "refresh",
-      "value": "刷新"
+      "value": "刷新网页"
     },
     {
       "name": "home_page",
       "value": "主页"
+    },
+    {
+      "name": "site_info",
+      "value": "网站信息"
+    },
+    {
+      "name": "scan_qr_code",
+      "value": "扫描二维码"
+    },
+    {
+      "name": "open_reader_mode",
+      "value": "打开阅读模式"
+    },
+    {
+      "name": "paste",
+      "value": "粘贴"
     },
     {
       "name": "share",
@@ -186,7 +214,7 @@
     },
     {
       "name": "text_size",
-      "value": "文字大小"
+      "value": "字体大小"
     },
     {
       "name": "clear_data",
@@ -214,7 +242,7 @@
     },
     {
       "name": "page_info",
-      "value": "网页信息"
+      "value": "网站信息"
     },
     {
       "name": "cancel",
@@ -250,15 +278,15 @@
     },
     {
       "name": "empty_bookmarks",
-      "value": "暂无书签"
+      "value": "没有书签~"
     },
     {
       "name": "empty_history",
-      "value": "暂无历史记录"
+      "value": "空空如也…"
     },
     {
       "name": "empty_downloads",
-      "value": "暂无下载内容"
+      "value": "空空如也…"
     },
     {
       "name": "empty_page_placeholder",
@@ -330,7 +358,7 @@
     },
     {
       "name": "copied",
-      "value": "已复制"
+      "value": "已复制文本"
     },
     {
       "name": "name_label",
@@ -398,7 +426,7 @@
     },
     {
       "name": "close_all_tabs",
-      "value": "关闭全部标签页"
+      "value": "关闭所有标签页"
     },
     {
       "name": "tab_count_unit",
@@ -485,6 +513,22 @@
       "value": "为网页启用强制暗色，这可能会导致部分页面表现异常"
     },
     {
+      "name": "night_label_on",
+      "value": "夜间模式 已开启"
+    },
+    {
+      "name": "night_label_off",
+      "value": "夜间模式 已关闭"
+    },
+    {
+      "name": "night_follow_toast",
+      "value": "跟随系统暗模式已启用"
+    },
+    {
+      "name": "night_filter_opacity",
+      "value": "网页蒙版滤镜"
+    },
+    {
       "name": "reader_confirm",
       "value": "开启阅读模式需要二次确认"
     },
@@ -507,10 +551,6 @@
     {
       "name": "custom_reader_css",
       "value": "自定义阅读模式 CSS"
-    },
-    {
-      "name": "reader_sample_text",
-      "value": "莫忧世事兼身事，须著人间比梦间。"
     },
     {
       "name": "app_layout",
@@ -542,11 +582,11 @@
     },
     {
       "name": "auto_hide_swipe",
-      "value": "滑动来显示…"
+      "value": "滑动来显示/隐藏"
     },
     {
       "name": "auto_hide_tap",
-      "value": "点击来显示…"
+      "value": "点击来显示/隐藏"
     },
     {
       "name": "auto_hide_swipe_desc",
@@ -810,7 +850,7 @@
     },
     {
       "name": "latest_version",
-      "value": "当前已是最新版本"
+      "value": "已是最新版本"
     },
     {
       "name": "email_copied",
@@ -915,6 +955,238 @@
     {
       "name": "add_home_fav",
       "value": "添加主页收藏"
+    },
+    {
+      "name": "image_mode_block",
+      "value": "无图模式"
+    },
+    {
+      "name": "image_mode_wifi",
+      "value": "仅 Wi-Fi 有图"
+    },
+    {
+      "name": "report_reason_distracting",
+      "value": "干扰内容太多"
+    },
+    {
+      "name": "report_reason_dangerous",
+      "value": "这是危险网站"
+    },
+    {
+      "name": "report_reason_broken",
+      "value": "页面显示不正确"
+    },
+    {
+      "name": "report_remarks_hint",
+      "value": "备注（可不填）"
+    },
+    {
+      "name": "report_success",
+      "value": "举报成功"
+    },
+    {
+      "name": "open_with_failed",
+      "value": "找不到相关应用来打开链接"
+    },
+    {
+      "name": "mark_ad_http_only",
+      "value": "仅支持 “http” 或 “https” 开头的网址"
+    },
+    {
+      "name": "fullscreen_toast_on",
+      "value": "全屏 已开启"
+    },
+    {
+      "name": "fullscreen_toast_off",
+      "value": "全屏 已关闭"
+    },
+    {
+      "name": "game_mode_toast_on",
+      "value": "游戏模式已开启，按两次返回键可退出"
+    },
+    {
+      "name": "game_mode_toast_off",
+      "value": "游戏模式 已关闭"
+    },
+    {
+      "name": "orientation_system",
+      "value": "跟随系统"
+    },
+    {
+      "name": "orientation_auto",
+      "value": "自动"
+    },
+    {
+      "name": "orientation_portrait",
+      "value": "竖屏"
+    },
+    {
+      "name": "orientation_landscape",
+      "value": "横屏"
+    },
+    {
+      "name": "orientation_toast",
+      "value": "已设置 屏幕方向 为 %s"
+    },
+    {
+      "name": "close_other_tabs",
+      "value": "关闭其它标签页"
+    },
+    {
+      "name": "close_tabs_above",
+      "value": "关闭上方标签页"
+    },
+    {
+      "name": "close_tabs_below",
+      "value": "关闭下方标签页"
+    },
+    {
+      "name": "duplicate_tab",
+      "value": "复制标签页"
+    },
+    {
+      "name": "no_title",
+      "value": "无标题"
+    },
+    {
+      "name": "manage_home_favs",
+      "value": "管理收藏"
+    },
+    {
+      "name": "new_home_fav",
+      "value": "新建"
+    },
+    {
+      "name": "home_fav_name",
+      "value": "名称"
+    },
+    {
+      "name": "home_fav_url",
+      "value": "网址"
+    },
+    {
+      "name": "copied_link",
+      "value": "已复制链接"
+    },
+    {
+      "name": "bookmark_added_state",
+      "value": "已添加"
+    },
+    {
+      "name": "permission_request",
+      "value": "权限请求"
+    },
+    {
+      "name": "perm_camera_reason",
+      "value": "用于提供网站需要的拍照与扫码能力"
+    },
+    {
+      "name": "perm_microphone_reason",
+      "value": "用于提供网站需要的语音输入或音频录制能力"
+    },
+    {
+      "name": "perm_location_reason",
+      "value": "用于提供网站需要的位置信息"
+    },
+    {
+      "name": "home_fav_added",
+      "value": "已添加主页收藏"
+    },
+    {
+      "name": "webpage",
+      "value": "网页"
+    },
+    {
+      "name": "exit_incognito",
+      "value": "退出隐身浏览"
+    },
+    {
+      "name": "close_all_tabs_title",
+      "value": "关闭所有标签"
+    },
+    {
+      "name": "exit_incognito_confirm_msg",
+      "value": "你想要在退出隐身模式前，关闭所有标签吗？"
+    },
+    {
+      "name": "keep_tabs",
+      "value": "保留"
+    },
+    {
+      "name": "close_btn",
+      "value": "关闭"
+    },
+    {
+      "name": "download_confirm_title",
+      "value": "你想要下载此文件吗？"
+    },
+    {
+      "name": "file_size_label",
+      "value": "文件大小：%s"
+    },
+    {
+      "name": "download_btn",
+      "value": "下载"
+    },
+    {
+      "name": "retry_download",
+      "value": "重新下载"
+    },
+    {
+      "name": "pause_download",
+      "value": "暂停"
+    },
+    {
+      "name": "resume_download",
+      "value": "继续"
+    },
+    {
+      "name": "restore_session_ask",
+      "value": "你想要恢复上次会话未关闭的标签页吗？"
+    },
+    {
+      "name": "restore_btn",
+      "value": "恢复"
+    },
+    {
+      "name": "clear_history_title",
+      "value": "清除浏览历史"
+    },
+    {
+      "name": "delete_items_confirm",
+      "value": "你确定删除 %d 个条目吗？"
+    },
+    {
+      "name": "new_bookmark",
+      "value": "新建书签"
+    },
+    {
+      "name": "bookmark_folder",
+      "value": "文件夹"
+    },
+    {
+      "name": "new_folder",
+      "value": "新建文件夹"
+    },
+    {
+      "name": "delete_folder_confirm",
+      "value": "你想要删除此文件夹吗？"
+    },
+    {
+      "name": "home_fav_deleted",
+      "value": "\"%s\" 已删除"
+    },
+    {
+      "name": "home_css_hint",
+      "value": "此处添加的 CSS 会追加到主页样式表末尾，仅作用于网页版主页。"
+    },
+    {
+      "name": "copy",
+      "value": "复制"
+    },
+    {
+      "name": "invalid_url",
+      "value": "无效链接"
     }
   ]
 }

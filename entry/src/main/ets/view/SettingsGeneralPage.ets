@@ -1,13 +1,14 @@
-import { BusinessError } from '@kit.BasicServicesKit'
+﻿import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo, picker } from '@kit.CoreFileKit'
 import { webview } from '@kit.ArkWeb'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
+import { dialogTransition } from '../common/Transitions'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { window } from '@kit.ArkUI'
+import { common, Want } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
 import { BackupManager } from '../common/Backup'
 import { uaByKey } from '../common/UaTable'
-import { SEARCH_ENGINES, SearchEngineDef } from '../common/SearchEngines'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
@@ -75,8 +76,9 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '主页', rowValue: this.homeLabel(), onTapRow: () => {
               this.pickHome()
             } })
-            SettingNavRow({ rowLabel: '搜索设置', rowValue: this.engineLabel(), onTapRow: () => {
-              this.pickEngine()
+            // 原版 hb/c4 id31：搜索设置行无行值，跳 hb/b6 搜索设置页
+            SettingNavRow({ rowLabel: '搜索设置', onTapRow: () => {
+              this.navPathStack.pushPathByName('settingsSearch', '', true)
             } })
             SettingNavRow({ rowLabel: 'AI 设置', onTapRow: () => {
               this.navPathStack.pushPathByName('aiSettings', '', true)
@@ -87,22 +89,24 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '下载目录', rowValue: this.downloadDirLabel(), onTapRow: () => {
               this.pickDownloadDir()
             } })
-            SettingNavRow({ rowLabel: '下载管理', onTapRow: () => {
-              this.navPathStack.pushPathByName('downloads', '', true)
+            // 原版 hb/c4 id15：下载管理 = 下载器选择（dlmanager）
+            SettingNavRow({ rowLabel: '下载管理', rowValue: this.dlManagerLabel(), onTapRow: () => {
+              this.pickDlManager()
             } })
-            SettingCheckRow({ rowLabel: '外置视频播放器', rowDesc: '调用外部播放器播放网页视频', isChecked: this.settings.externalPlayer, onCheckRow: (isOn: boolean) => {
-              this.settings.setExternalPlayer(isOn)
+            // 原版 hb/c4 id27：外置视频播放器（videoplayer），HarmonyOS 无法枚举第三方播放器，仅 关闭/系统分享
+            SettingNavRow({ rowLabel: '外置视频播放器', rowValue: this.videoPlayerLabel(), onTapRow: () => {
+              this.pickVideoPlayer()
             } })
-            SettingNavRow({ rowLabel: '退出时清除数据', rowValue: this.clearOnExitLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: '退出时清除数据', onTapRow: () => {
               this.pickClearOnExit()
             } })
             SettingNavRow({ rowLabel: '字体', rowValue: `${this.settings.textZoom}%`, onTapRow: () => {
               this.pickFontScale()
             } })
             SettingNavRow({ rowLabel: '操作设定', onTapRow: () => {
-              this.navPathStack.pushPathByName('gestureSettings', '', true)
+              this.navPathStack.pushPathByName('settingsGesture', '', true)
             } })
-            SettingNavRow({ rowLabel: '导入或备份书签', onTapRow: () => {
+            SettingNavRow({ rowLabel: '导入/备份书签', onTapRow: () => {
               this.pickBookmarkIO()
             } })
             SettingNavRow({ rowLabel: '导入数据', onTapRow: () => {
@@ -111,8 +115,9 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '导出数据', onTapRow: () => {
               this.exportData()
             } })
-            SettingCheckRow({ rowLabel: '启动时恢复未关闭标签', isChecked: this.settings.restoreTabs, onCheckRow: (isOn: boolean) => {
-              this.settings.setRestoreTabs(isOn)
+            SettingNavRow({ rowLabel: '启动时恢复未关闭标签', onTapRow: () => {
+              // 原版三选一（arrays.xml array g：禁用恢复/总是恢复/优先询问）
+              this.pickRestoreMode()
             } })
             SettingCheckRow({ rowLabel: '显示撤销关闭标签的提示', isChecked: this.settings.undoCloseToast, onCheckRow: (isOn: boolean) => {
               this.settings.setUndoCloseToast(isOn)
@@ -139,6 +144,9 @@ export struct SettingsGeneralPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
@@ -156,22 +164,26 @@ export struct SettingsGeneralPage {
     return def !== null ? def.label : '默认'
   }
 
-  private engineLabel(): string {
-    if (this.settings.engineKey === 'custom' && this.settings.customEngineTemplate !== '') {
-      return '自定义'
+  // 原版 1..4 语义：1=跟随系统 2=自动 3=竖屏 4=横屏
+  private orientationLabel(): string {
+    if (this.settings.orientation === 2) {
+      return this.getStringById('orientation_auto')
     }
-    const matched = SEARCH_ENGINES.find((engine: SearchEngineDef): boolean => engine.key === this.settings.engineKey)
-    return matched !== undefined ? matched.name : '百度'
+    if (this.settings.orientation === 3) {
+      return this.getStringById('orientation_portrait')
+    }
+    if (this.settings.orientation === 4) {
+      return this.getStringById('orientation_landscape')
+    }
+    return this.getStringById('orientation_system')
   }
 
-  private orientationLabel(): string {
-    if (this.settings.orientation === 1) {
-      return '竖屏'
+  private getStringById(name: string): string {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return ''
     }
-    if (this.settings.orientation === 2) {
-      return '横屏'
-    }
-    return '跟随系统'
+    return context.resourceManager.getStringByNameSync(name)
   }
 
   private downloadDirLabel(): string {
@@ -183,34 +195,19 @@ export struct SettingsGeneralPage {
     return slash >= 0 && slash < dir.length - 1 ? dir.substring(slash + 1) : dir
   }
 
-  private clearOnExitLabel(): string {
-    const flags = this.settings.clearOnExit
-    if (flags === '') {
-      return '关闭'
-    }
-    const labels: string[] = []
-    if (flags.includes('history')) {
-      labels.push('历史记录')
-    }
-    if (flags.includes('bookmarks')) {
-      labels.push('书签')
-    }
-    if (flags.includes('cookies')) {
-      labels.push('Cookies')
-    }
-    return labels.length > 0 ? labels.join('、') : '关闭'
-  }
-
   private pickOrientation(): void {
     const sheets: SheetInfo[] = [
       { title: '跟随系统', action: (): void => {
-        this.applyOrientation(0)
-      } },
-      { title: '竖屏', action: (): void => {
         this.applyOrientation(1)
       } },
-      { title: '横屏', action: (): void => {
+      { title: '自动', action: (): void => {
         this.applyOrientation(2)
+      } },
+      { title: '竖屏', action: (): void => {
+        this.applyOrientation(3)
+      } },
+      { title: '横屏', action: (): void => {
+        this.applyOrientation(4)
       } }
     ]
     ActionSheet.show({
@@ -259,7 +256,7 @@ export struct SettingsGeneralPage {
   }
 
   private pickFontScale(): void {
-    const options: number[] = [80, 90, 100, 110, 120, 130]
+    const options: number[] = [130, 115, 100, 85, 70]
     const sheets: SheetInfo[] = []
     for (let i = 0; i < options.length; i++) {
       const value = options[i]
@@ -274,16 +271,15 @@ export struct SettingsGeneralPage {
     })
   }
 
-  @Local clearHistoryOnExit: boolean = false
-  @Local clearBookmarksOnExit: boolean = false
-  @Local clearCookiesOnExit: boolean = false
+  // 原版 z8/h0.f + arrays c：退出时清除数据七项多选，位表 [1,2,4,64,8,16,32]
+  @Local clearOnExitChecks: boolean[] = [false, false, false, false, false, false, false]
   private clearOnExitDialogId: number = -1
 
   private pickClearOnExit(): void {
-    const flags = this.settings.clearOnExit
-    this.clearHistoryOnExit = flags.includes('history')
-    this.clearBookmarksOnExit = flags.includes('bookmarks')
-    this.clearCookiesOnExit = flags.includes('cookies')
+    const mask = this.settings.clearOnExit
+    for (let i = 0; i < CLEAR_ON_EXIT_ITEMS.length; i++) {
+      this.clearOnExitChecks[i] = (mask & CLEAR_ON_EXIT_BITS[i]) !== 0
+    }
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
         this.ClearOnExitDialog()
@@ -300,68 +296,67 @@ export struct SettingsGeneralPage {
 
   @Builder
   ClearOnExitDialog() {
-    Column({ space: 12 }) {
+    // 原版 w5.k 弹窗紧凑卡（视频 0:48 同款）：窄卡、加粗标题、右对齐取消/确定文字按钮
+    Column({ space: 6 }) {
       Text('退出时清除数据')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-      Row() {
-        Text('历史记录').fontSize(15).layoutWeight(1)
-        Checkbox().select(this.clearHistoryOnExit).onChange((value: boolean) => {
-          this.clearHistoryOnExit = value
+        .fontColor($r('app.color.fg'))
+      ForEach(CLEAR_ON_EXIT_ITEMS, (label: string, index: number) => {
+        Row() {
+          Text(label)
+            .fontSize(15)
+            .fontColor($r('app.color.fg'))
+            .layoutWeight(1)
+          Checkbox()
+            .select(this.clearOnExitChecks[index])
+            .onChange((value: boolean) => {
+              this.clearOnExitChecks[index] = value
+            })
+        }
+        .width('100%')
+        .height(42)
+        .onClick(() => {
+          this.clearOnExitChecks[index] = !this.clearOnExitChecks[index]
         })
-      }
-      .width('100%')
+      }, (label: string) => label)
       Row() {
-        Text('书签').fontSize(15).layoutWeight(1)
-        Checkbox().select(this.clearBookmarksOnExit).onChange((value: boolean) => {
-          this.clearBookmarksOnExit = value
-        })
-      }
-      .width('100%')
-      Row() {
-        Text('Cookies').fontSize(15).layoutWeight(1)
-        Checkbox().select(this.clearCookiesOnExit).onChange((value: boolean) => {
-          this.clearCookiesOnExit = value
-        })
-      }
-      .width('100%')
-      Row({ space: 12 }) {
-        Button($r('app.string.cancel'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(15)
+          .fontColor($r('app.color.fg_secondary'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
           .onClick(() => {
             this.closeClearOnExitDialog()
           })
-        Button($r('app.string.confirm'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
+        Text($r('app.string.confirm'))
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
           .onClick(() => {
             this.saveClearOnExit()
             this.closeClearOnExitDialog()
           })
       }
       .width('100%')
-      .margin({ top: 4 })
+      .margin({ top: 6 })
     }
-    .width('86%')
+    .width('70%')
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .borderRadius(12)
+    .transition(dialogTransition())
   }
 
   private saveClearOnExit(): void {
-    const flags: string[] = []
-    if (this.clearHistoryOnExit) {
-      flags.push('history')
+    let mask = 0
+    for (let i = 0; i < CLEAR_ON_EXIT_ITEMS.length; i++) {
+      if (this.clearOnExitChecks[i]) {
+        mask |= CLEAR_ON_EXIT_BITS[i]
+      }
     }
-    if (this.clearBookmarksOnExit) {
-      flags.push('bookmarks')
-    }
-    if (this.clearCookiesOnExit) {
-      flags.push('cookies')
-    }
-    this.settings.setClearOnExit(flags.join(','))
+    this.settings.setClearOnExit(mask)
   }
 
   private closeClearOnExitDialog(): void {
@@ -373,8 +368,9 @@ export struct SettingsGeneralPage {
   }
 
   private pickBookmarkIO(): void {
+    // 原版 hb/c4 case20：[备份书签(T4), 导入书签(F6)]
     const sheets: SheetInfo[] = [
-      { title: '导出书签', action: (): void => {
+      { title: '备份书签', action: (): void => {
         this.exportBookmarks()
       } },
       { title: '导入书签', action: (): void => {
@@ -382,7 +378,7 @@ export struct SettingsGeneralPage {
       } }
     ]
     ActionSheet.show({
-      title: '导入或备份书签',
+      title: '导入/备份书签',
       message: '以 HTML 书签文件与其它浏览器互通',
       sheets: sheets
     })
@@ -404,14 +400,11 @@ export struct SettingsGeneralPage {
           return
         }
         this.readTextFile(uris[0]).then((html: string) => {
-          const bookmarks = BackupManager.getInstance().parseBookmarksHtml(html)
-          for (let i = 0; i < bookmarks.length; i++) {
-            const rec = bookmarks[i]
-            this.db.addBookmark(rec.title, rec.url).catch((error: BusinessError) => {
-              console.error(`import bookmark failed: ${error.message}`)
-            })
-          }
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+          BackupManager.getInstance().importBookmarksHtml(html).then(() => {
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+          }).catch((error: BusinessError) => {
+            console.error(`import bookmarks failed: ${error.message}`)
+          })
         }).catch((error: BusinessError) => {
           console.error(`read bookmark file failed: ${error.message}`)
         })
@@ -426,11 +419,43 @@ export struct SettingsGeneralPage {
   private importData(): void {
     try {
       const documentPicker = new picker.DocumentViewPicker()
-      documentPicker.select({ fileSuffixFilters: ['.json'] }).then((uris: Array<string>) => {
+      // 原版 hb/c4.q4：MIME 为 text/plain + application/zip，安卓导出为 .zip
+      documentPicker.select({ fileSuffixFilters: ['.zip', '.json'] }).then((uris: Array<string>) => {
         if (uris.length === 0) {
           return
         }
-        this.readTextFile(uris[0]).then((raw: string) => {
+        const uri = uris[0]
+        // 原版按文件名 .zip 判定；文档 URI 不含可靠文件名时以 ZIP 魔数 PK 判定
+        let isZip = false
+        try {
+          const file = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY)
+          try {
+            const head = new ArrayBuffer(4)
+            fileIo.readSync(file.fd, head)
+            const bytes = new Uint8Array(head)
+            isZip = bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4B
+          } finally {
+            fileIo.closeSync(file)
+          }
+        } catch (error) {
+          const idx = uri.toLowerCase().lastIndexOf('.zip')
+          isZip = idx >= 0 && idx + 4 === uri.length
+        }
+        if (isZip) {
+          // 原版 s3：.zip 走 ZipBackupManager 还原
+          const context = this.getUIContext().getHostContext()
+          if (context === undefined) {
+            return
+          }
+          BackupManager.getInstance().restoreFromZipBackup(uri, context).then(() => {
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+          }).catch((error: BusinessError) => {
+            console.error(`import zip backup failed: ${error.message}`)
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+          })
+          return
+        }
+        this.readTextFile(uri).then((raw: string) => {
           BackupManager.getInstance().applyBackupJson(raw).then(() => {
             this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
           }).catch((error: BusinessError) => {
@@ -448,12 +473,252 @@ export struct SettingsGeneralPage {
     }
   }
 
+  // 原版 hb/c4.f4：导出数据六项多选，默认勾选前五项（k3 位表 0→2 1→4 2→8 3→16 4→1 5→32）
+  private static readonly EXPORT_ITEMS: string[] =
+    ['书签', '主页收藏', '历史', '关闭的标签页', '设置', '保存的密码']
+  private static readonly EXPORT_BITS: number[] = [2, 4, 8, 16, 1, 32]
+
+  private exportSelection: boolean[] = [true, true, true, true, true, false]
+  private exportDialogId: number = -1
+  // 导出密码弹窗（hb/c4.F4）
+  private pendingExportFlags: number = 0
+  private passwordInput: string = ''
+  private passwordDialogId: number = -1
+
   private exportData(): void {
-    BackupManager.getInstance().buildBackupJson().then((json: string) => {
-      this.saveTextFile('via_backup.json', json)
-    }).catch((error: BusinessError) => {
-      console.error(`export data failed: ${error.message}`)
+    // 原版 c4 case22：先弹导出范围多选弹窗，确定后按位打包 ZIP
+    this.exportSelection = [true, true, true, true, true, false]
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.ExportDataDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.2)'
+    }).then((dialogId: number) => {
+      this.exportDialogId = dialogId
+    }).catch(() => {
+      console.error('open export dialog failed')
     })
+  }
+
+  private closeExportDialog(): void {
+    if (this.exportDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.exportDialogId)
+    this.exportDialogId = -1
+  }
+
+  private confirmExport(): void {
+    this.closeExportDialog()
+    let flags = 0
+    for (let i = 0; i < this.exportSelection.length; i++) {
+      if (this.exportSelection[i]) {
+        flags += SettingsGeneralPage.EXPORT_BITS[i]
+      }
+    }
+    if (flags === 0) {
+      return
+    }
+    if ((flags & 32) !== 0) {
+      // 原版 hb/c4.F4：bit32 → 生物识别通过后弹密码输入框（w5.k.l().d0(B4).I(C4).i("",ke,1)）；
+      // 本端无生物识别子系统，直接弹输入框（用户拍板）
+      this.pendingExportFlags = flags
+      this.passwordInput = ''
+      this.getUIContext().getPromptAction().openCustomDialog({
+        builder: (): void => {
+          this.PasswordDialog()
+        },
+        isModal: true,
+        autoCancel: true,
+        alignment: DialogAlignment.Center,
+        maskColor: 'rgba(0,0,0,0.2)'
+      }).then((dialogId: number) => {
+        this.passwordDialogId = dialogId
+      }).catch(() => {
+        console.error('open password dialog failed')
+      })
+      return
+    }
+    this.doExport(flags, null)
+  }
+
+  private closePasswordDialog(): void {
+    if (this.passwordDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.passwordDialogId)
+    this.passwordDialogId = -1
+  }
+
+  // 原版 c4.G0：输入为空时使用默认密码 "3_=cZHGxZ#FZgZA@"
+  private confirmExportPassword(): void {
+    const password = this.passwordInput === '' ? '3_=cZHGxZ#FZgZA@' : this.passwordInput
+    const flags = this.pendingExportFlags
+    this.closePasswordDialog()
+    this.doExport(flags, password)
+  }
+
+  private doExport(flags: number, password: string | null): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    const now = new Date()
+    const ymd = `${now.getFullYear()}${this.pad2(now.getMonth() + 1)}${this.pad2(now.getDate())}`
+    const fileName = `Via_导出数据_${ymd}.zip`
+    try {
+      const documentPicker = new picker.DocumentViewPicker(context)
+      documentPicker.save({ newFileNames: [fileName] }).then((uris: Array<string>) => {
+        if (uris.length === 0) {
+          return
+        }
+        BackupManager.getInstance().buildZipBackup(flags, context, password).then((zipPath: string) => {
+          try {
+            const src = fileIo.openSync(zipPath, fileIo.OpenMode.READ_ONLY)
+            try {
+              const dst = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC)
+              try {
+                fileIo.copyFileSync(src.fd, dst.fd)
+              } finally {
+                fileIo.closeSync(dst)
+              }
+            } finally {
+              fileIo.closeSync(src)
+            }
+            fileIo.unlinkSync(zipPath)
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.export_done'), duration: 1500 })
+          } catch (error) {
+            console.error('copy export zip failed')
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+          }
+        }).catch((error: BusinessError) => {
+          console.error(`build zip backup failed: ${error.message}`)
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+        })
+      }).catch((error: BusinessError) => {
+        console.error(`save export file failed: ${error.message}`)
+      })
+    } catch (error) {
+      console.error('open save picker failed')
+    }
+  }
+
+  private pad2(n: number): string {
+    return n < 10 ? `0${n}` : `${n}`
+  }
+
+  @Builder
+  ExportDataItem(label: string, index: number) {
+    Row({ space: 14 }) {
+      Circle({ width: 20, height: 20 })
+        .fill(this.exportSelection[index] ? $r('app.color.accent') : Color.Transparent)
+        .stroke(this.exportSelection[index] ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+        .strokeWidth(1.5)
+      Text(label)
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+    }
+    .width('100%')
+    .height(42)
+    .onClick(() => {
+      this.exportSelection[index] = !this.exportSelection[index]
+    })
+  }
+
+  // 原版 hb/c4.f4 弹窗：标题「导出数据」+ 六项多选 + 取消/确定
+  @Builder
+  ExportDataDialog() {
+    // 原版 w5.k 弹窗紧凑卡（视频 0:59 同款）：窄卡、加粗标题、右对齐取消/确定文字按钮
+    Column({ space: 6 }) {
+      Text('导出数据')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+      ForEach(SettingsGeneralPage.EXPORT_ITEMS, (label: string, index: number) => {
+        this.ExportDataItem(label, index)
+      }, (label: string) => label)
+      Row() {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(15)
+          .fontColor($r('app.color.fg_secondary'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .onClick(() => {
+            this.closeExportDialog()
+          })
+        Text($r('app.string.confirm'))
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .onClick(() => {
+            this.confirmExport()
+          })
+      }
+      .width('100%')
+      .margin({ top: 6 })
+    }
+    .width('70%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(12)
+    .transition(dialogTransition())
+  }
+
+  // 原版 hb/c4.F4 密码弹窗：标题「输入密码」(ht)、正文 hu、占位「密码」(ke)、取消/确定
+  @Builder
+  PasswordDialog() {
+    Column({ space: 6 }) {
+      Text('输入密码')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+      Text('你正在导出隐私数据，请输入密码以加密数据。请牢记密码，如果密码丢失，你将无法导入其中加密的数据。')
+        .fontSize(13)
+        .fontColor($r('app.color.fg_secondary'))
+        .lineHeight(19)
+        .margin({ top: 4, bottom: 6 })
+      TextInput({ text: this.passwordInput, placeholder: '密码' })
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+        .placeholderColor($r('app.color.fg_secondary'))
+        .placeholderFont({ size: 15 })
+        .backgroundColor($r('app.color.page_bg'))
+        .height(40)
+        .borderRadius(8)
+        .padding({ left: 12, right: 12 })
+        .onChange((value: string) => {
+          this.passwordInput = value
+        })
+      Row() {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(15)
+          .fontColor($r('app.color.fg_secondary'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .onClick(() => {
+            this.closePasswordDialog()
+          })
+        Text($r('app.string.confirm'))
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .onClick(() => {
+            this.confirmExportPassword()
+          })
+      }
+      .width('100%')
+      .margin({ top: 6 })
+    }
+    .width('70%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(12)
+    .transition(dialogTransition())
   }
 
   private saveTextFile(fileName: string, content: string): void {
@@ -529,30 +794,18 @@ export struct SettingsGeneralPage {
     return '跟随系统'
   }
 
+  // 原版 hb/c4.n4 + arrays e：主页四选（默认 about:home / 空白页 about:blank / 书签 about:bookmarks / 网页自定义 URL）
   private homeLabel(): string {
     if (this.settings.homepageMode === 1 && this.settings.homeUrl !== '') {
       return this.settings.homeUrl
     }
+    if (this.settings.homepageMode === 2) {
+      return '空白页'
+    }
+    if (this.settings.homepageMode === 3) {
+      return '书签'
+    }
     return '默认'
-  }
-
-  private pickLanguage(): void {
-    const sheets: SheetInfo[] = [
-      { title: '跟随系统', action: (): void => {
-        this.settings.setAppLanguage(0)
-      } },
-      { title: '简体中文', action: (): void => {
-        this.settings.setAppLanguage(1)
-      } },
-      { title: 'English', action: (): void => {
-        this.settings.setAppLanguage(2)
-      } }
-    ]
-    ActionSheet.show({
-      title: '语言',
-      message: '选择应用语言',
-      sheets: sheets
-    })
   }
 
   private pickHome(): void {
@@ -560,7 +813,13 @@ export struct SettingsGeneralPage {
       { title: '默认', action: (): void => {
         this.settings.setHomepageMode(0)
       } },
-      { title: '自定义', action: (): void => {
+      { title: '空白页', action: (): void => {
+        this.settings.setHomepageMode(2)
+      } },
+      { title: '书签', action: (): void => {
+        this.settings.setHomepageMode(3)
+      } },
+      { title: '网页', action: (): void => {
         this.inputHomeUrl()
       } }
     ]
@@ -571,6 +830,64 @@ export struct SettingsGeneralPage {
     })
   }
 
+  private pickLanguage(): void {
+    const sheets: SheetInfo[] = [
+      { title: '跟随系统', action: (): void => {
+        this.settings.setAppLanguage(0)
+        this.confirmRestart()
+      } },
+      { title: '简体中文', action: (): void => {
+        this.settings.setAppLanguage(1)
+        this.confirmRestart()
+      } },
+      { title: 'English', action: (): void => {
+        this.settings.setAppLanguage(2)
+        this.confirmRestart()
+      } }
+    ]
+    ActionSheet.show({
+      title: '语言',
+      message: '选择应用语言',
+      sheets: sheets
+    })
+  }
+
+  // 原版 hb/c4.W3→G4：语言切换后确认重启（语言/这将在下次启动应用时生效…/重启应用/取消）
+  private confirmRestart(): void {
+    AlertDialog.show({
+      title: '语言',
+      message: '这将在下次启动应用时生效，你希望立即重启应用以生效吗？',
+      primaryButton: {
+        value: '重启应用',
+        action: () => {
+          this.restartApp()
+        }
+      },
+      secondaryButton: {
+        value: '取消',
+        action: () => {
+        }
+      }
+    })
+  }
+
+  private restartApp(): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    if (context === undefined || context.abilityInfo === undefined) {
+      return
+    }
+    const want: Want = {
+      bundleName: context.abilityInfo.bundleName,
+      abilityName: context.abilityInfo.name
+    }
+    context.startAbility(want).then(() => {
+      context.terminateSelf()
+    }).catch((error: BusinessError) => {
+      console.error(`restart app failed: ${error.message}`)
+    })
+  }
+
+  // 原版 hb/c4.m4：网页主页输入弹窗（自定义主页），确定时 URL 需含 ://（c4.E3）
   private inputHomeUrl(): void {
     this.homeUrlInput = this.settings.homeUrl
     this.getUIContext().getPromptAction().openCustomDialog({
@@ -592,7 +909,7 @@ export struct SettingsGeneralPage {
 
   @Builder
   HomeUrlDialog() {
-    Column({ space: 16 }) {
+    Column({ space: 14 }) {
       Text('自定义主页')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
@@ -603,20 +920,24 @@ export struct SettingsGeneralPage {
         .onChange((value: string) => {
           this.homeUrlInput = value
         })
-      Row({ space: 12 }) {
-        Button($r('app.string.cancel'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
+      Row() {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(15)
+          .fontColor($r('app.color.fg_secondary'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
           .onClick(() => {
             this.closeHomeUrlDialog()
           })
-        Button($r('app.string.confirm'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
+        Text($r('app.string.confirm'))
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
           .onClick(() => {
             const url = this.homeUrlInput.trim()
-            if (url !== '') {
+            // 原版 c4.E3：需含 :// 才保存
+            if (url.includes('://')) {
               this.settings.setHomeUrl(url)
               this.settings.setHomepageMode(1)
             }
@@ -625,10 +946,11 @@ export struct SettingsGeneralPage {
       }
       .width('100%')
     }
-    .width('86%')
+    .width('70%')
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .borderRadius(12)
+    .transition(dialogTransition())
   }
 
   private closeHomeUrlDialog(): void {
@@ -639,108 +961,47 @@ export struct SettingsGeneralPage {
     this.homeUrlDialogId = -1
   }
 
-  private pickEngine(): void {
-    const sheets: SheetInfo[] = []
-    for (let i = 0; i < SEARCH_ENGINES.length; i++) {
-      const engine = SEARCH_ENGINES[i]
-      sheets.push({ title: engine.name, action: (): void => {
-        this.settings.setEngineKey(engine.key)
-      } })
-    }
-    if (this.settings.customEngineTemplate !== '') {
-      sheets.push({ title: '自定义', action: (): void => {
-        this.inputCustomEngine()
-      } })
-    } else {
-      sheets.push({ title: '添加自定义搜索引擎', action: (): void => {
-        this.inputCustomEngine()
-      } })
-    }
+  // 原版 hb/c4 case27（hb.D4）：''=系统分享；HarmonyOS 无第三方播放器枚举，选项仅 关闭/系统分享
+  private videoPlayerLabel(): string {
+    return this.settings.videoPlayer === 'share' ? '系统分享' : '关闭'
+  }
+
+  private pickVideoPlayer(): void {
+    const sheets: SheetInfo[] = [
+      { title: '关闭', action: (): void => {
+        this.settings.setVideoPlayer('')
+      } },
+      { title: '系统分享', action: (): void => {
+        this.settings.setVideoPlayer('share')
+      } }
+    ]
     ActionSheet.show({
-      title: '搜索设置',
-      message: '选择默认搜索引擎',
+      title: '外置视频播放器',
+      message: '选择网页视频的打开方式',
       sheets: sheets
     })
   }
 
-  @Local engineTemplateInput: string = ''
-  private engineDialogId: number = -1
+  // 原版 hb/c4 case15（下载管理，dlmanager）：''/内建下载器；HarmonyOS 无第三方下载器枚举
+  private dlManagerLabel(): string {
+    return this.settings.dlManager === 'builtin' ? '内建下载器' : ''
+  }
 
-  private inputCustomEngine(): void {
-    this.engineTemplateInput = this.settings.customEngineTemplate
-    this.getUIContext().getPromptAction().openCustomDialog({
-      builder: (): void => {
-        this.CustomEngineDialog()
-      },
-      isModal: true,
-      autoCancel: true,
-      alignment: DialogAlignment.Center
-    }).then((dialogId: number) => {
-      this.engineDialogId = dialogId
-    }).catch((error: BusinessError) => {
-      console.error(`open custom engine dialog failed: ${error.message}`)
+  private pickDlManager(): void {
+    const sheets: SheetInfo[] = [
+      { title: '内建下载器', action: (): void => {
+        this.settings.setDlManager('builtin')
+      } }
+    ]
+    ActionSheet.show({
+      title: '下载管理',
+      message: '选择下载器',
+      sheets: sheets
     })
   }
 
-  @Builder
-  CustomEngineDialog() {
-    Column({ space: 14 }) {
-      Text('自定义搜索引擎')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
-      Text('用 %s 代表搜索词，例如：https://example.com/search?q=%s')
-        .fontSize(13)
-        .fontColor($r('app.color.fg_secondary'))
-      TextInput({ placeholder: 'https://example.com/search?q=%s', text: this.engineTemplateInput })
-        .width('100%')
-        .height(44)
-        .fontSize(14)
-        .onChange((value: string) => {
-          this.engineTemplateInput = value
-        })
-      Row({ space: 12 }) {
-        Button($r('app.string.cancel'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.closeEngineDialog()
-          })
-        Button($r('app.string.confirm'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .enabled(this.engineTemplateInput.includes('%s'))
-          .opacity(this.engineTemplateInput.includes('%s') ? 1 : 0.4)
-          .onClick(() => {
-            const template = this.engineTemplateInput.trim()
-            if (!template.includes('%s')) {
-              return
-            }
-            this.settings.setCustomEngineTemplate(template)
-            this.settings.setEngineKey('custom')
-            this.closeEngineDialog()
-          })
-      }
-      .width('100%')
-    }
-    .width('86%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
-  }
-
-  private closeEngineDialog(): void {
-    if (this.engineDialogId < 0) {
-      return
-    }
-    this.getUIContext().getPromptAction().closeCustomDialog(this.engineDialogId)
-    this.engineDialogId = -1
-  }
-
-
   private confirmClear(): void {
-    this.clearDataSelection = [true, true, false, false, false, false]
+    this.clearDataSelection = [true, true, true, false, false, false, false]
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
         this.ClearDataDialog()
@@ -756,7 +1017,7 @@ export struct SettingsGeneralPage {
     })
   }
 
-  @Local clearDataSelection: boolean[] = [true, true, false, false, false, false]
+  @Local clearDataSelection: boolean[] = [true, true, true, false, false, false, false]
   private clearDataDialogId: number = -1
 
   @Builder
@@ -783,21 +1044,21 @@ export struct SettingsGeneralPage {
 
   @Builder
   ClearDataDialog() {
-    Column({ space: 10 }) {
+    // 原版 w5.k 弹窗紧凑卡（视频 0:48 同款）：窄卡、加粗标题、右对齐取消/确定文字按钮
+    Column({ space: 6 }) {
       Text('清除数据')
-        .fontSize(18)
+        .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
-        .width('100%')
       ForEach(CLEAR_DATA_ITEMS, (label: string, index: number) => {
         this.ClearDataItem(label, index)
       }, (label: string) => label)
-      Row({ space: 24 }) {
+      Row() {
         Blank()
         Text($r('app.string.cancel'))
           .fontSize(15)
           .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
           .onClick(() => {
             this.closeClearDataDialog()
           })
@@ -805,7 +1066,7 @@ export struct SettingsGeneralPage {
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.accent'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
           .onClick(() => {
             this.applyClearData()
             this.closeClearDataDialog()
@@ -814,10 +1075,11 @@ export struct SettingsGeneralPage {
       .width('100%')
       .margin({ top: 6 })
     }
-    .width('80%')
-    .padding(24)
+    .width('70%')
+    .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .borderRadius(12)
+    .transition(dialogTransition())
   }
 
   private closeClearDataDialog(): void {
@@ -826,6 +1088,30 @@ export struct SettingsGeneralPage {
     }
     this.getUIContext().getPromptAction().closeCustomDialog(this.clearDataDialogId)
     this.clearDataDialogId = -1
+  }
+
+  private pickRestoreMode(): void {
+    const labels: string[] = ['禁用恢复', '总是恢复', '优先询问']
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < labels.length; i++) {
+      const mode = i
+      const label = labels[i]
+      sheets.push({
+        title: this.settings.restoreTabsMode === mode ? `${label} ✓` : label,
+        action: (): void => {
+          this.settings.setRestoreTabsMode(mode)
+          if (mode !== 0) {
+            // 原版 toast s5：开启“隐身模式”时不会恢复未关闭标签。
+            this.getUIContext().getPromptAction().showToast({ message: '开启“隐身模式”时不会恢复未关闭标签。', duration: 2000 })
+          }
+        }
+      })
+    }
+    ActionSheet.show({
+      title: '启动时恢复未关闭标签',
+      message: '选择启动时未关闭标签页的恢复方式',
+      sheets: sheets
+    })
   }
 
   private applyClearData(): void {
@@ -838,27 +1124,35 @@ export struct SettingsGeneralPage {
       }
     }
     if (selected[1]) {
+      // 原版表单数据=清除表单自动填充；ArkWeb 无独立 API，用 WebStorage 数据清除
+      try {
+        webview.WebStorage.deleteAllData()
+      } catch (error) {
+        console.error('clear form data failed')
+      }
+    }
+    if (selected[2]) {
       this.db.clearHistory().catch((error: BusinessError) => {
         console.error(`clear history failed: ${error.message}`)
       })
       this.settings.clearSearchHistory()
     }
-    if (selected[2]) {
+    if (selected[3]) {
       AppStorage.setOrCreate('via_undo_close_url', '')
     }
-    if (selected[3]) {
+    if (selected[4]) {
       try {
         webview.WebStorage.deleteAllData()
       } catch (error) {
         console.error('clear web storage failed')
       }
     }
-    if (selected[4]) {
+    if (selected[5]) {
       webview.WebCookieManager.clearAllCookies().catch((error: BusinessError) => {
         console.error(`clear cookies failed: ${error.message}`)
       })
     }
-    if (selected[5]) {
+    if (selected[6]) {
       this.clearAppCache()
     }
     this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
@@ -890,14 +1184,29 @@ export struct SettingsGeneralPage {
   }
 }
 
+// 原版 7 项与顺序（arrays.xml array c：缓存/表单数据/历史/关闭的标签页/网页存储/Cookies/应用缓存）
 const CLEAR_DATA_ITEMS: string[] = [
   '缓存',
+  '表单数据',
   '历史',
   '关闭的标签页',
   '网页存储',
   'Cookies (登录状态)',
   '应用缓存'
 ]
+
+// 原版 z8/h0.f：退出时清除数据同表（arrays c），位表 [1,2,4,64,8,16,32]
+const CLEAR_ON_EXIT_ITEMS: string[] = [
+  '缓存',
+  '表单数据',
+  '历史',
+  '关闭的标签页',
+  '网页存储',
+  'Cookies (登录状态)',
+  '应用缓存'
+]
+
+const CLEAR_ON_EXIT_BITS: number[] = [1, 2, 4, 64, 8, 16, 32]
 
 @Builder
 export function SettingsGeneralPageBuilder() {

@@ -1,4 +1,5 @@
 import { SiteSetting } from '../common/Types'
+import { dialogTransition } from '../common/Transitions'
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -91,6 +92,9 @@ export struct SiteAllPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {
@@ -197,6 +201,9 @@ export struct FontSizePage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
@@ -281,6 +288,7 @@ export struct FontSizePage {
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
+    .transition(dialogTransition())
   }
 
   private closeAddException(): void {
@@ -350,6 +358,9 @@ export struct PermissionPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {
@@ -471,6 +482,7 @@ export struct PermissionPage {
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
+    .transition(dialogTransition())
   }
 
   private closeAddException(): void {
@@ -534,6 +546,9 @@ export struct AdBlockExceptionPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {
@@ -639,6 +654,7 @@ export struct AdBlockExceptionPage {
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
+    .transition(dialogTransition())
   }
 
   private closeAddException(): void {

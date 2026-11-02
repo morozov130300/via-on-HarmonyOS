@@ -1,19 +1,30 @@
-import { RuleSubEntry } from '../common/Types'
+import { RuleSubEntry, RULE_SUB_PRESETS } from '../common/Types'
+import { dialogTransition } from '../common/Transitions'
 import { AppSettings } from '../common/Settings'
 import { RuleSubManager } from '../common/RuleSubscriptions'
 import { AdBlocker } from '../common/AdBlock'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { BusinessError } from '@kit.BasicServicesKit'
+import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 
+const AUTO_UPDATE_DAYS: number[] = [0, 1, 3, 7, 15]
+const AUTO_UPDATE_LABELS: string[] = ['从不', '每天', '每 3 天', '每周', '每 15 天']
+
+// 原版 z7/q0.java：规则订阅页
+// 列表行：名称 + 「%d 条规则，从未更新/已更新」(ib/g.java) + 启用圆点；点击切换、长按菜单 [预览/更新/编辑/复制链接/删除]（G3/t3）
+// 工具栏：＋新建（预设单选 + 自定义，z3/u3/m3）、更新（ch→K3）
 @ComponentV2
 export struct SettingsRuleSubPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
   @Local updating: boolean = false
-  @Local addDialogVisible: boolean = false
-  @Local newName: string = ''
-  @Local newUrl: string = ''
+  @Local newUrl: string = 'https://'
+  @Local editUrl: string = ''
+  @Local editKey: string = ''
+  @Local previewLines: string[] = []
+  @Local previewTitle: string = ''
   private addDialogId: number = -1
+  private editDialogId: number = -1
+  private previewDialogId: number = -1
 
   private bindAppBar(): void {
     AppBar.show({
@@ -27,7 +38,7 @@ export struct SettingsRuleSubPage {
         this.updateAll()
       },
       onRight2: () => {
-        this.openAddDialog()
+        this.pickToAdd()
       }
     }, this)
   }
@@ -62,51 +73,39 @@ export struct SettingsRuleSubPage {
               .width('100%')
               .padding({ left: 16, right: 16, top: 12, bottom: 4 })
 
-            List({ space: 1 }) {
-              ForEach(this.settings.ruleSubscriptions, (sub: RuleSubEntry) => {
-                ListItem() {
-                  Row({ space: 12 }) {
-                    Column() {
-                      Text(sub.name)
-                        .fontSize(15)
-                        .fontColor($r('app.color.fg'))
-                        .maxLines(1)
-                      Text(`${sub.ruleCount} 条规则，${this.lastUpdateLabel(sub.lastUpdate)}`)
-                        .fontSize(12)
-                        .fontColor($r('app.color.fg_secondary'))
-                        .maxLines(1)
-                        .margin({ top: 2 })
-                    }
-                    .alignItems(HorizontalAlign.Start)
-                    .layoutWeight(1)
-                    .onClick(() => {
-                      this.toggleSub(sub)
-                    })
-                    if (!sub.isPreset) {
-                      Text('删除')
-                        .fontSize(13)
-                        .fontColor($r('app.color.fg_secondary'))
-                        .padding(6)
-                        .onClick(() => {
-                          this.removeSub(sub)
-                        })
-                    }
-                    Circle({ width: 22, height: 22 })
-                      .fill(sub.enabled ? $r('app.color.accent') : Color.Transparent)
-                      .stroke(sub.enabled ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-                      .strokeWidth(1.5)
-                      .onClick(() => {
-                        this.toggleSub(sub)
-                      })
-                  }
-                  .width('100%')
-                  .height(60)
-                  .padding({ left: 16, right: 16 })
+            ForEach(this.settings.ruleSubscriptions, (sub: RuleSubEntry) => {
+              Row({ space: 12 }) {
+                Column() {
+                  Text(sub.name)
+                    .fontSize(15)
+                    .fontColor($r('app.color.fg'))
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  // 原版 ib/g.java:28：「%d 条规则，%s」；%s = 从未更新(k7) / 「%s 已更新」(a0t)
+                  Text(`${sub.ruleCount} 条规则，${this.lastUpdateLabel(sub.lastUpdate)}`)
+                    .fontSize(12)
+                    .fontColor($r('app.color.fg_secondary'))
+                    .maxLines(1)
+                    .margin({ top: 2 })
                 }
-              }, (sub: RuleSubEntry) => `${sub.key}-${sub.enabled}-${sub.ruleCount}-${sub.lastUpdate}`)
-            }
-            .width('100%')
-            .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
+                .alignItems(HorizontalAlign.Start)
+                .layoutWeight(1)
+                Circle({ width: 22, height: 22 })
+                  .fill(sub.enabled ? $r('app.color.accent') : Color.Transparent)
+                  .stroke(sub.enabled ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+                  .strokeWidth(1.5)
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 11, bottom: 11 })
+              .alignItems(VerticalAlign.Center)
+              .onClick(() => {
+                this.toggleSub(sub)
+              })
+              .gesture(LongPressGesture()
+                .onAction(() => {
+                  this.showSubMenu(sub)
+                }))
+            }, (sub: RuleSubEntry) => `${sub.key}-${sub.enabled}-${sub.ruleCount}-${sub.lastUpdate}`)
           }
           .width('100%')
         }
@@ -126,19 +125,22 @@ export struct SettingsRuleSubPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
   }
 
   private autoUpdateLabel(): string {
-    if (this.settings.ruleAutoUpdate === 1) {
-      return '每天'
+    let index = 0
+    for (let i = 0; i < AUTO_UPDATE_DAYS.length; i++) {
+      if (this.settings.ruleAutoUpdate >= AUTO_UPDATE_DAYS[i]) {
+        index = i
+      }
     }
-    if (this.settings.ruleAutoUpdate === 7) {
-      return '每周'
-    }
-    return '从不'
+    return AUTO_UPDATE_LABELS[index]
   }
 
   private lastUpdateLabel(ts: number): string {
@@ -147,26 +149,150 @@ export struct SettingsRuleSubPage {
     }
     const d = new Date(ts)
     const pad = (n: number): string => n < 10 ? `0${n}` : `${n}`
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} 更新`
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} 已更新`
   }
 
   private pickAutoUpdate(): void {
-    const sheets: SheetInfo[] = [
-      { title: '从不', action: (): void => {
-        this.settings.setRuleAutoUpdate(0)
-      } },
-      { title: '每天', action: (): void => {
-        this.settings.setRuleAutoUpdate(1)
-      } },
-      { title: '每周', action: (): void => {
-        this.settings.setRuleAutoUpdate(7)
-      } }
-    ]
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < AUTO_UPDATE_DAYS.length; i++) {
+      const days = AUTO_UPDATE_DAYS[i]
+      sheets.push({
+        title: AUTO_UPDATE_LABELS[i],
+        action: (): void => {
+          this.settings.setRuleAutoUpdate(days)
+        }
+      })
+    }
     ActionSheet.show({
       title: '自动更新',
-      message: '自动更新已启用的规则订阅',
+      message: '',
       sheets: sheets
     })
+  }
+
+  // 原版 G3/t3：长按菜单 [预览(W)/更新(ch)/编辑(D)/复制链接(s)/删除(x)]
+  private showSubMenu(sub: RuleSubEntry): void {
+    ActionSheet.show({
+      title: sub.name,
+      message: '',
+      sheets: [
+        {
+          title: '预览',
+          action: (): void => {
+            this.previewSub(sub)
+          }
+        },
+        {
+          title: '更新',
+          action: (): void => {
+            this.updateOne(sub)
+          }
+        },
+        {
+          title: '编辑',
+          action: (): void => {
+            this.openEditDialog(sub)
+          }
+        },
+        {
+          title: '复制链接',
+          action: (): void => {
+            this.copyLink(sub)
+          }
+        },
+        {
+          title: '删除',
+          action: (): void => {
+            this.confirmRemove(sub)
+          }
+        }
+      ]
+    })
+  }
+
+  // 原版 v0：预览本地规则文件
+  private previewSub(sub: RuleSubEntry): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    this.previewLines = RuleSubManager.getInstance().readSubLines(context, sub.key)
+    this.previewTitle = sub.name
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.PreviewDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.5)'
+    }).then((dialogId: number) => {
+      this.previewDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open preview dialog failed: ${error.message}`)
+    })
+  }
+
+  private closePreview(): void {
+    if (this.previewDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.previewDialogId)
+    this.previewDialogId = -1
+  }
+
+  // 原版 t3:1：更新单条（a0q 开始更新…）
+  private updateOne(sub: RuleSubEntry): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined || this.updating) {
+      return
+    }
+    this.getUIContext().getPromptAction().showToast({ message: '开始更新…', duration: 1500 })
+    this.updating = true
+    RuleSubManager.getInstance().updateSubscription(context, sub).then((count: number) => {
+      this.settings.updateRuleSubEntry(sub.key, count, Date.now())
+      this.reloadBlocker()
+    }).catch((error: BusinessError) => {
+      console.error(`update sub failed: ${error.message}`)
+    }).finally(() => {
+      this.updating = false
+    })
+  }
+
+  // 原版 K3：更新全部已启用（h3 正在开始下载… → a0k 订阅规则更新完成。）
+  private updateAll(): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined || this.updating) {
+      return
+    }
+    const targets: RuleSubEntry[] = []
+    for (let i = 0; i < this.settings.ruleSubscriptions.length; i++) {
+      if (this.settings.ruleSubscriptions[i].enabled) {
+        targets.push(this.settings.ruleSubscriptions[i])
+      }
+    }
+    if (targets.length === 0) {
+      return
+    }
+    this.updating = true
+    this.getUIContext().getPromptAction().showToast({ message: '正在开始下载…', duration: 1500 })
+    const manager = RuleSubManager.getInstance()
+    let done = 0
+    for (let i = 0; i < targets.length; i++) {
+      const sub = targets[i]
+      manager.updateSubscription(context, sub).then((count: number) => {
+        this.settings.updateRuleSubEntry(sub.key, count, Date.now())
+      }).catch((error: BusinessError) => {
+        console.error(`update sub failed: ${error.message}`)
+      }).finally(() => {
+        done = done + 1
+        if (done === targets.length) {
+          this.updating = false
+          this.reloadBlocker()
+          this.getUIContext().getPromptAction().showToast({ message: '订阅规则更新完成。', duration: 1500 })
+        }
+      })
+    }
   }
 
   private toggleSub(sub: RuleSubEntry): void {
@@ -176,6 +302,25 @@ export struct SettingsRuleSubPage {
     if (enabled && sub.ruleCount === 0) {
       this.updateOne(sub)
     }
+  }
+
+  // 原版 l3：删除（fl 你确定删除 %s 吗？）
+  private confirmRemove(sub: RuleSubEntry): void {
+    this.getUIContext().showAlertDialog({
+      message: `你确定删除 ${sub.name} 吗？`,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: (): void => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.delete'),
+        fontColor: $r('app.color.accent'),
+        action: (): void => {
+          this.removeSub(sub)
+        }
+      }
+    })
   }
 
   private removeSub(sub: RuleSubEntry): void {
@@ -196,62 +341,52 @@ export struct SettingsRuleSubPage {
     RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, AdBlocker.getInstance())
   }
 
-  private updateOne(sub: RuleSubEntry): void {
-    const context = this.getUIContext().getHostContext()
-    if (context === undefined || this.updating) {
-      return
-    }
-    this.updating = true
-    RuleSubManager.getInstance().updateSubscription(context, sub).then((count: number) => {
-      this.settings.updateRuleSubEntry(sub.key, count, Date.now())
-      this.reloadBlocker()
-      this.getUIContext().getPromptAction().showToast({ message: `${sub.name} 已更新 ${count} 条规则`, duration: 1500 })
-    }).catch((error: BusinessError) => {
-      console.error(`update sub failed: ${error.message}`)
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_failed'), duration: 1500 })
-    }).finally(() => {
-      this.updating = false
+  // 原版 t3:3：复制链接（zd 已复制链接）
+  private copyLink(sub: RuleSubEntry): void {
+    const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, sub.url)
+    pasteboard.getSystemPasteboard().setData(data).then(() => {
+      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: 1500 })
     })
   }
 
-  private updateAll(): void {
-    const context = this.getUIContext().getHostContext()
-    if (context === undefined || this.updating) {
-      return
-    }
-    const targets: RuleSubEntry[] = []
+  // 原版 z3/u3/m3：＋新建 → 未添加预设单选 + 自定义(ey)
+  private pickToAdd(): void {
+    const existing: string[] = []
     for (let i = 0; i < this.settings.ruleSubscriptions.length; i++) {
-      if (this.settings.ruleSubscriptions[i].enabled) {
-        targets.push(this.settings.ruleSubscriptions[i])
+      existing.push(this.settings.ruleSubscriptions[i].url)
+    }
+    const candidates: RuleSubEntry[] = []
+    for (let i = 0; i < RULE_SUB_PRESETS.length; i++) {
+      if (existing.indexOf(RULE_SUB_PRESETS[i].url) < 0) {
+        candidates.push(RULE_SUB_PRESETS[i])
       }
     }
-    if (targets.length === 0) {
-      this.getUIContext().getPromptAction().showToast({ message: '没有已启用的订阅', duration: 1500 })
-      return
-    }
-    this.updating = true
-    const manager = RuleSubManager.getInstance()
-    let done = 0
-    for (let i = 0; i < targets.length; i++) {
-      const sub = targets[i]
-      manager.updateSubscription(context, sub).then((count: number) => {
-        this.settings.updateRuleSubEntry(sub.key, count, Date.now())
-      }).catch((error: BusinessError) => {
-        console.error(`update sub failed: ${error.message}`)
-      }).finally(() => {
-        done = done + 1
-        if (done === targets.length) {
-          this.updating = false
-          this.reloadBlocker()
-          this.getUIContext().getPromptAction().showToast({ message: `已更新 ${done} 个订阅`, duration: 1500 })
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < candidates.length; i++) {
+      const preset = candidates[i]
+      sheets.push({
+        title: preset.name,
+        action: (): void => {
+          this.settings.addRuleSub(preset.name, preset.url)
         }
       })
     }
+    sheets.push({
+      title: '自定义',
+      action: (): void => {
+        this.openAddDialog()
+      }
+    })
+    ActionSheet.show({
+      title: '添加规则订阅',
+      message: '',
+      sheets: sheets
+    })
   }
 
+  // 原版 B3(-1,null)：自定义添加对话框（b8 添加规则订阅，输入预填 https://，hint kh 地址）
   private openAddDialog(): void {
-    this.newName = ''
-    this.newUrl = ''
+    this.newUrl = 'https://'
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
         this.AddSubDialog()
@@ -275,25 +410,68 @@ export struct SettingsRuleSubPage {
     this.addDialogId = -1
   }
 
+  // 原版 y3：校验 URL（a0z 链接无效。）+ 去重（jd 此规则订阅已存在。），名称取 host
+  private applyUrl(newUrl: string): boolean {
+    const url = newUrl.trim()
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: 1500 })
+      return false
+    }
+    for (let i = 0; i < this.settings.ruleSubscriptions.length; i++) {
+      if (this.settings.ruleSubscriptions[i].url === url) {
+        this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: 1500 })
+        return false
+      }
+    }
+    return true
+  }
+
+  private hostOf(url: string): string {
+    const rest = url.indexOf('://') >= 0 ? url.substring(url.indexOf('://') + 3) : url
+    const cut = rest.indexOf('/')
+    return cut > 0 ? rest.substring(0, cut) : rest
+  }
+
+  // 原版 B3(i10, cVar)：编辑对话框（hd 编辑规则订阅，输入预填当前 URL，hint kh 地址）
+  private openEditDialog(sub: RuleSubEntry): void {
+    this.editKey = sub.key
+    this.editUrl = sub.url
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.EditSubDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.5)'
+    }).then((dialogId: number) => {
+      this.editDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open edit sub dialog failed: ${error.message}`)
+    })
+  }
+
+  private closeEditDialog(): void {
+    if (this.editDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.editDialogId)
+    this.editDialogId = -1
+  }
+
   @Builder
   AddSubDialog() {
     Column({ space: 14 }) {
-      Text('添加订阅')
+      Text('添加规则订阅')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
-      TextInput({ placeholder: '名称', text: this.newName })
+      TextInput({ text: this.newUrl })
         .width('100%')
         .height(44)
         .fontSize(14)
-        .onChange((value: string) => {
-          this.newName = value
-        })
-      TextInput({ placeholder: '规则列表 URL（Adblock Plus 格式）', text: this.newUrl })
-        .width('100%')
-        .height(44)
-        .fontSize(14)
+        .placeholderColor($r('app.color.fg_secondary'))
         .onChange((value: string) => {
           this.newUrl = value
         })
@@ -312,12 +490,11 @@ export struct SettingsRuleSubPage {
           .fontColor($r('app.color.accent'))
           .padding({ left: 8, right: 8, top: 10, bottom: 10 })
           .onClick(() => {
-            const name = this.newName.trim()
             const url = this.newUrl.trim()
-            if (url.startsWith('http')) {
-              this.settings.addRuleSub(name === '' ? url : name, url)
+            if (this.applyUrl(url)) {
+              this.settings.addRuleSub(this.hostOf(url), url)
+              this.closeAddDialog()
             }
-            this.closeAddDialog()
           })
       }
       .width('100%')
@@ -326,6 +503,120 @@ export struct SettingsRuleSubPage {
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
+    .transition(dialogTransition())
+  }
+
+  @Builder
+  EditSubDialog() {
+    Column({ space: 14 }) {
+      Text('编辑规则订阅')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+      TextInput({ text: this.editUrl })
+        .width('100%')
+        .height(44)
+        .fontSize(14)
+        .placeholderColor($r('app.color.fg_secondary'))
+        .onChange((value: string) => {
+          this.editUrl = value
+        })
+      Row({ space: 24 }) {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(15)
+          .fontColor($r('app.color.fg_secondary'))
+          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+          .onClick(() => {
+            this.closeEditDialog()
+          })
+        Text($r('app.string.confirm'))
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+          .onClick(() => {
+            const url = this.editUrl.trim()
+            const sub = this.settings.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === this.editKey)
+            const others: RuleSubEntry[] = this.settings.ruleSubscriptions.filter((s: RuleSubEntry): boolean => s.key !== this.editKey)
+            let dup = false
+            for (let i = 0; i < others.length; i++) {
+              if (others[i].url === url) {
+                dup = true
+              }
+            }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+              this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: 1500 })
+              return
+            }
+            if (dup) {
+              this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: 1500 })
+              return
+            }
+            if (sub !== undefined) {
+              sub.url = url
+              this.settings.saveRuleSubs()
+              this.reloadBlocker()
+            }
+            this.closeEditDialog()
+          })
+      }
+      .width('100%')
+    }
+    .width('80%')
+    .padding(24)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+    .transition(dialogTransition())
+  }
+
+  @Builder
+  PreviewDialog() {
+    Column() {
+      Text(this.previewTitle)
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+        .maxLines(1)
+      Scroll() {
+        Column() {
+          if (this.previewLines.length === 0) {
+            Text('暂无规则')
+              .fontSize(14)
+              .fontColor($r('app.color.fg_secondary'))
+              .margin({ top: 20 })
+          }
+          ForEach(this.previewLines, (line: string, index: number) => {
+            Text(line)
+              .fontSize(12)
+              .fontColor($r('app.color.fg_secondary'))
+              .width('100%')
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .padding({ top: 3, bottom: 3 })
+          }, (line: string, index: number) => `${index}-${line}`)
+        }
+        .width('100%')
+      }
+      .layoutWeight(1)
+      .align(Alignment.Top)
+      .margin({ top: 12 })
+      Text($r('app.string.cancel'))
+        .fontSize(15)
+        .fontColor($r('app.color.fg_secondary'))
+        .padding({ left: 8, right: 8, top: 12, bottom: 4 })
+        .onClick(() => {
+          this.closePreview()
+        })
+    }
+    .width('85%')
+    .height('70%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+    .transition(dialogTransition())
   }
 }
 

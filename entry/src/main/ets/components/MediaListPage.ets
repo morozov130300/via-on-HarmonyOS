@@ -17,7 +17,7 @@ export struct MediaListPage {
   build() {
     Column() {
       SettingsHeader({
-        headerTitle: '媒体资源',
+        headerTitle: '资源嗅探',
         rightText: this.mediaUrls.length > 0 ? `${this.mediaUrls.length} 个` : '',
         onBack: () => {
           this.close()
@@ -37,9 +37,14 @@ export struct MediaListPage {
       if (this.mediaUrls.length === 0) {
         Column({ space: 10 }) {
           ViaIcon({ icon: $r('app.media.via_ic_download'), iconSize: 40, iconColor: $r('app.color.fg_tertiary') })
-          Text('当前页面没有嗅探到媒体资源')
+          Text('该网站不支持资源嗅探')
             .fontSize(14)
             .fontColor($r('app.color.fg_secondary'))
+          Text('注：音乐或视频在播放时更容易被获取。资源嗅探不支持部分网站。')
+            .fontSize(12)
+            .fontColor($r('app.color.fg_tertiary'))
+            .textAlign(TextAlign.Center)
+            .padding({ left: 32, right: 32 })
         }
         .width('100%')
         .layoutWeight(1)
@@ -95,7 +100,8 @@ export struct MediaListPage {
   }
 
   private play(url: string): void {
-    if (this.settings.externalPlayer) {
+    // 原版 c8/k6.U7 + w9/k.w0（videoplayer）：'share' 时用系统分享/其它应用打开
+    if (this.settings.videoPlayer === 'share') {
       this.playExternal(url)
       return
     }
@@ -134,12 +140,8 @@ export struct MediaListPage {
   }
 
   private download(url: string): void {
-    const context = getContext(this) as Context
-    DownloadCoordinator.getInstance().startUrlDownload(context, url).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_started'), duration: 1500 })
-    }).catch(() => {
-      console.error('media download failed')
-    })
+    // 原版媒体下载与链接下载同走确认弹层（mark/via/download/m.java）
+    DownloadCoordinator.getInstance().requestUrlDownload(url, '', '')
   }
 
   private mediaName(url: string): string {

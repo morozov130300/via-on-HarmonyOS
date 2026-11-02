@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { dialogTransition } from '../common/Transitions'
 import { AdBlocker } from '../common/AdBlock'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -70,6 +71,9 @@ export struct RulesPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {
@@ -171,6 +175,7 @@ export struct RulesPage {
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
+    .transition(dialogTransition())
   }
 }
 

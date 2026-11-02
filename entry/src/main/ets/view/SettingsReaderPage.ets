@@ -1,29 +1,51 @@
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { i18n } from '@kit.LocalizationKit'
+import { ConfigurationConstant, common } from '@kit.AbilityKit'
 
-class ReaderThemeDef {
-  bg: string
-  fg: string
+// 原版 g8/j.java:18 f6283d 主题底色（ARGB int）
+// 0 表示默认主题（原版 GradientDrawable.setColor(0) 即透明圆点）
+const READER_THEME_ARG_BS: number[] = [0, -462365, -4133433, -11908531, -15592942]
 
-  constructor(bg: string, fg: string) {
-    this.bg = bg
-    this.fg = fg
+// 原版 g6/y.java G(i10, -16777216, 0.3f)：暗色下每个通道 = ch * 0.3（截断）
+function blendDotColorToDark(argb: number): string {
+  if (argb === 0) {
+    return '#00000000'
   }
+  const r = Math.floor(((argb >> 16) & 255) * 0.3)
+  const g = Math.floor(((argb >> 8) & 255) * 0.3)
+  const b = Math.floor((argb & 255) * 0.3)
+  const toHex = (v: number): string => v.toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }
 
-const READER_THEMES: ReaderThemeDef[] = [
-  new ReaderThemeDef('#121212', '#BEBEBE'),
-  new ReaderThemeDef('#7C766B', '#1C1C1C'),
-  new ReaderThemeDef('#4C5F50', '#E4E9E4'),
-  new ReaderThemeDef('#2E2E30', '#C9C9C9'),
-  new ReaderThemeDef('#050505', '#9C9C9C')
-]
+function dotColorOf(argb: number, isDark: boolean): string {
+  if (argb === 0) {
+    return '#00000000'
+  }
+  return isDark ? blendDotColorToDark(argb) : `#${(argb & 0xFFFFFF).toString(16).padStart(6, '0')}`
+}
 
 @ComponentV2
 export struct SettingsReaderPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+
+  private isDarkMode(): boolean {
+    try {
+      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+      return ctx.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+    } catch (error) {
+      return false
+    }
+  }
+
+  // 原版 z8/f.c()：中文环境预览文案
+  private fontPreviewText(): string {
+    const lang = i18n.System.getSystemLanguage()
+    return lang.startsWith('zh') ? '莫忆世事兼身事，须著人间比梦间。' : 'Less is more.'
+  }
 
   private bindAppBar(): void {
     AppBar.show({
@@ -40,6 +62,8 @@ export struct SettingsReaderPage {
         AppBarSpacer()
         Scroll() {
           Column() {
+            // 原版 hb/o5：row1 = 二次确认开关（rp=开启阅读模式需要二次确认，
+            // 副标题 rr/rq 随开合切换：开=先展示菜单、关=开启阅读模式）
             SettingCheckRow({
               rowLabel: $r('app.string.reader_confirm'),
               rowDesc: this.settings.readerConfirm
@@ -51,17 +75,18 @@ export struct SettingsReaderPage {
               }
             })
 
+            // 原版 hb/o5：外观（主题点阵 g8.j）+ 自定义阅读模式 CSS
             Text($r('app.string.appearance'))
               .fontSize(13)
               .fontColor($r('app.color.accent'))
               .width('100%')
               .padding({ left: 16, right: 16, top: 18, bottom: 8 })
             Row({ space: 14 }) {
-              ForEach(READER_THEMES, (theme: ReaderThemeDef, index: number) => {
+              ForEach(READER_THEME_ARG_BS, (argb: number, index: number) => {
                 Column()
                   .width(52)
                   .height(30)
-                  .backgroundColor(theme.bg)
+                  .backgroundColor(dotColorOf(argb, this.isDarkMode()))
                   .borderRadius(15)
                   .border({
                     width: this.settings.readerTheme === index ? 2 : 0.5,
@@ -71,7 +96,7 @@ export struct SettingsReaderPage {
                   .onClick(() => {
                     this.settings.setReaderTheme(index)
                   })
-              }, (theme: ReaderThemeDef) => theme.bg)
+              }, (argb: number) => argb.toString())
             }
             .width('100%')
             .padding({ left: 16, right: 16 })
@@ -88,7 +113,7 @@ export struct SettingsReaderPage {
                 .width(44)
               Slider({
                 value: this.settings.readerFontSize,
-                min: 9,
+                min: 10,
                 max: 30,
                 step: 1,
                 style: SliderStyle.OutSet
@@ -105,19 +130,17 @@ export struct SettingsReaderPage {
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 4 })
-
-            Row() {
-              Text($r('app.string.reader_sample_text'))
+            // 原版 ib.x + z8/f.c()：字体预览文案（中文=「莫忆世事兼身事，须著人间比梦间。」，否则 Less is more.）
+            Column({ space: 2 }) {
+              Text(this.fontPreviewText())
                 .fontSize(this.settings.readerFontSize)
-                .fontColor(READER_THEMES[this.settings.readerTheme].fg)
-                .animation({ duration: 120 })
+                .fontColor($r('app.color.fg'))
+                .width('100%')
+                .padding({ left: 16, right: 16 })
+                .maxLines(2)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
             }
-            .width('100%')
-            .padding(16)
-            .margin({ left: 0, right: 0, top: 10 })
-            .backgroundColor(READER_THEMES[this.settings.readerTheme].bg)
-            .borderRadius(10)
-            .animation({ duration: 150 })
+            .margin({ top: 4 })
 
             SettingNavRow({
               rowLabel: $r('app.string.custom_reader_css'),
@@ -142,6 +165,9 @@ export struct SettingsReaderPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {

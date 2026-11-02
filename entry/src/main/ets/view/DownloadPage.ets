@@ -1,7 +1,12 @@
 import { DownloadRec, DownloadStatus } from '../common/Types'
 import { BrowserDb } from '../common/Database'
+import { DownloadCoordinator } from '../common/Downloads'
 import { AppIcon } from '../components/AppIcon'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { filePreview } from '@kit.PreviewKit'
+import { common } from '@kit.AbilityKit'
+
+const DOWNLOAD_REFRESH_MS: number = 500
 
 function downloadStatusText(status: DownloadStatus): string {
   if (status === DownloadStatus.Completed) {
@@ -35,11 +40,35 @@ function downloadSizeText(size: number): string {
 @ComponentV2
 export struct DownloadPage {
   private db: BrowserDb = BrowserDb.getInstance()
+  private coordinator: DownloadCoordinator = DownloadCoordinator.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
   @Local items: DownloadRec[] = []
+  private refreshTimer: number = -1
 
   aboutToAppear(): void {
     this.reload()
+    this.startAutoRefresh()
+  }
+
+  aboutToDisappear(): void {
+    this.stopAutoRefresh()
+  }
+
+  // 原版下载进度经系统通知栏实时更新；应用内页面以 500ms 轮询近似（mark/via/download/c）
+  private startAutoRefresh(): void {
+    if (this.refreshTimer >= 0) {
+      return
+    }
+    this.refreshTimer = setInterval(() => {
+      this.reload()
+    }, DOWNLOAD_REFRESH_MS)
+  }
+
+  private stopAutoRefresh(): void {
+    if (this.refreshTimer >= 0) {
+      clearInterval(this.refreshTimer)
+      this.refreshTimer = -1
+    }
   }
 
   private bindAppBar(): void {
@@ -76,31 +105,38 @@ export struct DownloadPage {
                       .fontColor($r('app.color.fg'))
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    Text(`${downloadStatusText(item.status)} ${downloadSizeText(item.size)}`)
+                    Text(`${downloadStatusText(item.status)} ${downloadSizeText(item.received > 0 ? item.received : item.size)}`)
                       .fontSize(12)
                       .fontColor(item.status === DownloadStatus.Completed ? $r('app.color.fg_secondary') : $r('app.color.accent'))
                       .maxLines(1)
+                    if (this.progressVisible(item)) {
+                      Progress({ value: item.size > 0 ? Math.floor(item.received / item.size * 100) : 0, total: 100,
+                        type: ProgressType.Linear })
+                        .width('100%')
+                        .height(3)
+                        .color($r('app.color.accent'))
+                        .backgroundColor($r('app.color.surface'))
+                    }
                   }
                   .layoutWeight(1)
                   .alignItems(HorizontalAlign.Start)
-                  AppIcon({ icon: $r('sys.symbol.trash'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-                    .onClick(() => {
-                      this.db.deleteDownload(item.id).then(() => {
-                        this.reload()
-                      }).catch((error: BusinessError) => {
-                        console.error(`delete download failed: ${error.message}`)
-                      })
-                    })
+                  this.ActionIcons(item)
                 }
                 .width('100%')
-                .height(56)
-                .padding({ left: 16, right: 16 })
+                .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+                .onClick(() => {
+                  // 原版点击已完成任务打开文件
+                  if (item.status === DownloadStatus.Completed) {
+                    this.openFile(item)
+                  }
+                })
               }
-            }, (item: DownloadRec) => item.id.toString())
+            }, (item: DownloadRec) => `${item.id}_${item.status}_${item.received}`)
           }
           .width('100%')
           .layoutWeight(1)
           .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
+          .scrollBar(BarState.Off)
 
           Button($r('app.string.clear_data'))
             .fontSize(14)
@@ -130,8 +166,81 @@ export struct DownloadPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+      this.startAutoRefresh()
+    })
+    .onHidden(() => {
+      this.stopAutoRefresh()
+    })
     .onWillDisappear(() => {
+      this.stopAutoRefresh()
       AppBar.maybeHide(this)
+    })
+  }
+
+  // 原版下载状态机（mark/via/download/c）：下载中→暂停/取消；已暂停→继续/取消；失败/取消→重新下载
+  @Builder
+  ActionIcons(item: DownloadRec) {
+    Row({ space: 14 }) {
+      if (item.status === DownloadStatus.Running) {
+        Text($r('app.string.pause_download'))
+          .fontSize(13)
+          .fontColor($r('app.color.accent'))
+          .onClick(() => {
+            this.coordinator.pauseDownload(item)
+          })
+        Text($r('app.string.cancel'))
+          .fontSize(13)
+          .fontColor($r('app.color.fg_secondary'))
+          .onClick(() => {
+            this.coordinator.cancelDownload(item)
+          })
+      } else if (item.status === DownloadStatus.Paused) {
+        Text($r('app.string.resume_download'))
+          .fontSize(13)
+          .fontColor($r('app.color.accent'))
+          .onClick(() => {
+            this.coordinator.resumeDownload(item)
+          })
+        Text($r('app.string.cancel'))
+          .fontSize(13)
+          .fontColor($r('app.color.fg_secondary'))
+          .onClick(() => {
+            this.coordinator.cancelDownload(item)
+          })
+      } else if (item.status === DownloadStatus.Failed || item.status === DownloadStatus.Canceled) {
+        Text($r('app.string.retry_download'))
+          .fontSize(13)
+          .fontColor($r('app.color.accent'))
+          .onClick(() => {
+            this.coordinator.retryDownload(item)
+          })
+      }
+      AppIcon({ icon: $r('sys.symbol.trash'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
+        .onClick(() => {
+          this.db.deleteDownload(item.id).then(() => {
+            this.reload()
+          }).catch((error: BusinessError) => {
+            console.error(`delete download failed: ${error.message}`)
+          })
+        })
+    }
+  }
+
+  private progressVisible(item: DownloadRec): boolean {
+    return item.status === DownloadStatus.Running || item.status === DownloadStatus.Paused
+  }
+
+  private openFile(item: DownloadRec): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const info: filePreview.PreviewInfo = {
+      title: this.baseName(item.path),
+      uri: `file://${item.path}`,
+      mimeType: item.mime
+    }
+    filePreview.openPreview(context, info).catch((error: BusinessError) => {
+      console.error(`open preview failed: ${error.code} ${error.message}`)
     })
   }
 

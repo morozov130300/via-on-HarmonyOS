@@ -26,7 +26,7 @@ export struct HomeCssPage {
     NavDestination() {
       Column() {
         AppBarSpacer()
-        Text('自定义 CSS')
+        Text($r('app.string.home_css_hint'))
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -52,6 +52,9 @@ export struct HomeCssPage {
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.bindAppBar()
+    })
+    .onShown(() => {
       this.bindAppBar()
     })
     .onWillDisappear(() => {

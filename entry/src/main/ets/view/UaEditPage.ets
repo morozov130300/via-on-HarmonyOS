@@ -2,6 +2,9 @@ import { AppSettings } from '../common/Settings'
 import { CustomUaEntry } from '../common/UaTable'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
+// 原版 hb/v1.java：自定义浏览器标识 新建/编辑页
+// 标题=新建(N)/编辑(D)；菜单=保存(ap)；返回时未保存 → 提示(g6) 修改的内容未保存，是否保存？(nt) [保存并退出(sa)/退出(i9)]
+// 校验：标题不能为空(yj)、浏览器标识不能为空(a11)
 @ComponentV2
 export struct UaEditPage {
   private settings: AppSettings = AppSettings.getInstance()
@@ -12,10 +15,10 @@ export struct UaEditPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '自定义浏览器标识',
+      title: this.isNew ? '新建' : '编辑',
       rightText: '保存',
       onBack: () => {
-        this.navPathStack.pop()
+        this.confirmExit()
       },
       onRight: () => {
         this.save()
@@ -29,13 +32,8 @@ export struct UaEditPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            Text('标题')
-              .fontSize(13)
-              .fontColor($r('app.color.fg_secondary'))
-              .width('100%')
-              .padding({ left: 16, top: 14, bottom: 6 })
-            TextInput({ placeholder: '显示在列表中的名称', text: this.titleInput })
-              .height(44)
+            TextInput({ placeholder: '标题', text: this.titleInput })
+              .height(48)
               .fontSize(15)
               .fontColor($r('app.color.fg'))
               .placeholderColor($r('app.color.fg_secondary'))
@@ -45,32 +43,17 @@ export struct UaEditPage {
               .onChange((value: string) => {
                 this.titleInput = value
               })
-            Text('浏览器标识')
-              .fontSize(13)
-              .fontColor($r('app.color.fg_secondary'))
-              .width('100%')
-              .padding({ left: 16, top: 14, bottom: 6 })
-            TextArea({ placeholder: 'Mozilla/5.0 ...', text: this.uaInput })
+            TextArea({ placeholder: '浏览器标识', text: this.uaInput })
               .fontSize(14)
               .fontColor($r('app.color.fg'))
               .placeholderColor($r('app.color.fg_secondary'))
               .backgroundColor($r('app.color.page_bg'))
               .borderRadius(0)
-              .margin({ left: 16, right: 16 })
-              .constraintSize({ minHeight: 96 })
+              .margin({ left: 16, right: 16, top: 8 })
+              .constraintSize({ minHeight: 120 })
               .onChange((value: string) => {
                 this.uaInput = value
               })
-            if (!this.isNew) {
-              Text('删除此标识')
-                .fontSize(15)
-                .fontColor($r('app.color.fg'))
-                .width('100%')
-                .padding({ left: 16, right: 16, top: 16, bottom: 13 })
-                .onClick(() => {
-                  this.removeEntry()
-                })
-            }
           }
           .width('100%')
         }
@@ -98,6 +81,9 @@ export struct UaEditPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
@@ -111,11 +97,47 @@ export struct UaEditPage {
     return null
   }
 
+  // 原版 o3：内容未变化则直接退出，否则弹确认
+  private confirmExit(): void {
+    if (this.isNew) {
+      if (this.titleInput.trim() === '' && this.uaInput.trim() === '') {
+        this.navPathStack.pop()
+        return
+      }
+    } else {
+      const entry = this.findEntry(this.titleInput)
+      if (entry !== null && entry.title === this.titleInput && entry.ua === this.uaInput) {
+        this.navPathStack.pop()
+        return
+      }
+    }
+    this.getUIContext().showAlertDialog({
+      title: '提示',
+      message: '修改的内容未保存，是否保存？',
+      primaryButton: {
+        value: '保存并退出',
+        action: (): void => {
+          this.save()
+        }
+      },
+      secondaryButton: {
+        value: '退出',
+        action: (): void => {
+          this.navPathStack.pop()
+        }
+      }
+    })
+  }
+
   private save(): void {
     const title = this.titleInput.trim()
     const ua = this.uaInput.trim()
-    if (title === '' || ua === '') {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.ua_empty'), duration: 1500 })
+    if (title === '') {
+      this.getUIContext().getPromptAction().showToast({ message: '标题不能为空', duration: 1500 })
+      return
+    }
+    if (ua === '') {
+      this.getUIContext().getPromptAction().showToast({ message: '浏览器标识不能为空', duration: 1500 })
       return
     }
     const oldTitle = this.isNew ? '' : this.titleInput
@@ -123,18 +145,6 @@ export struct UaEditPage {
       this.settings.removeCustomUaEntry(oldTitle)
     }
     this.settings.saveCustomUaEntry(new CustomUaEntry(title, ua))
-    this.navPathStack.pop()
-  }
-
-  private removeEntry(): void {
-    const title = this.titleInput.trim()
-    if (title !== '') {
-      this.settings.removeCustomUaEntry(title)
-      if (this.settings.uaKey === 'custom' && this.settings.customUa === this.uaInput.trim()) {
-        this.settings.setCustomUa('')
-        this.settings.setUaKey('default')
-      }
-    }
     this.navPathStack.pop()
   }
 }

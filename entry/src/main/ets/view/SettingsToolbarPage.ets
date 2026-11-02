@@ -1,22 +1,16 @@
 import { AppSettings } from '../common/Settings'
+import { dialogTransition } from '../common/Transitions'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
+import { ConfigurationConstant, common } from '@kit.AbilityKit'
 
 const LAYOUT_TRADITIONAL: number = 0
 const LAYOUT_TOOLBAR_TOP: number = 1
 const LAYOUT_TOOLBAR_BOTTOM: number = 2
 const LAYOUT_DOUBLE: number = 3
 
-const AUTO_HIDE_ALWAYS: number = 0
-const AUTO_HIDE_SWIPE: number = 1
-const AUTO_HIDE_TAP: number = 2
-
-const CARD_H: number = 112
-const PAD: number = 8
-const ROW_H: number = 26
-const TAB_H: number = 22
-const ICONS_W: number = 120
+const ROW_H: number = 48
 
 class OptionItem {
   label: string
@@ -28,6 +22,7 @@ class OptionItem {
   }
 }
 
+// 应用布局数组 = 原版 arrays array i（a07/a06/a05/a03）
 const LAYOUT_OPTIONS: OptionItem[] = [
   new OptionItem('layout_traditional', LAYOUT_TRADITIONAL),
   new OptionItem('layout_toolbar_top', LAYOUT_TOOLBAR_TOP),
@@ -35,12 +30,14 @@ const LAYOUT_OPTIONS: OptionItem[] = [
   new OptionItem('layout_double_toolbar', LAYOUT_DOUBLE)
 ]
 
+// 自动隐藏数组 = 原版 arrays array d（jt/ju/jv）
 const AUTO_HIDE_OPTIONS: OptionItem[] = [
-  new OptionItem('auto_hide_always', AUTO_HIDE_ALWAYS),
-  new OptionItem('auto_hide_swipe', AUTO_HIDE_SWIPE),
-  new OptionItem('auto_hide_tap', AUTO_HIDE_TAP)
+  new OptionItem('auto_hide_always', 0),
+  new OptionItem('auto_hide_swipe', 1),
+  new OptionItem('auto_hide_tap', 2)
 ]
 
+// 地址栏内容数组 = 原版 arrays array k（kg/kh/a0y）
 const ADDRESS_CONTENT_OPTIONS: OptionItem[] = [
   new OptionItem('content_title', 0),
   new OptionItem('content_address', 1),
@@ -51,7 +48,6 @@ const ADDRESS_CONTENT_OPTIONS: OptionItem[] = [
 export struct SettingsToolbarPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
-  @Local cardW: number = 300
   @Local layoutDialogId: number = -1
   @Local autoHideDialogId: number = -1
   @Local addressContentDialogId: number = -1
@@ -59,7 +55,7 @@ export struct SettingsToolbarPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '工具栏设置',
+      title: $r('app.string.toolbar_settings'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -72,7 +68,8 @@ export struct SettingsToolbarPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            this.PreviewCard()
+            // 原版 p3() 第一项 ib.b0：真实工具栏布局预览（ToolbarsViewDelegate）
+            this.PreviewItem()
 
             SettingNavRow({
               rowLabel: $r('app.string.app_layout'),
@@ -128,143 +125,129 @@ export struct SettingsToolbarPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
   }
 
+  // 原版 ToolbarsViewDelegate.d()/B()/A()：预览容器圆角 18dp + 2dp #30808080 描边；
+  // 布局 0 = 透明底 + 左右 12dp；布局 1/2 = 胶囊底（亮 0x10000000/暗 0x22FFFFFF）+ 4dp；
+  // 布局 3 = 同胶囊底 + 16dp
   @Builder
-  PreviewCard() {
-    Stack({ alignContent: Alignment.Start }) {
-      // 地址栏
-      Row() {
-        Row({ space: 6 }) {
-          Text('网页')
-            .fontSize(11)
+  PreviewItem() {
+    Column() {
+      // 标签栏预览行（原版 f10006i：globe 图标 + 「网页」文本，仅布局 1/2 且启用时显示）
+      if (this.settings.tabBarEnabled && this.tabBarVisible()) {
+        Row({ space: 10 }) {
+          ViaIcon({ icon: $r('app.media.via_ic_globe'), iconSize: 20, iconColor: $r('app.color.icon') })
+          Text($r('app.string.webpage'))
+            .fontSize(14)
             .fontColor($r('app.color.fg_secondary'))
             .maxLines(1)
-          Blank()
-          Circle({ width: 10, height: 10 })
-            .fill(Color.Transparent)
-            .stroke($r('app.color.fg_secondary'))
-            .strokeWidth(1.2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
         }
-        .padding({ left: 8, right: 8 })
-        .height(ROW_H)
-        .width(this.pillWidth())
-        .backgroundColor(this.settings.toolbarColorAdapt ? '#333B4E' : '#1C1B1D')
-        .borderRadius(ROW_H / 2)
-        .animation({ duration: 260, curve: Curve.EaseInOut })
+        .width('100%')
+        .height(36)
+        .padding({ left: 12, right: 12 })
       }
-      .height(ROW_H)
-      .position({ x: PAD, y: this.addressY() })
-      .animation({ duration: 260, curve: Curve.EaseInOut })
 
-      // 工具栏按钮
+      // 地址栏预览（原版 n0：左钮 + 标题 + 右刷新钮；标题按地址栏内容三态）
       Row() {
-        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 13, iconColor: $r('app.color.icon') })
-          .width(24)
-        ViaIcon({ icon: $r('app.media.via_ic_forward'), iconSize: 13, iconColor: $r('app.color.icon') })
-          .width(24)
-        ViaIcon({ icon: $r('app.media.via_ic_home'), iconSize: 13, iconColor: $r('app.color.icon') })
-          .width(24)
+        ViaIcon({ icon: $r('app.media.via_ic_site_info'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+          .margin({ left: 13 })
+        Text(this.previewTitle())
+          .fontSize(16)
+          .fontColor($r('app.color.appbar_text'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+        ViaIcon({ icon: $r('app.media.via_ic_refresh'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+          .margin({ right: 13 })
+      }
+      .width('100%')
+      .height(ROW_H)
+
+      // 工具栏预览（原版 g0：返回/前进/主页/标签/菜单，accent 着色）
+      Row() {
+        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 24, iconColor: $r('app.color.accent') })
+          .layoutWeight(1)
+        ViaIcon({ icon: $r('app.media.via_ic_forward'), iconSize: 24, iconColor: $r('app.color.accent') })
+          .layoutWeight(1)
+        ViaIcon({ icon: $r('app.media.via_ic_home'), iconSize: 24, iconColor: $r('app.color.accent') })
+          .layoutWeight(1)
         Text('1')
           .fontSize(11)
-          .fontColor($r('app.color.icon'))
-          .width(24)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.accent'))
+          .layoutWeight(1)
           .textAlign(TextAlign.Center)
-        ViaIcon({ icon: $r('app.media.via_ic_menu'), iconSize: 13, iconColor: $r('app.color.icon') })
-          .width(24)
+        ViaIcon({ icon: $r('app.media.via_ic_menu'), iconSize: 24, iconColor: $r('app.color.accent') })
+          .layoutWeight(1)
       }
+      .width('100%')
       .height(ROW_H)
-      .justifyContent(FlexAlign.SpaceBetween)
-      .position({ x: this.iconsX(), y: this.iconsY() })
-      .animation({ duration: 260, curve: Curve.EaseInOut })
-
-      // 标签栏
-      if (this.settings.tabBarEnabled && this.tabBarVisible()) {
-        Row({ space: 6 }) {
-          Circle({ width: 9, height: 9 })
-            .fill(Color.Transparent)
-            .stroke($r('app.color.fg_secondary'))
-            .strokeWidth(1.2)
-          Text('网页')
-            .fontSize(10)
-            .fontColor($r('app.color.fg_secondary'))
-            .maxLines(1)
-          Blank()
-          Text('×')
-            .fontSize(11)
-            .fontColor($r('app.color.fg_tertiary'))
-          Text('+')
-            .fontSize(12)
-            .fontColor($r('app.color.fg_secondary'))
-            .margin({ left: 8 })
-        }
-        .padding({ left: 8, right: 8 })
-        .height(TAB_H)
-        .width(this.pillWidth())
-        .backgroundColor('#161618')
-        .borderRadius(6)
-        .position({ x: PAD, y: this.tabY() })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
-      }
     }
     .width('100%')
-    .height(CARD_H)
-    .margin({ left: 16, right: 16, top: 12 })
-    .backgroundColor('#0C0C0E')
-    .borderRadius(12)
-    .clip(true)
-    .onAreaChange((_old: Area, newArea: Area) => {
-      this.cardW = Number(newArea.width)
+    .constraintSize({ maxHeight: 300 })
+    .margin({ left: 16, right: 16, top: 12, bottom: 8 })
+    .borderRadius(18)
+    .border({
+      width: 2,
+      color: $r('app.color.appbar_divider')
     })
+    .backgroundColor(this.previewBackground())
+    .padding(this.previewPadding())
+    .alignItems(HorizontalAlign.Start)
   }
 
-  private pillWidth(): number {
-    const compact = this.settings.appLayout === LAYOUT_TOOLBAR_TOP || this.settings.appLayout === LAYOUT_TOOLBAR_BOTTOM
-    return compact ? this.cardW - PAD * 2 - ICONS_W - 6 : this.cardW - PAD * 2
-  }
-
-  private addressY(): number {
-    const layout = this.settings.appLayout
-    if (layout === LAYOUT_TOOLBAR_TOP) {
-      return PAD
+  // 原版 A()：地址栏预览标题三态（f14069m0=「网页」/完整地址/域名）
+  private previewTitle(): string {
+    const mode = this.settings.addressBarContent
+    if (mode === 1) {
+      return 'https://example.com/'
     }
-    if (layout === LAYOUT_TOOLBAR_BOTTOM) {
-      return CARD_H - PAD - ROW_H
+    if (mode === 2) {
+      return 'example.com'
+    }
+    return '网页'
+  }
+
+  // 原版 B()：按布局设置预览容器底色与 padding
+  private previewBackground(): ResourceColor {
+    const layout = this.settings.appLayout
+    if (layout === LAYOUT_TRADITIONAL) {
+      return Color.Transparent
+    }
+    return this.isDarkMode() ? '#22FFFFFF' : '#10000000'
+  }
+
+  private previewPadding(): Padding {
+    const layout = this.settings.appLayout
+    if (layout === LAYOUT_TRADITIONAL) {
+      return { left: 12, right: 12 }
     }
     if (layout === LAYOUT_DOUBLE) {
-      return CARD_H - PAD - ROW_H * 2 - 4
+      return { left: 16, right: 16 }
     }
-    return PAD
+    return { left: 4, right: 4 }
   }
 
-  private iconsY(): number {
-    const layout = this.settings.appLayout
-    if (layout === LAYOUT_TOOLBAR_TOP) {
-      return PAD
+  private isDarkMode(): boolean {
+    try {
+      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+      return ctx.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+    } catch (error) {
+      return false
     }
-    return CARD_H - PAD - ROW_H
-  }
-
-  private iconsX(): number {
-    const layout = this.settings.appLayout
-    if (layout === LAYOUT_TOOLBAR_TOP || layout === LAYOUT_TOOLBAR_BOTTOM) {
-      return PAD + this.pillWidth() + 6
-    }
-    return (this.cardW - ICONS_W) / 2
   }
 
   private tabBarVisible(): boolean {
     return this.settings.appLayout === LAYOUT_TOOLBAR_TOP || this.settings.appLayout === LAYOUT_TOOLBAR_BOTTOM
-  }
-
-  private tabY(): number {
-    if (this.settings.appLayout === LAYOUT_TOOLBAR_TOP) {
-      return PAD + ROW_H + 4
-    }
-    return CARD_H - PAD - ROW_H - TAB_H - 4
   }
 
   private layoutLabel(): string {
@@ -302,7 +285,7 @@ export struct SettingsToolbarPage {
       isModal: true,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.2)'
     }).then((dialogId: number) => {
       this.assignDialogId(dialogKind, dialogId)
     }).catch(() => {
@@ -360,11 +343,11 @@ export struct SettingsToolbarPage {
     this.assignDialogId(dialogKind, -1)
   }
 
-  private dialogTitle(kind: number): string {
+  private dialogTitle(kind: number): ResourceStr {
     if (kind === 1) {
-      return '自动隐藏操作栏'
+      return $r('app.string.auto_hide_toolbar')
     }
-    return '应用布局'
+    return $r('app.string.app_layout')
   }
 
   private dialogOptions(kind: number): OptionItem[] {
@@ -396,6 +379,7 @@ export struct SettingsToolbarPage {
   private applyOption(kind: number, value: number): void {
     if (kind === 1) {
       this.settings.setToolbarAutoHide(value)
+      this.closeDialog(1)
     } else if (kind === 2) {
       this.settings.setAddressBarContent(value)
     } else if (kind === 3) {
@@ -407,43 +391,119 @@ export struct SettingsToolbarPage {
     }
   }
 
+  // 原版 r3()：图形选择器对话框（com.tuyafeng.support.widget.c）
+  // 标题 P5=自动隐藏操作栏；三个手机示意图 a8/a9/a_（50×90dp，圆角 6dp，1dp 描边）
+  // 文案 jt/ju/jv；选中高亮 accent，未选中 icon 色；点击保存并关闭（m3）
   @Builder
-  OptionDialog(kind: number) {
-    Column({ space: 8 }) {
-      if (kind === 3) {
-        Text('应用布局')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.fg'))
-          .width('100%')
-        Text($r('app.string.tab_bar_need_layout'))
-          .fontSize(13)
-          .fontColor($r('app.color.fg_secondary'))
-          .width('100%')
-      } else if (kind !== 1) {
-        Text('应用布局')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.fg'))
-          .width('100%')
-      } else {
-        Text($r('app.string.auto_hide_toolbar'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.fg'))
-          .width('100%')
+  AutoHidePicker() {
+    Column() {
+      Text($r('app.string.auto_hide_toolbar'))
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+        .margin({ bottom: 8 })
+
+      Row() {
+        ForEach(AUTO_HIDE_OPTIONS, (option: OptionItem) => {
+          Column() {
+            this.PhoneSchematic(option.value)
+            Text(this.autoHideOptionText(option.value))
+              .fontSize(16)
+              .fontColor(this.settings.toolbarAutoHide === option.value ?
+                $r('app.color.accent') : $r('app.color.fg'))
+              .fontWeight(this.settings.toolbarAutoHide === option.value ?
+                FontWeight.Bold : FontWeight.Normal)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .margin({ top: 6 })
+          }
+          .layoutWeight(1)
+          .margin(4)
+          .onClick(() => {
+            this.applyOption(1, option.value)
+          })
+        }, (option: OptionItem) => `picker-${option.value}`)
+      }
+      .width('100%')
+    }
+    .width('72%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+    .transition(dialogTransition())
+  }
+
+  // 原版 drawable a8/a9/a_：layer-list 手机轮廓（50×90，圆角 6，1dp 描边）
+  // 0=a8 内嵌全高操作条（上下 inset 10）；1=a9 中段操作条（上下 inset 6）；2=a_ 底部圆点（10dp，距底 10）
+  @Builder
+  PhoneSchematic(mode: number) {
+    Stack() {
+      Column()
+        .width(50)
+        .height(90)
+        .borderRadius(6)
+        .border({
+          width: 1,
+          color: this.schematicStroke(mode)
+        })
+
+      if (mode === 0 || mode === 1) {
+        Column()
+          .width(50)
+          .height(mode === 0 ? 70 : 78)
+          .border({
+            width: 1,
+            color: this.schematicStroke(mode)
+          })
       }
 
-      if (kind === 1) {
-        Row({ space: 14 }) {
-          ForEach(AUTO_HIDE_OPTIONS, (option: OptionItem) => {
-            this.AutoHideMock(option)
-          }, (option: OptionItem) => `${option.value}`)
+      if (mode === 2) {
+        Column()
+          .width(10)
+          .height(10)
+          .borderRadius(5)
+          .border({
+            width: 1,
+            color: this.schematicStroke(mode)
+          })
+          .position({ x: 20, y: 70 })
+      }
+    }
+    .width(50)
+    .height(90)
+  }
+
+  // 原版 f()：选中 = accent（SRC_ATOP 着色），未选中 = itemDrawableTint（icon 色）
+  private schematicStroke(mode: number): ResourceColor {
+    return this.settings.toolbarAutoHide === mode ? $r('app.color.accent') : $r('app.color.icon')
+  }
+
+  private autoHideOptionText(value: number): string {
+    const labels: string[] = ['总是显示', '滑动来显示/隐藏', '点击来显示/隐藏']
+    return labels[value]
+  }
+
+  // 原版 w5.k 单选对话框：标题 + 选项列表，无任何预览缩略图
+  @Builder
+  OptionDialog(kind: number) {
+    if (kind === 1) {
+      this.AutoHidePicker()
+    } else {
+      Column({ space: 8 }) {
+        Text(this.dialogTitle(kind))
+          .fontSize(17)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.fg'))
+          .width('100%')
+
+        if (kind === 3) {
+          Text($r('app.string.tab_bar_need_layout'))
+            .fontSize(13)
+            .fontColor($r('app.color.fg_secondary'))
+            .width('100%')
         }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .margin({ top: 10 })
-      } else {
+
         ForEach(this.dialogOptions(kind), (option: OptionItem) => {
           Row({ space: 14 }) {
             Circle({ width: 20, height: 20 })
@@ -461,11 +521,12 @@ export struct SettingsToolbarPage {
           })
         }, (option: OptionItem) => `${kind}-${option.value}`)
       }
+      .width('72%')
+      .padding(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .borderRadius(16)
+      .transition(dialogTransition())
     }
-    .width('72%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
   }
 
   private optionText(option: OptionItem): string {
@@ -480,66 +541,6 @@ export struct SettingsToolbarPage {
     }
     const label = labels[option.label]
     return label !== undefined ? label : option.label
-  }
-
-  @Builder
-  AutoHideMock(option: OptionItem) {
-    Column({ space: 8 }) {
-      Column() {
-        if (option.value === AUTO_HIDE_ALWAYS) {
-          Rect({ width: 40, height: 4 })
-            .fill(Color.Transparent)
-            .stroke($r('app.color.fg_secondary'))
-            .strokeWidth(1)
-            .margin({ top: 4 })
-          Blank()
-          Rect({ width: 40, height: 4 })
-            .fill(Color.Transparent)
-            .stroke($r('app.color.fg_secondary'))
-            .strokeWidth(1)
-            .margin({ bottom: 4 })
-        } else if (option.value === AUTO_HIDE_SWIPE) {
-          Rect({ width: 40, height: 4 })
-            .fill(Color.Transparent)
-            .stroke($r('app.color.fg_secondary'))
-            .strokeWidth(1)
-            .margin({ top: 4 })
-          Blank()
-        } else {
-          Blank()
-          Circle({ width: 8, height: 8 })
-            .fill(Color.Transparent)
-            .stroke($r('app.color.fg_secondary'))
-            .strokeWidth(1)
-            .margin({ bottom: 8 })
-        }
-      }
-      .width(52)
-      .height(92)
-      .borderRadius(10)
-      .border({
-        width: this.settings.toolbarAutoHide === option.value ? 2 : 1.2,
-        color: this.settings.toolbarAutoHide === option.value ? $r('app.color.accent') : $r('app.color.fg_tertiary')
-      })
-      .animation({ duration: 150 })
-
-      Text(this.autoHideOptionLabel(option.value))
-        .fontSize(12)
-        .fontColor(this.settings.toolbarAutoHide === option.value ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-    }
-    .onClick(() => {
-      this.settings.setToolbarAutoHide(option.value)
-    })
-  }
-
-  private autoHideOptionLabel(value: number): string {
-    if (value === AUTO_HIDE_SWIPE) {
-      return '滑动来显示…'
-    }
-    if (value === AUTO_HIDE_TAP) {
-      return '点击来显示…'
-    }
-    return '总是显示'
   }
 }
 

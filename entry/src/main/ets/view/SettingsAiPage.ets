@@ -1,4 +1,3 @@
-import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -13,10 +12,6 @@ const AI_PROVIDER_LABELS: Record<string, string> = {
 export struct SettingsAiPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
-  @Local keyDraft: string = ''
-  @Local modelDraft: string = ''
-  private keyDialogId: number = -1
-  private modelDialogId: number = -1
 
   private bindAppBar(): void {
     AppBar.show({
@@ -33,14 +28,13 @@ export struct SettingsAiPage {
         AppBarSpacer()
         Scroll() {
         Column() {
-          SettingNavRow({ rowLabel: '服务商', rowValue: this.providerLabel(), onTapRow: () => {
+          SettingNavRow({ rowLabel: 'AI 服务提供商', rowValue: this.providerLabel(), onTapRow: () => {
             this.pickProvider()
           } })
-          SettingNavRow({ rowLabel: 'API Key', rowValue: this.maskedKey(), onTapRow: () => {
-            this.editApiKey()
-          } })
-          SettingNavRow({ rowLabel: '模型', rowValue: this.settings.aiModel, onTapRow: () => {
-            this.editModel()
+          // 原版 a9/o.j3()：第二行「AI 提示词」→ 提示词列表页（a9/z）；
+          // API Key/模型不在本页（原版在服务商条目内编辑，a9/o 新建页）
+          SettingNavRow({ rowLabel: 'AI 提示词', rowValue: '', onTapRow: () => {
+            this.navPathStack.pushPathByName('aiPrompts', '', true)
           } })
         }
         .width('100%')
@@ -60,25 +54,21 @@ export struct SettingsAiPage {
     .onWillAppear(() => {
       this.bindAppBar()
     })
+    .onShown(() => {
+      this.bindAppBar()
+    })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
   }
 
   private providerLabel(): string {
-    const label = AI_PROVIDER_LABELS[this.settings.aiProvider]
-    return label === undefined ? this.settings.aiProvider : label
-  }
-
-  private maskedKey(): string {
-    const key = this.settings.aiApiKey
-    if (key === '') {
+    // 原版 a9/o.j3：提供商为空时显示「未设置」（x7.u.U8）
+    if (this.settings.aiProvider === '') {
       return '未设置'
     }
-    if (key.length <= 8) {
-      return '已设置'
-    }
-    return `${key.substring(0, 4)}****${key.substring(key.length - 4)}`
+    const label = AI_PROVIDER_LABELS[this.settings.aiProvider]
+    return label === undefined ? this.settings.aiProvider : label
   }
 
   private pickProvider(): void {
@@ -101,128 +91,6 @@ export struct SettingsAiPage {
       message: '选择 AI 服务商',
       sheets: sheets
     })
-  }
-
-  private editApiKey(): void {
-    this.keyDraft = this.settings.aiApiKey
-    this.getUIContext().getPromptAction().openCustomDialog({
-      builder: (): void => {
-        this.ApiKeyDialog()
-      },
-      isModal: true,
-      autoCancel: true,
-      alignment: DialogAlignment.Center
-    }).then((dialogId: number) => {
-      this.keyDialogId = dialogId
-    }).catch((error: BusinessError) => {
-      console.error(`open api key dialog failed: ${error.message}`)
-    })
-  }
-
-  private closeKeyDialog(): void {
-    if (this.keyDialogId >= 0) {
-      this.getUIContext().getPromptAction().closeCustomDialog(this.keyDialogId)
-      this.keyDialogId = -1
-    }
-  }
-
-  @Builder
-  ApiKeyDialog() {
-    Column({ space: 16 }) {
-      Text('API Key')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
-      TextInput({ text: this.keyDraft, placeholder: '输入 API Key' })
-        .fontSize(14)
-        .height(44)
-        .onChange((value: string) => {
-          this.keyDraft = value
-        })
-      Row({ space: 12 }) {
-        Button('取消')
-          .fontSize(15)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.page_bg'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.closeKeyDialog()
-          })
-        Button('确定')
-          .fontSize(15)
-          .layoutWeight(1)
-          .onClick(() => {
-            this.settings.setAiApiKey(this.keyDraft.trim())
-            this.closeKeyDialog()
-          })
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .padding(20)
-    .backgroundColor($r('app.color.page_bg'))
-    .borderRadius(16)
-  }
-
-  private editModel(): void {
-    this.modelDraft = this.settings.aiModel
-    this.getUIContext().getPromptAction().openCustomDialog({
-      builder: (): void => {
-        this.ModelDialog()
-      },
-      isModal: true,
-      autoCancel: true,
-      alignment: DialogAlignment.Center
-    }).then((dialogId: number) => {
-      this.modelDialogId = dialogId
-    }).catch((error: BusinessError) => {
-      console.error(`open model dialog failed: ${error.message}`)
-    })
-  }
-
-  private closeModelDialog(): void {
-    if (this.modelDialogId >= 0) {
-      this.getUIContext().getPromptAction().closeCustomDialog(this.modelDialogId)
-      this.modelDialogId = -1
-    }
-  }
-
-  @Builder
-  ModelDialog() {
-    Column({ space: 16 }) {
-      Text('模型')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
-      TextInput({ text: this.modelDraft, placeholder: '输入模型名称' })
-        .fontSize(14)
-        .height(44)
-        .onChange((value: string) => {
-          this.modelDraft = value
-        })
-      Row({ space: 12 }) {
-        Button('取消')
-          .fontSize(15)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.page_bg'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.closeModelDialog()
-          })
-        Button('确定')
-          .fontSize(15)
-          .layoutWeight(1)
-          .onClick(() => {
-            this.settings.setAiModel(this.modelDraft.trim())
-            this.closeModelDialog()
-          })
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .padding(20)
-    .backgroundColor($r('app.color.page_bg'))
-    .borderRadius(16)
   }
 }
 
