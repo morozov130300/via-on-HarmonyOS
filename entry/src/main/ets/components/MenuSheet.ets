@@ -16,6 +16,8 @@ import { TtsManager } from '../common/Tts'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
+import { ZoomSlider } from './ZoomSlider'
+import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { dialogTransition, menuTransition, dimTransition } from '../common/Transitions'
 
@@ -95,7 +97,6 @@ export struct MenuSheet {
   private tabStore: TabStore = TabStore.getInstance()
   @Local pageIndex: number = 0
   @Local showUaDialog: boolean = false
-  @Local showFontDialog: boolean = false
   @Local showClearDataDialog: boolean = false
   // 默认 cleardata2=7（缓存|表单数据|历史），aboutToAppear 按 settings.clearData2 重算
   @Local clearDataSelection: boolean[] = [true, true, true, false, false, false, false]
@@ -476,58 +477,89 @@ export struct MenuSheet {
     }
   }
 
-  // 字号弹窗：滑杆拖动实时生效（原版同款行为）
+  // 原版 k6.qb(false, 0)：菜单「字体大小」点击快捷弹窗。
+  // 无标题无按钮，仅外点取消（X3：z10=false 时无操作）。
+  // 内容 = 预览 "%d%%"（p5：16sp、居中、fg、上下 margin 16）+
+  // w0 滑条（g5：max 30、progress=(当前-50)/5、highlight：站点模式取全局否则 100、
+  // 步进 5、padH16、marginBottom16）+ 站点模式下提示「仅对当前网站生效」
+  // （f6：12sp、居中、fg_secondary、margin 上 2 下 8）
+  @Local showFontDialog: boolean = false
+  private fontSiteMode: boolean = false
+  private fontHost: string = ''
+  @Local fontDialogZoom: number = 100
+  private fontHighlight: number = 100
+
+  private openFontDialog(): void {
+    const tab = this.tabStore.current()
+    const host = tab.url.startsWith('http') ? hostOf(tab.url) : ''
+    const siteZoom = host !== '' ? this.settings.getSiteFontZoom(host) : 0
+    const siteMode = siteZoom > 0
+    this.fontSiteMode = siteMode
+    this.fontHost = host
+    this.fontDialogZoom = siteMode ? siteZoom : this.settings.textZoom
+    this.fontHighlight = siteMode ? this.settings.textZoom : 100
+    this.showFontDialog = true
+  }
+
+  // 原版 k6.g.onProgressChanged：仅当当前页为网页时实时 setTextZoom
+  private applyFontPreview(zoom: number): void {
+    const tab = this.tabStore.current()
+    if (tab.url.startsWith('http')) {
+      tab.liveZoom = zoom
+    }
+  }
+
+  // 原版 k6.g.onStopTrackingTouch：站点模式 Q1(host) 否则 J() 全局
+  private commitFontZoom(zoom: number): void {
+    if (this.fontSiteMode && this.fontHost !== '') {
+      this.settings.setSiteFontZoom(this.fontHost, zoom)
+    } else {
+      this.settings.setTextZoom(zoom)
+    }
+    this.tabStore.current().liveZoom = 0
+  }
+
   @Builder
   FontSizeDialog() {
     Stack({ alignContent: Alignment.Center }) {
-      Column({ space: 16 }) {
-        Text($r('app.string.font_size'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
+      Column() {
+        Text(`${this.fontDialogZoom}%`)
+          .fontSize(16)
           .fontColor($r('app.color.fg'))
-        // 原版 g8/f：SeekBar max=20、progress=值-10、左右 A−/A+，写 readertextsize（w9/k.W2）
-        Row({ space: 12 }) {
-          Text('A-')
-            .fontSize(15)
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.settings.setReaderFontSize(Math.max(10, this.settings.readerFontSize - 1))
-            })
-          Slider({ value: Math.min(20, Math.max(0, this.settings.readerFontSize - 10)),
-            min: 0, max: 20, step: 1, style: SliderStyle.OutSet })
-            .layoutWeight(1)
-            .blockColor($r('app.color.accent'))
-            .selectedColor($r('app.color.accent'))
-            .trackColor($r('app.color.surface'))
-            .onChange((value: number) => {
-              this.settings.setReaderFontSize(Math.round(value) + 10)
-            })
-          Text('A+')
-            .fontSize(17)
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.settings.setReaderFontSize(Math.min(30, this.settings.readerFontSize + 1))
-            })
+          .width('100%')
+          .textAlign(TextAlign.Center)
+          .margin({ top: 16, bottom: 16 })
+        ZoomSlider({
+          zoom: this.fontDialogZoom,
+          highlightZoom: this.fontHighlight,
+          onZoomChange: (zoom: number): void => {
+            this.fontDialogZoom = zoom
+            this.applyFontPreview(zoom)
+          },
+          onZoomEnd: (zoom: number): void => {
+            this.commitFontZoom(zoom)
+          }
+        })
+          .margin({ left: 16, right: 16, bottom: 16 })
+        if (this.fontSiteMode) {
+          Text('仅对当前网站生效')
+            .fontSize(12)
+            .fontColor($r('app.color.fg_secondary'))
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .margin({ top: 2, bottom: 8 })
         }
-        .width('86%')
-        Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-          .onClick(() => {
-            this.showFontDialog = false
-          })
       }
-      .width('72%')
-      .padding({ top: 22, bottom: 16 })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .width(computeDialogWidthVp())
+      .padding({ top: 12, bottom: 12 })
+      .backgroundColor($r('app.color.dialog_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showFontDialog = false
@@ -1059,9 +1091,9 @@ export struct MenuSheet {
       case 'scan_qr':
         this.startScan()
         break
-      // 原版行为：弹出字号滑杆，拖动实时生效
+      // 原版 i8/k z3() flags&1 → k6.O9 case29 → qb(false,0) 快捷滑条弹窗
       case 'font_size':
-        this.showFontDialog = true
+        this.openFontDialog()
         break
       // 原版行为：弹出与设置页一致的清除数据多选框
       case 'clear_data':

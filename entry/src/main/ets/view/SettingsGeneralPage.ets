@@ -101,9 +101,8 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '退出时清除数据', onTapRow: () => {
               this.pickClearOnExit()
             } })
-            SettingNavRow({ rowLabel: '字体', rowValue: `${this.settings.textZoom}%`, onTapRow: () => {
-              this.pickFontScale()
-            } })
+            // 原版 c4.u4() 行列表无 row12 字体行（case12/I4 为死代码）；
+            // 网页字体大小入口 = 主界面菜单「字体大小」长按 → jb.k5 页
             SettingNavRow({ rowLabel: '操作设定', onTapRow: () => {
               this.navPathStack.pushPathByName('settingsGesture', '', true)
             } })
@@ -196,26 +195,12 @@ export struct SettingsGeneralPage {
     return slash >= 0 && slash < dir.length - 1 ? dir.substring(slash + 1) : dir
   }
 
+  // 原版 c4:206 `.d0(px 屏幕方向).Z(array h, i0()-1)`，回调 Q0(idx+1)
   private pickOrientation(): void {
-    const sheets: SheetInfo[] = [
-      { title: '跟随系统', action: (): void => {
-        this.applyOrientation(1)
-      } },
-      { title: '自动', action: (): void => {
-        this.applyOrientation(2)
-      } },
-      { title: '竖屏', action: (): void => {
-        this.applyOrientation(3)
-      } },
-      { title: '横屏', action: (): void => {
-        this.applyOrientation(4)
-      } }
-    ]
-    ActionSheet.show({
-      title: '屏幕方向',
-      message: '选择应用屏幕方向',
-      sheets: sheets
-    })
+    this.openListDialog('屏幕方向', ['跟随系统', '自动', '竖屏', '横屏'],
+      Math.max(0, this.settings.orientation - 1), false, (index: number): void => {
+        this.applyOrientation(index + 1)
+      })
   }
 
   private applyStatusBar(visible: boolean): void {
@@ -256,20 +241,113 @@ export struct SettingsGeneralPage {
     }
   }
 
-  private pickFontScale(): void {
-    const options: number[] = [130, 115, 100, 85, 70]
-    const sheets: SheetInfo[] = []
-    for (let i = 0; i < options.length; i++) {
-      const value = options[i]
-      sheets.push({ title: `${value}%`, action: (): void => {
-        this.settings.setTextZoom(value)
-      } })
-    }
-    ActionSheet.show({
-      title: '字体',
-      message: '选择网页字体缩放',
-      sheets: sheets
+  // ---- 原版 w5.k.b0/.Z/.F 列表弹窗（layout u.xml 卡片 + v.xml 单选项 / w.xml 纯列表项）----
+  // 一次只显示一个，7 个选择器复用同一弹窗
+  @Local listDialogTitle: string = ''
+  @Local listDialogOptions: string[] = []
+  @Local listDialogChecked: number = -1
+  @Local listDialogPlain: boolean = false
+  @Local listDialogOnSelect: (index: number) => void = (index: number) => {}
+  private listDialogId: number = -1
+
+  private openListDialog(title: string, options: string[], checked: number, plain: boolean,
+    onSelect: (index: number) => void): void {
+    this.listDialogTitle = title
+    this.listDialogOptions = options
+    this.listDialogChecked = checked
+    this.listDialogPlain = plain
+    this.listDialogOnSelect = onSelect
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.ListDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.listDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open list dialog failed: ${error.message}`)
     })
+  }
+
+  @Builder
+  ListRadioItem(label: string, index: number) {
+    // 原版 layout v.xml + w5.d：16dp 圆形复选框在左，drawablePadding 24（dimen a4），
+    // 14sp 文字（style a6），padV 12（a3）、padH 16
+    Row({ space: 24 }) {
+      Circle({ width: 16, height: 16 })
+        .fill(this.listDialogChecked === index ? $r('app.color.accent') : Color.Transparent)
+        .stroke(this.listDialogChecked === index ? Color.Transparent : $r('app.color.dialog_border'))
+        .strokeWidth(2)
+      Text(label)
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .onClick(() => {
+      const select = this.listDialogOnSelect
+      this.closeListDialog()
+      select(index)
+    })
+  }
+
+  @Builder
+  ListPlainItem(label: string, index: number) {
+    // 原版 layout w.xml：居中 TextView，padH 16（a2）、padV 12（a3），14sp（style a6）
+    Text(label)
+      .fontSize(14)
+      .fontColor($r('app.color.fg'))
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .width('100%')
+      .textAlign(TextAlign.Center)
+      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      .onClick(() => {
+        const select = this.listDialogOnSelect
+        this.closeListDialog()
+        select(index)
+      })
+  }
+
+  @Builder
+  ListDialog() {
+    Column() {
+      Text(this.listDialogTitle)
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      ForEach(this.listDialogOptions, (label: string, index: number) => {
+        if (this.listDialogPlain) {
+          this.ListPlainItem(label, index)
+        } else {
+          this.ListRadioItem(label, index)
+        }
+      }, (label: string) => label)
+    }
+    .width(this.dialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
+    .transition(dialogTransition())
+  }
+
+  private closeListDialog(): void {
+    if (this.listDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.listDialogId)
+    this.listDialogId = -1
   }
 
   // 原版 z8/h0.f + arrays c：退出时清除数据七项多选，位表 [1,2,4,64,8,16,32]
@@ -386,20 +464,15 @@ export struct SettingsGeneralPage {
     this.clearOnExitDialogId = -1
   }
 
+  // 原版 c4:239 `.d0(l6 导入/备份书签).F([ie 备份书签, l0 导入书签])`（w.xml 纯列表），
+  // 回调 O3：0→c4() 备份 1→o4() 导入
   private pickBookmarkIO(): void {
-    // 原版 hb/c4 case20：[备份书签(T4), 导入书签(F6)]
-    const sheets: SheetInfo[] = [
-      { title: '备份书签', action: (): void => {
+    this.openListDialog('导入/备份书签', ['备份书签', '导入书签'], -1, true, (index: number): void => {
+      if (index === 0) {
         this.exportBookmarks()
-      } },
-      { title: '导入书签', action: (): void => {
+      } else {
         this.importBookmarks()
-      } }
-    ]
-    ActionSheet.show({
-      title: '导入/备份书签',
-      message: '以 HTML 书签文件与其它浏览器互通',
-      sheets: sheets
+      }
     })
   }
 
@@ -980,48 +1053,44 @@ export struct SettingsGeneralPage {
     return '默认'
   }
 
+  // 原版 c4.n4 `.d0(km 主页).Z(array e, B())`，回调 T3：
+  // 0/1/2 → about:home/blank/bookmarks，3 → m4 自定义主页输入弹窗
   private pickHome(): void {
-    const sheets: SheetInfo[] = [
-      { title: '默认', action: (): void => {
-        this.settings.setHomepageMode(0)
-      } },
-      { title: '空白页', action: (): void => {
-        this.settings.setHomepageMode(2)
-      } },
-      { title: '书签', action: (): void => {
-        this.settings.setHomepageMode(3)
-      } },
-      { title: '网页', action: (): void => {
-        this.inputHomeUrl()
-      } }
-    ]
-    ActionSheet.show({
-      title: '主页',
-      message: '选择主页',
-      sheets: sheets
-    })
+    this.openListDialog('主页', ['默认', '空白页', '书签', '网页'], this.homeIndex(), false,
+      (index: number): void => {
+        if (index === 3) {
+          this.inputHomeUrl()
+        } else {
+          this.settings.setHomepageMode([0, 2, 3][index])
+        }
+      })
   }
 
+  // 原版 w9.l.B()：当前主页索引（0 默认 1 空白 2 书签 3 网页；本工程 mode 1=网页 URL）
+  private homeIndex(): number {
+    if (this.settings.homepageMode === 2) {
+      return 1
+    }
+    if (this.settings.homepageMode === 3) {
+      return 2
+    }
+    if (this.settings.homepageMode === 1) {
+      return 3
+    }
+    return 0
+  }
+
+  // 原版 c4.t4 `.d0(m6 语言).b0(语言数组, 当前索引)`，回调 W3：
+  // 选择相同语言直接 return；不同 → z1 保存 + G4 重启确认
   private pickLanguage(): void {
-    const sheets: SheetInfo[] = [
-      { title: '跟随系统', action: (): void => {
-        this.settings.setAppLanguage(0)
+    this.openListDialog('语言', ['跟随系统', '简体中文', 'English'], this.settings.appLanguage, false,
+      (index: number): void => {
+        if (this.settings.appLanguage === index) {
+          return
+        }
+        this.settings.setAppLanguage(index)
         this.confirmRestart()
-      } },
-      { title: '简体中文', action: (): void => {
-        this.settings.setAppLanguage(1)
-        this.confirmRestart()
-      } },
-      { title: 'English', action: (): void => {
-        this.settings.setAppLanguage(2)
-        this.confirmRestart()
-      } }
-    ]
-    ActionSheet.show({
-      title: '语言',
-      message: '选择应用语言',
-      sheets: sheets
-    })
+      })
   }
 
   // 原版 hb/c4.W3→G4：语言切换后确认重启
@@ -1212,42 +1281,26 @@ export struct SettingsGeneralPage {
     this.homeUrlDialogId = -1
   }
 
-  // 原版 hb/c4 case27（hb.D4）：''=系统分享；HarmonyOS 无第三方播放器枚举，选项仅 关闭/系统分享
+  // 原版 hb/c4 case27（hb.D4）：C0 首项 = w.d.a("", qv 系统分享)，无「关闭」选项；
+  // HarmonyOS 无第三方播放器枚举，选项仅 系统分享
   private videoPlayerLabel(): string {
-    return this.settings.videoPlayer === 'share' ? '系统分享' : '关闭'
+    return '系统分享'
   }
 
   private pickVideoPlayer(): void {
-    const sheets: SheetInfo[] = [
-      { title: '关闭', action: (): void => {
-        this.settings.setVideoPlayer('')
-      } },
-      { title: '系统分享', action: (): void => {
-        this.settings.setVideoPlayer('share')
-      } }
-    ]
-    ActionSheet.show({
-      title: '外置视频播放器',
-      message: '选择网页视频的打开方式',
-      sheets: sheets
+    this.openListDialog('外置视频播放器', ['系统分享'], 0, false, (index: number): void => {
+      this.settings.setVideoPlayer('share')
     })
   }
 
-  // 原版 hb/c4 case15（下载管理，dlmanager）：''/内建下载器；HarmonyOS 无第三方下载器枚举
+  // 原版 hb/c4 case15（下载管理，dlmanager）：A0=[""]、label=[d5 内建下载器]
   private dlManagerLabel(): string {
-    return this.settings.dlManager === 'builtin' ? '内建下载器' : ''
+    return '内建下载器'
   }
 
   private pickDlManager(): void {
-    const sheets: SheetInfo[] = [
-      { title: '内建下载器', action: (): void => {
-        this.settings.setDlManager('builtin')
-      } }
-    ]
-    ActionSheet.show({
-      title: '下载管理',
-      message: '选择下载器',
-      sheets: sheets
+    this.openListDialog('下载管理', ['内建下载器'], 0, false, (index: number): void => {
+      this.settings.setDlManager('builtin')
     })
   }
 
@@ -1357,28 +1410,17 @@ export struct SettingsGeneralPage {
     this.clearDataDialogId = -1
   }
 
+  // 原版 c4:254 `.d0(s3 启动时恢复未关闭标签).Z(array g, u1())`，回调 V3：
+  // A0(idx) 保存；idx≠0 时 toast pb（开启“隐身模式”时不会恢复未关闭标签。）
   private pickRestoreMode(): void {
-    const labels: string[] = ['禁用恢复', '总是恢复', '优先询问']
-    const sheets: SheetInfo[] = []
-    for (let i = 0; i < labels.length; i++) {
-      const mode = i
-      const label = labels[i]
-      sheets.push({
-        title: this.settings.restoreTabsMode === mode ? `${label} ✓` : label,
-        action: (): void => {
-          this.settings.setRestoreTabsMode(mode)
-          if (mode !== 0) {
-            // 原版 toast s5：开启“隐身模式”时不会恢复未关闭标签。
-            this.getUIContext().getPromptAction().showToast({ message: '开启“隐身模式”时不会恢复未关闭标签。', duration: 2000 })
-          }
+    this.openListDialog('启动时恢复未关闭标签', ['禁用恢复', '总是恢复', '优先询问'],
+      this.settings.restoreTabsMode, false, (index: number): void => {
+        this.settings.setRestoreTabsMode(index)
+        if (index !== 0) {
+          this.getUIContext().getPromptAction()
+            .showToast({ message: '开启“隐身模式”时不会恢复未关闭标签。', duration: 2000 })
         }
       })
-    }
-    ActionSheet.show({
-      title: '启动时恢复未关闭标签',
-      message: '选择启动时未关闭标签页的恢复方式',
-      sheets: sheets
-    })
   }
 
   private applyClearData(): void {
