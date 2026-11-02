@@ -139,6 +139,22 @@
     {
       "name": "search_toolbar_icon_tint",
       "value": "#DE000000"
+    },
+    {
+      "name": "dialog_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "dialog_border",
+      "value": "#30808080"
+    },
+    {
+      "name": "dialog_action",
+      "value": "#6F8DE1"
+    },
+    {
+      "name": "dialog_hint",
+      "value": "#8A000000"
     }
   ]
 }

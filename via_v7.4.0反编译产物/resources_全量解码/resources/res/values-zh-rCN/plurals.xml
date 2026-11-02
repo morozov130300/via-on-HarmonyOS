@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="a">
+        <item quantity="other">%d 条规则</item>
+    </plurals>
+    <plurals name="b">
+        <item quantity="other">剩余 %d 小时</item>
+    </plurals>
+    <plurals name="c">
+        <item quantity="other">%d 个项目</item>
+    </plurals>
+    <plurals name="d">
+        <item quantity="other">剩余 %d 分钟</item>
+    </plurals>
+    <plurals name="e">
+        <item quantity="other">%d 个打开的标签</item>
+    </plurals>
+    <plurals name="f">
+        <item quantity="other">剩余 %d 秒</item>
+    </plurals>
+    <plurals name="g">
+        <item quantity="other">已关闭 %d 个标签页</item>
+    </plurals>
+</resources>

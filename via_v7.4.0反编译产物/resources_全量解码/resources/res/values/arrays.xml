@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="a">
+        <item>@string/pv</item>
+        <item>@string/pw</item>
+        <item>@string/ch</item>
+    </array>
+    <array name="b">
+        <item>@string/k0</item>
+        <item>@string/dp</item>
+    </array>
+    <array name="c">
+        <item>@string/f3</item>
+        <item>@string/f8</item>
+        <item>@string/f9</item>
+        <item>@string/rf</item>
+        <item>@string/f_</item>
+        <item>@string/f5</item>
+        <item>@string/f2</item>
+    </array>
+    <array name="d">
+        <item>@string/jt</item>
+        <item>@string/ju</item>
+        <item>@string/jv</item>
+    </array>
+    <array name="e">
+        <item>@string/fd</item>
+        <item>@string/g</item>
+        <item>@string/j</item>
+        <item>@string/b2</item>
+    </array>
+    <array name="f">
+        <item>@string/fd</item>
+        <item>@string/qr</item>
+        <item>@string/y9</item>
+        <item>@string/kn</item>
+        <item>@string/oj</item>
+    </array>
+    <array name="g">
+        <item>@string/gd</item>
+        <item>@string/c_</item>
+        <item>@string/ch</item>
+    </array>
+    <array name="h">
+        <item>@string/jk</item>
+        <item>@string/py</item>
+        <item>@string/q0</item>
+        <item>@string/pz</item>
+    </array>
+    <array name="i">
+        <item>@string/a07</item>
+        <item>@string/a06</item>
+        <item>@string/a05</item>
+        <item>@string/a03</item>
+    </array>
+    <array name="j">
+        <item>@string/o4</item>
+        <item>@string/i2</item>
+        <item>@string/i1</item>
+        <item>@string/i3</item>
+        <item>@string/i0</item>
+    </array>
+    <array name="k">
+        <item>@string/kg</item>
+        <item>@string/kh</item>
+        <item>@string/a0y</item>
+    </array>
+    <array name="l">
+        <item>@string/fd</item>
+        <item>@string/bl</item>
+        <item>@string/bn</item>
+        <item>@string/bp</item>
+        <item>@string/br</item>
+        <item>@string/bm</item>
+    </array>
+</resources>
