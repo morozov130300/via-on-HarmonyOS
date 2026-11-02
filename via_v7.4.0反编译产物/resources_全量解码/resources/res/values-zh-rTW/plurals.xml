@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="a">
+        <item quantity="other">%d 條篩選條件</item>
+    </plurals>
+    <plurals name="b">
+        <item quantity="other">剩餘 %d 小時</item>
+    </plurals>
+    <plurals name="c">
+        <item quantity="other">%d 個專案</item>
+    </plurals>
+    <plurals name="d">
+        <item quantity="other">剩餘 %d 分鐘</item>
+    </plurals>
+    <plurals name="e">
+        <item quantity="other">%d 個開啟的分頁</item>
+    </plurals>
+    <plurals name="f">
+        <item quantity="other">剩餘 %d 秒</item>
+    </plurals>
+    <plurals name="g">
+        <item quantity="other">已關閉 %d 個分頁</item>
+    </plurals>
+</resources>

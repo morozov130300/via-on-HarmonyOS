@@ -4,13 +4,14 @@ import { webview } from '@kit.ArkWeb'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { dialogTransition } from '../common/Transitions'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
-import { window } from '@kit.ArkUI'
+import { window, display } from '@kit.ArkUI'
 import { common, Want } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
 import { BackupManager } from '../common/Backup'
 import { uaByKey } from '../common/UaTable'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { ViaDialogCard } from '../components/ViaDialogCard'
 
 @ComponentV2
 export struct SettingsGeneralPage {
@@ -286,7 +287,8 @@ export struct SettingsGeneralPage {
       },
       isModal: true,
       autoCancel: true,
-      alignment: DialogAlignment.Center
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.clearOnExitDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -295,57 +297,74 @@ export struct SettingsGeneralPage {
   }
 
   @Builder
+  ClearOnExitItem(label: string, index: number) {
+    // 原版 layout v.xml + w5.d：16dp 圆形复选框在左（drawable s/r），
+    // drawablePadding 24（dimen a4），14sp 文字（style a6），padV 12（a3）、padH 16
+    Row({ space: 24 }) {
+      Circle({ width: 16, height: 16 })
+        .fill(this.clearOnExitChecks[index] ? $r('app.color.accent') : Color.Transparent)
+        .stroke(this.clearOnExitChecks[index] ? Color.Transparent : $r('app.color.dialog_border'))
+        .strokeWidth(2)
+      Text(label)
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .onClick(() => {
+      this.clearOnExitChecks[index] = !this.clearOnExitChecks[index]
+    })
+  }
+
+  @Builder
   ClearOnExitDialog() {
-    // 原版 w5.k 弹窗紧凑卡（视频 0:48 同款）：窄卡、加粗标题、右对齐取消/确定文字按钮
-    Column({ space: 6 }) {
+    // 原版 z8.h0.f：w5.k.l().d0(dr 退出时清除数据).K(array c, 已选位).V(ok).N(cancel).f0()
+    // 布局 = layout u.xml 同款卡片（详见 ExportDataDialog 注释）
+    Column() {
       Text('退出时清除数据')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
-      ForEach(CLEAR_ON_EXIT_ITEMS, (label: string, index: number) => {
-        Row() {
-          Text(label)
-            .fontSize(15)
-            .fontColor($r('app.color.fg'))
-            .layoutWeight(1)
-          Checkbox()
-            .select(this.clearOnExitChecks[index])
-            .onChange((value: boolean) => {
-              this.clearOnExitChecks[index] = value
-            })
-        }
+        .maxLines(1)
         .width('100%')
-        .height(42)
-        .onClick(() => {
-          this.clearOnExitChecks[index] = !this.clearOnExitChecks[index]
-        })
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      ForEach(CLEAR_ON_EXIT_ITEMS, (label: string, index: number) => {
+        this.ClearOnExitItem(label, index)
       }, (label: string) => label)
       Row() {
         Blank()
         Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.closeClearOnExitDialog()
           })
         Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.saveClearOnExit()
             this.closeClearOnExitDialog()
           })
       }
       .width('100%')
-      .margin({ top: 6 })
+      .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('70%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(12)
+    .width(this.dialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -485,6 +504,27 @@ export struct SettingsGeneralPage {
   private passwordInput: string = ''
   private passwordDialogId: number = -1
 
+  // 原版 w5.k.f0()：弹窗宽 = min(屏宽,屏高) − 72dp；大屏（g6.y.E）或横屏时上限 300dp
+  private dialogWidthVp(): number {
+    try {
+      const d = display.getDefaultDisplaySync()
+      const density = d.densityPixels
+      if (density <= 0) {
+        return 288
+      }
+      const wVp = d.width / density
+      const hVp = d.height / density
+      let width = Math.min(wVp, hVp) - 72
+      const isLargeScreen = wVp >= 600
+      if ((isLargeScreen || wVp > hVp) && width > 300) {
+        width = 300
+      }
+      return width
+    } catch (error) {
+      return 288
+    }
+  }
+
   private exportData(): void {
     // 原版 c4 case22：先弹导出范围多选弹窗，确定后按位打包 ZIP
     this.exportSelection = [true, true, true, true, true, false]
@@ -495,7 +535,7 @@ export struct SettingsGeneralPage {
       isModal: true,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.2)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.exportDialogId = dialogId
     }).catch(() => {
@@ -534,7 +574,7 @@ export struct SettingsGeneralPage {
         isModal: true,
         autoCancel: true,
         alignment: DialogAlignment.Center,
-        maskColor: 'rgba(0,0,0,0.2)'
+        maskColor: 'rgba(0,0,0,0.4)'
       }).then((dialogId: number) => {
         this.passwordDialogId = dialogId
       }).catch(() => {
@@ -612,112 +652,144 @@ export struct SettingsGeneralPage {
 
   @Builder
   ExportDataItem(label: string, index: number) {
-    Row({ space: 14 }) {
-      Circle({ width: 20, height: 20 })
+    // 原版 layout v.xml + w5.d：FrameLayout padH 16 + CheckBox(padV 12/dimen a3,
+    // padLeft 12/dimen a2, drawablePadding 24/dimen a4, 14sp 文字 style a6)；
+    // 复选框 drawable s/r：16dp 圆，未选中 2dp 描边 #30808080，选中实心 accent
+    Row({ space: 24 }) {
+      Circle({ width: 16, height: 16 })
         .fill(this.exportSelection[index] ? $r('app.color.accent') : Color.Transparent)
-        .stroke(this.exportSelection[index] ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-        .strokeWidth(1.5)
+        .stroke(this.exportSelection[index] ? Color.Transparent : $r('app.color.dialog_border'))
+        .strokeWidth(2)
       Text(label)
-        .fontSize(15)
+        .fontSize(14)
         .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
     }
     .width('100%')
-    .height(42)
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
     .onClick(() => {
       this.exportSelection[index] = !this.exportSelection[index]
     })
   }
 
-  // 原版 hb/c4.f4 弹窗：标题「导出数据」+ 六项多选 + 取消/确定
+  // 原版 hb/c4.f4 弹窗：w5.k.e0(ig 导出数据) + .L(六项多选) + .V(ok)/.N(cancel)
+  // 布局 = layout u.xml：Space12 + 标题(style a0=16sp bold/边距16/底距6) + 复选列表 +
+  // Space12 + 按钮行(取消/确定，style y=14sp #6f8de1/pad16/minWidth56) + Space12；
+  // 卡片 = drawable t/u：圆角 18dp、纯白/深色底、1dp 描边 #30808080；遮罩 0.4（theme n）
   @Builder
   ExportDataDialog() {
-    // 原版 w5.k 弹窗紧凑卡（视频 0:59 同款）：窄卡、加粗标题、右对齐取消/确定文字按钮
-    Column({ space: 6 }) {
+    Column() {
       Text('导出数据')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
       ForEach(SettingsGeneralPage.EXPORT_ITEMS, (label: string, index: number) => {
         this.ExportDataItem(label, index)
       }, (label: string) => label)
       Row() {
         Blank()
         Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.closeExportDialog()
           })
         Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.confirmExport()
           })
       }
       .width('100%')
-      .margin({ top: 6 })
+      .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('70%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(12)
+    .width(this.dialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
-  // 原版 hb/c4.F4 密码弹窗：标题「输入密码」(ht)、正文 hu、占位「密码」(ke)、取消/确定
+  // 原版 hb/c4.a.onSuccess：w5.k.l().d0(ht 输入密码).I(hu 正文).i("", ke 密码, 1)
+  // .V(ok).N(cancel).f0()；输入框 = layout u.xml bh 槽 + w5.k.g(i11=1)：
+  // 单行 EditText 14sp，容器 marginLeft16/right12/top8、底边线 1dp（drawable w）
   @Builder
   PasswordDialog() {
-    Column({ space: 6 }) {
+    Column() {
       Text('输入密码')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
       Text('你正在导出隐私数据，请输入密码以加密数据。请牢记密码，如果密码丢失，你将无法导入其中加密的数据。')
-        .fontSize(13)
-        .fontColor($r('app.color.fg_secondary'))
-        .lineHeight(19)
-        .margin({ top: 4, bottom: 6 })
-      TextInput({ text: this.passwordInput, placeholder: '密码' })
-        .fontSize(15)
+        .fontSize(14)
         .fontColor($r('app.color.fg'))
-        .placeholderColor($r('app.color.fg_secondary'))
-        .placeholderFont({ size: 15 })
-        .backgroundColor($r('app.color.page_bg'))
-        .height(40)
-        .borderRadius(8)
-        .padding({ left: 12, right: 12 })
-        .onChange((value: string) => {
-          this.passwordInput = value
-        })
+        .lineHeight(21)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      Row() {
+        TextInput({ text: this.passwordInput, placeholder: '密码' })
+          .fontSize(14)
+          .fontColor($r('app.color.fg'))
+          .placeholderColor($r('app.color.dialog_hint'))
+          .placeholderFont({ size: 14 })
+          .backgroundColor(Color.Transparent)
+          .padding({ left: 0, right: 0 })
+          .height(40)
+          .layoutWeight(1)
+          .onChange((value: string) => {
+            this.passwordInput = value
+          })
+      }
+      .width('100%')
+      .margin({ left: 16, right: 12, top: 8 })
+      .border({ width: { bottom: 1 }, color: $r('app.color.dialog_border') })
       Row() {
         Blank()
         Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.closePasswordDialog()
           })
         Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.confirmExportPassword()
           })
       }
       .width('100%')
-      .margin({ top: 6 })
+      .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('70%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(12)
+    .width(this.dialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -761,27 +833,127 @@ export struct SettingsGeneralPage {
   }
 
   private showDefaultBrowserGuide(): void {
-    AlertDialog.show({
-      title: '设置默认浏览器',
-      message: '请在系统"设置-应用-默认应用-浏览器"中将 VIA 设为默认浏览器。',
-      confirm: {
-        value: $r('app.string.confirm'),
-        action: () => {
-        }
-      }
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.DefaultBrowserGuideDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.defaultBrowserGuideDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open default browser guide dialog failed: ${error.message}`)
     })
   }
 
-  private showPasswordVaultGuide(): void {
-    AlertDialog.show({
-      title: '密码管理器',
-      message: '密码由系统密码保险箱自动管理：网页登录时自动弹出保存与填充提示。可在系统"设置-隐私和安全-密码保险箱"中查看已保存的密码。',
-      confirm: {
-        value: $r('app.string.confirm'),
-        action: () => {
-        }
+  private defaultBrowserGuideDialogId: number = -1
+
+  // 原版 z8.b0.W：API≥24 直跳系统默认应用设置（无弹窗）；
+  // HarmonyOS 无对应深链，保留引导卡片（w5.k 卡片样式）
+  @Builder
+  DefaultBrowserGuideDialog() {
+    ViaDialogCard() {
+      Text('设置默认浏览器')
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      Text('请在系统"设置-应用-默认应用-浏览器"中将 VIA 设为默认浏览器。')
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .lineHeight(21)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      Row() {
+        Blank()
+        Text($r('app.string.confirm'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            this.closeDefaultBrowserGuideDialog()
+          })
       }
+      .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
+    }
+  }
+
+  private closeDefaultBrowserGuideDialog(): void {
+    if (this.defaultBrowserGuideDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.defaultBrowserGuideDialogId)
+    this.defaultBrowserGuideDialogId = -1
+  }
+
+  private showPasswordVaultGuide(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.PasswordVaultGuideDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.passwordVaultGuideDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open password vault guide dialog failed: ${error.message}`)
     })
+  }
+
+  private passwordVaultGuideDialogId: number = -1
+
+  // 密码管理器引导（用户拍板：弹系统密码保险箱说明，不建原版五项子页）；
+  // 弹窗样式 = 原版 w5.k 卡片
+  @Builder
+  PasswordVaultGuideDialog() {
+    ViaDialogCard() {
+      Text('密码管理器')
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      Text('密码由系统密码保险箱自动管理：网页登录时自动弹出保存与填充提示。可在系统"设置-隐私和安全-密码保险箱"中查看已保存的密码。')
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .lineHeight(21)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      Row() {
+        Blank()
+        Text($r('app.string.confirm'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            this.closePasswordVaultGuideDialog()
+          })
+      }
+      .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
+    }
+  }
+
+  private closePasswordVaultGuideDialog(): void {
+    if (this.passwordVaultGuideDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.passwordVaultGuideDialogId)
+    this.passwordVaultGuideDialogId = -1
   }
 
   private languageLabel(): string {
@@ -852,23 +1024,77 @@ export struct SettingsGeneralPage {
     })
   }
 
-  // 原版 hb/c4.W3→G4：语言切换后确认重启（语言/这将在下次启动应用时生效…/重启应用/取消）
+  // 原版 hb/c4.W3→G4：语言切换后确认重启
+  // w5.k.l().d0(m6 语言).I(s2 这将在下次启动应用时生效，你希望立即重启应用以生效吗？)
+  // .V(er 重启应用, z8.f.k).N(cancel).f0()
   private confirmRestart(): void {
-    AlertDialog.show({
-      title: '语言',
-      message: '这将在下次启动应用时生效，你希望立即重启应用以生效吗？',
-      primaryButton: {
-        value: '重启应用',
-        action: () => {
-          this.restartApp()
-        }
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.RestartConfirmDialog()
       },
-      secondaryButton: {
-        value: '取消',
-        action: () => {
-        }
-      }
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.restartConfirmDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open restart confirm dialog failed: ${error.message}`)
     })
+  }
+
+  private restartConfirmDialogId: number = -1
+
+  @Builder
+  RestartConfirmDialog() {
+    ViaDialogCard() {
+      Text('语言')
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      Text('这将在下次启动应用时生效，你希望立即重启应用以生效吗？')
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .lineHeight(21)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      Row() {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            this.closeRestartConfirmDialog()
+          })
+        Text('重启应用')
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            this.closeRestartConfirmDialog()
+            this.restartApp()
+          })
+      }
+      .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
+    }
+  }
+
+  private closeRestartConfirmDialog(): void {
+    if (this.restartConfirmDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.restartConfirmDialogId)
+    this.restartConfirmDialogId = -1
   }
 
   private restartApp(): void {
@@ -896,7 +1122,8 @@ export struct SettingsGeneralPage {
       },
       isModal: true,
       autoCancel: true,
-      alignment: DialogAlignment.Center
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.homeUrlDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -907,33 +1134,55 @@ export struct SettingsGeneralPage {
   @Local homeUrlInput: string = ''
   private homeUrlDialogId: number = -1
 
+  // 原版 hb/c4.m4：w5.k.l().d0(Rf 自定义主页).i(主页URL, Rf 占位, 3).V(ok).N(cancel).f0()
+  // 输入类型 3（w5.k.g 多行分支）：EditText 直挂内容槽，底边线背景（drawable w），
+  // padH 12、padTop 8（style a1），14sp 文字
   @Builder
   HomeUrlDialog() {
-    Column({ space: 14 }) {
+    Column() {
       Text('自定义主页')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
-      TextInput({ placeholder: 'https://', text: this.homeUrlInput })
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
         .width('100%')
-        .height(44)
-        .fontSize(14)
-        .onChange((value: string) => {
-          this.homeUrlInput = value
-        })
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      Row() {
+        TextInput({ placeholder: '自定义主页', text: this.homeUrlInput })
+          .fontSize(14)
+          .fontColor($r('app.color.fg'))
+          .placeholderColor($r('app.color.dialog_hint'))
+          .placeholderFont({ size: 14 })
+          .backgroundColor(Color.Transparent)
+          .padding({ left: 0, right: 0 })
+          .height(40)
+          .layoutWeight(1)
+          .onChange((value: string) => {
+            this.homeUrlInput = value
+          })
+      }
+      .width('100%')
+      .padding({ left: 12, right: 12 })
+      .margin({ top: 8 })
+      .border({ width: { bottom: 1 }, color: $r('app.color.dialog_border') })
       Row() {
         Blank()
         Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.closeHomeUrlDialog()
           })
         Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             const url = this.homeUrlInput.trim()
             // 原版 c4.E3：需含 :// 才保存
@@ -945,11 +1194,13 @@ export struct SettingsGeneralPage {
           })
       }
       .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('70%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(12)
+    .width(this.dialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -1000,8 +1251,14 @@ export struct SettingsGeneralPage {
     })
   }
 
+  // 原版 z8.h0.e：默认选中 = 已存掩码 cleardata2（w9.l.V()），位表 iArr {1,2,4,64,8,16,32}
+  private static readonly CLEAR_DATA_BITS: number[] = [1, 2, 4, 64, 8, 16, 32]
+
   private confirmClear(): void {
-    this.clearDataSelection = [true, true, true, false, false, false, false]
+    const mask = this.settings.clearData2
+    for (let i = 0; i < CLEAR_DATA_ITEMS.length; i++) {
+      this.clearDataSelection[i] = (mask & SettingsGeneralPage.CLEAR_DATA_BITS[i]) !== 0
+    }
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
         this.ClearDataDialog()
@@ -1009,7 +1266,7 @@ export struct SettingsGeneralPage {
       isModal: true,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.clearDataDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -1022,63 +1279,73 @@ export struct SettingsGeneralPage {
 
   @Builder
   ClearDataItem(label: string, index: number) {
-    Row({ space: 14 }) {
-      Circle({ width: 20, height: 20 })
+    // 原版 layout v.xml + w5.d：16dp 圆形复选框在左（drawable s/r），
+    // drawablePadding 24（dimen a4），14sp 文字（style a6），padV 12（a3）、padH 16
+    Row({ space: 24 }) {
+      Circle({ width: 16, height: 16 })
         .fill(this.clearDataSelection[index] ? $r('app.color.accent') : Color.Transparent)
-        .stroke(this.clearDataSelection[index] ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-        .strokeWidth(1.5)
+        .stroke(this.clearDataSelection[index] ? Color.Transparent : $r('app.color.dialog_border'))
+        .strokeWidth(2)
       Text(label)
-        .fontSize(15)
+        .fontSize(14)
         .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
     }
     .width('100%')
-    .height(42)
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
     .onClick(() => {
-      if (!this.clearDataSelection[index]) {
-        this.clearDataSelection[index] = true
-      } else {
-        this.clearDataSelection[index] = false
-      }
+      this.clearDataSelection[index] = !this.clearDataSelection[index]
     })
   }
 
   @Builder
   ClearDataDialog() {
-    // 原版 w5.k 弹窗紧凑卡（视频 0:48 同款）：窄卡、加粗标题、右对齐取消/确定文字按钮
-    Column({ space: 6 }) {
+    // 原版 z8.h0.e：w5.k.l().d0(dq 清除数据).K(array c, 已选位).V(ok).N(cancel).f0()
+    // 布局 = layout u.xml 同款卡片（详见 ExportDataDialog 注释）
+    Column() {
       Text('清除数据')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
       ForEach(CLEAR_DATA_ITEMS, (label: string, index: number) => {
         this.ClearDataItem(label, index)
       }, (label: string) => label)
       Row() {
         Blank()
         Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.closeClearDataDialog()
           })
         Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.applyClearData()
             this.closeClearDataDialog()
           })
       }
       .width('100%')
-      .margin({ top: 6 })
+      .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('70%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(12)
+    .width(this.dialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -1155,7 +1422,17 @@ export struct SettingsGeneralPage {
     if (selected[6]) {
       this.clearAppCache()
     }
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
+    // 原版 z8.h0.a 末尾：确认后保存选中掩码（w9.l.I0），有清除项时 toast「数据已清除」(S2)
+    let mask = 0
+    for (let i = 0; i < CLEAR_DATA_ITEMS.length; i++) {
+      if (selected[i]) {
+        mask |= SettingsGeneralPage.CLEAR_DATA_BITS[i]
+      }
+    }
+    this.settings.setClearData2(mask)
+    if (mask !== 0) {
+      this.getUIContext().getPromptAction().showToast({ message: '数据已清除', duration: 1500 })
+    }
   }
 
   private clearAppCache(): void {

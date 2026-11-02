@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <drawable name="aq">r/g/aq.9.png</drawable>
+    <drawable name="ar">r/g/ar.9.png</drawable>
+    <drawable name="as">r/g/as.9.png</drawable>
+    <drawable name="at">r/g/at.9.png</drawable>
+    <drawable name="au">r/g/au.png</drawable>
+</resources>

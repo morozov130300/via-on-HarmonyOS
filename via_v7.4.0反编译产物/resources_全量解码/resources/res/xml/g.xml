@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:icon="@drawable/af"
+        android:enabled="true">
+        <intent
+            android:targetPackage="mark.via"
+            android:action="mark.via.SCAN"
+            android:targetClass="mark.via.Trampoline"/>
+    </shortcut>
+    <shortcut
+        android:icon="@drawable/ag"
+        android:enabled="true">
+        <intent
+            android:targetPackage="mark.via"
+            android:action="mark.via.SEARCH"
+            android:targetClass="mark.via.Trampoline"/>
+    </shortcut>
+    <shortcut
+        android:icon="@drawable/ae"
+        android:enabled="true">
+        <intent
+            android:targetPackage="mark.via"
+            android:action="mark.via.HISTORY"
+            android:targetClass="mark.via.Trampoline"/>
+    </shortcut>
+    <shortcut
+        android:icon="@drawable/ad"
+        android:enabled="true">
+        <intent
+            android:targetPackage="mark.via"
+            android:action="mark.via.BOOKMARK"
+            android:targetClass="mark.via.Trampoline"/>
+    </shortcut>
+</shortcuts>

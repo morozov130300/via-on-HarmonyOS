@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <include
+        domain="database"
+        path="via"/>
+    <include
+        domain="database"
+        path="downloader"/>
+    <include
+        domain="database"
+        path="monkey"/>
+    <include
+        domain="sharedpref"
+        path="settings.xml"/>
+    <include
+        domain="external"
+        path="filters/custom.txt"/>
+    <include
+        domain="external"
+        path="filters/subscribed.txt"/>
+    <exclude
+        domain="sharedpref"
+        path="AppCenter.xml"/>
+    <exclude
+        domain="database"
+        path="com.microsoft.appcenter.persistence"/>
+    <exclude
+        domain="database"
+        path="com.microsoft.appcenter.persistence-journal"/>
+    <exclude
+        domain="file"
+        path="error"/>
+    <exclude
+        domain="file"
+        path="appcenter"/>
+</full-backup-content>

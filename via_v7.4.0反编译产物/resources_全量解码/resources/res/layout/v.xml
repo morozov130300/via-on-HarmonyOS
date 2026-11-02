@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <CheckBox
+        android:ellipsize="middle"
+        android:id="@+id/aq"
+        android:paddingLeft="@dimen/a2"
+        android:paddingTop="@dimen/a3"
+        android:paddingRight="0dp"
+        android:paddingBottom="@dimen/a3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:button="?attr/a4"
+        android:singleLine="true"
+        android:drawablePadding="@dimen/a4"
+        android:textDirection="locale"
+        android:paddingStart="@dimen/a2"
+        android:paddingEnd="0dp"
+        style="@style/a6"/>
+</FrameLayout>
