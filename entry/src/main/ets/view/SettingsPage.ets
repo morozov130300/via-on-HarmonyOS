@@ -60,6 +60,10 @@ export struct SettingsPage {
             SettingNavRow({ rowLabel: '脚本', onTapRow: () => {
               this.navPathStack.pushPathByName('userScripts', '', true)
             } })
+            // 原版 hb/o6.java id 11 → hb/h5 Proxy 页（7.4.0 该入口为死代码，按规格书补全入口）
+            SettingNavRow({ rowLabel: '代理', onTapRow: () => {
+              this.navPathStack.pushPathByName('settingsProxy', '', true)
+            } })
             if (this.settings.isLabEntryVisible()) {
               SettingNavRow({ rowLabel: '实验', onTapRow: () => {
                 this.navPathStack.pushPathByName('settingsExperimental', '', true)

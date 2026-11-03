@@ -50,6 +50,9 @@
           ],
           "when": "inuse"
         }
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
       }
     ],
     "abilities": [
@@ -63,6 +66,9 @@
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
         "launchType": "singleton",
+        "backgroundModes": [
+          "audioPlayback"
+        ],
         "skills": [
           {
             "entities": [
