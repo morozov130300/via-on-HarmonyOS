@@ -14,6 +14,7 @@ import { Reader, READER_THEME_COLORS } from '../common/Reader'
 import { DownloadCoordinator } from '../common/Downloads'
 import { FontStore } from '../common/FontStore'
 import { NetMonitor } from '../common/NetState'
+import { VideoOverlayState } from './VideoPlayerOverlay'
 import { AppIcon } from './AppIcon'
 
 // 1x1 GIF 占位（原版 u4/a.f12819d base64 1:1 解码）
@@ -329,6 +330,20 @@ export struct TabWeb {
           }
           response.setResponseHeader([{ headerKey: 'Cache-Control', headerValue: 'no-store' }])
           return response
+        })
+        // 原版 k6.z（onShowCustomView → ib 视频探测）：进入全屏唤起视频播放器覆盖层
+        .onFullScreenEnter((event: FullScreenEnterEvent) => {
+          const state = VideoOverlayState.getInstance()
+          state.begin(this.tab, event.handler, this.getUIContext().getHostContext())
+          if (event.videoWidth !== undefined && event.videoWidth > 0) {
+            const vw = event.videoWidth
+            const vh = event.videoHeight === undefined ? 0 : event.videoHeight
+            state.setVideoSize(vw, vh)
+          }
+        })
+        // 原版 k6.V（onHideCustomView）：退出全屏，恢复状态栏/方向/亮度
+        .onFullScreenExit(() => {
+          VideoOverlayState.getInstance().end()
         })
       // 原版 k6 f2570c1：网页容器前景黑色蒙版，夜间生效时 alpha=nightfilter（默认 77）
       if (this.settings.isNightActive()) {
