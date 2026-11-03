@@ -31,7 +31,7 @@ import { inputConsumer, KeyEvent, KeyCode } from '@kit.InputKit'
 import { hostOf } from '../common/SearchEngines'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 
-const EXIT_INTERVAL: number = 2000
+const EXIT_INTERVAL: number = 1500
 // 原版进度条渐变（x8/h.x）：#59C2E5 → #A687E0
 const PROGRESS_GRADIENT: LinearGradient = {
   angle: 90,
@@ -333,20 +333,22 @@ struct Index {
       }
       return true
     }
-    // 原版游戏模式：按两次返回键退出（bb/k6:6074）
+    // 原版游戏模式：1500ms 内双击退出，首次提示 R5「再按一次返回键退出游戏模式」，第二次 bb(false) 关闭
     if (this.settings.gameMode) {
       const now = Date.now()
-      if (now - this.gameModeBackTime < 2000) {
+      if (now - this.gameModeBackTime < 1500) {
         this.gameModeBackTime = 0
         this.settings.setGameMode(false)
         this.getUIContext().getPromptAction().showToast({ message: $r('app.string.game_mode_toast_off'), duration: 1500 })
       } else {
         this.gameModeBackTime = now
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit_game_mode'), duration: 1500 })
       }
       return true
     }
     const tab = this.tabStore.current()
-    if (!tab.isHomePage()) {
+    // 原版隐身会话（f2583n1）：可后退则后退，多标签开标签面板，否则结束会话
+    if (this.tabStore.sessionIncognito && tab.incognito) {
       if (tab.canBack) {
         try {
           tab.controller.backward()
@@ -355,7 +357,24 @@ struct Index {
         }
         return true
       }
-      this.tabStore.gotoHome()
+      if (this.tabStore.tabs.length > 1) {
+        this.showTabPanel = true
+        return true
+      }
+      this.tabStore.exitIncognitoSession(false)
+      return true
+    }
+    if (!tab.isHomePage()) {
+      // 原版 U8：可后退则后退；不可后退且非主页 → 关闭当前标签（f2580m0.B0()）
+      if (tab.canBack) {
+        try {
+          tab.controller.backward()
+        } catch (error) {
+          console.error('backward failed')
+        }
+        return true
+      }
+      this.tabStore.closeTab(this.tabStore.currentIndex)
       return true
     }
     const now = Date.now()
@@ -363,7 +382,7 @@ struct Index {
       return false
     }
     this.exitHintTime = now
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit'), duration: 2000 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit'), duration: 1500 })
     return true
   }
 

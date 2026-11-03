@@ -7,6 +7,9 @@ import { hostOf, getBuiltinEngines } from '../common/SearchEngines'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
 import { curves } from '@kit.ArkUI'
 import { i18n } from '@kit.LocalizationKit'
+import { BusinessError } from '@kit.BasicServicesKit'
+import { computeDialogWidthVp } from './ViaDialogCard'
+import { dialogTransition } from '../common/Transitions'
 
 const BAR_HEIGHT: number = 48
 const ICON_SIZE: number = 24
@@ -50,7 +53,9 @@ export struct AddressBar {
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   @Local showTitleMenu: boolean = false
-  @Local showEngineMenu: boolean = false
+  private readerHintVisible: boolean = false
+  // 原版 k6.h 左图标长按：w5.k 单选弹窗（一次一个）
+  private engineDialogId: number = -1
   @Local pulseScale: number = 1
   // 原版 n0.v(true)：阅读图标 3s 显示窗口（postDelayed 3000 → v(false) 复位）
   @Local readerHint: boolean = false
@@ -253,6 +258,31 @@ export struct AddressBar {
     return items
   }
 
+  // 原版 k6.h：左图标长按 → w5.k.l(I()).d0(sp=搜索引擎).b0(引擎名数组, 当前项, 选中回调).f0()
+  private openEngineDialog(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.EngineDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.engineDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open engine dialog failed: ${error.message}`)
+    })
+  }
+
+  private closeEngineDialog(): void {
+    if (this.engineDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.engineDialogId)
+    this.engineDialogId = -1
+  }
+
   build() {
     Row() {
       Stack() {
@@ -273,14 +303,8 @@ export struct AddressBar {
         }
       })
       // 原版 k6.h：左图标长按 → 搜索引擎单选对话框（sp=搜索引擎，选中写 searchengine）
-      .bindPopup(this.showEngineMenu, {
-        builder: this.EngineMenu(),
-        placement: Placement.Bottom,
-        onStateChange: (_e: object) => {
-        }
-      })
       .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
-        this.showEngineMenu = true
+        this.openEngineDialog()
       }))
 
       Text(this.titleText())
@@ -290,10 +314,17 @@ export struct AddressBar {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center)
         .layoutWeight(1)
+        // 原版 z5.a 弹窗：k6.h 标题长按 → 复制/粘贴/粘贴并前往 横排 pill 弹窗
         .bindPopup(this.showTitleMenu, {
           builder: this.TitleMenu(),
           placement: Placement.Bottom,
-          onStateChange: (_e: object) => {
+          popupColor: Color.Transparent,
+          enableArrow: false,
+          autoCancel: true,
+          onStateChange: (e: PopupStateChangeParam) => {
+            if (!e.isVisible) {
+              this.showTitleMenu = false
+            }
           }
         })
         // 原版标题长按 → 复制/粘贴/粘贴并前往（k6.h.onLongClick）
@@ -336,47 +367,75 @@ export struct AddressBar {
     })
   }
 
+  // 原版 z5.a 弹窗：横向 LinearLayout（orientation 0）+ 每项 48dp 高、padH16、
+  // 14sp（style a6）、居中、容器 padH18（dimen ae）、底 menu_bg 圆角 18dp（drawable t）、遮罩 0.4
   @Builder
   TitleMenu() {
-    Column() {
+    Row() {
       ForEach(this.titleMenuItems(), (item: TitleMenuItem) => {
         Text(item.label)
           .fontSize(14)
           .fontColor($r('app.color.fg'))
-          .padding({ left: 20, right: 20, top: 10, bottom: 10 })
-          .width('100%')
+          .height(48)
+          .padding({ left: 16, right: 16 })
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
           .onClick(() => {
             this.showTitleMenu = false
             item.action()
           })
       }, (item: TitleMenuItem, index: number) => `${index}`)
     }
-    .width(120)
+    .padding({ left: 18, right: 18 })
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(18)
   }
 
-  // 原版 k6.h 左图标长按：w5.k.l(I()).d0(sp=搜索引擎) 单选列表
+  // 原版左图标长按：w5.k.l(I()).d0(搜索引擎) 单选列表弹窗（layout v.xml：16dp 圆形单选 + 24dp 间距）
   @Builder
-  EngineMenu() {
+  EngineDialog() {
     Column() {
       Text($r('app.string.search_engine'))
-        .fontSize(14)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
-        .padding({ left: 16, right: 16, top: 10, bottom: 6 })
-      ForEach(this.engineItems(), (item: EngineItem) => {
-        Text(item.name)
-          .fontSize(14)
-          .fontColor(this.settings.engineKey === item.key ? $r('app.color.accent') : $r('app.color.fg'))
-          .fontWeight(this.settings.engineKey === item.key ? FontWeight.Bold : FontWeight.Normal)
-          .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-          .width('100%')
-          .onClick(() => {
-            // 原版选中 → q3("searchengine", 引擎)
-            this.settings.setEngineKey(item.key)
-            this.showEngineMenu = false
-          })
-      }, (item: EngineItem) => item.key)
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      Scroll() {
+        Column() {
+          ForEach(this.engineItems(), (item: EngineItem) => {
+            Row({ space: 24 }) {
+              Circle({ width: 16, height: 16 })
+                .fill(this.settings.engineKey === item.key ? $r('app.color.accent') : Color.Transparent)
+                .stroke(this.settings.engineKey === item.key ? Color.Transparent : $r('app.color.dialog_border'))
+                .strokeWidth(2)
+              Text(item.name)
+                .fontSize(14)
+                .fontColor($r('app.color.fg'))
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .layoutWeight(1)
+            }
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+            .onClick(() => {
+              // 原版选中 → q3("searchengine", 引擎)
+              this.settings.setEngineKey(item.key)
+              this.closeEngineDialog()
+            })
+          }, (item: EngineItem) => item.key)
+        }
+        .width('100%')
+      }
+      .constraintSize({ maxHeight: 384 })
     }
-    .width(140)
+    .width(computeDialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
+    .transition(dialogTransition())
   }
 }
