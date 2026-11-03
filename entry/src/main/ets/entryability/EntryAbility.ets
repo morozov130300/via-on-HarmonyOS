@@ -7,6 +7,7 @@ import { AppSettings } from '../common/Settings';
 import { BrowserDb } from '../common/Database';
 import { applyImmersiveWindow } from '../common/Immersive';
 import { initReaderContext } from '../common/Reader';
+import { initGmRuntime } from '../common/GmRuntime';
 import { webview } from '@kit.ArkWeb';
 import { fileIo } from '@kit.CoreFileKit';
 
@@ -53,6 +54,8 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
     initReaderContext(this.context);
+    // GM_* 用户脚本运行时存储（o5 变量库 / p5 require 缓存目录）
+    initGmRuntime(this.context);
     const entry = extractEntryUrl(want)
     if (entry.url !== '') {
       AppStorage.setOrCreate('via_launch_url', entry.url)

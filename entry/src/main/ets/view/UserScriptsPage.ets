@@ -1,7 +1,8 @@
 import { http } from '@kit.NetworkKit'
 import { fileIo, picker } from '@kit.CoreFileKit'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
-import { UserScriptRec, parseUserScriptMeta } from '../common/Types'
+import { UserScriptRec, parseUserScriptMeta, parseJsonArray } from '../common/Types'
+import { fetchScriptRequires, gmSecret, gmMenusJs, gmMenuInvokeJs } from '../common/GmRuntime'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -208,7 +209,7 @@ export struct UserScriptsPage {
     })
   }
 
-  // P3/T3：长按菜单 [编辑/更新/主页/复制链接/删除]（sa/d1.java:209-274）
+  // P3/T3：长按菜单 [编辑/更新/主页/复制链接/删除]（sa/d1.java:209-274）+ GM 菜单命令（ua/i c0）
   private showScriptMenu(script: UserScriptRec): void {
     const sheets: SheetInfo[] = []
     sheets.push({
@@ -246,11 +247,64 @@ export struct UserScriptsPage {
         this.confirmDelete(script)
       }
     })
-    ActionSheet.show({
-      title: script.name,
-      message: '',
-      sheets: sheets
+    // GM registerMenuCommand 注册的命令（当前页面 window[secret]['gm_menus']）追加到尾部
+    this.appendGmMenuCommands(script, sheets, (): void => {
+      ActionSheet.show({
+        title: script.name,
+        message: '',
+        sheets: sheets
+      })
     })
+  }
+
+  // 在当前标签页枚举该脚本的 GM 菜单命令，追加为 ActionSheet 尾部项
+  private appendGmMenuCommands(script: UserScriptRec, sheets: SheetInfo[], done: () => void): void {
+    const scriptId = String(script.id)
+    const controller = TabStore.getInstance().current().controller
+    controller.runJavaScript(gmMenusJs(gmSecret())).then((result: string) => {
+      const commands = this.parseGmMenusResult(result, scriptId)
+      for (let i = 0; i < commands.length; i++) {
+        const command = commands[i]
+        sheets.push({
+          title: command,
+          action: (): void => {
+            TabStore.getInstance().current().controller
+              .runJavaScript(gmMenuInvokeJs(gmSecret(), scriptId, command)).catch(() => {
+              })
+          }
+        })
+      }
+      done()
+    }).catch(() => {
+      done()
+    })
+  }
+
+  // runJavaScript 结果可能是 JSON 编码字符串（带引号），容错两层解析后取脚本命令名列表
+  private parseGmMenusResult(raw: string, scriptId: string): string[] {
+    let json: string = raw
+    try {
+      const first = JSON.parse(raw) as Object
+      if (typeof first === 'string') {
+        json = first
+      }
+    } catch (error) {
+    }
+    try {
+      const menus = JSON.parse(json) as Record<string, Object>
+      const list = menus[scriptId]
+      if (list instanceof Array) {
+        const names: string[] = []
+        for (let i = 0; i < list.length; i++) {
+          if (typeof list[i] === 'string') {
+            names.push(list[i] as string)
+          }
+        }
+        return names
+      }
+    } catch (error) {
+    }
+    return []
   }
 
   private openHomepage(script: UserScriptRec): void {
@@ -375,6 +429,7 @@ export struct UserScriptsPage {
       rec.enabled = true
     }
     this.settings.saveScript(rec)
+    fetchScriptRequires(rec)
     this.toast(`安装 "${rec.name}" 成功！`)
   }
 
@@ -438,6 +493,7 @@ export struct UserScriptsPage {
             parsed.id = script.id
             parsed.enabled = script.enabled
             this.settings.saveScript(parsed)
+            fetchScriptRequires(parsed)
           }
         }
       }).catch((error: BusinessError) => {
@@ -645,6 +701,7 @@ struct ScriptEditOverlay {
       rec.name = this.name.trim()
     }
     this.settings.saveScript(rec)
+    fetchScriptRequires(rec)
     this.onSaved()
   }
 }
