@@ -160,13 +160,13 @@ export class DownloadCoordinator {
     }
   }
 
-  // 原版上下文菜单「下载链接」同样走确认层
-  requestUrlDownload(url: string, referer: string, ua: string): void {
+  // 原版上下文菜单「下载链接」同样走确认层；GM_download 透传脚本指定文件名（k6.s download）
+  requestUrlDownload(url: string, referer: string, ua: string, name: string = ''): void {
     this.pendingUrl = {
       url: url,
       referer: referer,
       ua: ua,
-      fileName: this.fileNameFromUrl(url)
+      fileName: name.trim() !== '' ? name.trim() : this.fileNameFromUrl(url)
     }
     this.emitConfirm({
       'kind': 'url',

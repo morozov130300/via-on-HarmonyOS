@@ -12,6 +12,7 @@ import { TabStore } from '../common/TabStore'
 import { hostOf } from '../common/SearchEngines'
 import { Reader, READER_THEME_COLORS } from '../common/Reader'
 import { DownloadCoordinator } from '../common/Downloads'
+import { GmBridge, gmSecret, gmFakeTampermonkeyJs, gmSandboxJs, GmRequireStore } from '../common/GmRuntime'
 import { FontStore } from '../common/FontStore'
 import { NetMonitor } from '../common/NetState'
 import { VideoOverlayState } from './VideoPlayerOverlay'
@@ -63,10 +64,45 @@ export struct TabWeb {
   @Local privacyScripts: Array<ScriptItem> = []
   private schemeHandler: webview.WebSchemeHandler = new webview.WebSchemeHandler()
   private viaBridge: ViaBridge = new ViaBridge()
+  // 原版 o5/a：window.via_gm GM_* 分派桥（每 tab 一实例，宿主回调 1:1 k6.s）
+  private gmBridge: GmBridge = new GmBridge()
 
   aboutToAppear(): void {
     this.viaBridge.handler = (msg: string): void => {
       this.onViaMessage(msg)
+    }
+    // k6.s 宿主回调接线
+    this.gmBridge.onSetClipboard = (data: string, type: string): void => {
+      if (type !== 'text/plain' && type !== 'text' && type !== 'text/unicode') {
+        return
+      }
+      pasteboard.getSystemPasteboard()
+          .setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, data)).catch(() => {
+      })
+    }
+    this.gmBridge.onDownload = (url: string, name: string): void => {
+      let pageUa = ''
+      try {
+        pageUa = this.tab.controller.getUserAgent()
+      } catch (error) {
+      }
+      DownloadCoordinator.getInstance().requestUrlDownload(url, this.tab.url, pageUa, name)
+    }
+    this.gmBridge.onOpenInTab = (url: string, active: boolean, insert: number): void => {
+      // 原版 g1(url, active, insert)；本端 insert 忽略
+      this.tabStore.newTabAt(url, !active)
+    }
+    this.gmBridge.evaluateJs = (js: string): void => {
+      this.tab.controller.runJavaScript(js).catch((error: BusinessError) => {
+        console.error(`gm evaluate failed: ${error.message}`)
+      })
+    }
+    this.gmBridge.userAgent = (): string => {
+      try {
+        return this.tab.controller.getUserAgent()
+      } catch (error) {
+        return ''
+      }
     }
     this.refreshPrivacyScripts()
     // 原版 w9/p.x()：监听 Wi-Fi 状态，供「仅 Wi-Fi 有图」判断
@@ -138,6 +174,14 @@ export struct TabWeb {
         .onControllerAttached(() => {
           this.setupSchemeHandler()
           this.applyAdvancedSettings()
+          // 原版 k6:1487 registerJavaScriptProxy 之外的第二个桥：window.via_gm（o5/a.call）
+          // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，via_gm 走 controller 注册
+          try {
+            this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'via_gm', ['call'])
+            this.tab.controller.refresh()
+          } catch (error) {
+            console.error('register via_gm proxy failed')
+          }
           if (this.tab.initialUrl !== '') {
             try {
               if (this.settings.dataSaver) {
@@ -900,10 +944,20 @@ export struct TabWeb {
     }
   }
 
-  // n5/a.b()：enabled && (runAt & 时机) && glob 匹配；wrap = (grant&1)==0
+  // n5/a.b() 1:1：非空非 file:// 才执行；runAt 1/2 时脚本站 host 注入假 Tampermonkey；
+  // 每脚本 wrap = (b() & 1) == 0 即 !script.unwrap，code 非空门，
+  // 拼接顺序 = [wrap头] + 沙盒(脚本id, secret, grant) + 各 require 内容 + '\n\n' + code + [wrap尾]
   private runUserScripts(runAt: number, from: string): void {
-    if (!from.startsWith('http')) {
+    if (from === '' || from.startsWith('file://')) {
       return
+    }
+    if (runAt === 1 || runAt === 2) {
+      const scriptSiteHost = this.urlAuthority(from)
+      if (scriptSiteHost.indexOf('greasyfork.org') >= 0 || scriptSiteHost.indexOf('userscript.zone') >= 0 ||
+        scriptSiteHost.indexOf('openuserjs.org') >= 0 || scriptSiteHost.indexOf('sleazyfork.org') >= 0) {
+        this.tab.controller.runJavaScript(gmFakeTampermonkeyJs(gmSecret())).catch(() => {
+        })
+      }
     }
     const scripts = this.settings.userScripts
     for (let i = 0; i < scripts.length; i++) {
@@ -933,14 +987,39 @@ export struct TabWeb {
       if (excluded) {
         continue
       }
-      let code = script.code
-      if (!script.unwrap && (script.grantBits & 1) === 0) {
-        code = `(function(){\n${code}\n})()`
+      if (script.code === '') {
+        continue
+      }
+      const wrap = !script.unwrap
+      let code = wrap ? '(function(){\n' : ''
+      code += gmSandboxJs(String(script.id), gmSecret(), script.grantBits)
+      const requires = parseJsonArray(script.requires)
+      for (let j = 0; j < requires.length; j++) {
+        code += GmRequireStore.getInstance().readCached(requires[j])
+        code += '\n\n'
+      }
+      code += script.code
+      if (wrap) {
+        code += '\n})();'
       }
       this.tab.controller.runJavaScript(code).catch((error: BusinessError) => {
         console.error(`run user script failed: ${error.message}`)
       })
     }
+  }
+
+  // n5/a.e()：取 URL 的 host:port（小写），非网络 URL 返回空串
+  private urlAuthority(url: string): string {
+    const schemeIndex = url.indexOf('://')
+    if (schemeIndex < 0) {
+      return ''
+    }
+    const start = schemeIndex + 3
+    let end = url.indexOf('/', start)
+    if (end < 0) {
+      end = url.length
+    }
+    return url.substring(start, end).toLowerCase()
   }
 
   private blockPageText(key: string): string {
