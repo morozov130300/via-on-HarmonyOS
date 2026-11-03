@@ -6,7 +6,7 @@ import { AppIcon } from './AppIcon'
 import { ViaIcon } from './ViaIcon'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
-import { menuTransition, dimTransition } from '../common/Transitions'
+import { dimTransition, dialogTransition } from '../common/Transitions'
 
 const PANEL_FG: ResourceColor = '#E6E6E6'
 
@@ -41,8 +41,9 @@ export struct TabPanel {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('rgba(0,0,0,0.5)')
-        .transition(dimTransition(160))
+        // 原版 style n：backgroundDimAmount 0.4
+        .backgroundColor('rgba(0,0,0,0.4)')
+        .transition(dimTransition(240))
         .onClick(() => {
           this.onClose()
         })
@@ -145,14 +146,19 @@ export struct TabPanel {
                     this.removeTab(index)
                   }
                 }))
-              // 原版 f8.l0.t3：长按弹行操作菜单
+              // 原版 f8.l0.t3：长按弹行操作菜单（w5.k.h0(view) 锚定该行弹出）
               .bindPopup(this.longPressIndex === index, {
                 builder: (): void => {
                   this.TabMenu(index)
                 },
                 placement: Placement.Top,
-                popupColor: '#F01C1B1D',
-                onStateChange: (_e: object) => {
+                popupColor: Color.Transparent,
+                enableArrow: false,
+                autoCancel: true,
+                onStateChange: (e: PopupStateChangeParam) => {
+                  if (!e.isVisible) {
+                    this.longPressIndex = -1
+                  }
                 }
               })
               .gesture(LongPressGesture({ repeat: false, duration: 500 })
@@ -187,7 +193,8 @@ export struct TabPanel {
       .margin({ bottom: 48 })
       .backgroundColor($r('app.color.menu_bg'))
       .borderRadius({ topLeft: 16, topRight: 16 })
-      .transition(menuTransition())
+      // 原版 f8.l0 用 style n 弹窗主题 → windowAnimationStyle=style/k → anim/a 进、anim/b 出（240ms bounce）
+      .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
@@ -210,7 +217,8 @@ export struct TabPanel {
     }
   }
 
-  // 原版 f8.l0.t3 长按菜单项与顺序
+  // 原版 f8.l0.t3 长按菜单项与顺序（w5.k 弹出卡片：宽 min(240dp, 屏宽*4/7)，
+  // item = layout w：pad 16/12、14sp fg（style a6）左对齐）
   @Builder
   TabMenu(index: number) {
     Column() {
@@ -243,7 +251,21 @@ export struct TabPanel {
         })
       }
     }
-    .width(180)
+    // 原版 w5.k.g0：宽 = min(240dp, 屏宽/7*4)
+    .width(Math.min(240, this.screenWidthVp() / 7 * 4))
+    .padding({ top: 8, bottom: 8 })
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
+  }
+
+  private screenWidthVp(): number {
+    try {
+      const d = display.getDefaultDisplaySync()
+      return d.width / d.densityPixels
+    } catch (error) {
+      return 360
+    }
   }
 
   @Builder
@@ -252,8 +274,9 @@ export struct TabPanel {
       .fontSize(14)
       .fontColor($r('app.color.fg'))
       .width('100%')
-      .height(38)
-      .padding({ left: 14, right: 14 })
+      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
       .textAlign(TextAlign.Start)
       .onClick(() => {
         action()

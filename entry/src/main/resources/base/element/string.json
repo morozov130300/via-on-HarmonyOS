@@ -53,6 +53,10 @@
       "value": "继续加载"
     },
     {
+      "name": "press_back_again_exit_game_mode",
+      "value": "再按一次返回键退出游戏模式"
+    },
+    {
       "name": "press_back_again_exit",
       "value": "再按一次返回键退出"
     },
