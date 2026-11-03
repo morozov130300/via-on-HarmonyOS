@@ -20,6 +20,7 @@ import { TtsManager } from '../common/Tts'
 import { AiPanel } from '../components/AiPanel'
 import { MediaListPage } from '../components/MediaListPage'
 import { LinkInterstitial } from '../components/LinkInterstitial'
+import { VideoPlayerOverlay, VideoOverlayState } from '../components/VideoPlayerOverlay'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
@@ -72,6 +73,8 @@ struct Index {
   // 下载确认弹层（原版 mark/via/download/m.java）
   @Local downloadConfirm: PendingDownloadUi | null = null
   private tts: TtsManager = TtsManager.getInstance()
+  // 全屏视频播放器（原版 k6.z/V + com.tuyafeng.support.widget.v）
+  videoOverlay: VideoOverlayState = VideoOverlayState.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
   @Local isLandscape: boolean = false
   private landscapeListener: mediaquery.MediaQueryListener | null = null
@@ -299,6 +302,11 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    // 原版 k6 返回键：全屏视频时 V() 退出全屏播放
+    if (this.videoOverlay.active) {
+      this.videoOverlay.requestExit()
+      return true
+    }
     if (this.showLinkConfirm) {
       this.showLinkConfirm = false
       this.linkConfirmUrl = ''
@@ -664,7 +672,7 @@ struct Index {
       Navigation(this.mainNavStack) {
         Column() {
           if (this.ready) {
-          if (!this.settings.gameMode) {
+          if (!this.settings.gameMode && !this.videoOverlay.active) {
             this.TopBarArea()
           }
           Tabs({ index: this.tabStore.currentIndex }) {
@@ -701,7 +709,7 @@ struct Index {
             this.tabStore.switchTo(index)
           })
 
-          if (!this.settings.gameMode) {
+          if (!this.settings.gameMode && !this.videoOverlay.active) {
             this.BottomBarArea()
           }
           }
@@ -841,6 +849,9 @@ struct Index {
           }
         })
       }
+
+      // 原版 k6 自定义视图（全屏视频容器）：置于内容之上、整窗夜间滤镜之下
+      VideoPlayerOverlay()
 
       // 原版 k6 Hb()：整窗黑色滤镜，夜间生效时 alpha=max(128, 主页背景不透明度/100*255)
       if (this.settings.isNightActive()) {
