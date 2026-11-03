@@ -176,6 +176,11 @@
       "buildFunction": "FontPageBuilder"
     },
     {
+      "name": "skinPage",
+      "pageSourceFile": "src/main/ets/view/SkinPage.ets",
+      "buildFunction": "SkinPageBuilder"
+    },
+    {
       "name": "settingsAdBlock",
       "pageSourceFile": "src/main/ets/view/SettingsAdBlockPage.ets",
       "buildFunction": "SettingsAdBlockPageBuilder"

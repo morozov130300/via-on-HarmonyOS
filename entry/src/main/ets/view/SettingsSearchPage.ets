@@ -17,7 +17,7 @@ class SuggestItem {
 }
 
 // 原版 hb/b6：搜索设置页（搜索引擎 / 搜索建议多选 / 搜索工具栏）
-// 搜索工具栏行未移植：原版 hb/i6 依赖的搜索工具栏功能移植工程未实现，见交付报告
+// 搜索工具栏已完整移植：SearchToolbar.ets + SettingsSearchToolbarPage.ets，路由 settingsSearchToolbar
 @ComponentV2
 export struct SettingsSearchPage {
   private settings: AppSettings = AppSettings.getInstance()

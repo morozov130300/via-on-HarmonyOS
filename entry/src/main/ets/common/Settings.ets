@@ -56,6 +56,7 @@ const SYNC_KEYS: string[] = [
   'uaKey', 'customUaList', 'desktopUaKey', 'desktopCustomUa', 'simplifyUa',
   'syncMode', 'orientation', 'videoPlayer', 'dlManager', 'clearOnExit',
   'volumePageFlip', 'swipeSwitchTab', 'videoGesture', 'videoorientation', 'uifont', 'undoCloseToast', 'showStatusBar',
+  'skin',
   'fullScreen', 'gameMode', 'wifiOnlyImages', 'cleardata2', 'labflag',
   'aiPrompts', 'aiPromptNextId', 'jsEnabled',
   'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled',
@@ -281,6 +282,8 @@ export class AppSettings {
   @Trace videoOrientation: number = 0
   // 原版 w9.k.a1()/o()（键名 uifont）：网页自定义字体文件名，空 = 默认
   @Trace uiFont: string = ''
+  // 原版 w9.l.L()/T1()（键名 skin）：当前皮肤目录名，空 = 默认
+  @Trace skin: string = ''
   @Trace undoCloseToast: boolean = false
   // 原版 i3/k6:2806：全屏模式开关（菜单「全屏」）
   @Trace fullScreen: boolean = false
@@ -541,6 +544,7 @@ export class AppSettings {
       // 原版 w9.k.o0()：d3("videoorientation", 0)
       this.videoOrientation = await this.readNumber('videoorientation', 0)
       this.uiFont = await this.readString('uifont', '')
+      this.skin = await this.readString('skin', '')
       this.undoCloseToast = await this.readBoolean('undoCloseToast', false)
       this.fullScreen = await this.readBoolean('fullScreen', false)
       this.gameMode = await this.readBoolean('gameMode', false)
@@ -1675,6 +1679,21 @@ export class AppSettings {
 
   setBlurEffect(on: boolean): void {
     this.setLabFlag(on ? (this.labFlag | 2) : (this.labFlag & ~2))
+  }
+
+  // 原版 w9.d.g()/j()：labflag 位4 = 实验页「在设置中显示背景」开关
+  isShowSettingsBackground(): boolean {
+    return (this.labFlag & 4) !== 0
+  }
+
+  setShowSettingsBackground(on: boolean): void {
+    this.setLabFlag(on ? (this.labFlag | 4) : (this.labFlag & ~4))
+  }
+
+  // 原版 w9.l.L()/T1()（键名 skin）
+  setSkin(name: string): void {
+    this.skin = name
+    this.flushKey('skin', name)
   }
 
   saveAiPrompt(prompt: AiPromptRec): void {

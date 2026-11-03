@@ -13,7 +13,7 @@ import { BrowserDb } from '../common/Database'
 import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { SiteSetting } from '../common/Types'
 import { TtsManager } from '../common/Tts'
-import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel } from '../common/MenuItems'
+import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
 import { ZoomSlider } from './ZoomSlider'
@@ -331,7 +331,8 @@ export struct MenuSheet {
       this.GridCellBody($r('app.media.via_menu_save'), $r('app.string.save'), this.saveEnabled(), () => {
         this.onClose()
         this.onSavePage()
-      })
+      }, () => {
+      }, $r('app.color.menu_icon'), null, null, '', 'ic_menu_save')
     } else if (id === 'night_mode') {
       // 点击切换夜间模式，长按进夜间模式设置页（原版 O9 case1 / P9 case1）。
       // 原版 h8/c 绑定：可见文字用 d()（纯标题「夜间模式」），「已开启/已关闭」只进 contentDescription；
@@ -343,31 +344,32 @@ export struct MenuSheet {
         this.onOpenPage('settingsNight')
       }, this.settings.isNightActive() ? $r('app.color.accent') : $r('app.color.menu_icon'),
       null, this.settings.isNightActive() ? $r('app.color.accent') : null,
-      this.nightAccessibilityText())
+      this.nightAccessibilityText(), menuSkinIconName(id))
     } else if (id === 'image_mode') {
       // 原版 id=17：点击循环切换三态，标签随状态切换（i8/k.java:398-404）；
       // 无图/仅 Wi-Fi 态染强调色（x3 aVarV310.j(z13)）
       this.GridCellBody(menuIcon(id), this.imageModeLabel(), true, () => {
         this.cycleImageMode()
       }, () => {
-      }, this.settings.noImage || this.settings.wifiOnlyImages ? $r('app.color.accent') : $r('app.color.menu_icon'))
+      }, this.settings.noImage || this.settings.wifiOnlyImages ? $r('app.color.accent') : $r('app.color.menu_icon'),
+      null, null, '', menuSkinIconName(id))
     } else if (id === 'add_bookmark' && this.bookmarkUrls.indexOf(this.tabStore.current().url) >= 0) {
       // 原版 i8/k:363-368：已收藏时条目文案变「已添加」（x7.u.A1）并染强调色
       this.GridCellBody(menuIcon(id), $r('app.string.bookmark_added_state'), true, () => {
       }, () => {
-      }, $r('app.color.accent'))
+      }, $r('app.color.accent'), null, null, '', menuSkinIconName(id))
     } else if (id === 'add_home_fav' && this.homeFavUrls.indexOf(this.tabStore.current().url) >= 0) {
       // 原版 i8/k x3 id40：已收藏时文案变「已添加」（x7.u.f14060l5）并染强调色
       this.GridCellBody(menuIcon(id), $r('app.string.bookmark_added_state'), true, () => {
       }, () => {
-      }, $r('app.color.accent'))
+      }, $r('app.color.accent'), null, null, '', menuSkinIconName(id))
     } else {
       // 原版 i8/k x3：开启态条目染强调色（电脑模式/全屏/浏览器标识/字体大小/广告拦截/游戏模式/隐身）
       this.GridCellBody(menuIcon(id), menuLabel(id), true, () => {
         this.menuAction(id)
       }, () => {
         this.menuLongPress(id)
-      }, this.menuItemColor(id))
+      }, this.menuItemColor(id), null, null, '', menuSkinIconName(id))
     }
   }
 
@@ -1141,7 +1143,7 @@ export struct MenuSheet {
         this.openAddHomeFavDialog()
         break
       default:
-        // 视频之外尚未实现的条目：主页提示无页面，其余提示暂未支持
+        // 死分支：39 个菜单 id 均已有 case（save 在 MainCell 单独处理），仅为穷尽兜底
         if (this.tabStore.current().isHomePage()) {
           this.homePageGuard()
         } else {
@@ -1171,9 +1173,9 @@ export struct MenuSheet {
   @Builder
   GridCellBody(icon: Resource, label: Resource, enabled: boolean, action: () => void, longPress: () => void = () => {},
     iconColor: ResourceColor = $r('app.color.menu_icon'), labelOverride: ResourceStr | null = null,
-    labelColor: ResourceColor | null = null, accessibilityText: string = '') {
+    labelColor: ResourceColor | null = null, accessibilityText: string = '', iconName: string = '') {
     Column({ space: 4 }) {
-      ViaIcon({ icon: icon, iconSize: 24, iconColor: iconColor })
+      ViaIcon({ icon: icon, iconSize: 24, iconColor: iconColor, iconName: iconName })
       Text(labelOverride === null ? label : labelOverride)
         .fontSize(11 * this.settings.textZoom / 100)
         .fontColor(labelColor === null ? $r('app.color.menu_text') : labelColor)
