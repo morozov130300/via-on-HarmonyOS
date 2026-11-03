@@ -8,6 +8,7 @@ import { BrowserDb } from '../common/Database';
 import { applyImmersiveWindow } from '../common/Immersive';
 import { initReaderContext } from '../common/Reader';
 import { initGmRuntime } from '../common/GmRuntime';
+import { RemoteConfig } from '../common/RemoteConfig';
 import { ProxyManager } from '../common/ProxyConfig';
 import { webview } from '@kit.ArkWeb';
 import { fileIo } from '@kit.CoreFileKit';
@@ -57,6 +58,10 @@ export default class EntryAbility extends UIAbility {
     initReaderContext(this.context);
     // GM_* 用户脚本运行时存储（o5 变量库 / p5 require 缓存目录）
     initGmRuntime(this.context);
+    // 原版 mark/via/Shell.h0()→d0()：启动时抓取 r9 远程配置（60s 节流 + 文件缓存），
+    // 应用到 RemoteConfig 单例（Shell.java:156 k.q().t(new i(list))）；失败静默降级默认值
+    RemoteConfig.getInstance().load(this.context).catch(() => {
+    });
     // 原版 mark/via/Shell 启动时机：读 proxy config → enabled 则启动应用级代理
     ProxyManager.getInstance().applyOnStartup(this.context);
     const entry = extractEntryUrl(want)

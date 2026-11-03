@@ -16,7 +16,10 @@ import { AppBarHeader } from '../components/AppBar'
 import { MenuSheet, TRANSLATE_INJECT_JS } from '../components/MenuSheet'
 import { FindBar } from '../components/FindBar'
 import { Reader, READER_THEME_COLORS } from '../common/Reader'
-import { TtsManager } from '../common/Tts'
+import { ReadAloudController, ReadAloudTask, ReadAloudListener, sentencesFromJson } from '../common/ReadAloud'
+import { ReadAloudEngine } from '../common/Tts'
+import { ReadAloudPanel } from '../components/ReadAloudPanel'
+import { ReadAloudFloat } from '../components/ReadAloudFloat'
 import { AiPanel } from '../components/AiPanel'
 import { CopilotStore, AiAttachment } from '../common/CopilotStore'
 import { MediaListPage } from '../components/MediaListPage'
@@ -41,6 +44,9 @@ const PROGRESS_GRADIENT: LinearGradient = {
 }
 const SHORTCUT_URL_EVENT_ID = 10001
 const EXTERNAL_LINK_EVENT_ID = 10002
+// 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 via-reader-body）
+const READ_ALOUD_EXTRACT_JS: string =
+  '(function(){try{var e=document.getElementsByClassName("via-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
 
 // 原版应用布局（Ya()）：0=传统 1=工具栏在上 2=工具栏在下 3=双行
 const LAYOUT_TRADITIONAL: number = 0
@@ -80,7 +86,19 @@ struct Index {
   @Local linkConfirmUrl: string = ''
   // 下载确认弹层（原版 mark/via/download/m.java）
   @Local downloadConfirm: PendingDownloadUi | null = null
-  private tts: TtsManager = TtsManager.getInstance()
+  // 朗读：悬浮控件/面板/Snackbar（原版 k6.xb/ha/p3）
+  private readAloudController: ReadAloudController = ReadAloudController.getInstance()
+  @Local showReadAloudPanel: boolean = false
+  @Local readAloudFloatVisible: boolean = false
+  @Local readAloudPlaying: boolean = false
+  private readAloudTaskId: string | null = null
+  private readAloudListener: ReadAloudListener = (task: ReadAloudTask) => {
+    this.onReadAloudTaskChanged(task)
+  }
+  @Local snackbarText: string = ''
+  @Local snackbarActionText: string = ''
+  private snackbarCallback: (() => void) | null = null
+  private snackbarTimer: number = -1
   // 全屏视频播放器（原版 k6.z/V + com.tuyafeng.support.widget.v）
   videoOverlay: VideoOverlayState = VideoOverlayState.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
@@ -193,6 +211,8 @@ struct Index {
     emitter.on({ eventId: OPEN_BOOKMARKS_EVENT_ID }, () => {
       this.openPage('bookmarks')
     })
+    // 朗读任务监听（原版 k6.va：I1.b(d) → xb）
+    this.readAloudController.addListener(this.readAloudListener)
   }
 
   aboutToDisappear(): void {
@@ -200,7 +220,8 @@ struct Index {
       this.landscapeListener.off('change')
       this.landscapeListener = null
     }
-    this.tts.shutdown()
+    this.readAloudController.removeListener(this.readAloudListener)
+    ReadAloudEngine.getInstance().shutdown()
     this.syncVolumeKeyConsumers()
     this.tabStore.snapshot(this.settings)
     this.settings.persistAdBlockTotal()
@@ -648,20 +669,9 @@ struct Index {
           console.error('runJavaScript view source failed')
         }
         break
-      case 'tts': {
-        // 原版朗读：提取当前页正文（阅读模式中取 via-reader-body 文本）
-        const ttsTab = this.tabStore.current()
-        Reader.extractText(ttsTab).then((text: string) => {
-          if (text.trim() === '') {
-            this.getUIContext().getPromptAction().showToast({
-              message: $r('app.string.page_failed_load'), duration: 1500
-            })
-            return
-          }
-          this.tts.speak(text)
-        })
+      case 'tts':
+        this.startReadAloud()
         break
-      }
       case 'reader':
         this.toggleReader()
         // 原版 n0.v(true)：阅读模式触发地址栏左图标脉冲
@@ -807,6 +817,9 @@ struct Index {
           },
           onOpenReader: () => {
             this.toggleReader()
+          },
+          onReadAloud: () => {
+            this.startReadAloud()
           }
         })
       }
@@ -891,6 +904,72 @@ struct Index {
         })
       }
 
+      // 原版 k6.xb：朗读悬浮控件（贴左边缘、可纵向拖拽）
+      if (this.readAloudFloatVisible) {
+        ReadAloudFloat({
+          playing: this.readAloudPlaying,
+          onAction: (action: number) => {
+            this.onReadAloudAction(action)
+          }
+        })
+      }
+
+      // 原版 k6.ha()/j8.p：朗读面板（min(4/5W,450)×min(4/5H,600) 弹窗）
+      if (this.showReadAloudPanel) {
+        ReadAloudPanel({
+          onClose: () => {
+            this.showReadAloudPanel = false
+          },
+          onSpeedChanged: (speed: number) => {
+            this.readAloudController.getEngine().setSpeed(speed)
+          }
+        })
+      }
+
+      // 原版 g6.n.r：Snackbar（底部深色条 + 动作按钮）
+      if (this.snackbarText !== '') {
+        Column() {
+          Row() {
+            Text(this.snackbarText)
+              .fontSize(14)
+              .fontColor('#DEFFFFFF')
+              .maxLines(2)
+              .layoutWeight(1)
+            if (this.snackbarActionText !== '') {
+              Text(this.snackbarActionText)
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.accent'))
+                .padding({ left: 12, right: 4, top: 6, bottom: 6 })
+                .onClick(() => {
+                  const cb = this.snackbarCallback
+                  this.snackbarText = ''
+                  this.snackbarActionText = ''
+                  this.snackbarCallback = null
+                  if (this.snackbarTimer >= 0) {
+                    clearTimeout(this.snackbarTimer)
+                    this.snackbarTimer = -1
+                  }
+                  if (cb !== null) {
+                    cb()
+                  }
+                })
+            }
+          }
+          .width('100%')
+          .padding({ left: 16, right: 8, top: 12, bottom: 12 })
+          .backgroundColor('#F0322F2F')
+          .borderRadius(4)
+          .margin({ left: 12, right: 12, bottom: 56 })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 150 }))
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.End)
+        .alignItems(HorizontalAlign.Center)
+        .hitTestBehavior(HitTestMode.Transparent)
+      }
+
       // 原版 k6 自定义视图（全屏视频容器）：置于内容之上、整窗夜间滤镜之下
       VideoPlayerOverlay()
 
@@ -955,6 +1034,132 @@ struct Index {
 
   private openPage(page: string): void {
     this.mainNavStack.pushPathByName(page, '', true)
+  }
+
+  // ===== 原版朗读（k6.va/G3/p3/E3/xb/ha）=====
+
+  // 原版 k6.va()：朗读入口 —— JS 禁用提示 → 初始化控制器/引擎 → 稍等提示 → 抽取正文
+  private startReadAloud(): void {
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.read_aloud_cannot'), duration: 1500
+      })
+      return
+    }
+    if (!this.settings.jsEnabled) {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.read_aloud_js_disabled'), duration: 1500
+      })
+      return
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    if (context !== undefined) {
+      this.readAloudController.initService(context)
+    }
+    // 原版 I1.g().g(settings.O())：引擎语速
+    this.readAloudController.getEngine().setSpeed(this.settings.readAloudSpeed)
+    const state = this.readAloudController.getEngine().getState()
+    if (state !== 0 && state !== 1 && state !== 2) {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.read_aloud_engine_failed'), duration: 1500
+      })
+      return
+    }
+    this.getUIContext().getPromptAction().showToast({
+      message: $r('app.string.read_aloud_wait'), duration: 1500
+    })
+    const taskId = `ra${Date.now()}${Math.floor(Math.random() * 100000)}`
+    const url = tab.url
+    const title = tab.title
+    try {
+      tab.controller.runJavaScript(READ_ALOUD_EXTRACT_JS, (error: BusinessError, result: string) => {
+        if (error) {
+          console.error(`read aloud extract failed: ${error.code}`)
+          this.getUIContext().getPromptAction().showToast({
+            message: $r('app.string.read_aloud_cannot'), duration: 1500
+          })
+          return
+        }
+        this.submitReadAloud(taskId, url, title, result)
+      })
+    } catch (error) {
+      console.error('runJavaScript read aloud failed')
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.read_aloud_cannot'), duration: 1500
+      })
+    }
+  }
+
+  // 原版 k6.G3 → p3：切分句子 → 提交任务 → 播放 → Snackbar「开始朗读/查看」→ 显示悬浮控件
+  private submitReadAloud(taskId: string, url: string, title: string, json: string): void {
+    const sentences = sentencesFromJson(json)
+    if (sentences.length === 0) {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.read_aloud_cannot'), duration: 1500
+      })
+      return
+    }
+    const task = new ReadAloudTask(taskId, url, title, sentences, 0)
+    const submitted = this.readAloudController.submit(task)
+    if (submitted === null) {
+      return
+    }
+    this.readAloudTaskId = submitted
+    this.readAloudController.commandPlay(submitted)
+    this.readAloudFloatVisible = true
+    this.readAloudPlaying = true
+    const ctx = this.getUIContext().getHostContext()
+    if (ctx !== undefined) {
+      this.showSnackbar(
+        ctx.resourceManager.getStringSync($r('app.string.read_aloud_started').id),
+        ctx.resourceManager.getStringSync($r('app.string.read_aloud_view').id),
+        () => {
+          this.showReadAloudPanel = true
+        }
+      )
+    }
+  }
+
+  // 原版 k6.xb：任务变化 → 悬浮控件 setPlaying(t.h())
+  private onReadAloudTaskChanged(task: ReadAloudTask): void {
+    this.readAloudFloatVisible = true
+    this.readAloudPlaying = task.playing()
+  }
+
+  // 原版 k6.E3：悬浮控件回调 1=播放 2=暂停 3=停止 4=面板
+  private onReadAloudAction(action: number): void {
+    if (action === 1) {
+      if (this.readAloudTaskId !== null) {
+        this.readAloudController.commandPlay(this.readAloudTaskId)
+      }
+    } else if (action === 2) {
+      if (this.readAloudTaskId !== null) {
+        this.readAloudController.commandPause(this.readAloudTaskId)
+      }
+    } else if (action === 3) {
+      this.readAloudController.commandStop()
+      this.readAloudTaskId = null
+      this.readAloudFloatVisible = false
+    } else if (action === 4) {
+      this.showReadAloudPanel = true
+    }
+  }
+
+  // 原版 g6.n.r：Snackbar（消息 + 动作按钮，2750ms 自动消失）
+  private showSnackbar(text: string, actionText: string, onAction: (() => void) | null): void {
+    this.snackbarText = text
+    this.snackbarActionText = actionText
+    this.snackbarCallback = onAction
+    if (this.snackbarTimer >= 0) {
+      clearTimeout(this.snackbarTimer)
+    }
+    this.snackbarTimer = setTimeout(() => {
+      this.snackbarText = ''
+      this.snackbarActionText = ''
+      this.snackbarCallback = null
+      this.snackbarTimer = -1
+    }, 2750)
   }
 
   // 原版 k6.ba()：AI 入口 —— aibackend 空 → push AI 设置页；

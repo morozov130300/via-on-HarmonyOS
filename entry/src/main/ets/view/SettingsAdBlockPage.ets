@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { RemoteConfig } from '../common/RemoteConfig'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
@@ -55,14 +56,17 @@ export struct SettingsAdBlockPage {
                 this.navPathStack.pushPathByName('ruleSub', '', true)
               }
             })
-            SettingCheckRow({
-              rowLabel: '自动展开网页全文',
-              rowDesc: '打开网页时自动展开网页中折叠的内容',
-              isChecked: this.settings.autoExpandFullText,
-              onCheckRow: (isOn: boolean) => {
-                this.settings.setAutoExpandFullText(isOn)
-              }
-            })
+            // 原版 z7/d.java:49-55：r9 fl1 位开关（h.e() = !(第1位)，默认可见）控制第 5 项显隐
+            if (RemoteConfig.getInstance().autoExpandSwitchVisible) {
+              SettingCheckRow({
+                rowLabel: '自动展开网页全文',
+                rowDesc: '打开网页时自动展开网页中折叠的内容',
+                isChecked: this.settings.autoExpandFullText,
+                onCheckRow: (isOn: boolean) => {
+                  this.settings.setAutoExpandFullText(isOn)
+                }
+              })
+            }
           }
           .width('100%')
         }
