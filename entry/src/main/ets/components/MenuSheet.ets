@@ -12,7 +12,6 @@ import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { SiteSetting } from '../common/Types'
-import { TtsManager } from '../common/Tts'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
@@ -93,6 +92,8 @@ export struct MenuSheet {
   @Event onSavePage: () => void = () => {}
   @Event onOpenAi: () => void = () => {}
   @Event onOpenReader: () => void = () => {}
+
+  @Event onReadAloud: () => void = () => {}
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   @Local pageIndex: number = 0
@@ -1632,25 +1633,10 @@ export struct MenuSheet {
     this.onClose()
   }
 
-  // 朗读网页：取正文 innerText 交 TTS
+  // 朗读网页：交由主页处理（原版 va()：抽取正文 → j8 朗读管线）
   private readAloud(): void {
-    const tab = this.tabStore.current()
-    if (tab.isHomePage()) {
-      this.homePageGuard()
-      return
-    }
-    try {
-      tab.controller.runJavaScript('document.body.innerText', (error: BusinessError, result: string) => {
-        if (error) {
-          console.error(`get read aloud text failed: ${error.code}`)
-          return
-        }
-        TtsManager.getInstance().speak(result)
-      })
-      this.onClose()
-    } catch (error) {
-      console.error('runJavaScript read aloud failed')
-    }
+    this.onReadAloud()
+    this.onClose()
   }
 
   private applyOrientationChoice(index: number): void {

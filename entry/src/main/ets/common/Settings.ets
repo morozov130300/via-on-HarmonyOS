@@ -61,7 +61,8 @@ const SYNC_KEYS: string[] = [
   'jsEnabled',
   'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled',
   'keyback', 'keyforward', 'keyhome', 'keytab', 'keymenu',
-  'gesturetoolbarleft', 'gesturetoolbarright', 'restoreclosedtabs', 'scriptNextId'
+  'gesturetoolbarleft', 'gesturetoolbarright', 'restoreclosedtabs', 'scriptNextId',
+  'readaloudspeed'
 ]
 const SNAPSHOT_DEBOUNCE_MS: number = 1500
 const AD_BLOCK_ESTIMATED_BYTES: number = 20 * 1024
@@ -164,6 +165,8 @@ export class AppSettings {
   @Trace scriptEnabled: boolean = false
   // 原版 w9/k.t（网站设定 JavaScript 全局默认，jb/y4 id8），默认允许
   @Trace jsEnabled: boolean = true
+  // 原版 w9/k.O()：朗读语速（readaloudspeed，存储 int(speed*100)），范围 0.25-5.0
+  @Trace readAloudSpeed: number = 1.0
   @Trace doNotTrack: boolean = false
   @Trace disableWebRtc: boolean = false
   @Trace doNotSell: boolean = false
@@ -379,6 +382,8 @@ export class AppSettings {
       this.ruleSubscriptions = await this.readRuleSubs()
       this.scriptEnabled = await this.readBoolean('scriptEnabled', false)
       this.jsEnabled = await this.readBoolean('jsEnabled', true)
+      // 原版 w9/k.O()：max(0.25, min(5.0, readNumber('readaloudspeed', 100)/100))
+      this.readAloudSpeed = Math.max(0.25, Math.min(5.0, (await this.readNumber('readaloudspeed', 100)) / 100))
       this.doNotTrack = await this.readBoolean('doNotTrack', false)
       this.disableWebRtc = await this.readBoolean('disableWebRtc', false)
       this.doNotSell = await this.readBoolean('doNotSell', false)
@@ -1282,6 +1287,13 @@ export class AppSettings {
   setJsEnabled(on: boolean): void {
     this.jsEnabled = on
     this.flushKey('jsEnabled', on)
+  }
+
+  // 原版 w9/k.u0(float)：存储 int(clamp(speed,0.25,5)*100)
+  setReadAloudSpeed(speed: number): void {
+    const clamped = Math.max(0.25, Math.min(5.0, speed))
+    this.readAloudSpeed = clamped
+    this.flushKey('readaloudspeed', Math.round(clamped * 100))
   }
 
   setDoNotTrack(on: boolean): void {

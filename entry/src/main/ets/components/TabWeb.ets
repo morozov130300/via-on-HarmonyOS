@@ -15,6 +15,7 @@ import { DownloadCoordinator } from '../common/Downloads'
 import { GmBridge, gmSecret, gmFakeTampermonkeyJs, gmSandboxJs, GmRequireStore } from '../common/GmRuntime'
 import { FontStore } from '../common/FontStore'
 import { NetMonitor } from '../common/NetState'
+import { RemoteConfig } from '../common/RemoteConfig'
 import { VideoOverlayState } from './VideoPlayerOverlay'
 import { AppIcon } from './AppIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
@@ -839,7 +840,9 @@ export struct TabWeb {
   }
 
   private expandFullText(): void {
-    if (!this.settings.autoExpandFullText || this.tab.incognito || this.tab.isHomePage()) {
+    // 原版 k6:5262/7538：!r9.g.a().e(url)——wls 白名单（v.qq.com/film.qq.com）豁免，不自动展开
+    if (!this.settings.autoExpandFullText || this.tab.incognito || this.tab.isHomePage() ||
+      RemoteConfig.getInstance().isInWls(this.tab.url)) {
       return
     }
     const js = '(function(){var k=/(展开全文|阅读全文|查看全文|显示全文|展开剩余|show more|read more|view more)/i;if(k.test(document.body?document.body.innerText:"")){var els=document.querySelectorAll("button,a,div,span,p");for(var i=0;i<els.length;i++){var t=(els[i].innerText||"").trim();if(t&&t.length<=10&&k.test(t)){els[i].click();break}}}})()'

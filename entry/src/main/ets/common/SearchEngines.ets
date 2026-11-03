@@ -1,3 +1,5 @@
+import { RemoteConfig } from './RemoteConfig'
+
 export class SearchEngineDef {
   key: string
   name: string
@@ -121,7 +123,10 @@ export const SEARCH_ENGINES: SearchEngineDef[] = [
 export function getBuiltinEngines(isZh: boolean, isRu: boolean): SearchEngineDef[] {
   const byKey = (key: string): SearchEngineDef => {
     const found = SEARCH_ENGINES.find((engine: SearchEngineDef): boolean => engine.key === key)
-    return found !== undefined ? found : SEARCH_ENGINES[0]
+    const base = found !== undefined ? found : SEARCH_ENGINES[0]
+    // 原版 z9 getUrl：模板随 r9 远程配置（bd/mt 等）动态构造
+    const dynamic = dynamicEngineTemplate(base.key)
+    return dynamic === '' ? base : new SearchEngineDef(base.key, base.name, dynamic, base.id)
   }
   const list: SearchEngineDef[] = []
   if (isZh) {
@@ -152,6 +157,60 @@ export function getBuiltinEngines(isZh: boolean, isRu: boolean): SearchEngineDef
 // 原版 z8/v2.a()：默认搜索引擎 = CN 环境百度(-2)，否则谷歌(-1)
 export function defaultEngineKey(isZh: boolean): string {
   return isZh ? 'baidu' : 'google'
+}
+
+// 原版 i6/i0.s（m||n）：http:// 或 https:// 前缀
+function isHttpUrl(text: string): boolean {
+  return text.startsWith('http://') || text.startsWith('https://')
+}
+
+// 原版 z9/* 各引擎 getUrl 的远程参数模式：
+// param 为 null/空 → 裸模板；param 为 http(s) URL → 整体替换；否则 paramPrefix + param + suffix
+function remoteParamTemplate(bare: string, paramPrefix: string, param: string | null, suffix: string = ''): string {
+  if (param === null || param === '') {
+    return bare
+  }
+  if (isHttpUrl(param)) {
+    return param
+  }
+  return paramPrefix + param + suffix
+}
+
+// 原版 z9/a~n.getUrl 1:1：内置引擎模板按 r9 远程配置（bd/sg/tt/sm/hs/bn/gg/yh/mt 键）实时构造；
+// 无远程参数的引擎（duckduckgo/startpage/yandex）返回空串，继续用静态模板
+export function dynamicEngineTemplate(key: string): string {
+  const rc = RemoteConfig.getInstance()
+  switch (key) {
+    // z9/a.java：bd（默认 1022282z）
+    case 'baidu':
+      return remoteParamTemplate('https://m.baidu.com/s?word=', 'https://m.baidu.com/s?from=', rc.getBaiduFrom(), '&word=')
+    // z9/b.java：bn
+    case 'bing':
+      return remoteParamTemplate('https://www.bing.com/search?q=', 'https://www.bing.com/search?', rc.getBingParam(), '&q=')
+    // z9/e.java：gg
+    case 'google':
+      return remoteParamTemplate('https://www.google.com/search?q=', 'https://www.google.com/search?', rc.getGoogleParam(), '&q=')
+    // z9/f.java：hs
+    case 'so360':
+      return remoteParamTemplate('https://m.so.com/s?q=', 'https://m.so.com/s?', rc.getSo360Param(), '&q=')
+    // z9/j.java：sg
+    case 'sogou':
+      return remoteParamTemplate('https://wap.sogou.com/web/sl?keyword=', 'https://wap.sogou.com/web/sl?bid=sogou-mobb-', rc.getSogouParam(), '&keyword=')
+    // z9/i.java：sm
+    case 'shenma':
+      return remoteParamTemplate('https://yz.m.sm.cn/s?q=', 'https://yz.m.sm.cn/s?from=', rc.getShenmaParam(), '&q=')
+    // z9/l.java：tt
+    case 'toutiao':
+      return remoteParamTemplate('https://so.toutiao.com/search?keyword=', 'https://so.toutiao.com/search?', rc.getToutiaoParam(), '&keyword=')
+    // z9/m.java：yh
+    case 'yahoo':
+      return remoteParamTemplate('https://search.yahoo.com/search?p=', 'https://search.yahoo.com/search?', rc.getYahooParam(), '&p=')
+    // z9/g.java：mt（默认 s=nyzav&referrer_s=nyzav）
+    case 'metaso':
+      return remoteParamTemplate('https://metaso.cn/?q=', 'https://metaso.cn/?', rc.getMetasoParam(), '&q=')
+    default:
+      return ''
+  }
 }
 
 // 原版 ma/e.b(int)：按建议源 id 返回接口（1=ma/c Google、2=ma/a 百度、3=ma/b 必应、4=ma/d 360）
@@ -218,10 +277,10 @@ export function buildSuggestUrl(engineKey: string, query: string, language: stri
 
 export function findEngine(key: string): SearchEngineDef {
   const found = SEARCH_ENGINES.find((engine: SearchEngineDef): boolean => engine.key === key)
-  if (found !== undefined) {
-    return found
-  }
-  return SEARCH_ENGINES[0]
+  const base = found !== undefined ? found : SEARCH_ENGINES[0]
+  // 原版 z9 getUrl：模板随 r9 远程配置动态构造（buildSearchUrl/备份导出消费）
+  const dynamic = dynamicEngineTemplate(base.key)
+  return dynamic === '' ? base : new SearchEngineDef(base.key, base.name, dynamic, base.id)
 }
 
 // 原版 i6/g0.h：模板套词。%@→%s→%S 依次查找；trim(query) 后编码；
