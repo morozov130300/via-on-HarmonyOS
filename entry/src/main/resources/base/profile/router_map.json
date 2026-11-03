@@ -171,6 +171,11 @@
       "buildFunction": "KeyboardShortcutsPageBuilder"
     },
     {
+      "name": "fontPage",
+      "pageSourceFile": "src/main/ets/view/FontPage.ets",
+      "buildFunction": "FontPageBuilder"
+    },
+    {
       "name": "settingsAdBlock",
       "pageSourceFile": "src/main/ets/view/SettingsAdBlockPage.ets",
       "buildFunction": "SettingsAdBlockPageBuilder"

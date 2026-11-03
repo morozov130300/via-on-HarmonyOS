@@ -101,9 +101,12 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '退出时清除数据', onTapRow: () => {
               this.pickClearOnExit()
             } })
-            // 原版 c4.u4() 行列表无 row12 字体行（case12/I4 为死代码）；
-            // 网页字体大小入口 = 主界面菜单「字体大小」长按 → jb.k5 页
-            SettingNavRow({ rowLabel: '操作设定', onTapRow: () => {
+            // 原版 c4.u4() row35：字体（K5，value = w9.l.a1() 当前 uifont，默认空）→ case35 打开 hb.j2
+            SettingNavRow({ rowLabel: '字体', rowValue: this.settings.uiFont, onTapRow: () => {
+              this.navPathStack.pushPathByName('fontPage', '', true)
+            } })
+            // 原版 c4.u4() row19：操作设定（sc，value = C9「手势，快捷方式，功能键」）
+            SettingNavRow({ rowLabel: '操作设定', rowValue: '手势，快捷方式，功能键', onTapRow: () => {
               this.navPathStack.pushPathByName('settingsGesture', '', true)
             } })
             SettingNavRow({ rowLabel: '导入/备份书签', onTapRow: () => {
