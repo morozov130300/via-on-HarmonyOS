@@ -21,6 +21,93 @@ export function isMenuId(id: string): boolean {
   return MENU_DEFAULT_ORDER.indexOf(id) >= 0
 }
 
+// 原版 i8/l.a：菜单条目皮肤图标名（lb.b.a 第二参字符串值，皮肤目录下 <name>.png 覆盖）
+// 菜单数字 id → 皮肤名（i8/l.java case 表，已逐项按字符串资源值核对）
+export function menuSkinIconName(id: string): string {
+  switch (id) {
+    case 'night_mode':
+      return 'ic_menu_night'
+    case 'bookmarks':
+      return 'ic_menu_bookmark'
+    case 'history':
+      return 'ic_menu_history'
+    case 'downloads':
+      return 'ic_menu_downloads'
+    case 'incognito':
+      return 'ic_menu_incognito_mode'
+    case 'share':
+      return 'ic_menu_share'
+    case 'add_bookmark':
+      return 'ic_menu_add_bookmark'
+    case 'pc_mode':
+      return 'ic_menu_desktop_mode'
+    case 'toolbox':
+      return 'ic_menu_tools'
+    case 'settings':
+      return 'ic_menu_settings'
+    case 'find':
+      return 'ic_menu_find'
+    case 'save':
+      return 'ic_menu_save'
+    case 'offline':
+      return 'ic_menu_offline'
+    case 'translate':
+      return 'ic_menu_translate'
+    case 'view_source':
+      return 'ic_menu_view_source'
+    case 'fullscreen':
+      return 'ic_menu_fullscreen'
+    case 'image_mode':
+      return 'ic_menu_image_mode'
+    case 'res_sniffer':
+      return 'ic_menu_resource'
+    case 'ua':
+      return 'ic_menu_useragent'
+    case 'netlog':
+      return 'ic_menu_network_log'
+    case 'scan_qr':
+      return 'ic_menu_scan'
+    case 'add_to_desktop':
+      return 'ic_menu_add_to_home_screen'
+    case 'read_aloud':
+      return 'ic_menu_read_aloud'
+    case 'ai':
+      return 'ic_menu_ai'
+    case 'screen_orientation':
+      return 'ic_menu_rotation'
+    case 'adblock':
+      return 'ic_menu_adblock'
+    case 'mark_ad':
+      return 'ic_menu_mark'
+    case 'font_size':
+      return 'ic_menu_font_size'
+    case 'report_site':
+      return 'ic_menu_report_abuse'
+    case 'customize_menu':
+      return 'ic_menu_customize_menu'
+    case 'clear_data':
+      return 'ic_menu_delete'
+    case 'refresh_page':
+      return 'ic_menu_reload'
+    case 'site_settings':
+      return 'ic_menu_site_conf'
+    case 'script':
+      return 'ic_menu_scripts'
+    case 'print':
+      return 'ic_menu_print'
+    case 'reading_mode':
+      return 'ic_menu_reader'
+    case 'open_with':
+      return 'ic_menu_open_with'
+    case 'game_mode':
+      return 'ic_menu_game_mode'
+    case 'add_home_fav':
+      return 'ic_menu_add_favorite'
+    default:
+      return ''
+  }
+}
+
 // 图标为原版 Via 7.4.0 APK 反解资源（resources.arsc drawable → r/j/<name>.png，
 // 原样拷贝至 media/via_menu_<id>.png，未做任何压缩/裁剪/转码）
 export function menuIcon(id: string): Resource {

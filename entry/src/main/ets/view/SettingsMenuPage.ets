@@ -8,7 +8,7 @@
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
-import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel } from '../common/MenuItems'
+import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 
 const KIND_ACTIVE: string = 'active'
 const KIND_SEPARATOR: string = 'sep'
@@ -234,7 +234,7 @@ export struct SettingsMenuPage {
                   .height('100%')
               } else {
                 Column({ space: 6 }) {
-                  ViaIcon({ icon: menuIcon(item.id), iconSize: 24, iconColor: $r('app.color.fg'), imageDraggable: false })
+                  ViaIcon({ icon: menuIcon(item.id), iconSize: 24, iconColor: $r('app.color.fg'), imageDraggable: false, iconName: menuSkinIconName(item.id) })
                   Text(menuLabel(item.id))
                     .fontSize(11)
                     .fontColor($r('app.color.fg_secondary'))

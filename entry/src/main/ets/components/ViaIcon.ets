@@ -1,8 +1,14 @@
+import { common } from '@kit.AbilityKit'
+import { SkinStore } from '../common/SkinStore'
+
 @ComponentV2
 export struct ViaIcon {
   @Param @Require icon: Resource
   @Param iconSize: number = 24
   @Param iconColor: ResourceColor = $r('app.color.fg')
+  // 原版 lb.b.a：皮肤图标名（如 ic_menu_night）。非空且当前皮肤目录存在 <name>.png
+  // 时用皮肤位图替换默认资源（lb.a.b 96x96 BitmapDrawable），空串走默认资源
+  @Param iconName: string = ''
   // Grid 拖拽场景（如定制菜单宫格）内置的 Image 拖拽会抢走宿主 GridItem 的拖拽事件，
   // 需要在宫格内禁用（ faqs-arkui-1188），因此暴露开关，默认保持原行为
   @Param imageDraggable: boolean = true
@@ -20,6 +26,15 @@ export struct ViaIcon {
       0, 0, 0, g, 0,
       0, 0, 0, b, 0,
       0, 0, 0, a, 0];
+  }
+
+  // 原版 lb.a.a：当前皮肤下存在 <iconName>.png 则返回其路径（皮肤需重启生效，无需响应式）
+  private skinPath(): string | null {
+    if (this.iconName === '') {
+      return null
+    }
+    const context = getContext(this) as common.Context
+    return SkinStore.getInstance().skinIconPath(context, this.iconName)
   }
 
   private resolveColor(): number {
@@ -56,11 +71,21 @@ export struct ViaIcon {
   }
 
   build() {
-    Image(this.icon)
-      .width(this.iconSize)
-      .height(this.iconSize)
-      .objectFit(ImageFit.Contain)
-      .colorFilter(this.tintMatrix)
-      .draggable(this.imageDraggable)
+    if (this.skinPath() !== null) {
+      // 皮肤位图（lb.a.b）：按原样渲染，同菜单 ImageView 主题着色
+      Image(`file://${this.skinPath()}`)
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+        .colorFilter(this.tintMatrix)
+        .draggable(this.imageDraggable)
+    } else {
+      Image(this.icon)
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+        .colorFilter(this.tintMatrix)
+        .draggable(this.imageDraggable)
+    }
   }
 }
