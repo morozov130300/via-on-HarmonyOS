@@ -12,6 +12,7 @@ import { TabStore } from '../common/TabStore'
 import { hostOf } from '../common/SearchEngines'
 import { Reader, READER_THEME_COLORS } from '../common/Reader'
 import { DownloadCoordinator } from '../common/Downloads'
+import { FontStore } from '../common/FontStore'
 import { NetMonitor } from '../common/NetState'
 import { AppIcon } from './AppIcon'
 
@@ -31,6 +32,9 @@ const USER_SCRIPT_BRIDGE_JS: string = '(function(){' +
   'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){e(2)})}else{e(2)}' +
   'if(document.readyState==="complete"){e(4)}else{window.addEventListener("load",function(){e(4)})}' +
   '})()'
+
+// 原版 c8/ta.a 1:1：@font-face ViaCustomFont + body 字体族 CSS（排除图标），__PATH__ 运行时替换
+const CUSTOM_FONT_JS: string = '(function(){var i=\'via_custom_font\';var f=\'@font-face{font-family:ViaCustomFont;font-display:swap;src:url("__PATH__")}body,body :not(.bi):not(.bx):not(.bxr):not(.docon):not(.fa):not(.fab):not(.fad):not(.fal):not(.far):not(.fas):not(.glyphicon):not(.icon):not(.la):not(.las):not(.material-icons):not(.material-icons-outlined):not(.material-icons-round):not(.material-icons-sharp):not(.material-icons-two-tone):not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp):not(.md):not(.typcn):not(.uni-btn-icon):not(.uni-icons):not(ion-icon):not(mat-icon):not(maticon):not(mdui-icon):not(i[data-feather]):not(span[data-feather]):not(i[class^="ri-"]):not(span[class^="ri-"]):not([class*="fa-"]):not([class*="mce-i-"]):not([class*=FONT]):not([class*=Font]):not([class*=ICON]):not([class*=Icon]):not([class*=arrow]):not([class*=font]):not([class*=icon]):not([class*=player]){font-family:ViaCustomFont,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important}\';var s=document.getElementById(i);if(s){s.innerHTML=f}else{s=document.createElement(\'style\');s.id=i;s.type=\'text/css\';s.innerHTML=f;document.head.appendChild(s)}})();'
 
 interface ScriptRunMsg {
   action: number
@@ -166,6 +170,7 @@ export struct TabWeb {
           this.injectPrivacy(event.url)
           this.injectBlockerCss(event.url)
           this.injectCustomCss()
+          this.injectCustomFont()
           this.prepareReader()
           this.expandFullText()
           this.settings.persistAdBlockTotal()
@@ -257,6 +262,11 @@ export struct TabWeb {
         .onInterceptRequest((event: OnInterceptRequestEvent) => {
           const request = event.request
           const requestUrl = request.getRequestUrl()
+          // 原版 na.E0 首段：字体请求（后缀 = URL 编码字体名）优先于一切拦截
+          const fontResponse = this.interceptFont(requestUrl)
+          if (fontResponse !== null) {
+            return fontResponse
+          }
           // 原版 na.U1：内部页/非 http 放行
           if (!requestUrl.startsWith('http') || !this.tab.url.startsWith('http')) {
             return null
@@ -627,6 +637,53 @@ export struct TabWeb {
     } catch (error) {
       console.error('inject blocker css failed')
     }
+  }
+
+  // 原版 k6:4612-4614（onPageFinished 脚本注入段）：uifont 非空注入 ta.a，路径 "/"+字体名
+  private injectCustomFont(): void {
+    if (this.settings.uiFont === '') {
+      return
+    }
+    const js = CUSTOM_FONT_JS.replace('__PATH__', `/${this.settings.uiFont}`)
+    this.tab.controller.runJavaScript(js).catch(() => {
+      console.error('inject custom font failed')
+    })
+  }
+
+  // 原版 na.E0:707-711 + s9/d.f：请求 URL 以 URL 编码后的字体名结尾（i6.u.b）→ 回源 fonts 目录，
+  // 头 Cache-Control immutable / ACAO * / Content-Type（mime 按扩展名，默认 font/ttf）
+  private interceptFont(requestUrl: string): WebResourceResponse | null {
+    const fontName = this.settings.uiFont
+    if (fontName === '') {
+      return null
+    }
+    let encoded = ''
+    try {
+      encoded = encodeURIComponent(fontName)
+    } catch (error) {
+      encoded = fontName
+    }
+    if (!requestUrl.endsWith(encoded)) {
+      return null
+    }
+    const context = getContext(this) as common.Context
+    const bytes = FontStore.getInstance().readBytes(context, fontName)
+    if (bytes === null) {
+      return null
+    }
+    const mime = FontStore.getInstance().mimeOf(fontName)
+    const response = new WebResourceResponse()
+    response.setResponseCode(200)
+    response.setReasonMessage('OK')
+    response.setResponseMimeType(mime)
+    response.setResponseEncoding('UTF-8')
+    response.setResponseData(bytes)
+    response.setResponseHeader([
+      { headerKey: 'Cache-Control', headerValue: 'immutable' },
+      { headerKey: 'Access-Control-Allow-Origin', headerValue: '*' },
+      { headerKey: 'Content-Type', headerValue: mime }
+    ])
+    return response
   }
 
   private injectCustomCss(): void {    if (this.settings.customCss === '') {

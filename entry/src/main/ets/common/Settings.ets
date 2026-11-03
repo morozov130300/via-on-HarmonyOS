@@ -55,7 +55,7 @@ const SYNC_KEYS: string[] = [
   'customRulesText', 'siteExceptions', 'desktopAllSites', 'forceZoom', 'siteFontZooms',
   'uaKey', 'customUaList', 'desktopUaKey', 'desktopCustomUa', 'simplifyUa',
   'syncMode', 'orientation', 'videoPlayer', 'dlManager', 'clearOnExit',
-  'volumePageFlip', 'swipeSwitchTab', 'videoGesture', 'undoCloseToast', 'showStatusBar',
+  'volumePageFlip', 'swipeSwitchTab', 'videoGesture', 'uifont', 'undoCloseToast', 'showStatusBar',
   'fullScreen', 'gameMode', 'wifiOnlyImages', 'cleardata2', 'labflag',
   'aiPrompts', 'aiPromptNextId', 'jsEnabled',
   'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled',
@@ -277,6 +277,8 @@ export class AppSettings {
   @Trace swipeSwitchTab: boolean = true
   // 原版 w9.a.u()（appflag bit128）：启用视频播放器手势，默认开
   @Trace videoGesture: boolean = true
+  // 原版 w9.k.a1()/o()（键名 uifont）：网页自定义字体文件名，空 = 默认
+  @Trace uiFont: string = ''
   @Trace undoCloseToast: boolean = false
   // 原版 i3/k6:2806：全屏模式开关（菜单「全屏」）
   @Trace fullScreen: boolean = false
@@ -534,6 +536,7 @@ export class AppSettings {
       this.swipeSwitchTab = await this.readBoolean('swipeSwitchTab', true)
       // 原版 w9.a bit128（appflag 默认 226 含 128）：启用视频播放器手势默认开
       this.videoGesture = await this.readBoolean('videoGesture', true)
+      this.uiFont = await this.readString('uifont', '')
       this.undoCloseToast = await this.readBoolean('undoCloseToast', false)
       this.fullScreen = await this.readBoolean('fullScreen', false)
       this.gameMode = await this.readBoolean('gameMode', false)
@@ -1612,6 +1615,12 @@ export class AppSettings {
   setVideoGesture(on: boolean): void {
     this.videoGesture = on
     this.flushKey('videoGesture', on)
+  }
+
+  // 原版 w9.k.o（键名 uifont）
+  setUiFont(name: string): void {
+    this.uiFont = name
+    this.flushKey('uifont', name)
   }
 
   setUndoCloseToast(on: boolean): void {
