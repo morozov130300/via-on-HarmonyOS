@@ -12,8 +12,9 @@
 //
 // 引擎（p9/m SSE）在 AiEngine.ets；DB 门面与引擎由上层组合（对应 v 持有 m）。
 
-import { relationalStore } from '@kit.ArkDataKit'
+import { relationalStore, preferences } from '@kit.ArkData'
 import { util } from '@kit.ArkTS'
+import { AppSettings } from './Settings'
 
 // ----- 角色（role 列为 TEXT，值与原版一致：system / user / assistant）-----
 
@@ -458,9 +459,45 @@ export function newSuggestion(name: string, content: string, type: number): AiSu
   return s
 }
 
+// 旧版占位实现的 aiProvider → 服务商名/接口地址（迁移用，原版无此映射）
+function legacyProviderName(provider: string): string {
+  if (provider === 'deepseek') {
+    return 'DeepSeek'
+  }
+  if (provider === 'openai') {
+    return 'ChatGPT'
+  }
+  if (provider === 'siliconflow') {
+    return 'SiliconFlow'
+  }
+  return provider === '' ? '自定义' : provider
+}
+
+function legacyProviderUrl(provider: string): string {
+  if (provider === 'deepseek') {
+    return 'https://api.deepseek.com'
+  }
+  if (provider === 'openai') {
+    return 'https://api.openai.com/v1'
+  }
+  if (provider === 'siliconflow') {
+    return 'https://api.siliconflow.cn/v1'
+  }
+  return ''
+}
+
 // ----- 存储门面（p9/w + p9/v）-----
 
 export class CopilotStore {
+  private static instance: CopilotStore | null = null
+
+  static getInstance(): CopilotStore {
+    if (CopilotStore.instance === null) {
+      CopilotStore.instance = new CopilotStore()
+    }
+    return CopilotStore.instance
+  }
+
   private rdb: relationalStore.RdbStore | null = null
   private initing: Promise<void> | null = null
   // p9/v.f11080c：内存 url→threadId 映射（y/z，进程内有效）
@@ -498,10 +535,72 @@ export class CopilotStore {
         await rdb.executeSql(creates[i])
       }
       this.rdb = rdb
+      await this.migrateLegacy(context)
     }
     this.initing = doInit()
     await this.initing
     this.initing = null
+  }
+
+  // 旧占位数据一次性迁移（原版无此逻辑）：
+  // aiPrompts(JSON 数组)→suggestions 表；aiApiKey/aiProvider/aiModel→自定义服务商 + aibackend/aimodel
+  // 库中已有数据则跳过对应部分，不删除任何旧偏好
+  private async migrateLegacy(context: Context): Promise<void> {
+    try {
+      const prefs = await preferences.getPreferences(context, 'via_settings')
+      const existingSuggestions = await this.suggestions()
+      if (existingSuggestions.length === 0) {
+        const raw = await prefs.get('aiPrompts', '[]')
+        if (typeof raw === 'string' && raw !== '' && raw !== '[]') {
+          const parsed = JSON.parse(raw) as Object[]
+          const base = Date.now() - parsed.length
+          for (let i = 0; i < parsed.length; i++) {
+            const element = parsed[i] as Record<string, Object>
+            const name = element['name']
+            const content = element['content']
+            const type = element['type']
+            if (typeof name === 'string' && typeof content === 'string' && typeof type === 'number') {
+              const s = newSuggestion(name, content, type)
+              s.createdAt = base + i
+              s.updatedAt = base + i
+              await this.insertSuggestion(s)
+            }
+          }
+        }
+      }
+      const existingBackends = await this.backends()
+      if (existingBackends.length === 0) {
+        const key = await prefs.get('aiApiKey', '')
+        if (typeof key === 'string' && key !== '') {
+          const provider = await prefs.get('aiProvider', '')
+          const model = await prefs.get('aiModel', '')
+          const providerStr = typeof provider === 'string' ? provider : ''
+          const modelStr = typeof model === 'string' ? model : ''
+          const b = new AiBackend()
+          b.id = util.generateRandomUUID(false)
+          b.name = legacyProviderName(providerStr)
+          b.url = legacyProviderUrl(providerStr)
+          b.token = key
+          if (modelStr !== '') {
+            b.models = [modelStr]
+          }
+          const now = Date.now()
+          b.createdAt = now
+          b.updatedAt = now
+          await this.insertBackend(b)
+          await prefs.put('aibackend', b.id)
+          if (modelStr !== '') {
+            await prefs.put('aimodel', modelStr)
+          }
+          await prefs.flush()
+          const app = AppSettings.getInstance()
+          app.aiBackend = b.id
+          app.aiModel = modelStr
+        }
+      }
+    } catch (error) {
+      console.error('copilot legacy migration failed')
+    }
   }
 
   // ----- url→threadId 映射（p9/v.y/z）-----

@@ -1,18 +1,21 @@
-import { AppSettings, AiPromptRec } from '../common/Settings'
+import { CopilotStore, AiSuggestion } from '../common/CopilotStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
-// 原版 a9/z：AI 提示词列表页（分组「系统提示词」/「消息模板」，AppBar 右上加号新建）
+// 原版 a9/z：AI 提示词列表页
+// q3()：分组「系统提示词」(type1)/「消息模板」(type2)，组非空才显示组头
+// 新建：AppBar 加号 → [系统提示词/消息模板] 选择 → 编辑页
+// 长按行 → [编辑/删除] 对话框；点击行 → 编辑页
 @ComponentV2
 export struct SettingsAiPromptsPage {
-  private settings: AppSettings = AppSettings.getInstance()
+  private store: CopilotStore = CopilotStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
-  @Local systemPrompts: AiPromptRec[] = []
-  @Local templatePrompts: AiPromptRec[] = []
+  @Local systemPrompts: AiSuggestion[] = []
+  @Local templatePrompts: AiSuggestion[] = []
   @Local isEmpty: boolean = false
 
   private bindAppBar(): void {
     AppBar.show({
-      title: 'AI 提示词',
+      title: $r('app.string.ai_prompts'),
       // 原版 z.b(1,1,ic_add,「新建」)：右上角加号 → 弹类型选择（系统提示词/消息模板）
       rightIcon: $r('app.media.via_ic_add'),
       onRight: () => {
@@ -24,15 +27,16 @@ export struct SettingsAiPromptsPage {
     }, this)
   }
 
-  private reload(): void {
-    const system: AiPromptRec[] = []
-    const template: AiPromptRec[] = []
-    for (let i = 0; i < this.settings.aiPrompts.length; i++) {
-      const item = this.settings.aiPrompts[i]
-      if (item.type === 1) {
-        system.push(item)
-      } else if (item.type === 2) {
-        template.push(item)
+  // 原版 t3()/q3()：加载并按 type 分组
+  private async reload(): Promise<void> {
+    const all = await this.store.suggestions()
+    const system: AiSuggestion[] = []
+    const template: AiSuggestion[] = []
+    for (let i = 0; i < all.length; i++) {
+      if (all[i].type === 1) {
+        system.push(all[i])
+      } else if (all[i].type === 2) {
+        template.push(all[i])
       }
     }
     this.systemPrompts = system
@@ -43,12 +47,18 @@ export struct SettingsAiPromptsPage {
   // 原版 a9/z.s3(view, null)：新建时弹「系统提示词/消息模板」选择
   private pickNewType(): void {
     const sheets: SheetInfo[] = [
-      { title: '系统提示词', action: (): void => {
-        this.navPathStack.pushPathByName('aiPromptEdit', JSON.stringify({ type: 1 }), true)
-      } },
-      { title: '消息模板', action: (): void => {
-        this.navPathStack.pushPathByName('aiPromptEdit', JSON.stringify({ type: 2 }), true)
-      } }
+      {
+        title: $r('app.string.ai_system_prompts'),
+        action: (): void => {
+          this.navPathStack.pushPathByName('aiPromptEdit', JSON.stringify({ type: 1 }), true)
+        }
+      },
+      {
+        title: $r('app.string.ai_msg_templates'),
+        action: (): void => {
+          this.navPathStack.pushPathByName('aiPromptEdit', JSON.stringify({ type: 2 }), true)
+        }
+      }
     ]
     ActionSheet.show({
       title: '',
@@ -71,16 +81,16 @@ export struct SettingsAiPromptsPage {
                 .margin({ top: 64 })
             }
             if (this.systemPrompts.length > 0) {
-              this.GroupHeader('系统提示词')
-              ForEach(this.systemPrompts, (item: AiPromptRec) => {
+              this.GroupHeader($r('app.string.ai_system_prompts'))
+              ForEach(this.systemPrompts, (item: AiSuggestion) => {
                 this.PromptRow(item)
-              }, (item: AiPromptRec) => `sys_${item.id}_${item.name}`)
+              }, (item: AiSuggestion) => `sys_${item.id}_${item.name}`)
             }
             if (this.templatePrompts.length > 0) {
-              this.GroupHeader('消息模板')
-              ForEach(this.templatePrompts, (item: AiPromptRec) => {
+              this.GroupHeader($r('app.string.ai_msg_templates'))
+              ForEach(this.templatePrompts, (item: AiSuggestion) => {
                 this.PromptRow(item)
-              }, (item: AiPromptRec) => `tpl_${item.id}_${item.name}`)
+              }, (item: AiSuggestion) => `tpl_${item.id}_${item.name}`)
             }
           }
           .width('100%')
@@ -96,6 +106,7 @@ export struct SettingsAiPromptsPage {
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
+      this.reload()
     })
     .onWillAppear(() => {
       this.bindAppBar()
@@ -111,7 +122,7 @@ export struct SettingsAiPromptsPage {
   }
 
   @Builder
-  GroupHeader(label: string) {
+  GroupHeader(label: ResourceStr) {
     Text(label)
       .fontSize(13)
       .fontColor($r('app.color.fg_secondary'))
@@ -120,7 +131,7 @@ export struct SettingsAiPromptsPage {
   }
 
   @Builder
-  PromptRow(item: AiPromptRec) {
+  PromptRow(item: AiSuggestion) {
     Column() {
       Text(item.name)
         .fontSize(15)
@@ -134,21 +145,34 @@ export struct SettingsAiPromptsPage {
       // 原版 a9/z.s3(view, id)：点击进入编辑页
       this.navPathStack.pushPathByName('aiPromptEdit', JSON.stringify({ id: item.id }), true)
     })
-    .bindContextMenuByResponseType(this.itemMenu(item), ResponseType.LongPress)
+    .gesture(LongPressGesture()
+      .onAction(() => {
+        this.itemMenu(item)
+      }))
   }
 
-  // 原版 a9/z.p3：长按弹「编辑/删除」菜单
-  private itemMenu(item: AiPromptRec): MenuElement[] {
-    const menu: MenuElement[] = [
-      { value: '编辑', action: (): void => {
-        this.navPathStack.pushPathByName('aiPromptEdit', JSON.stringify({ id: item.id }), true)
-      } },
-      { value: '删除', action: (): void => {
-        this.settings.removeAiPrompt(item.id)
-        this.reload()
-      } }
-    ]
-    return menu
+  // 原版 a9/z.p3：长按弹「编辑/删除」列表对话框（w5.k.F 无标题两项）
+  private itemMenu(item: AiSuggestion): void {
+    ActionSheet.show({
+      title: '',
+      message: '',
+      sheets: [
+        {
+          title: $r('app.string.ai_edit'),
+          action: (): void => {
+            this.navPathStack.pushPathByName('aiPromptEdit', JSON.stringify({ id: item.id }), true)
+          }
+        },
+        {
+          title: $r('app.string.ai_delete'),
+          action: (): void => {
+            this.store.deleteSuggestion(item.id).then(() => {
+              this.reload()
+            })
+          }
+        }
+      ]
+    })
   }
 }
 

@@ -15,6 +15,7 @@
 
 import { http } from '@kit.NetworkKit'
 import { util } from '@kit.ArkTS'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { AiBackend } from './CopilotStore'
 
 // 请求消息（p9/e 序列化形态：content + role）

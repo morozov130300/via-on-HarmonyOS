@@ -1,21 +1,27 @@
+import { CopilotStore } from '../common/CopilotStore'
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 
-const AI_PROVIDER_LABELS: Record<string, string> = {
-  'deepseek': 'DeepSeek',
-  'openai': 'OpenAI',
-  'siliconflow': 'SiliconFlow'
-}
-
+// 原版 a9/o：AI 设置页（两行：AI 服务提供商 / AI 提示词）
+// j3()：行1 = ai_provider + 当前服务商名（空则「无」）；行2 = ai_prompts（无值）
 @ComponentV2
 export struct SettingsAiPage {
   private settings: AppSettings = AppSettings.getInstance()
+  private store: CopilotStore = CopilotStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  @Local providerName: string = ''
+
+  // k3()：刷新当前服务商名（l3(j3(backend))）
+  private async reloadProvider(): Promise<void> {
+    const backend = await this.store.backend(this.settings.aiBackend)
+    // j3：lVar == null → Z0(U8)「无」
+    this.providerName = backend === null ? '' : backend.name
+  }
 
   private bindAppBar(): void {
     AppBar.show({
-      title: 'AI 设置',
+      title: $r('app.string.ai_settings'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -27,17 +33,22 @@ export struct SettingsAiPage {
       Column() {
         AppBarSpacer()
         Scroll() {
-        Column() {
-          SettingNavRow({ rowLabel: 'AI 服务提供商', rowValue: this.providerLabel(), onTapRow: () => {
-            this.pickProvider()
-          } })
-          // 原版 a9/o.j3()：第二行「AI 提示词」→ 提示词列表页（a9/z）；
-          // API Key/模型不在本页（原版在服务商条目内编辑，a9/o 新建页）
-          SettingNavRow({ rowLabel: 'AI 提示词', rowValue: '', onTapRow: () => {
-            this.navPathStack.pushPathByName('aiPrompts', '', true)
-          } })
-        }
-        .width('100%')
+          Column() {
+            SettingNavRow({
+              rowLabel: $r('app.string.ai_provider'),
+              rowValue: this.providerName === '' ? $r('app.string.ai_none_label') : this.providerName,
+              onTapRow: () => {
+                this.navPathStack.pushPathByName('aiProviders', '', true)
+              }
+            })
+            SettingNavRow({
+              rowLabel: $r('app.string.ai_prompts'),
+              onTapRow: () => {
+                this.navPathStack.pushPathByName('aiPrompts', '', true)
+              }
+            })
+          }
+          .width('100%')
         }
         .width('100%')
         .layoutWeight(1)
@@ -50,46 +61,17 @@ export struct SettingsAiPage {
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
+      this.reloadProvider()
     })
     .onWillAppear(() => {
       this.bindAppBar()
     })
     .onShown(() => {
       this.bindAppBar()
+      this.reloadProvider()
     })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
-    })
-  }
-
-  private providerLabel(): string {
-    // 原版 a9/o.j3：提供商为空时显示「未设置」（x7.u.U8）
-    if (this.settings.aiProvider === '') {
-      return '未设置'
-    }
-    const label = AI_PROVIDER_LABELS[this.settings.aiProvider]
-    return label === undefined ? this.settings.aiProvider : label
-  }
-
-  private pickProvider(): void {
-    const sheets: SheetInfo[] = [
-      { title: 'DeepSeek', action: (): void => {
-        this.settings.setAiProvider('deepseek')
-        this.settings.setAiModel('deepseek-chat')
-      } },
-      { title: 'OpenAI', action: (): void => {
-        this.settings.setAiProvider('openai')
-        this.settings.setAiModel('gpt-4o-mini')
-      } },
-      { title: 'SiliconFlow', action: (): void => {
-        this.settings.setAiProvider('siliconflow')
-        this.settings.setAiModel('deepseek-ai/DeepSeek-V3')
-      } }
-    ]
-    ActionSheet.show({
-      title: '服务商',
-      message: '选择 AI 服务商',
-      sheets: sheets
     })
   }
 }
