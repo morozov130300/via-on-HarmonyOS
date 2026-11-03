@@ -166,6 +166,11 @@
       "buildFunction": "SettingsGesturePageBuilder"
     },
     {
+      "name": "keyboardShortcuts",
+      "pageSourceFile": "src/main/ets/view/KeyboardShortcutsPage.ets",
+      "buildFunction": "KeyboardShortcutsPageBuilder"
+    },
+    {
       "name": "settingsAdBlock",
       "pageSourceFile": "src/main/ets/view/SettingsAdBlockPage.ets",
       "buildFunction": "SettingsAdBlockPageBuilder"
