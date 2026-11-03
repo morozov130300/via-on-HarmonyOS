@@ -16,6 +16,11 @@
       "buildFunction": "DownloadPageBuilder"
     },
     {
+      "name": "pdfViewer",
+      "pageSourceFile": "src/main/ets/view/PdfViewerPage.ets",
+      "buildFunction": "PdfViewerPageBuilder"
+    },
+    {
       "name": "settings",
       "pageSourceFile": "src/main/ets/view/SettingsPage.ets",
       "buildFunction": "SettingsPageBuilder"
@@ -44,6 +49,11 @@
       "name": "settingsScript",
       "pageSourceFile": "src/main/ets/view/SettingsScriptPage.ets",
       "buildFunction": "SettingsScriptPageBuilder"
+    },
+    {
+      "name": "settingsProxy",
+      "pageSourceFile": "src/main/ets/view/SettingsProxyPage.ets",
+      "buildFunction": "SettingsProxyPageBuilder"
     },
     {
       "name": "settingsExperimental",

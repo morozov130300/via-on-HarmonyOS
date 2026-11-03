@@ -17,6 +17,7 @@ import { FontStore } from '../common/FontStore'
 import { NetMonitor } from '../common/NetState'
 import { VideoOverlayState } from './VideoPlayerOverlay'
 import { AppIcon } from './AppIcon'
+import { PdfViewerView } from '../view/PdfViewerPage'
 
 // 1x1 GIF 占位（原版 u4/a.f12819d base64 1:1 解码）
 const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
@@ -66,6 +67,9 @@ export struct TabWeb {
   private viaBridge: ViaBridge = new ViaBridge()
   // 原版 o5/a：window.via_gm GM_* 分派桥（每 tab 一实例，宿主回调 1:1 k6.s）
   private gmBridge: GmBridge = new GmBridge()
+  // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
+  @Local pdfPreviewPath: string = ''
+  @Local pdfPreviewName: string = ''
 
   aboutToAppear(): void {
     this.viaBridge.handler = (msg: string): void => {
@@ -152,6 +156,11 @@ export struct TabWeb {
         // 原版 k6:8598：v://blocker/jump 解码后加会话放行并重新加载
         .onLoadIntercept((event: OnLoadInterceptEvent) => {
           const url = event.data.getRequestUrl()
+          // 原版 k6.java:8592-8596：file:// 且后缀 pdf → 打开 PDF 查看器（za.g，参数 pdfPath）
+          if (url.startsWith('file://') && this.urlPdfExtension(url)) {
+            this.openPdfPreview(url)
+            return true
+          }
           const prefix = 'v://blocker/jump?url='
           if (!url.startsWith(prefix)) {
             return false
@@ -400,6 +409,17 @@ export struct TabWeb {
       if (this.tab.isError) {
         this.ErrorView()
       }
+      // 原版 g6.i.h(za.g.class, pdfPath)：file:// pdf 导航被拦截后全屏打开查看器
+      if (this.pdfPreviewPath !== '') {
+        PdfViewerView({
+          pdfPath: this.pdfPreviewPath,
+          pdfTitle: this.pdfPreviewName,
+          inOverlay: true,
+          onClose: () => {
+            this.closePdfPreview()
+          }
+        })
+      }
     }
   }
 
@@ -464,6 +484,44 @@ export struct TabWeb {
           console.error('swipe nav failed')
         }
       }))
+  }
+
+  // 原版 i6/i0.c(str)：取 URL 路径扩展名（忽略查询串），判断是否 pdf
+  private urlPdfExtension(url: string): boolean {
+    const queryIndex = url.indexOf('?')
+    const path = queryIndex >= 0 ? url.substring(0, queryIndex) : url
+    const dotIndex = path.lastIndexOf('.')
+    if (dotIndex < 0 || dotIndex < path.lastIndexOf('/')) {
+      return false
+    }
+    return path.substring(dotIndex + 1).toLowerCase() === 'pdf'
+  }
+
+  // 原版 k6.java:8595：g6.i.h(za.g.class, pdfPath) —— file:// uri 解析为沙箱路径后进查看器
+  private openPdfPreview(url: string): void {
+    let path = url.substring('file://'.length)
+    try {
+      path = decodeURIComponent(path)
+    } catch (error) {
+    }
+    if (path === '') {
+      return
+    }
+    this.pdfPreviewPath = path
+    this.pdfPreviewName = this.pdfBaseName(path)
+  }
+
+  private closePdfPreview(): void {
+    this.pdfPreviewPath = ''
+    this.pdfPreviewName = ''
+  }
+
+  private pdfBaseName(path: string): string {
+    const index = path.lastIndexOf('/')
+    if (index >= 0 && index < path.length - 1) {
+      return path.substring(index + 1)
+    }
+    return path
   }
 
   private maskAlphaHex(): string {

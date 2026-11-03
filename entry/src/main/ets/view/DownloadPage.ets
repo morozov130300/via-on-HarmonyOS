@@ -125,9 +125,13 @@ export struct DownloadPage {
                 .width('100%')
                 .padding({ left: 16, right: 16, top: 8, bottom: 8 })
                 .onClick(() => {
-                  // 原版点击已完成任务打开文件
+                  // 原版点击已完成任务打开文件；.pdf 条目按原版 za.g 查看器打开（w1.java:59 关联行为）
                   if (item.status === DownloadStatus.Completed) {
-                    this.openFile(item)
+                    if (this.isPdfItem(item)) {
+                      this.navPathStack.pushPathByName('pdfViewer', item.path, true)
+                    } else {
+                      this.openFile(item)
+                    }
                   }
                 })
               }
@@ -230,6 +234,12 @@ export struct DownloadPage {
 
   private progressVisible(item: DownloadRec): boolean {
     return item.status === DownloadStatus.Running || item.status === DownloadStatus.Paused
+  }
+
+  // 原版 i6/i0.c：扩展名判断 pdf（za.g 查看器入口条件）
+  private isPdfItem(item: DownloadRec): boolean {
+    const path = item.path.toLowerCase()
+    return path.endsWith('.pdf')
   }
 
   private openFile(item: DownloadRec): void {

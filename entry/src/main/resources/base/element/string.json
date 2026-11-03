@@ -237,6 +237,66 @@
       "value": "停止朗读"
     },
     {
+      "name": "read_aloud_cannot",
+      "value": "无法朗读该网页"
+    },
+    {
+      "name": "read_aloud_wait",
+      "value": "稍等片刻…"
+    },
+    {
+      "name": "read_aloud_started",
+      "value": "开始朗读"
+    },
+    {
+      "name": "read_aloud_view",
+      "value": "查看"
+    },
+    {
+      "name": "read_aloud_engine_failed",
+      "value": "文字转语音引擎加载失败"
+    },
+    {
+      "name": "read_aloud_js_disabled",
+      "value": "仅在允许 JavaScript 运行时支持"
+    },
+    {
+      "name": "read_aloud_panel_title",
+      "value": "朗读面板"
+    },
+    {
+      "name": "read_aloud_rewind",
+      "value": "倒退"
+    },
+    {
+      "name": "read_aloud_forward",
+      "value": "快进"
+    },
+    {
+      "name": "read_aloud_pause",
+      "value": "暂停"
+    },
+    {
+      "name": "read_aloud_resume",
+      "value": "恢复"
+    },
+    {
+      "name": "read_aloud_empty",
+      "value": "空空如也…"
+    },
+    {
+      "name": "read_aloud_copy_done",
+      "value": "已复制文本"
+    },
+    {
+      "name": "read_aloud_operation_failed",
+      "value": "操作失败"
+    },
+    {
+      "name": "read_aloud_no_title",
+      "value": "无标题"
+    },
+    {
       "name": "user_scripts",
       "value": "用户脚本"
     },
@@ -857,6 +917,14 @@
       "value": "已是最新版本"
     },
     {
+      "name": "new_version_available",
+      "value": "新版本可用"
+    },
+    {
+      "name": "update_btn",
+      "value": "更新"
+    },
+    {
       "name": "email_copied",
       "value": "邮箱已复制"
     },
@@ -1431,6 +1499,14 @@
     {
       "name": "ai_just_now",
       "value": "刚刚"
+    },
+    {
+      "name": "preview",
+      "value": "预览"
+    },
+    {
+      "name": "preview_pdf",
+      "value": "预览 PDF"
     }
   ]
 }
