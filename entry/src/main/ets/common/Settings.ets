@@ -48,7 +48,7 @@ const SYNC_KEYS: string[] = [
   'homeBgOpacity', 'homeThemeColor', 'homeIconEpoch',
   'homeAdvEffect', 'homeAdvArea',
   'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
-  'menuOrder', 'toolbarHidden', 'scriptAutoUpdate', 'aiProvider', 'aiModel',
+  'menuOrder', 'toolbarHidden', 'scriptAutoUpdate', 'aibackend', 'aimodel',
   'readerConfirm', 'readerTheme', 'readerFontSize', 'readerCustomCss',
   'appLayout', 'toolbarAutoHide', 'tabBarEnabled', 'addressBarContent', 'toolbarColorAdapt',
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',
@@ -58,7 +58,7 @@ const SYNC_KEYS: string[] = [
   'volumePageFlip', 'swipeSwitchTab', 'videoGesture', 'videoorientation', 'uifont', 'undoCloseToast', 'showStatusBar',
   'skin',
   'fullScreen', 'gameMode', 'wifiOnlyImages', 'cleardata2', 'labflag',
-  'aiPrompts', 'aiPromptNextId', 'jsEnabled',
+  'jsEnabled',
   'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled',
   'keyback', 'keyforward', 'keyhome', 'keytab', 'keymenu',
   'gesturetoolbarleft', 'gesturetoolbarright', 'restoreclosedtabs', 'scriptNextId'
@@ -90,34 +90,6 @@ export class CustomEngineRec {
     this.name = name
     this.template = template
     this.id = id
-  }
-}
-
-// AI 提示词记录（原版 p9/q 实体 + p9.o DAO；移植以偏好 JSON 数组替代数据库表）
-export class AiPromptRec {
-  id: number
-  name: string
-  content: string
-  // 原版 type：1=系统提示词（a9/z 分组 Md）、2=消息模板（分组 nk）
-  type: number
-
-  constructor(id: number, name: string, content: string, type: number) {
-    this.id = id
-    this.name = name
-    this.content = content
-    this.type = type
-  }
-
-  static fromJson(obj: Record<string, Object>): AiPromptRec | null {
-    const id = obj['id']
-    const name = obj['name']
-    const content = obj['content']
-    const type = obj['type']
-    if (typeof id === 'number' && typeof name === 'string'
-      && typeof content === 'string' && typeof type === 'number') {
-      return new AiPromptRec(id, name, content, type)
-    }
-    return null
   }
 }
 
@@ -253,9 +225,10 @@ export class AppSettings {
   @Trace toolbarHidden: string[] = []
   @Trace scriptAutoUpdate: number = 0
   @Trace lastScriptUpdate: number = 0
-  @Trace aiProvider: string = 'deepseek'
-  @Trace aiApiKey: string = ''
-  @Trace aiModel: string = 'deepseek-chat'
+  // 原版 w9/k.n0()/H0()（键名 aibackend）：当前 AI 服务商 id，空 = 未设置（默认 null）
+  @Trace aiBackend: string = ''
+  // 原版 w9/k.K0()（键名 aimodel）：当前模型 id，空 = 未设置（默认 null）
+  @Trace aiModel: string = ''
   @Trace uaKey: string = 'default'
   @Trace customUaList: CustomUaEntry[] = []
   @Trace desktopUaKey: string = 'win_chrome'
@@ -295,9 +268,6 @@ export class AppSettings {
   @Trace clearData2: number = 7
   // 原版 labflag（w9/d）：位1=设置根页「实验」入口（hb/o6 五连点切换）、位2=模糊效果（hb/y1）
   @Trace labFlag: number = 0
-  // AI 提示词（原版 prompt 表）
-  @Trace aiPrompts: AiPromptRec[] = []
-  @Trace aiPromptNextId: number = 1
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -478,9 +448,8 @@ export class AppSettings {
       this.toolbarHidden = await this.readStringArray('toolbarHidden')
       this.scriptAutoUpdate = await this.readNumber('scriptautoupdate', 0)
       this.lastScriptUpdate = await this.readNumber('lastScriptUpdate', 0)
-      this.aiProvider = await this.readString('aiProvider', 'deepseek')
-      this.aiApiKey = await this.readString('aiApiKey', '')
-      this.aiModel = await this.readString('aiModel', 'deepseek-chat')
+      this.aiBackend = await this.readString('aibackend', '')
+      this.aiModel = await this.readString('aimodel', '')
       this.customUaList = await this.readCustomUaList()
       this.uaKey = await this.readString('uaKey', '')
       if (this.uaKey === '') {
@@ -551,8 +520,6 @@ export class AppSettings {
       this.wifiOnlyImages = await this.readBoolean('wifiOnlyImages', false)
       this.clearData2 = await this.readNumber('cleardata2', 7)
       this.labFlag = await this.readNumber('labflag', 0)
-      this.aiPrompts = await this.readAiPrompts()
-      this.aiPromptNextId = await this.readNumber('aiPromptNextId', 1)
       this.applyAppTheme()
     } catch (error) {
       const err = error as BusinessError
@@ -1544,19 +1511,16 @@ export class AppSettings {
     this.flushKey('lastScriptUpdate', this.lastScriptUpdate)
   }
 
-  setAiProvider(provider: string): void {
-    this.aiProvider = provider
-    this.flushKey('aiProvider', provider)
+  // 原版 w9/k.H0()（键名 aibackend）
+  setAiBackend(id: string): void {
+    this.aiBackend = id
+    this.flushKey('aibackend', id)
   }
 
-  setAiApiKey(key: string): void {
-    this.aiApiKey = key
-    this.flushKey('aiApiKey', key)
-  }
-
+  // 原版 w9/k（键名 aimodel）
   setAiModel(model: string): void {
     this.aiModel = model
-    this.flushKey('aiModel', model)
+    this.flushKey('aimodel', model)
   }
 
   setSyncMode(mode: string): void {
@@ -1694,64 +1658,6 @@ export class AppSettings {
   setSkin(name: string): void {
     this.skin = name
     this.flushKey('skin', name)
-  }
-
-  saveAiPrompt(prompt: AiPromptRec): void {
-    const next: AiPromptRec[] = []
-    let replaced = false
-    for (let i = 0; i < this.aiPrompts.length; i++) {
-      if (this.aiPrompts[i].id === prompt.id) {
-        next.push(prompt)
-        replaced = true
-      } else {
-        next.push(this.aiPrompts[i])
-      }
-    }
-    if (!replaced) {
-      next.push(prompt)
-      this.aiPromptNextId = this.aiPromptNextId + 1
-      this.flushKey('aiPromptNextId', this.aiPromptNextId)
-    }
-    this.aiPrompts = next
-    this.persistAiPrompts()
-  }
-
-  removeAiPrompt(id: number): void {
-    const next: AiPromptRec[] = []
-    for (let i = 0; i < this.aiPrompts.length; i++) {
-      if (this.aiPrompts[i].id !== id) {
-        next.push(this.aiPrompts[i])
-      }
-    }
-    this.aiPrompts = next
-    this.persistAiPrompts()
-  }
-
-  private persistAiPrompts(): void {
-    const payload: Record<string, Object>[] = []
-    for (let i = 0; i < this.aiPrompts.length; i++) {
-      const item = this.aiPrompts[i]
-      payload.push({ 'id': item.id, 'name': item.name, 'content': item.content, 'type': item.type })
-    }
-    this.flushKey('aiPrompts', JSON.stringify(payload))
-  }
-
-  private async readAiPrompts(): Promise<AiPromptRec[]> {
-    const raw = await this.readString('aiPrompts', '[]')
-    const result: AiPromptRec[] = []
-    try {
-      const parsed = JSON.parse(raw) as Object[]
-      for (let i = 0; i < parsed.length; i++) {
-        const element = parsed[i] as Record<string, Object>
-        const item = AiPromptRec.fromJson(element)
-        if (item !== null) {
-          result.push(item)
-        }
-      }
-    } catch (error) {
-      console.error('parse aiPrompts failed')
-    }
-    return result
   }
 
   resetHomeStyle(): void {

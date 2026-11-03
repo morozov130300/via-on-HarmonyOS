@@ -1191,6 +1191,246 @@
     {
       "name": "invalid_url",
       "value": "无效链接"
+    },
+    {
+      "name": "ai_provider",
+      "value": "AI 服务提供商"
+    },
+    {
+      "name": "ai_prompts",
+      "value": "AI 提示词"
+    },
+    {
+      "name": "ai_all_topics",
+      "value": "所有主题"
+    },
+    {
+      "name": "ai_new_topic",
+      "value": "新主题"
+    },
+    {
+      "name": "ai_messages",
+      "value": "消息"
+    },
+    {
+      "name": "ai_casual",
+      "value": "随便聊聊"
+    },
+    {
+      "name": "ai_assistant",
+      "value": "Assistant"
+    },
+    {
+      "name": "ai_empty",
+      "value": "空空如也…"
+    },
+    {
+      "name": "ai_select_model",
+      "value": "选择模型"
+    },
+    {
+      "name": "ai_export_chat",
+      "value": "导出聊天"
+    },
+    {
+      "name": "ai_clear_messages",
+      "value": "清空消息"
+    },
+    {
+      "name": "ai_confirm_clear",
+      "value": "确认清空"
+    },
+    {
+      "name": "ai_copy_full",
+      "value": "复制全文"
+    },
+    {
+      "name": "ai_preview",
+      "value": "预览"
+    },
+    {
+      "name": "ai_delete",
+      "value": "删除"
+    },
+    {
+      "name": "ai_copied",
+      "value": "已复制文本"
+    },
+    {
+      "name": "ai_confirm_delete_item",
+      "value": "你确定删除 %1$s 吗？"
+    },
+    {
+      "name": "ai_confirm_delete_items",
+      "value": "你确定删除 %1$d 个条目吗?"
+    },
+    {
+      "name": "ai_title_label",
+      "value": "标题"
+    },
+    {
+      "name": "ai_content_label",
+      "value": "内容"
+    },
+    {
+      "name": "ai_available_vars",
+      "value": "可用变量"
+    },
+    {
+      "name": "ai_system_prompts",
+      "value": "系统提示词"
+    },
+    {
+      "name": "ai_msg_templates",
+      "value": "消息模板"
+    },
+    {
+      "name": "ai_edit",
+      "value": "编辑"
+    },
+    {
+      "name": "ai_new_label",
+      "value": "新建"
+    },
+    {
+      "name": "ai_save",
+      "value": "保存"
+    },
+    {
+      "name": "ai_custom_label",
+      "value": "自定义"
+    },
+    {
+      "name": "ai_none_label",
+      "value": "无"
+    },
+    {
+      "name": "ai_unsaved_title",
+      "value": "提示"
+    },
+    {
+      "name": "ai_unsaved_msg",
+      "value": "修改的内容未保存，是否保存？"
+    },
+    {
+      "name": "ai_save_and_exit",
+      "value": "保存并退出"
+    },
+    {
+      "name": "ai_open_key_page",
+      "value": "打开 API 密钥生成和管理页面"
+    },
+    {
+      "name": "ai_model_id",
+      "value": "模型 ID"
+    },
+    {
+      "name": "ai_add_model",
+      "value": "添加模型"
+    },
+    {
+      "name": "ai_api_key_label",
+      "value": "API 密钥"
+    },
+    {
+      "name": "ai_addr_label",
+      "value": "地址"
+    },
+    {
+      "name": "ai_verify",
+      "value": "验证"
+    },
+    {
+      "name": "ai_verify_fail",
+      "value": "验证失败"
+    },
+    {
+      "name": "ai_verify_ok",
+      "value": "验证成功"
+    },
+    {
+      "name": "ai_wait",
+      "value": "稍等片刻…"
+    },
+    {
+      "name": "ai_markdown",
+      "value": "Markdown"
+    },
+    {
+      "name": "ai_plain_text",
+      "value": "纯文本"
+    },
+    {
+      "name": "ai_stop_label",
+      "value": "停止"
+    },
+    {
+      "name": "ai_send_label",
+      "value": "发送"
+    },
+    {
+      "name": "ai_more_label",
+      "value": "更多"
+    },
+    {
+      "name": "ai_no_title",
+      "value": "无标题"
+    },
+    {
+      "name": "ai_no_messages",
+      "value": "无消息"
+    },
+    {
+      "name": "ai_no_provider",
+      "value": "未配置 AI 服务提供商"
+    },
+    {
+      "name": "ai_request_incomplete",
+      "value": "请求未完成"
+    },
+    {
+      "name": "ai_provider_misconfigured",
+      "value": "AI 服务提供商未正确配置"
+    },
+    {
+      "name": "ai_http_error",
+      "value": "HTTP 错误：%1$d\n\n%2$s"
+    },
+    {
+      "name": "ai_unknown_error",
+      "value": "未知错误：%1$s"
+    },
+    {
+      "name": "ai_export_ok",
+      "value": "数据导出成功"
+    },
+    {
+      "name": "ai_exported_to",
+      "value": "导出数据到：%1$s"
+    },
+    {
+      "name": "ai_var_input",
+      "value": "输入框内容。"
+    },
+    {
+      "name": "ai_var_content",
+      "value": "当前网页的纯文本内容。"
+    },
+    {
+      "name": "ai_var_title",
+      "value": "当前网页的标题。"
+    },
+    {
+      "name": "ai_var_link",
+      "value": "当前网页的链接。"
+    },
+    {
+      "name": "ai_var_time",
+      "value": "当前时间 yyyy-MM-dd HH:mm:ss EEEE (ZZZZ)。"
+    },
+    {
+      "name": "ai_just_now",
+      "value": "刚刚"
     }
   ]
 }

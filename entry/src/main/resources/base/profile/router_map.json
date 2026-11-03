@@ -131,6 +131,16 @@
       "buildFunction": "SettingsAiPromptEditPageBuilder"
     },
     {
+      "name": "aiProviders",
+      "pageSourceFile": "src/main/ets/view/SettingsAiProvidersPage.ets",
+      "buildFunction": "SettingsAiProvidersPageBuilder"
+    },
+    {
+      "name": "aiProviderEdit",
+      "pageSourceFile": "src/main/ets/view/SettingsAiProviderEditPage.ets",
+      "buildFunction": "SettingsAiProviderEditPageBuilder"
+    },
+    {
       "name": "settingsSearch",
       "pageSourceFile": "src/main/ets/view/SettingsSearchPage.ets",
       "buildFunction": "SettingsSearchPageBuilder"

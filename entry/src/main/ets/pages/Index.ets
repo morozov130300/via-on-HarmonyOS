@@ -18,6 +18,7 @@ import { FindBar } from '../components/FindBar'
 import { Reader, READER_THEME_COLORS } from '../common/Reader'
 import { TtsManager } from '../common/Tts'
 import { AiPanel } from '../components/AiPanel'
+import { CopilotStore, AiAttachment } from '../common/CopilotStore'
 import { MediaListPage } from '../components/MediaListPage'
 import { LinkInterstitial } from '../components/LinkInterstitial'
 import { VideoPlayerOverlay, VideoOverlayState } from '../components/VideoPlayerOverlay'
@@ -25,7 +26,7 @@ import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
 import { webview } from '@kit.ArkWeb'
-import { window, mediaquery } from '@kit.ArkUI'
+import { window, mediaquery, display } from '@kit.ArkUI'
 import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError, emitter, pasteboard } from '@kit.BasicServicesKit'
 import { inputConsumer, KeyEvent, KeyCode } from '@kit.InputKit'
@@ -63,6 +64,13 @@ struct Index {
   @Local showFindBar: boolean = false
 
   @Local showAi: boolean = false
+  // b9/g 面板呈现参数（ba() 时计算）：附件、绑定线程、宽高
+  @Local aiAttachment: AiAttachment | null = null
+  @Local aiInitThreadId: string = ''
+  @Local aiPanelHeightVp: number = 0
+  @Local aiPanelWidthVp: number = 0
+  // e0 面板返回键处理（registerBack 注册）
+  private aiBackHandler: (() => boolean) | null = null
   @Local showMediaList: boolean = false
   @Local mediaList: string[] = []
   @Local exitHintTime: number = 0
@@ -251,6 +259,7 @@ struct Index {
     this.setupImmersiveWindow()
     applyOrientationSetting(context)
     await this.db.init(context)
+    CopilotStore.getInstance().init(context)
     this.downloads.register(context)
     AdBlocker.getInstance().init(this.settings)
     RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, AdBlocker.getInstance()).then(() => {
@@ -321,7 +330,12 @@ struct Index {
       return true
     }
     if (this.showAi) {
-      this.showAi = false
+      // 原版 b9/g.onBackPressed：交由 e0 的返回键处理（panelBack）
+      if (this.aiBackHandler !== null) {
+        this.aiBackHandler()
+      } else {
+        this.showAi = false
+      }
       return true
     }
     if (this.showMenu) {
@@ -660,7 +674,7 @@ struct Index {
         this.openPage('downloads')
         break
       case 'ai':
-        this.showAi = true
+        this.openAi()
         break
       default:
         break
@@ -789,7 +803,7 @@ struct Index {
             this.saveCurrentPageAsPdf()
           },
           onOpenAi: () => {
-            this.showAi = true
+            this.openAi()
           },
           onOpenReader: () => {
             this.toggleReader()
@@ -806,17 +820,44 @@ struct Index {
           .position({ x: 0, y: this.insets.top })
       }
       if (this.showAi) {
+        // 原版 b9/g Dialog：dimAmount 0.2，点击面板外关闭
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor('#33000000')
+          .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
+          .onClick(() => {
+            this.showAi = false
+          })
+        // 竖屏：底部面板，宽 MATCH 高 max/9*5；横屏：居中面板，宽 min(440dp, max/2) 高 MATCH
         Column() {
           AiPanel({
+            initAttachment: this.aiAttachment,
+            initThreadId: this.aiInitThreadId,
             onClose: () => {
               this.showAi = false
+            },
+            onOpenSettings: () => {
+              this.showAi = false
+              this.openPage('aiSettings')
+            },
+            registerBack: (handler: () => boolean) => {
+              this.aiBackHandler = handler
             }
           })
+            .width('100%')
+            .height('100%')
+            .backgroundColor($r('app.color.page_bg'))
+            .padding(this.isLandscape ? { top: this.insets.top } : { bottom: this.insets.bottom })
         }
-        .width('100%')
-        .height('100%')
-        .padding({ top: this.insets.top })
-        .backgroundColor($r('app.color.page_bg'))
+        .width(this.isLandscape ? this.aiPanelWidthVp : '100%')
+        .height(this.isLandscape ? '100%' : this.aiPanelHeightVp)
+        .justifyContent(this.isLandscape ? FlexAlign.Center : FlexAlign.End)
+        .alignItems(this.isLandscape ? HorizontalAlign.Center : HorizontalAlign.Start)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
+        .onClick(() => {
+          this.showAi = false
+        })
       }
       if (this.showMediaList) {
         MediaListPage({
@@ -914,6 +955,56 @@ struct Index {
 
   private openPage(page: string): void {
     this.mainNavStack.pushPathByName(page, '', true)
+  }
+
+  // 原版 k6.ba()：AI 入口 —— aibackend 空 → push AI 设置页；
+  // 否则当前标签为可脚本化网页时抽正文构造附件（带 urlThreadId 绑定）再开面板，否则无附件开面板
+  private openAi(): void {
+    if (this.settings.aiBackend === '') {
+      this.openPage('aiSettings')
+      return
+    }
+    const tab = this.tabStore.current()
+    this.aiBackHandler = null
+    this.aiAttachment = null
+    this.aiInitThreadId = ''
+    this.computeAiPanelSize()
+    const scriptable = !tab.isHomePage() &&
+      (tab.url.startsWith('http://') || tab.url.startsWith('https://'))
+    if (!scriptable) {
+      this.showAi = true
+      return
+    }
+    const url = tab.url
+    const title = tab.title
+    const threadId = CopilotStore.getInstance().threadIdOfUrl(url)
+    if (threadId !== null) {
+      this.aiInitThreadId = threadId
+    }
+    Reader.extractText(tab).then((text: string) => {
+      const att = new AiAttachment()
+      att.url = url
+      att.title = title
+      att.content = text
+      this.aiAttachment = att
+      this.showAi = true
+    }).catch(() => {
+      this.showAi = true
+    })
+  }
+
+  // 原版 b9/g 呈现规格：竖屏宽 MATCH 高 max(w,h)/9*5 底部；横屏宽 min(440dp, max/2) 高 MATCH 居中
+  private computeAiPanelSize(): void {
+    try {
+      const d = display.getDefaultDisplaySync()
+      const px2vpFn = this.getUIContext().px2vp
+      const maxVp = Math.max(px2vpFn(d.width), px2vpFn(d.height))
+      this.aiPanelHeightVp = maxVp / 9 * 5
+      this.aiPanelWidthVp = Math.min(440, maxVp / 2)
+    } catch (error) {
+      this.aiPanelHeightVp = 400
+      this.aiPanelWidthVp = 440
+    }
   }
 
   private shareCurrentPage(): void {
