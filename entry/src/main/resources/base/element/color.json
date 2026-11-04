@@ -159,6 +159,18 @@
     {
       "name": "on_accent",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "widget_bar_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "widget_bar_stroke",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "widget_icon_tint",
+      "value": "#DE000000"
     }
   ]
 }
