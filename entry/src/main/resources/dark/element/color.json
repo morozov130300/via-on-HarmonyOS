@@ -147,6 +147,18 @@
     {
       "name": "dialog_hint",
       "value": "#99FFFFFF"
+    },
+    {
+      "name": "widget_bar_bg",
+      "value": "#1C1B1D"
+    },
+    {
+      "name": "widget_bar_stroke",
+      "value": "#EFEFEF"
+    },
+    {
+      "name": "widget_icon_tint",
+      "value": "#DE000000"
     }
   ]
 }

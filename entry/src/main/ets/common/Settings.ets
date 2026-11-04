@@ -6,6 +6,7 @@ import { SiteSetting, RuleEntry, UserScriptRec, RuleSubEntry, RULE_SUB_PRESETS }
 import { builtinEngineId } from './SearchEngines'
 import { BrowserDb } from './Database'
 import { uaByKey, simplifyUaString, CustomUaEntry } from './UaTable'
+import { RemoteConfig } from './RemoteConfig'
 
 // 原版 f4/Q0 语义：orientation 存 1..4（1=跟随系统 2=自动 3=竖屏 4=横屏）
 export function applyOrientationSetting(context: Context): void {
@@ -134,7 +135,8 @@ export class AppSettings {
   @Trace adBlockBuiltin: boolean = true
   @Trace adBlockTotal: number = 0
   @Trace adBlockSavedBytes: number = 0
-  @Trace autoExpandFullText: boolean = false
+  // 原版 pa\c.java:57 首启默认：fl1.e() && labflag.e()（均默认 true）
+  @Trace autoExpandFullText: boolean = true
   @Trace textZoom: number = 100
   // 原版 nightmode2（w9/k n3/d/m0/T0）：0=手动关 1=手动开 2=跟随系统(当前浅) 3=跟随系统(当前深)，默认 2
   @Trace nightMode2: number = 2
@@ -162,7 +164,8 @@ export class AppSettings {
   @Trace ruleSubUrl: string = ''
   @Trace ruleSubscriptions: RuleSubEntry[] = []
   @Trace ruleAutoUpdate: number = 0
-  @Trace scriptEnabled: boolean = false
+  // 原版 w9/p.D() = !bit268435456，初始位为 0 → 脚本默认启用
+  @Trace scriptEnabled: boolean = true
   // 原版 w9/k.t（网站设定 JavaScript 全局默认，jb/y4 id8），默认允许
   @Trace jsEnabled: boolean = true
   // 原版 w9/k.O()：朗读语速（readaloudspeed，存储 int(speed*100)），范围 0.25-5.0
@@ -353,7 +356,8 @@ export class AppSettings {
       this.adBlockBuiltin = await this.readBoolean('adBlockBuiltin', true)
       this.adBlockTotal = await this.readNumber('adBlockTotal', 0)
       this.adBlockSavedBytes = await this.readNumber('adBlockSavedBytes', 0)
-      this.autoExpandFullText = await this.readBoolean('autoExpandFullText', false)
+      // 原版 j0.c(context, fl1.e() && labflag.e(), true)：键缺失时按远程 fl1 位开关取默认
+      this.autoExpandFullText = await this.readBoolean('autoExpandFullText', RemoteConfig.getInstance().isFl1AutoExpandEnabled())
       this.textZoom = await this.readNumber('textZoom', 100)
       // 原版 nightmode2 迁移：旧布尔 nightMode → 手动开(1)/跟随系统(2)（w9/k n3 默认 2）
       const legacyNight = await this.readBoolean('nightMode', false)
@@ -380,7 +384,7 @@ export class AppSettings {
       this.ruleSubUrl = await this.readString('ruleSubUrl', '')
       this.ruleAutoUpdate = await this.readNumber('ruleAutoUpdate', 0)
       this.ruleSubscriptions = await this.readRuleSubs()
-      this.scriptEnabled = await this.readBoolean('scriptEnabled', false)
+      this.scriptEnabled = await this.readBoolean('scriptEnabled', true)
       this.jsEnabled = await this.readBoolean('jsEnabled', true)
       // 原版 w9/k.O()：max(0.25, min(5.0, readNumber('readaloudspeed', 100)/100))
       this.readAloudSpeed = Math.max(0.25, Math.min(5.0, (await this.readNumber('readaloudspeed', 100)) / 100))

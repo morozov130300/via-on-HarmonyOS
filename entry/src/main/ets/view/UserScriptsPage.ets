@@ -576,15 +576,17 @@ struct ScriptDownloadOverlay {
   }
 }
 
-// ta/u：脚本编辑器（新增/编辑，保存时解析元数据）
+// ta/u + sa/o：脚本编辑器（新增/编辑，保存时解析元数据；initUrl = 从「网页脚本」页 + 进入时预填作用网址 sa.o）
 @ComponentV2
-struct ScriptEditOverlay {
+export struct ScriptEditOverlay {
   @Param script: UserScriptRec | null = null
+  @Param initUrl: string = ''
   @Event onClose: () => void = () => {}
   @Event onSaved: () => void = () => {}
   @Local name: string = ''
   @Local downloadUrl: string = ''
   @Local code: string = ''
+  @Local matchUrl: string = ''
   private settings: AppSettings = AppSettings.getInstance()
 
   aboutToAppear(): void {
@@ -593,6 +595,7 @@ struct ScriptEditOverlay {
       this.downloadUrl = this.script.downloadUrl
       this.code = this.script.code
     }
+    this.matchUrl = this.initUrl
   }
 
   build() {
@@ -629,6 +632,21 @@ struct ScriptEditOverlay {
               .onChange((value: string) => {
                 this.downloadUrl = value
               })
+            // sa.o：从「网页脚本」页 + 进入时为该网址新建脚本，展示作用网址（@match 作用域）
+            if (this.initUrl !== '' && this.script === null) {
+              Text('网址')
+                .fontSize(12)
+                .fontColor($r('app.color.fg_secondary'))
+              TextInput({ text: this.matchUrl })
+                .height(40)
+                .fontSize(14)
+                .backgroundColor($r('app.color.surface'))
+                .fontColor($r('app.color.fg'))
+                .caretColor($r('app.color.accent'))
+                .onChange((value: string) => {
+                  this.matchUrl = value
+                })
+            }
             Text($r('app.string.script_code'))
               .fontSize(12)
               .fontColor($r('app.color.fg_secondary'))
@@ -699,6 +717,10 @@ struct ScriptEditOverlay {
     }
     if (this.name.trim() !== '') {
       rec.name = this.name.trim()
+    }
+    // sa.o：无 Metadata 作用域时以「网址」字段作为 @match 作用域
+    if (this.script === null && parseJsonArray(rec.includes).length === 0 && this.matchUrl.trim() !== '') {
+      rec.includes = JSON.stringify([this.matchUrl.trim()])
     }
     this.settings.saveScript(rec)
     fetchScriptRequires(rec)
