@@ -3,6 +3,8 @@ import { Configuration } from '@ohos.app.ability.Configuration';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { emitter } from '@kit.BasicServicesKit';
+import { commonEventManager } from '@kit.BasicServicesKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { AppSettings } from '../common/Settings';
 import { BrowserDb } from '../common/Database';
 import { applyImmersiveWindow } from '../common/Immersive';
@@ -10,11 +12,14 @@ import { initReaderContext } from '../common/Reader';
 import { initGmRuntime } from '../common/GmRuntime';
 import { RemoteConfig } from '../common/RemoteConfig';
 import { ProxyManager } from '../common/ProxyConfig';
+import { DownloadEngine } from '../common/DownloadEngine';
+import { DownloadNotifier, DL_ACTION_PAUSE, DL_ACTION_RESUME } from '../common/DownloadNotifier';
 import { webview } from '@kit.ArkWeb';
 import { fileIo } from '@kit.CoreFileKit';
 
 const DOMAIN = 0x0000;
 const EXTERNAL_LINK_EVENT_ID = 10002;
+const OPEN_DOWNLOADS_EVENT_ID = 10003;
 
 interface EntryUrl {
   url: string;
@@ -58,6 +63,12 @@ export default class EntryAbility extends UIAbility {
     initReaderContext(this.context);
     // GM_* 用户脚本运行时存储（o5 变量库 / p5 require 缓存目录）
     initGmRuntime(this.context);
+    // 自研下载引擎：恢复 90/95 状态任务并调度（原版 mark/via/Shell d() DownloadManagerImpl）
+    DownloadEngine.getInstance().init(this.context);
+    // 原版 mark/via/download/d.g()：通知渠道（鸿蒙：通知授权 + downloadTemplate 支持查询）
+    DownloadNotifier.getInstance().init(this.context);
+    // 原版 DownloadReceiver：通知栏暂停/恢复按钮 → 引擎
+    this.subscribeDownloadActions();
     // 原版 mark/via/Shell.h0()→d0()：启动时抓取 r9 远程配置（60s 节流 + 文件缓存），
     // 应用到 RemoteConfig 单例（Shell.java:156 k.q().t(new i(list))）；失败静默降级默认值
     RemoteConfig.getInstance().load(this.context).catch(() => {
@@ -69,6 +80,45 @@ export default class EntryAbility extends UIAbility {
       AppStorage.setOrCreate('via_launch_url', entry.url)
       AppStorage.setOrCreate('via_launch_external', entry.external)
     }
+    if (want.parameters?.['viaOpenPage'] === 'downloads') {
+      // 冷启动时 Index 尚未订阅 emitter，用 AppStorage 标志兜底
+      AppStorage.setOrCreate('via_open_downloads', true)
+      emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
+    }
+  }
+
+  // 通知栏按钮公共事件（原版 DownloadReceiver ACTION_PAUSE/ACTION_RESUME）
+  private subscribeDownloadActions(): void {
+    const subscribe = (action: string, isPause: boolean): void => {
+      const info: commonEventManager.CommonEventSubscribeInfo = {
+        events: [action]
+      }
+      commonEventManager.createSubscriber(info, (err, subscriber) => {
+        if (err) {
+          hilog.error(DOMAIN, 'testTag', 'createSubscriber failed: %{public}s', JSON.stringify(err));
+          return
+        }
+        commonEventManager.subscribe(subscriber, (error, data) => {
+          if (error) {
+            hilog.error(DOMAIN, 'testTag', 'subscribe failed: %{public}s', JSON.stringify(error));
+            return
+          }
+          const dataParams = data.parameters as Record<string, Object>
+          const rawTaskId: Object | undefined = dataParams['taskId']
+          if (typeof rawTaskId === 'number') {
+            const taskId: number = rawTaskId as number
+            const engine = DownloadEngine.getInstance()
+            if (isPause) {
+              engine.pauseById(taskId)
+            } else {
+              engine.resumeById(taskId)
+            }
+          }
+        })
+      })
+    }
+    subscribe(DL_ACTION_PAUSE, true)
+    subscribe(DL_ACTION_RESUME, false)
   }
 
   onNewEntry(want: Want, launchParam: AbilityConstant.LaunchParam): void {
@@ -79,6 +129,9 @@ export default class EntryAbility extends UIAbility {
         { eventId: EXTERNAL_LINK_EVENT_ID },
         { data: { 'linkUrl': entry.url, 'external': entry.external } }
       )
+    }
+    if (want.parameters?.['viaOpenPage'] === 'downloads') {
+      emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
     }
   }
 
