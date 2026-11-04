@@ -566,6 +566,11 @@ export struct TabWeb {
     if (!this.settings.autoSniffButton) {
       return
     }
+    // 原版 e8/j.o → d8.d.i：页开始按 wlr 白名单（v.qq/youku/iqiyi/mgtv/bilibili/ximalaya/film.qq）
+    // 标记本页；d8/c.a：wlr 页跳过媒体类资源记录（cVar.e() && f4593e → return）
+    if (RemoteConfig.getInstance().isInWlr(this.tab.url)) {
+      return
+    }
     const lower = url.toLowerCase()
     const queryIndex = lower.indexOf('?')
     const path = queryIndex >= 0 ? lower.substring(0, queryIndex) : lower
@@ -751,7 +756,12 @@ export struct TabWeb {
   }
 
   // 原版 na.E0()：元素隐藏 CSS（via_inject_blocker.css）
+  // 原版 k6.Ja(i10=1):4573：b1(url) 命中 wlb 白名单（youku/iqiyi/mgtv/qq）时
+  // 跳过 m8.b.b（via_inject_blocker.css 注入豁免），视频站不被元素隐藏 CSS 干扰
   private injectBlockerCss(pageUrl: string): void {
+    if (RemoteConfig.getInstance().isInWlb(pageUrl)) {
+      return
+    }
     const script = this.adBlocker.cssInjectScript(pageUrl)
     if (script === '') {
       return
@@ -835,6 +845,14 @@ export struct TabWeb {
       // 原版 w.i state 5：用户已确认自动进入（localStorage.__via_reader_enabled__）
       return Reader.checkState(this.tab).then((state: number) => {
         if (state === 5) {
+          // 原版 Q4 state 5 → B8()：wld 命中 → g6.n.q(O1)「不支持该网站」，不进入阅读
+          if (RemoteConfig.getInstance().isInWld(this.tab.url)) {
+            this.getUIContext().getPromptAction().showToast({
+              message: $r('app.string.site_not_supported'),
+              duration: 1500
+            })
+            return false
+          }
           return Reader.enterReader(this.tab, READER_THEME_COLORS[this.settings.readerTheme],
             this.settings.readerFontSize, this.settings.readerCustomCss)
         }
