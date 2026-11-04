@@ -167,7 +167,39 @@ export struct BookmarkPage {
     .backgroundColor($r('app.color.page_bg'))
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.applyFolderParam(ctx)
     })
+  }
+
+  // 深链参数（Index.openBookmarksAtFolder）：folder=数字文件夹 id、folderName=名称。
+  // 对应原版 k6.u 8657（v://bookmarks/?folder=&folderName=）与 8567（folder://X）
+  private applyFolderParam(ctx: NavDestinationContext): void {
+    try {
+      const rawParams: string | undefined = JSON.stringify(ctx.pathStack.getParamByName('bookmarks'))
+      const params: string[] = rawParams !== undefined && rawParams !== 'undefined' && rawParams !== '[]'
+        ? JSON.parse(rawParams) as string[] : []
+      if (params.length === 0) {
+        return
+      }
+      const param: string = params[params.length - 1]
+      if (typeof param !== 'string' || param === '') {
+        return
+      }
+      const obj = JSON.parse(param) as Record<string, string>
+      const folderRaw = obj['folder'] ?? ''
+      if (folderRaw === '' || Number.isNaN(Number(folderRaw))) {
+        return
+      }
+      const folderId = Number(folderRaw)
+      if (folderId === this.currentFolderId) {
+        return
+      }
+      this.currentFolderId = folderId
+      this.folderStack = [new FolderStackEntry(folderId, obj['folderName'] ?? '')]
+      this.reload()
+    } catch (error) {
+      console.error('read bookmark folder param failed')
+    }
   }
 
   @Builder

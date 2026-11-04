@@ -1,4 +1,4 @@
-import { TabItem, RuleSubEntry } from '../common/Types'
+import { TabItem, RuleSubEntry, BookmarkFolderRec } from '../common/Types'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
 import { RuleSubManager } from '../common/RuleSubscriptions'
@@ -34,7 +34,8 @@ import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError, emitter, pasteboard } from '@kit.BasicServicesKit'
 import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit'
 import { util } from '@kit.ArkTS'
-import { hostOf, buildSearchUrl, isUrlLike } from '../common/SearchEngines'
+import { scanBarcode } from '@kit.ScanKit'
+import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
@@ -292,9 +293,13 @@ struct Index {
       return
     }
     switch (cmd.kind) {
-      // k6.u 8657：v://bookmarks → 书签页（?folder/&folderName 我方 BookmarkPage 无文件夹参数入口，落根目录）
+      // k6.u 8657：v://bookmarks[/?folder=&folderName=] → 书签页；folder 有值时进对应文件夹
       case ViaCmdKind.BOOKMARKS:
-        this.openPage('bookmarks')
+        if (cmd.folder !== '' && !Number.isNaN(Number(cmd.folder))) {
+          this.openBookmarksAtFolder(Number(cmd.folder), cmd.folderName)
+        } else {
+          this.openPage('bookmarks')
+        }
         break
       // k6.u 8641：v://history → fa() 历史页
       case ViaCmdKind.HISTORY:
@@ -344,10 +349,32 @@ struct Index {
       case ViaCmdKind.HISTORY_URI:
         this.openPage('history')
         break
-      // k6.u 8567：folder://X → 书签文件夹（我方无文件夹深链入口，落书签根目录）
-      case ViaCmdKind.FOLDER:
-        this.openPage('bookmarks')
+      // k6.u 8567：folder://X → Z9(解码X) 按名称定位书签文件夹后进入（找不到落根目录）
+      case ViaCmdKind.FOLDER: {
+        let folderId = 0
+        let folderTitle = ''
+        try {
+          folderTitle = decodeURIComponent(cmd.url)
+        } catch (error) {
+          folderTitle = cmd.url
+        }
+        if (folderTitle !== '') {
+          BrowserDb.getInstance().listAllBookmarkFolders().then((folders: BookmarkFolderRec[]) => {
+            for (let i = 0; i < folders.length; i++) {
+              if (folders[i].title === folderTitle) {
+                this.openBookmarksAtFolder(folders[i].id, folders[i].title)
+                return
+              }
+            }
+            this.openPage('bookmarks')
+          }).catch(() => {
+            this.openPage('bookmarks')
+          })
+        } else {
+          this.openPage('bookmarks')
+        }
         break
+      }
       // k6.u 8598/8612：拦截页/错误页跳转 → 打开解码 url
       case ViaCmdKind.BLOCKER_JUMP:
       case ViaCmdKind.ERROR_JUMP:
@@ -355,11 +382,18 @@ struct Index {
           this.tabStore.navigate(cmd.url)
         }
         break
-      // SCANNER（无扫码功能）/TRANSLATE_TEXT（无翻译文本弹窗 f8.w0）/TABS_RESTORE（无按 id 恢复入口）
-      // /CATALOG（无 catalog.html 站点目录页）：我方无对应功能，如实 no-op
+      // k6.u 8624：v://scanner → ga() 扫码（与菜单「扫描二维码」同一管线）
       case ViaCmdKind.SCANNER:
+        this.startScan()
+        break
+      // k6.u 8669：v://translator/translate?text= → Eb(text) 翻译文本弹窗（f8.w0 我方无对应弹窗，no-op）
       case ViaCmdKind.TRANSLATE_TEXT:
+        break
+      // k6.u 8682：v://tabs/restore?ids=&selected= → F1(ids, selected) 按 id 恢复标签并选中
       case ViaCmdKind.TABS_RESTORE:
+        this.tabStore.restoreByIds(cmd.ids, cmd.selected)
+        break
+      // catalog.html 站点目录页我方无对应页面，如实 no-op
       case ViaCmdKind.CATALOG:
       default:
         break
@@ -1686,6 +1720,34 @@ struct Index {
 
   private openPage(page: string): void {
     this.mainNavStack.pushPathByName(page, '', true)
+  }
+
+  // 书签页带文件夹参数（原版 k6.u 8657/8567：?folder= 数字 id / folder://X 名称）：
+  // param JSON 由 BookmarkPage onReady 读取
+  private openBookmarksAtFolder(folderId: number, folderName: string): void {
+    const param: Record<string, string> = new Object() as Record<string, string>
+    param['folder'] = String(folderId)
+    param['folderName'] = folderName
+    this.mainNavStack.pushPathByName('bookmarks', JSON.stringify(param), true)
+  }
+
+  // 原版 k6.ga()：扫码结果按网址/搜索词分流（与 MenuSheet.startScan 同一管线）
+  private startScan(): void {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return
+    }
+    scanBarcode.startScanForResult(context).then((data: scanBarcode.ScanResult) => {
+      const scanned = data.originalValue.trim()
+      if (scanned === '') {
+        return
+      }
+      const target = isUrlLike(scanned) ? normalizeUrl(scanned)
+        : buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), scanned)
+      this.tabStore.navigate(target)
+    }).catch((error: BusinessError) => {
+      console.error(`scan failed: ${error.code}`)
+    })
   }
 
   // ===== 原版朗读（k6.va/G3/p3/E3/xb/ha）=====

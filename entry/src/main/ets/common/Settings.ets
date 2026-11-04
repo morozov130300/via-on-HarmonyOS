@@ -55,7 +55,7 @@ const SYNC_KEYS: string[] = [
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',
   'customRulesText', 'siteExceptions', 'desktopAllSites', 'forceZoom', 'siteFontZooms',
   'uaKey', 'customUaList', 'desktopUaKey', 'desktopCustomUa', 'simplifyUa',
-  'syncMode', 'orientation', 'videoPlayer', 'dlManager', 'clearOnExit',
+  'syncMode', 'orientation', 'orientationV2', 'videoPlayer', 'dlManager', 'clearOnExit',
   'volumePageFlip', 'swipeSwitchTab', 'videoGesture', 'videoorientation', 'uifont', 'undoCloseToast', 'showStatusBar',
   'skin',
   'fullScreen', 'gameMode', 'wifiOnlyImages', 'cleardata2', 'labflag',
@@ -480,9 +480,13 @@ export class AppSettings {
       this.webdavUrl = await this.readString('webdavUrl', '')
       this.webdavUser = await this.readString('webdavUser', '')
       this.webdavPwd = await this.readString('webdavPwd', '')
-      // 旧数据迁移：0(跟随系统)→1、1(竖屏)→3、2(横屏)→4（原版 1..4 语义）
+      // orientation 语义版本标记：orientationV2=1 表示已是原版 1..4 语义，直读；
+      // 否则做旧数据迁移：0(跟随系统)→1、1(竖屏)→3、2(横屏)→4
+      const orientationV2 = await this.readNumber('orientationV2', 0) === 1
       const rawOrientation = await this.readNumber('orientation', 1)
-      if (rawOrientation === 0) {
+      if (orientationV2) {
+        this.orientation = rawOrientation
+      } else if (rawOrientation === 0) {
         this.orientation = 1
       } else if (rawOrientation === 1) {
         this.orientation = 3
@@ -1561,6 +1565,8 @@ export class AppSettings {
 
   setOrientation(value: number): void {
     this.orientation = value
+    // 标记已是原版 1..4 语义，避免 loadFields 旧枚举迁移误转（0/1/2 → 1/3/4）
+    this.flushKey('orientationV2', 1)
     this.flushKey('orientation', value)
   }
 

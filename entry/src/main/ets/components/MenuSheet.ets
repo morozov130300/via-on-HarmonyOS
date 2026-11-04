@@ -429,9 +429,10 @@ export struct MenuSheet {
         this.onClose()
         this.onOpenPage('uaPage')
         break
+      // 原版 k6.P9 case28（k6.java:5544-5546）：长按「广告拦截」→ z7.d 广告拦截规则页
       case 'adblock':
         this.onClose()
-        this.onOpenPage('settingsAdBlock')
+        this.onOpenPage('rules')
         break
       case 'font_size':
         this.onClose()
@@ -1120,8 +1121,9 @@ export struct MenuSheet {
       case 'script':
         this.scriptMenuAction()
         break
+      // 原版 k6.O9 case28（k6.java:5283-5289）：点击切换广告拦截开关 + 持久化 + 刷新当前页 + toast「广告拦截 已开启/已关闭」
       case 'adblock':
-        this.onOpenPage('rules')
+        this.toggleAdBlock()
         break
       case 'ai':
         this.onClose()
@@ -1514,6 +1516,25 @@ export struct MenuSheet {
     const follow = this.settings.toggleNightMode()
     if (follow) {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.night_follow_toast'), duration: 1500 })
+    }
+  }
+
+  // 广告拦截：点击切换开关 + 刷新当前页 + toast（原版 k6.O9 case28，k6.java:5283-5289）
+  private toggleAdBlock(): void {
+    this.onClose()
+    const next = !this.settings.adBlockOn
+    this.settings.setAdBlockOn(next)
+    try {
+      this.tabStore.current().controller.refresh()
+    } catch (error) {
+      console.error('refresh after adblock toggle failed')
+    }
+    const context = this.getUIContext().getHostContext()
+    if (context !== undefined) {
+      const template = context.resourceManager.getStringSync(
+        (next ? $r('app.string.status_enabled') : $r('app.string.status_disabled')).id)
+      const label = context.resourceManager.getStringSync($r('app.string.ad_block').id)
+      this.getUIContext().getPromptAction().showToast({ message: `${label} ${template}`, duration: 1500 })
     }
   }
 

@@ -4,6 +4,7 @@ import { SiteSetting, UserScriptRec, RuleSubEntry } from './Types'
 import { CustomUaEntry } from './UaTable'
 import { engineIdFromKey, builtinKeyById } from './SearchEngines'
 import { BackupCrypto } from './BackupCrypto'
+import { MENU_DEFAULT_ORDER, menuKeysToIdCsv, menuIdCsvToKeys } from './MenuItems'
 
 // 导出时搜索引擎/UA 状态（m9/l.c 与 l9/f 共用 w9.l.L2 数据源）
 export interface SettingsExportState {
@@ -187,6 +188,33 @@ export class BackupSettings {
     if (s.searchToolbarDisabled !== '') {
       st['searchtoolbardisabled'] = s.searchToolbarDisabled
     }
+    // 原版 csstheme（w9/k.java:765 s3("csstheme", v0.b(str.trim()))）：
+    // 存 Base64(trim 后 CSS)，导出即 pref 原值（Base64）
+    if (s.customCss !== '') {
+      st['csstheme'] = BackupCrypto.base64Wrap76(BackupCrypto.utf8Encode(s.customCss.trim()))
+    }
+    // 原版 readercustomcss（w9/k.java:1115 s3("readercustomcss", v0.b(str))）：Base64 原值
+    if (s.readerCustomCss !== '') {
+      st['readercustomcss'] = BackupCrypto.base64Wrap76(BackupCrypto.utf8Encode(s.readerCustomCss))
+    }
+    // 原版 videoplayer（w9/k.java:366）：仅 prefs 含键才导出，空值（内置播放）不导
+    if (s.videoPlayer !== '') {
+      st['videoplayer'] = s.videoPlayer
+    }
+    // 原版 dlmanager（w9/k.java:228）：默认值时不导
+    if (s.dlManager !== '' && s.dlManager !== 'builtin') {
+      st['dlmanager'] = s.dlManager
+    }
+    // 原版 displayedmenus/hiddenmenus（w9/k.java:495/307）：逗号数字串；
+    // 与默认顺序一致时不导（原版 pref 仅定制后存在）
+    const orderCsv = menuKeysToIdCsv(s.menuOrder)
+    const defaultCsv = menuKeysToIdCsv(MENU_DEFAULT_ORDER)
+    if (orderCsv !== '' && orderCsv !== defaultCsv) {
+      st['displayedmenus'] = orderCsv
+    }
+    if (s.menuHidden.length > 0) {
+      st['hiddenmenus'] = menuKeysToIdCsv(s.menuHidden)
+    }
     // int 白名单（w9/i.b，仅导出有对应值的键）
     st['search2'] = state.search2
     st['textsize'] = s.textZoom
@@ -206,9 +234,41 @@ export class BackupSettings {
     st['nightfilter'] = s.nightFilter
     st['readertextsize'] = s.readerFontSize
     st['readerthemecolor'] = s.readerTheme
+    // 原版 fullscreenmode（w9/k.java:1428 q3，默认 0）：int 0/1；本工程 fullScreen bool，
+    // 默认（false=0）不导，与原版「pref 未设置即默认」一致
+    if (s.fullScreen) {
+      st['fullscreenmode'] = 1
+    }
+    // 原版 screenOrientation（w9/k.java:534，默认 1=跟随系统）：1..4 直传
+    if (s.orientation !== 1) {
+      st['screenOrientation'] = s.orientation
+    }
+    // 原版 videoorientation（w9/k.java:1149，默认 0=自动）：默认不导
+    if (s.videoOrientation !== 0) {
+      st['videoorientation'] = s.videoOrientation
+    }
+    // 原版 cleardata2（w9/k.java:318，默认 7）：默认不导
+    if (s.clearData2 !== 7) {
+      st['cleardata2'] = s.clearData2
+    }
+    // 原版 labflag（w9/k.java:1413，默认 0）：默认不导
+    if (s.labFlag !== 0) {
+      st['labflag'] = s.labFlag
+    }
     st['webflag'] = webflag
     st['webflag2'] = s.simplifyUa ? 1 : 0
     st['appflag'] = appflag
+    // 原版 long 白名单（w9/i.c）：updater_filter_subscriptions = 最近一次订阅规则更新时间戳；
+    // 本工程取各订阅 lastUpdate 最大值。updater_scripts 本工程无脚本更新时间持久化，不导
+    let lastFilterUpdate = 0
+    for (let i = 0; i < s.ruleSubscriptions.length; i++) {
+      if (s.ruleSubscriptions[i].lastUpdate > lastFilterUpdate) {
+        lastFilterUpdate = s.ruleSubscriptions[i].lastUpdate
+      }
+    }
+    if (lastFilterUpdate > 0) {
+      st['updater_filter_subscriptions'] = lastFilterUpdate
+    }
     return st
   }
 
@@ -597,6 +657,58 @@ export class BackupSettings {
           kv[intKeys[androidKey]] = v
         }
       }
+      // ---- 原版 int 白名单中本工程有等价设置、需类型/语义转换的键 ----
+      // fullscreenmode（w9/k.java:1341 d3 默认 0）：int 0/1 → 本工程 fullScreen bool
+      if (typeof st['fullscreenmode'] === 'number') {
+        kv['fullScreen'] = (st['fullscreenmode'] as number) !== 0
+      }
+      // screenOrientation（w9/k.java:1021 d3 默认 1）：1..4 直传（本工程 orientation 同语义）；
+      // 同时写 orientationV2 标记跳过旧枚举迁移
+      if (typeof st['screenOrientation'] === 'number') {
+        kv['orientation'] = st['screenOrientation'] as number
+        kv['orientationV2'] = 1
+      }
+      // videoorientation / cleardata2 / labflag：键名与默认值（0/7/0）均与原版一致，直传
+      const intDirectKeys: string[] = ['videoorientation', 'cleardata2', 'labflag']
+      for (let dk = 0; dk < intDirectKeys.length; dk++) {
+        const rawKey = intDirectKeys[dk]
+        if (typeof st[rawKey] === 'number') {
+          kv[rawKey] = st[rawKey] as number
+        }
+      }
+      // csstheme（原版 pref 存 Base64；getter v0.a 解码+trim，w9/k.java:869-875）
+      const csstheme = BackupSettings.getString(st, 'csstheme', '')
+      if (csstheme !== '') {
+        kv['customCss'] = BackupCrypto.utf8Decode(BackupCrypto.base64Decode(csstheme)).trim()
+      }
+      // readercustomcss（原版 pref 存 Base64；getter v0.a 解码，w9/k.java:1545）
+      const readercustomcss = BackupSettings.getString(st, 'readercustomcss', '')
+      if (readercustomcss !== '') {
+        kv['readerCustomCss'] = BackupCrypto.utf8Decode(BackupCrypto.base64Decode(readercustomcss)).trim()
+      }
+      // videoplayer / dlmanager：字符串直传（本工程内部键 videoPlayer/dlManager）
+      const videoplayer = BackupSettings.getString(st, 'videoplayer', '')
+      if (videoplayer !== '') {
+        kv['videoPlayer'] = videoplayer
+      }
+      const dlmanager = BackupSettings.getString(st, 'dlmanager', '')
+      if (dlmanager !== '') {
+        kv['dlManager'] = dlmanager
+      }
+      // displayedmenus / hiddenmenus（逗号数字串 → 本工程字符串 id 数组 JSON）
+      const displayedmenus = BackupSettings.getString(st, 'displayedmenus', '')
+      if (displayedmenus !== '') {
+        const keys = menuIdCsvToKeys(displayedmenus)
+        if (keys.length > 0) {
+          kv['menuOrder'] = JSON.stringify(keys)
+        }
+      }
+      const hiddenmenus = BackupSettings.getString(st, 'hiddenmenus', '')
+      if (hiddenmenus !== '') {
+        kv['menuHidden'] = JSON.stringify(menuIdCsvToKeys(hiddenmenus))
+      }
+      // updater_filter_subscriptions / updater_scripts（long 白名单）：
+      // 本工程无单一时间戳存储（订阅时间为逐条 lastUpdate），导入忽略
       // webflag（w9/p）位分解
       if (typeof st['webflag'] === 'number') {
         const webflag = st['webflag'] as number
