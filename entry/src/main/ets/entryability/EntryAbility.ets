@@ -5,7 +5,9 @@ import { window } from '@kit.ArkUI';
 import { emitter } from '@kit.BasicServicesKit';
 import { commonEventManager } from '@kit.BasicServicesKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { systemShare } from '@kit.ShareKit';
 import { AppSettings } from '../common/Settings';
+import { VIA_CMD_EVENT_ID } from '../common/DeepLink';
 import { BrowserDb } from '../common/Database';
 import { applyImmersiveWindow } from '../common/Immersive';
 import { initReaderContext } from '../common/Reader';
@@ -26,6 +28,7 @@ interface EntryUrl {
   external: boolean;
 }
 
+// 原版 Trampoline → Shell 深链解析：b0.A() 的 VIEW 分支（uri 直传）+ via:// 内部命令（z8/b0.Q）
 function extractEntryUrl(want: Want): EntryUrl {
   const params = want.parameters
   if (params !== undefined) {
@@ -34,22 +37,11 @@ function extractEntryUrl(want: Want): EntryUrl {
       return { url: viaUrl, external: false }
     }
   }
-  // SEND 分享文本（原版 Trampoline filter#3）：文本当作搜索/网址进入
-  const sendParams = want.parameters
-  if (sendParams !== undefined) {
-    const text = sendParams['text']
-    if (typeof text === 'string' && text.trim() !== '') {
-      return { url: text.trim(), external: true }
-    }
-  }
   const uri = want.uri
   if (typeof uri === 'string' && uri !== '') {
-    // 原版 k6.u()：via://→v:// 内部命令协议（z8/b0.Q 按 host 分发内部页），不是网页 URL
+    // 原版 k6.u()：via://→v:// 内部命令协议（z8/w2 + z8/b0.Q 全量命令表），不是网页 URL
     if (uri.startsWith('via://')) {
-      const cmd = uri.substring('via://'.length).split('/')[0].trim().toLowerCase()
-      if (cmd !== '') {
-        AppStorage.setOrCreate('via_internal_cmd', cmd)
-      }
+      AppStorage.setOrCreate('via_internal_cmd', uri)
       return { url: '', external: false }
     }
     return { url: uri, external: true }
@@ -79,7 +71,10 @@ export default class EntryAbility extends UIAbility {
     if (entry.url !== '') {
       AppStorage.setOrCreate('via_launch_url', entry.url)
       AppStorage.setOrCreate('via_launch_external', entry.external)
+      AppStorage.setOrCreate('via_shared_text', false)
     }
+    // 原版 Trampoline filter#3：ACTION_SEND text/plain 分享接收（b0.A ACTION_SEND → i0.v）
+    this.handleSharedText(want, true)
     if (want.parameters?.['viaOpenPage'] === 'downloads') {
       // 冷启动时 Index 尚未订阅 emitter，用 AppStorage 标志兜底
       AppStorage.setOrCreate('via_open_downloads', true)
@@ -127,12 +122,53 @@ export default class EntryAbility extends UIAbility {
     if (entry.url !== '') {
       emitter.emit(
         { eventId: EXTERNAL_LINK_EVENT_ID },
-        { data: { 'linkUrl': entry.url, 'external': entry.external } }
+        { data: { 'linkUrl': entry.url, 'external': entry.external, 'sharedText': false } }
       )
     }
+    // 热启动 via:// 内部命令：通知 Index 立即消费 AppStorage 'via_internal_cmd'
+    const pendingCmd = AppStorage.get<string>('via_internal_cmd') ?? ''
+    if (pendingCmd !== '') {
+      emitter.emit({ eventId: VIA_CMD_EVENT_ID }, { data: {} })
+    }
+    // 原版 Shell onNewIntent → k6.c0 → b0.H：SEND 分享文本接收
+    this.handleSharedText(want, false)
     if (want.parameters?.['viaOpenPage'] === 'downloads') {
       emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
     }
+  }
+
+  // 原版 z8/b0.A() ACTION_SEND 分支：EXTRA_TEXT 文本 → i6.i0.v（URL 直开，否则默认引擎搜索）。
+  // 鸿蒙侧用 Share Kit getSharedData 解析 want（参数字段由系统序列化，非公开稳定，禁直读）
+  private handleSharedText(want: Want, cold: boolean): void {
+    if (want.action !== 'ohos.want.action.sendData') {
+      return
+    }
+    systemShare.getSharedData(want).then((data: systemShare.SharedData) => {
+      const records: Array<systemShare.SharedRecord> = data.getRecords()
+      let text: string = ''
+      for (let i = 0; i < records.length; i++) {
+        const record: systemShare.SharedRecord = records[i]
+        const content: string = record.content ?? ''
+        if (text === '' && content !== '') {
+          text = content
+        }
+      }
+      const trimmed = text.trim()
+      if (trimmed === '') {
+        return
+      }
+      if (cold) {
+        AppStorage.setOrCreate('via_launch_url', trimmed)
+        AppStorage.setOrCreate('via_launch_external', false)
+        AppStorage.setOrCreate('via_shared_text', true)
+      } else {
+        emitter.emit(
+          { eventId: EXTERNAL_LINK_EVENT_ID },
+          { data: { 'linkUrl': trimmed, 'external': false, 'sharedText': true } }
+        )
+      }
+    }).catch(() => {
+    })
   }
 
   onDestroy(): void {

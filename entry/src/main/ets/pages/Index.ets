@@ -34,7 +34,8 @@ import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError, emitter, pasteboard } from '@kit.BasicServicesKit'
 import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit'
 import { util } from '@kit.ArkTS'
-import { hostOf } from '../common/SearchEngines'
+import { hostOf, buildSearchUrl, isUrlLike } from '../common/SearchEngines'
+import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID } from '../common/DeepLink'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 
 const EXIT_INTERVAL: number = 1500
@@ -224,8 +225,17 @@ struct Index {
       const linkUrl = data['linkUrl']
       const external = data['external']
       if (typeof linkUrl === 'string' && linkUrl !== '') {
+        // 原版 b0.A ACTION_SEND → i0.v：分享文本走 URL 判定/搜索，不走外链确认
+        if (data['sharedText'] === true) {
+          this.openReceivedText(linkUrl)
+          return
+        }
         this.openExternalLink(linkUrl, external !== false)
       }
+    })
+    // 热启动 via:// 内部命令（EntryAbility.onNewEntry → AppStorage 'via_internal_cmd'）
+    emitter.on({ eventId: VIA_CMD_EVENT_ID }, () => {
+      this.handleInternalCmd()
     })
     emitter.on({ eventId: DOWNLOAD_CONFIRM_EVENT_ID }, (event: emitter.EventData) => {
       const data = event.data as Record<string, Object>
@@ -269,19 +279,89 @@ struct Index {
     this.settings.persistAdBlockTotal()
   }
 
-  // 原版 z8/b0.Q()：v://（via://）内部命令分发（tabs/bookmarks/history 等）
+  // 原版 k6.u() + z8/w2 + z8/b0.Q()：via://(v://) 内部命令全量分发（深链/Trampoline 入口）
   private handleInternalCmd(): void {
-    const cmd = AppStorage.get<string>('via_internal_cmd') ?? ''
-    if (cmd === '') {
+    const raw = AppStorage.get<string>('via_internal_cmd') ?? ''
+    if (raw === '') {
       return
     }
     AppStorage.setOrCreate('via_internal_cmd', '')
-    if (cmd === 'tabs') {
-      this.showTabPanel = true
-    } else if (cmd === 'bookmarks') {
-      this.openPage('bookmarks')
-    } else if (cmd === 'history') {
-      this.openPage('history')
+    const cmd = parseViaDeepLink(raw)
+    if (cmd === null) {
+      return
+    }
+    switch (cmd.kind) {
+      // k6.u 8657：v://bookmarks → 书签页（?folder/&folderName 我方 BookmarkPage 无文件夹参数入口，落根目录）
+      case ViaCmdKind.BOOKMARKS:
+        this.openPage('bookmarks')
+        break
+      // k6.u 8641：v://history → fa() 历史页
+      case ViaCmdKind.HISTORY:
+        this.openPage('history')
+        break
+      // k6.u 8649：v://downloader → ca() 下载页
+      case ViaCmdKind.DOWNLOADER:
+        this.openPage('downloads')
+        break
+      // k6.u 8628：v://skins → lb.k 皮肤页
+      case ViaCmdKind.SKINS:
+        this.openPage('skinPage')
+        break
+      // z8/b0.Q "log" → s1(6)：log.html → netLog
+      case ViaCmdKind.LOG:
+        this.openPage('netLog')
+        break
+      // z8/b0.Q "offline" → s1(7)：save.html 离线页面
+      case ViaCmdKind.OFFLINE:
+        this.openPage('offlinePage')
+        break
+      // z8/b0.Q "about" → s1(4)：about.html → 关于
+      case ViaCmdKind.ABOUT:
+        this.openPage('settingsAbout')
+        break
+      // z8/b0.Q "home" → V0()：回主页
+      case ViaCmdKind.HOME:
+        if (!this.tabStore.current().isHomePage()) {
+          this.tabStore.gotoHome()
+        }
+        break
+      // k6.u 8632：v://search 空 q → na() 打开搜索；带 q → Ta(q,true) 默认引擎搜索
+      case ViaCmdKind.SEARCH:
+        if (cmd.query === '') {
+          this.searchInitialText = ''
+          this.showSearch = true
+        } else {
+          this.tabStore.navigate(
+            buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), cmd.query))
+        }
+        break
+      // k6.u 8653：v://readaloud → ha() 朗读当前页
+      case ViaCmdKind.READ_ALOUD:
+        this.startReadAloud()
+        break
+      // k6.u 8577：history:// → s1(3) 历史页
+      case ViaCmdKind.HISTORY_URI:
+        this.openPage('history')
+        break
+      // k6.u 8567：folder://X → 书签文件夹（我方无文件夹深链入口，落书签根目录）
+      case ViaCmdKind.FOLDER:
+        this.openPage('bookmarks')
+        break
+      // k6.u 8598/8612：拦截页/错误页跳转 → 打开解码 url
+      case ViaCmdKind.BLOCKER_JUMP:
+      case ViaCmdKind.ERROR_JUMP:
+        if (cmd.url !== '') {
+          this.tabStore.navigate(cmd.url)
+        }
+        break
+      // SCANNER（无扫码功能）/TRANSLATE_TEXT（无翻译文本弹窗 f8.w0）/TABS_RESTORE（无按 id 恢复入口）
+      // /CATALOG（无 catalog.html 站点目录页）：我方无对应功能，如实 no-op
+      case ViaCmdKind.SCANNER:
+      case ViaCmdKind.TRANSLATE_TEXT:
+      case ViaCmdKind.TABS_RESTORE:
+      case ViaCmdKind.CATALOG:
+      default:
+        break
     }
   }
 
@@ -348,8 +428,28 @@ struct Index {
       AppStorage.setOrCreate('via_launch_url', '')
       const launchExternal = AppStorage.get<boolean>('via_launch_external') ?? false
       AppStorage.setOrCreate('via_launch_external', false)
-      this.openExternalLink(launchUrl, launchExternal)
+      const launchSharedText = AppStorage.get<boolean>('via_shared_text') ?? false
+      AppStorage.setOrCreate('via_shared_text', false)
+      if (launchSharedText) {
+        this.openReceivedText(launchUrl)
+      } else {
+        this.openExternalLink(launchUrl, launchExternal)
+      }
     }
+  }
+
+  // 原版 z8/b0.A ACTION_SEND 分支 → i6.i0.v：文本为 URL 直接打开，否则默认引擎搜索
+  private openReceivedText(text: string): void {
+    const trimmed = text.trim()
+    if (trimmed === '') {
+      return
+    }
+    if (isUrlLike(trimmed)) {
+      this.tabStore.navigate(trimmed)
+      return
+    }
+    this.tabStore.navigate(
+      buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), trimmed))
   }
 
   private openExternalLink(url: string, external: boolean): void {
