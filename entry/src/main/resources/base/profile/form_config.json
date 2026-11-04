@@ -1,0 +1,42 @@
+{
+  "forms": [
+    {
+      "name": "searchWidget",
+      "displayName": "$string:search_widget_name",
+      "description": "$string:search_widget_desc",
+      "src": "./ets/widget/pages/SearchWidgetCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "isDynamic": false,
+      "colorMode": "auto",
+      "isDefault": true,
+      "updateEnabled": false,
+      "defaultDimension": "1*2",
+      "supportDimensions": [
+        "1*2"
+      ]
+    },
+    {
+      "name": "transparentSearchWidget",
+      "displayName": "$string:transparent_search_widget_name",
+      "description": "$string:transparent_search_widget_desc",
+      "src": "./ets/widget/pages/TransparentSearchWidgetCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "isDynamic": false,
+      "colorMode": "auto",
+      "isDefault": false,
+      "updateEnabled": false,
+      "defaultDimension": "1*2",
+      "supportDimensions": [
+        "1*2"
+      ]
+    }
+  ]
+}

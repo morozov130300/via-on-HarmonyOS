@@ -36,6 +36,14 @@ function extractEntryUrl(want: Want): EntryUrl {
     if (typeof viaUrl === 'string' && viaUrl !== '') {
       return { url: viaUrl, external: false }
     }
+    // 原版 Trampoline action（mark.via.SEARCH/HISTORY/BOOKMARK/SCAN → k6.u()）：
+    // 鸿蒙侧由服务卡片（FormLink router）与静态快捷方式（shortcuts_config wants parameters）
+    // 以 viaCmd = via:// 命令字符串触发，走既有 via:// 内部命令通道
+    const viaCmd = params['viaCmd']
+    if (typeof viaCmd === 'string' && viaCmd !== '') {
+      AppStorage.setOrCreate('via_internal_cmd', viaCmd)
+      return { url: '', external: false }
+    }
   }
   const uri = want.uri
   if (typeof uri === 'string' && uri !== '') {

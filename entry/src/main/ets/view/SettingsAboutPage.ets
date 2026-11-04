@@ -9,6 +9,8 @@ const CONTACT_WECHAT_URL: string = 'http://viayoo.com/contact/wechat/'
 const TERMS_OF_USE_URL: string = 'https://viayoo.com/zh-cn/docs/terms-of-use.html'
 const PRIVACY_POLICY_URL: string = 'https://viayoo.com/zh-cn/docs/privacy-policy.html'
 const CONTACT_EMAIL: string = 'yafengtu@gmail.com'
+// 原版 hb/d.java j3 case 4（q(4, x7.u.f13963e6 = string k_「协助翻译」）→ k3("https://github.com/tuyafeng/Via")
+const HELP_TRANSLATE_URL: string = 'https://github.com/tuyafeng/Via'
 
 @ComponentV2
 export struct SettingsAboutPage {
@@ -54,7 +56,7 @@ export struct SettingsAboutPage {
             this.openLink(CONTACT_WECHAT_URL)
           })
           this.AboutRow('协助翻译', () => {
-            this.notImplemented()
+            this.openLink(HELP_TRANSLATE_URL)
           })
           this.AboutRow('使用协议', () => {
             this.openLink(TERMS_OF_USE_URL)
@@ -139,10 +141,6 @@ export struct SettingsAboutPage {
         console.error('copy email failed')
       })
     })
-  }
-
-  private notImplemented(): void {
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
   }
 
   // 原版关于页「检查更新」：y8/h.k() 拉取配置 → y8/h.h() 流程；

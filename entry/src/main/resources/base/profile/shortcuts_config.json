@@ -1,0 +1,64 @@
+{
+  "shortcuts": [
+    {
+      "shortcutId": "scan",
+      "label": "$string:shortcut_scan_qr",
+      "icon": "$media:via_shortcut_scan",
+      "wants": [
+        {
+          "bundleName": "cn.edu.whut.via",
+          "moduleName": "entry",
+          "abilityName": "EntryAbility",
+          "parameters": {
+            "viaCmd": "via://scanner"
+          }
+        }
+      ]
+    },
+    {
+      "shortcutId": "search",
+      "label": "$string:shortcut_search",
+      "icon": "$media:via_shortcut_search",
+      "wants": [
+        {
+          "bundleName": "cn.edu.whut.via",
+          "moduleName": "entry",
+          "abilityName": "EntryAbility",
+          "parameters": {
+            "viaCmd": "via://search"
+          }
+        }
+      ]
+    },
+    {
+      "shortcutId": "history",
+      "label": "$string:shortcut_history",
+      "icon": "$media:via_shortcut_history",
+      "wants": [
+        {
+          "bundleName": "cn.edu.whut.via",
+          "moduleName": "entry",
+          "abilityName": "EntryAbility",
+          "parameters": {
+            "viaCmd": "via://history"
+          }
+        }
+      ]
+    },
+    {
+      "shortcutId": "bookmark",
+      "label": "$string:shortcut_bookmark",
+      "icon": "$media:via_shortcut_bookmark",
+      "wants": [
+        {
+          "bundleName": "cn.edu.whut.via",
+          "moduleName": "entry",
+          "abilityName": "EntryAbility",
+          "parameters": {
+            "viaCmd": "via://bookmarks"
+          }
+        }
+      ]
+    }
+  ]
+}

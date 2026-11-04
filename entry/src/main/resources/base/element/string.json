@@ -949,6 +949,38 @@
       "value": "请先打开网页"
     },
     {
+      "name": "search_widget_name",
+      "value": "Via"
+    },
+    {
+      "name": "search_widget_desc",
+      "value": "Via 浏览器"
+    },
+    {
+      "name": "transparent_search_widget_name",
+      "value": "Via"
+    },
+    {
+      "name": "transparent_search_widget_desc",
+      "value": "Via 浏览器"
+    },
+    {
+      "name": "shortcut_scan_qr",
+      "value": "扫描二维码"
+    },
+    {
+      "name": "shortcut_search",
+      "value": "搜索"
+    },
+    {
+      "name": "shortcut_history",
+      "value": "历史"
+    },
+    {
+      "name": "shortcut_bookmark",
+      "value": "书签"
+    },
+    {
       "name": "link_copied",
       "value": "链接已复制"
     },

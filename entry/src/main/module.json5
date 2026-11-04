@@ -102,10 +102,33 @@
               { "type": "text/plain" }
             ]
           }
+        ],
+        "metadata": [
+          {
+            "name": "ohos.ability.shortcuts",
+            "resource": "$profile:shortcuts_config"
+          }
         ]
       }
     ],
     "extensionAbilities": [
+      {
+        // 原版 AndroidManifest SearchWidgetProvider/TransparentSearchWidgetProvider 两个 receiver
+        // （meta-data android.appwidget.provider @xml/h、@xml/i）；鸿蒙 Form Kit 一个 form 扩展
+        // 承载两张卡片（form_config.json forms: searchWidget/transparentSearchWidget）
+        "name": "SearchFormAbility",
+        "srcEntry": "./ets/entryformability/SearchFormAbility.ets",
+        "label": "$string:search_widget_name",
+        "description": "$string:search_widget_desc",
+        "type": "form",
+        "exported": true,
+        "metadata": [
+          {
+            "name": "ohos.extension.form",
+            "resource": "$profile:form_config"
+          }
+        ]
+      },
       {
         "name": "EntryBackupAbility",
         "srcEntry": "./ets/entrybackupability/EntryBackupAbility.ets",
