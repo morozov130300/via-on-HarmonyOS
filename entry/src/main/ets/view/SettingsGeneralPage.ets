@@ -94,10 +94,6 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '下载管理', rowValue: this.dlManagerLabel(), onTapRow: () => {
               this.pickDlManager()
             } })
-            // 原版 hb/c4 id27：外置视频播放器（videoplayer），HarmonyOS 无法枚举第三方播放器，仅 关闭/系统分享
-            SettingNavRow({ rowLabel: '外置视频播放器', rowValue: this.videoPlayerLabel(), onTapRow: () => {
-              this.pickVideoPlayer()
-            } })
             SettingNavRow({ rowLabel: '退出时清除数据', onTapRow: () => {
               this.pickClearOnExit()
             } })
@@ -353,8 +349,8 @@ export struct SettingsGeneralPage {
     this.listDialogId = -1
   }
 
-  // 原版 z8/h0.f + arrays c：退出时清除数据七项多选，位表 [1,2,4,64,8,16,32]
-  @Local clearOnExitChecks: boolean[] = [false, false, false, false, false, false, false]
+  // 原版 z8/h0.f + arrays c：退出时清除数据多选，位表 [1,4,64,8,16,32]（表单数据位2已移除）
+  @Local clearOnExitChecks: boolean[] = [false, false, false, false, false, false]
   private clearOnExitDialogId: number = -1
 
   private pickClearOnExit(): void {
@@ -450,7 +446,8 @@ export struct SettingsGeneralPage {
   }
 
   private saveClearOnExit(): void {
-    let mask = 0
+    // 「表单数据」位2已从 UI 移除，保留原存储值以保证与安卓端备份互操作
+    let mask = this.settings.clearOnExit & 2
     for (let i = 0; i < CLEAR_ON_EXIT_ITEMS.length; i++) {
       if (this.clearOnExitChecks[i]) {
         mask |= CLEAR_ON_EXIT_BITS[i]
@@ -1284,18 +1281,6 @@ export struct SettingsGeneralPage {
     this.homeUrlDialogId = -1
   }
 
-  // 原版 hb/c4 case27（hb.D4）：C0 首项 = w.d.a("", qv 系统分享)，无「关闭」选项；
-  // HarmonyOS 无第三方播放器枚举，选项仅 系统分享
-  private videoPlayerLabel(): string {
-    return '系统分享'
-  }
-
-  private pickVideoPlayer(): void {
-    this.openListDialog('外置视频播放器', ['系统分享'], 0, false, (index: number): void => {
-      this.settings.setVideoPlayer('share')
-    })
-  }
-
   // 原版 hb/c4 case15（下载管理，dlmanager）：A0=[""]、label=[d5 内建下载器]
   private dlManagerLabel(): string {
     return '内建下载器'
@@ -1307,8 +1292,8 @@ export struct SettingsGeneralPage {
     })
   }
 
-  // 原版 z8.h0.e：默认选中 = 已存掩码 cleardata2（w9.l.V()），位表 iArr {1,2,4,64,8,16,32}
-  private static readonly CLEAR_DATA_BITS: number[] = [1, 2, 4, 64, 8, 16, 32]
+  // 原版 z8/h0.e：默认选中 = 已存掩码 cleardata2（w9.l.V()），位表 {1,4,64,8,16,32}（表单数据位2已移除）
+  private static readonly CLEAR_DATA_BITS: number[] = [1, 4, 64, 8, 16, 32]
 
   private confirmClear(): void {
     const mask = this.settings.clearData2
@@ -1330,7 +1315,7 @@ export struct SettingsGeneralPage {
     })
   }
 
-  @Local clearDataSelection: boolean[] = [true, true, true, false, false, false, false]
+  @Local clearDataSelection: boolean[] = [true, true, false, false, false, false]
   private clearDataDialogId: number = -1
 
   @Builder
@@ -1436,39 +1421,32 @@ export struct SettingsGeneralPage {
       }
     }
     if (selected[1]) {
-      // 原版表单数据=清除表单自动填充；ArkWeb 无独立 API，用 WebStorage 数据清除
-      try {
-        webview.WebStorage.deleteAllData()
-      } catch (error) {
-        console.error('clear form data failed')
-      }
-    }
-    if (selected[2]) {
       this.db.clearHistory().catch((error: BusinessError) => {
         console.error(`clear history failed: ${error.message}`)
       })
       this.settings.clearSearchHistory()
     }
-    if (selected[3]) {
+    if (selected[2]) {
       AppStorage.setOrCreate('via_undo_close_url', '')
     }
-    if (selected[4]) {
+    if (selected[3]) {
       try {
         webview.WebStorage.deleteAllData()
       } catch (error) {
         console.error('clear web storage failed')
       }
     }
-    if (selected[5]) {
+    if (selected[4]) {
       webview.WebCookieManager.clearAllCookies().catch((error: BusinessError) => {
         console.error(`clear cookies failed: ${error.message}`)
       })
     }
-    if (selected[6]) {
+    if (selected[5]) {
       this.clearAppCache()
     }
     // 原版 z8.h0.a 末尾：确认后保存选中掩码（w9.l.I0），有清除项时 toast「数据已清除」(S2)
-    let mask = 0
+    // 「表单数据」位2已从 UI 移除，保留原存储值以保证与安卓端备份互操作
+    let mask = this.settings.clearData2 & 2
     for (let i = 0; i < CLEAR_DATA_ITEMS.length; i++) {
       if (selected[i]) {
         mask |= SettingsGeneralPage.CLEAR_DATA_BITS[i]
@@ -1506,10 +1484,10 @@ export struct SettingsGeneralPage {
   }
 }
 
-// 原版 7 项与顺序（arrays.xml array c：缓存/表单数据/历史/关闭的标签页/网页存储/Cookies/应用缓存）
+// 原版项与顺序（arrays.xml array c：缓存/表单数据/历史/关闭的标签页/网页存储/Cookies/应用缓存）
+// 鸿蒙端已移除「表单数据」（ArkWeb 无表单自动填充数据），位2仅保留存储语义
 const CLEAR_DATA_ITEMS: string[] = [
   '缓存',
-  '表单数据',
   '历史',
   '关闭的标签页',
   '网页存储',
@@ -1517,10 +1495,9 @@ const CLEAR_DATA_ITEMS: string[] = [
   '应用缓存'
 ]
 
-// 原版 z8/h0.f：退出时清除数据同表（arrays c），位表 [1,2,4,64,8,16,32]
+// 原版 z8/h0.f：退出时清除数据同表（arrays c），位表 [1,4,64,8,16,32]（表单数据位2已移除）
 const CLEAR_ON_EXIT_ITEMS: string[] = [
   '缓存',
-  '表单数据',
   '历史',
   '关闭的标签页',
   '网页存储',
@@ -1528,7 +1505,7 @@ const CLEAR_ON_EXIT_ITEMS: string[] = [
   '应用缓存'
 ]
 
-const CLEAR_ON_EXIT_BITS: number[] = [1, 2, 4, 64, 8, 16, 32]
+const CLEAR_ON_EXIT_BITS: number[] = [1, 4, 64, 8, 16, 32]
 
 @Builder
 export function SettingsGeneralPageBuilder() {

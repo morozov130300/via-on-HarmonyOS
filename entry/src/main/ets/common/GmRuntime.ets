@@ -9,6 +9,7 @@ import { fileIo } from '@kit.CoreFileKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { AppSettings } from './Settings'
 import { UserScriptRec } from './Types'
+import { startScriptsAutoUpdate } from './ScriptUpdater'
 
 const TAG = 'GmRuntime'
 const DOMAIN = 0x0000
@@ -623,6 +624,8 @@ export function initGmRuntime(context: common.Context): void {
     hilog.error(DOMAIN, TAG, 'init gm store failed: %{public}s', error.message)
   })
   GmRequireStore.getInstance().init(context)
+  // 原版启动链 k6.i9() → c8/na.q0() → sb/q：脚本自动更新（fire-and-forget）
+  startScriptsAutoUpdate(context)
 }
 
 // ===================== o5/c.java 响应状态 =====================

@@ -1,10 +1,5 @@
 import { fileIo } from '@kit.CoreFileKit'
-import { connection } from '@kit.NetworkKit'
-
-interface ParsedProxyTarget {
-  host: string
-  port: number
-}
+import { webview } from '@kit.ArkWeb'
 
 // 原版 s8/c.java：代理配置模型
 // 配置文件 files/proxy/config.txt，行格式 key=value：
@@ -135,54 +130,16 @@ export class ProxyConfig {
     }
   }
 
-  // 鸿蒙 connection.HttpProxy 仅接受 host/port（HTTP 代理），原版 proxyUrl 为
-  // URL 形式（如 socks://127.0.0.1:1080），此处解析拆分 host/port 传参
-  static parseProxyTarget(url: string): ParsedProxyTarget | null {
-    let rest = url
-    let scheme = ''
-    const schemeIndex = rest.indexOf('://')
-    if (schemeIndex >= 0) {
-      scheme = rest.substring(0, schemeIndex).toLowerCase()
-      rest = rest.substring(schemeIndex + 3)
-    }
-    const slash = rest.indexOf('/')
-    if (slash >= 0) {
-      rest = rest.substring(0, slash)
-    }
-    const atSign = rest.lastIndexOf('@')
-    if (atSign >= 0) {
-      rest = rest.substring(atSign + 1)
-    }
-    const colon = rest.lastIndexOf(':')
-    if (colon > 0) {
-      const host = rest.substring(0, colon)
-      const port = parseInt(rest.substring(colon + 1))
-      if (host !== '' && !isNaN(port) && port > 0 && port <= 65535) {
-        return { host: host, port: port }
-      }
-      return null
-    }
-    if (rest === '') {
-      return null
-    }
-    if (scheme === 'http') {
-      return { host: rest, port: 80 }
-    }
-    if (scheme === 'https') {
-      return { host: rest, port: 443 }
-    }
-    if (scheme === 'socks' || scheme === 'socks5') {
-      return { host: rest, port: 1080 }
-    }
-    return null
-  }
 }
 
-// 原版 s8/b.java：代理启停管理
+// 原版 s8/b.java：代理启停管理（原版 q0/c → AndroidX WebView ProxyController，
+// 鸿蒙对应 webview.ProxyController，对应用内所有 Web 组件生效）
 export class ProxyManager {
   private static instance: ProxyManager | null = null
   private config: ProxyConfig | null = null
   private running: boolean = false
+  // initializeWebEngine 全生命周期一次（docs：不需重复调用）
+  private enginePrepared: boolean = false
 
   static getInstance(): ProxyManager {
     if (ProxyManager.instance === null) {
@@ -192,16 +149,15 @@ export class ProxyManager {
   }
 
   // 原版 s8/b.c()：PROXY_OVERRIDE 特性判定；
-  // 鸿蒙 connection.setAppHttpProxy 可用（作用于 Web 组件请求）→ 恒 true
+  // webview.ProxyController API 15+（工程 API 26）→ 恒 true
   isSupported(): boolean {
     return true
   }
 
   // 原版 s8/b.d()：PROXY_OVERRIDE_REVERSE_BYPASS 特性判定；
-  // 鸿蒙 HttpProxy 仅有 exclusionList（排除不走代理列表），无法表达
-  // reverse 模式（仅指定域走代理）→ 恒 false
+  // webview.ProxyConfig.enableReverseBypass API 15+ 原生支持 → 恒 true
   isReverseBypassSupported(): boolean {
-    return false
+    return true
   }
 
   getConfig(context: Context): ProxyConfig {
@@ -212,7 +168,21 @@ export class ProxyManager {
     return this.config
   }
 
-  // 原版 s8/b.e()：enabled 且 proxyUrl 非空则设置应用级 HTTP 代理
+  // applyProxyOverride 要求 Web 内核就绪：apply 前先 initializeWebEngine 预加载动态库
+  //（docs：主线程调用、全局一次；本方法两条调用路径——启动 onCreate 与设置页——均在主线程）
+  private prepareWebEngine(): void {
+    if (this.enginePrepared) {
+      return
+    }
+    try {
+      webview.WebviewController.initializeWebEngine()
+    } catch (error) {
+    }
+    this.enginePrepared = true
+  }
+
+  // 原版 s8/b.e()：enabled 且 proxyUrl 非空则对应用内所有 Web 组件应用代理。
+  // 构建顺序 1:1 对应原版 b.a 链：d(proxyUrl) → g() → b() → j(reverse) → a(rule)*
   start(context: Context): boolean {
     if (this.running || !this.isSupported()) {
       return false
@@ -221,17 +191,33 @@ export class ProxyManager {
     if (!config.hasProxyUrl()) {
       return false
     }
-    const target = ProxyConfig.parseProxyTarget(config.proxyUrl)
-    if (target === null) {
+    const proxyConfig = new webview.ProxyConfig()
+    try {
+      // 原版 d(url)：代理地址原样直传，格式 [scheme://]host[:port]，
+      // scheme http/https/socks（socks 默认端口 1080），原版 socks://host:port 原生可建隧道
+      proxyConfig.insertProxyRule(config.proxyUrl)
+      // 原版 g()：本地地址绕过
+      proxyConfig.insertBypassRule('<local>')
+      // 原版 b()：direct:// 兜底（未匹配规则 URL 直连），默认 MATCH_ALL_SCHEMES
+      proxyConfig.insertDirectRule()
+      // 原版 j(true)：仅 d() 且 h() 时反转 bypass 语义（列表内走代理、其余直连）
+      if (this.isReverseBypassSupported() && config.reverseBypassRules) {
+        proxyConfig.enableReverseBypass(true)
+      }
+      // 原版 a(rule)：bypass 列表逐条插入
+      const rules = config.sortedRules()
+      for (let i = 0; i < rules.length; i++) {
+        proxyConfig.insertBypassRule(rules[i])
+      }
+    } catch (error) {
       return false
     }
-    const exclusionList = config.sortedRules()
+    this.prepareWebEngine()
     try {
-      connection.setAppHttpProxy({
-        host: target.host,
-        port: target.port,
-        exclusionList: exclusionList
-      } as connection.HttpProxy)
+      // 原版 q0/c.c(config, executor, runnable)：应用代理；回调在 UI 线程（原版日志 webview proxy changed!）
+      webview.ProxyController.applyProxyOverride(proxyConfig, () => {
+        console.info('webview proxy changed!')
+      })
     } catch (error) {
       return false
     }
@@ -239,17 +225,16 @@ export class ProxyManager {
     return true
   }
 
-  // 原版 s8/b.f()：清除代理（host 置空、port 置 0、排除列表置空）
+  // 原版 s8/b.f()：移除代理配置，恢复默认网络连接
   stop(context: Context): boolean {
     if (!this.running || !this.isSupported()) {
       return false
     }
+    this.prepareWebEngine()
     try {
-      connection.setAppHttpProxy({
-        host: '',
-        port: 0,
-        exclusionList: []
-      } as connection.HttpProxy)
+      webview.ProxyController.removeProxyOverride(() => {
+        console.info('webview proxy changed!')
+      })
     } catch (error) {
       return false
     }

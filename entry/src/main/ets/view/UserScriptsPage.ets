@@ -222,7 +222,8 @@ export struct UserScriptsPage {
       sheets.push({
         title: '更新',
         action: (): void => {
-          this.confirmUpdateSingle(script)
+          // sa/d1.u4 → l4：长按「更新」无预确认，直接下载（确认在解析后 t2.n 弹窗）
+          this.downloadAndInstall(script.downloadUrl, script.id)
         }
       })
     }
@@ -339,24 +340,6 @@ export struct UserScriptsPage {
     })
   }
 
-  // C3/V3：单脚本更新确认 rn「你确认更新 %s 吗？」
-  private confirmUpdateSingle(script: UserScriptRec): void {
-    this.getUIContext().showAlertDialog({
-      message: `你确认更新 ${script.name} 吗？`,
-      primaryButton: {
-        value: $r('app.string.cancel'),
-        action: () => {
-        }
-      },
-      secondaryButton: {
-        value: $r('app.string.done'),
-        action: () => {
-          this.downloadAndInstall(script.downloadUrl, script.id)
-        }
-      }
-    })
-  }
-
   // g4：导入脚本（文件选择 → j4 解析）
   private importScript(): void {
     try {
@@ -407,30 +390,84 @@ export struct UserScriptsPage {
     })
   }
 
-  // G3/H3：解析元数据并落库；失败 toast tg，成功 toast zi/zj
+  // G3/H3（z8/t2.n）：解析后按「新脚本 / 已存在且版本相同 / 已存在且版本不同」三态确认：
+  // yy+na 安装脚本 / z2+nf 重新安装脚本 / z9+nl 更新脚本（版本空回退旧版本，再回退 "0.1"，字符串等值比较）
   private installFromCode(code: string, sourceUrl: string, id: number): void {
     const parsed = parseUserScriptMeta(code, sourceUrl)
     if (parsed === null) {
       this.toast('解析脚本失败！')
       return
     }
-    const rec = parsed
-    if (id > 0) {
-      const existing = this.settings.userScripts.find((s: UserScriptRec): boolean => s.id === id)
-      if (existing !== undefined) {
-        rec.id = existing.id
-        rec.enabled = existing.enabled
-      } else {
-        this.toast(`安装 "${rec.name}" 失败！`)
-        return
-      }
-    } else {
-      rec.id = Date.now()
-      rec.enabled = true
+    const existing = this.findExistingScript(parsed, id)
+    const oldVersion = existing !== null ? existing.version : ''
+    // t2.n:124-125：新版本为空回退旧版本，再回退 "0.1"
+    let newVersion = parsed.version
+    if (newVersion === '') {
+      newVersion = oldVersion !== '' ? oldVersion : '0.1'
     }
-    this.settings.saveScript(rec)
-    fetchScriptRequires(rec)
-    this.toast(`安装 "${rec.name}" 成功！`)
+    let title = ''
+    let message = ''
+    if (existing === null) {
+      title = '安装脚本'
+      message = `你确定安装 "${parsed.name}"(${newVersion}) 吗？`
+    } else if (newVersion === oldVersion) {
+      title = '重新安装脚本'
+      message = `你确定重新安装 "${parsed.name}"(${newVersion}) 吗？`
+    } else {
+      title = '更新脚本'
+      message = `你确定更新脚本 "${parsed.name}"(${oldVersion !== '' ? oldVersion : '0.1'} -> ${newVersion}) 吗？`
+    }
+    this.getUIContext().showAlertDialog({
+      title: title,
+      message: message,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.done'),
+        action: () => {
+          this.persistScript(parsed, existing, id)
+        }
+      }
+    })
+  }
+
+  // 已装脚本查找：id>0 按 id；否则按下载地址匹配（原版按 script_id，其下载地址为 p5.i 第二判据）
+  private findExistingScript(parsed: UserScriptRec, id: number): UserScriptRec | null {
+    const scripts = this.settings.userScripts
+    if (id > 0) {
+      for (let i = 0; i < scripts.length; i++) {
+        if (scripts[i].id === id) {
+          return scripts[i]
+        }
+      }
+      return null
+    }
+    if (parsed.downloadUrl !== '') {
+      for (let i = 0; i < scripts.length; i++) {
+        if (scripts[i].downloadUrl === parsed.downloadUrl) {
+          return scripts[i]
+        }
+      }
+    }
+    return null
+  }
+
+  // t2.f 确认分支：p5/b.p 持久化（enabled 置 true，原版未回写原启用位）→ toast zi/zj
+  private persistScript(parsed: UserScriptRec, existing: UserScriptRec | null, id: number): void {
+    if (existing !== null) {
+      parsed.id = existing.id
+    } else if (id > 0) {
+      parsed.id = id
+    } else {
+      parsed.id = Date.now()
+    }
+    parsed.enabled = true
+    this.settings.saveScript(parsed)
+    fetchScriptRequires(parsed)
+    this.toast(`安装 "${parsed.name}" 成功！`)
   }
 
   // q4/w4：更新全部（ch 更新 → a0q 开始更新… → a0r 脚本更新完成。）

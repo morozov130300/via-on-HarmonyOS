@@ -159,6 +159,22 @@
     {
       "name": "widget_icon_tint",
       "value": "#DE000000"
+    },
+    {
+      "name": "translate_panel_bg",
+      "value": "#CC000000"
+    },
+    {
+      "name": "translate_text",
+      "value": "#BEFFFFFF"
+    },
+    {
+      "name": "translate_icon",
+      "value": "#9F9F9F"
+    },
+    {
+      "name": "translate_divider",
+      "value": "#30111111"
     }
   ]
 }

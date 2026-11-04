@@ -188,6 +188,27 @@ export class BackupSettings {
     if (s.searchToolbarDisabled !== '') {
       st['searchtoolbardisabled'] = s.searchToolbarDisabled
     }
+    // 原版 searchshortcuts（w9/k.java:943 f1）：搜索快捷词 JSON 串
+    // （{"<引擎id>":"<快捷词>"}）；仅 pref 存在才导（L2 contains），本工程未实施值为空不导
+    if (s.searchshortcuts !== '') {
+      st['searchshortcuts'] = s.searchshortcuts
+    }
+    // 原版 taghome（w9/k.java:751 a0 / 1571 z0）：主页 logo 内容，pref 存 Base64(trim(内容))，
+    // 仅 pref 存在才导；按当前 homeLogoType（=原版 logochioce 0默认/1图片/2文字/3HTML/4无）取内容：
+    // 图片=e9/u.b3 "<img class=\"smaller\" src=\"...\" />"、无=d3 case4 "<br>"
+    let taghomeContent = ''
+    if (s.homeLogoType === 1 && s.homeLogoImage !== '') {
+      taghomeContent = `<img class="smaller" src="${s.homeLogoImage}" />`
+    } else if (s.homeLogoType === 2 && s.homeLogoText !== '') {
+      taghomeContent = s.homeLogoText
+    } else if (s.homeLogoType === 3 && s.homeLogoHtml !== '') {
+      taghomeContent = s.homeLogoHtml
+    } else if (s.homeLogoType === 4) {
+      taghomeContent = '<br>'
+    }
+    if (taghomeContent !== '') {
+      st['taghome'] = BackupCrypto.base64Wrap76(BackupCrypto.utf8Encode(taghomeContent.trim()))
+    }
     // 原版 csstheme（w9/k.java:765 s3("csstheme", v0.b(str.trim()))）：
     // 存 Base64(trim 后 CSS)，导出即 pref 原值（Base64）
     if (s.customCss !== '') {
@@ -255,6 +276,86 @@ export class BackupSettings {
     if (s.labFlag !== 0) {
       st['labflag'] = s.labFlag
     }
+    // 原版 bookmarksviewmode/bookmarksorder（w9/k.java:564/640，默认 0）：仅 pref 存在才导；
+    // 本工程书签页功能未实施，默认值不导
+    if (s.bookmarksviewmode !== 0) {
+      st['bookmarksviewmode'] = s.bookmarksviewmode
+    }
+    if (s.bookmarksorder !== 0) {
+      st['bookmarksorder'] = s.bookmarksorder
+    }
+    // 原版 favinfo（w9/k.java:690 X2 → i9.c，默认 1638446）：主页收藏设计打包 int——
+    // 宽 bits0-6 / 高 bits7-13 / 圆角 bits14-20 / 隐藏图标 bit21 / 无彩色 bit22（i9/c.java）；
+    // 原版 x9/c.java:21 迁移（版本 2）首启即写四键 → pref 恒存在 → 恒导出；
+    // 鸿蒙 homeFavIconStyle 1=文字（隐藏图标→bit21）、homeFavShadow 1=透明（无彩色→bit22）
+    st['favinfo'] = (s.homeFavWidth & 127)
+      | ((s.homeFavHeight & 127) << 7)
+      | ((s.homeFavCorner & 127) << 14)
+      | (s.homeFavIconStyle === 1 ? 2097152 : 0)
+      | (s.homeFavShadow === 1 ? 4194304 : 0)
+    // 原版 logoinfo2（w9/k.java r0/W1 → i9.d，默认 193766400）：主页 Logo 设计打包 int——
+    // 宽 bits0-6 / 高 bits7-13 / 圆角 bits14-20 / 字号 bits21-26(6b) / 粗体 bit27 / 斜体 bit28
+    // （i9/d.java）；鸿蒙 homeLogoStyle 0常规/1粗体/2斜体/3粗斜体 → 粗体/斜体位
+    st['logoinfo2'] = (s.homeLogoWidth & 127)
+      | ((s.homeLogoHeight & 127) << 7)
+      | ((s.homeLogoCorner & 127) << 14)
+      | ((s.homeLogoSize & 63) << 21)
+      | ((s.homeLogoStyle === 1 || s.homeLogoStyle === 3) ? 134217728 : 0)
+      | ((s.homeLogoStyle === 2 || s.homeLogoStyle === 3) ? 268435456 : 0)
+    // 原版 searchinfo（w9/k.java V2/W0 → i9.e，默认 2490468）：搜索框设计打包 int——
+    // 圆角 bits0-6 / 不透明度 bits7-13 / 描边不透明度 bits14-20 / 描边宽 bits21-23(3b) /
+    // 线条样式 bit24（i9/e.java）；鸿蒙 homePillStyle 0矩形/1线条 → bit24
+    st['searchinfo'] = (s.homePillCorner & 127)
+      | ((s.homePillOpacity & 127) << 7)
+      | ((s.homePillStrokeOpacity & 127) << 14)
+      | ((s.homePillStrokeWidth & 7) << 21)
+      | (s.homePillStyle === 1 ? 16777216 : 0)
+    // 原版 custominfo（w9/k.java X()/h1 → i9.b，默认 0）：主页高级设计打包 int——
+    // 模糊 bit0 / 隐藏搜索区 bit1 / 背景不透明度 bits2-8（i9/b.java）；
+    // 鸿蒙 homeAdvEffect 0透明/1模糊 → bit0、homeAdvArea 0展示/1隐藏 → bit1；
+    // bits2-8 原版恒 0（i9.b.a() 无消费方），对齐写 0
+    st['custominfo'] = (s.homeAdvEffect === 1 ? 1 : 0)
+      | (s.homeAdvArea === 1 ? 2 : 0)
+    // 原版 appui2（w9/k.java:1524/1046，默认 -1 自动）：界面布局 0传统/1工具栏在上/
+    // 2工具栏在下/3双行（hb/n7.java 单选写 0-3）；-1 自动与 4 平板强制鸿蒙无对应，
+    // 非默认不导（鸿蒙 appLayout 0-3 同序，默认 0=传统）
+    if (s.appLayout !== 0) {
+      st['appui2'] = s.appLayout
+    }
+    // 原版 urlbox（w9/k.java:973/185，默认 0）：地址栏内容 0标题/1地址/2域名（hb/n7.java 单选）；
+    // 鸿蒙 addressBarContent 0-2 同序，默认不导
+    if (s.addressBarContent !== 0) {
+      st['urlbox'] = s.addressBarContent
+    }
+    // 原版 logochioce（w9/k.java:559/1100，默认 0）：主页 Logo 类型 0默认/1图片/2文字/
+    // 3HTML/4无；鸿蒙 homeLogoType 0-4 同序，默认不导
+    if (s.homeLogoType !== 0) {
+      st['logochioce'] = s.homeLogoType
+    }
+    // 原版 fab 族 / urlbarcolor：默认值（80/12/13/23/1/-1）不导，与原版
+    // 「pref 未定制不持久化 → L2 contains 不导」一致
+    if (s.fab !== 80) {
+      st['fab'] = s.fab
+    }
+    if (s.fableftaction !== 12) {
+      st['fableftaction'] = s.fableftaction
+    }
+    if (s.fabrightaction !== 13) {
+      st['fabrightaction'] = s.fabrightaction
+    }
+    if (s.fabupaction !== 23) {
+      st['fabupaction'] = s.fabupaction
+    }
+    if (s.fabdownaction !== 1) {
+      st['fabdownaction'] = s.fabdownaction
+    }
+    if (s.urlbarcolor !== -1) {
+      st['urlbarcolor'] = s.urlbarcolor
+    }
+    // 原版 version（w9/k.java:956 f3 / 1406 t3）：偏好迁移版本 int（非应用版本号），
+    // u3() 迁移链最高版本 = 14（x9.i=12、w9/k 内 a(12)/b(14)），安卓端导出恒为 14，
+    // 对齐写 14；导入忽略（本工程无偏好迁移系统）
+    st['version'] = 14
     st['webflag'] = webflag
     st['webflag2'] = s.simplifyUa ? 1 : 0
     st['appflag'] = appflag
@@ -551,6 +652,40 @@ export class BackupSettings {
     return result
   }
 
+  // m9/j.c：搜索快捷词 JSON 串引擎 id 键重映射（负 id 原样；0/正 id 查 map 未命中丢弃；
+  // 去重；解析失败原样返回）
+  private static remapShortcutJson(raw: string, map: Record<string, number>): string {
+    if (raw === '') {
+      return raw
+    }
+    try {
+      const parsed = JSON.parse(raw) as Record<string, Object>
+      const out: Record<string, Object> = {}
+      const keys = Object.keys(parsed)
+      for (let i = 0; i < keys.length; i++) {
+        const n = Number(keys[i])
+        if (Number.isNaN(n) || n === 0) {
+          continue
+        }
+        let mapped = n
+        if (n > 0) {
+          const target = map[keys[i]]
+          if (target === undefined) {
+            continue
+          }
+          mapped = target
+        }
+        const mappedKey = String(mapped)
+        if (out[mappedKey] === undefined) {
+          out[mappedKey] = parsed[keys[i]]
+        }
+      }
+      return JSON.stringify(out)
+    } catch (error) {
+      return raw
+    }
+  }
+
   // ba/b.u：enabledFlags(bit) 置位时读 flags(bit)，否则取默认
   private static siteBit(enabled: number, flags: number, bit: number, def: boolean): boolean {
     return (enabled & bit) !== 0 ? (flags & bit) !== 0 : def
@@ -668,8 +803,74 @@ export class BackupSettings {
         kv['orientation'] = st['screenOrientation'] as number
         kv['orientationV2'] = 1
       }
+      // favinfo（i9/c 位布局）：宽 bits0-6 / 高 bits7-13 / 圆角 bits14-20 /
+      // 隐藏图标 bit21 / 无彩色 bit22 → 鸿蒙分散键
+      if (typeof st['favinfo'] === 'number') {
+        const favinfo = st['favinfo'] as number
+        kv['homeFavWidth'] = favinfo & 127
+        kv['homeFavHeight'] = (favinfo >> 7) & 127
+        kv['homeFavCorner'] = (favinfo >> 14) & 127
+        kv['homeFavIconStyle'] = (favinfo & 2097152) !== 0 ? 1 : 0
+        kv['homeFavShadow'] = (favinfo & 4194304) !== 0 ? 1 : 0
+      }
+      // logoinfo2（i9/d 位布局）：宽 bits0-6 / 高 bits7-13 / 圆角 bits14-20 /
+      // 字号 bits21-26(6b) / 粗体 bit27 / 斜体 bit28 → 鸿蒙分散键（style 0常规/1粗体/2斜体/3粗斜体）
+      if (typeof st['logoinfo2'] === 'number') {
+        const logoinfo2 = st['logoinfo2'] as number
+        kv['homeLogoWidth'] = logoinfo2 & 127
+        kv['homeLogoHeight'] = (logoinfo2 >> 7) & 127
+        kv['homeLogoCorner'] = (logoinfo2 >> 14) & 127
+        kv['homeLogoSize'] = (logoinfo2 >> 21) & 63
+        const bold = (logoinfo2 & 134217728) !== 0
+        const italic = (logoinfo2 & 268435456) !== 0
+        kv['homeLogoStyle'] = (bold ? 1 : 0) + (italic ? 2 : 0)
+      }
+      // searchinfo（i9/e 位布局）：圆角 bits0-6 / 不透明度 bits7-13 / 描边不透明度 bits14-20 /
+      // 描边宽 bits21-23(3b) / 线条样式 bit24 → 鸿蒙分散键
+      if (typeof st['searchinfo'] === 'number') {
+        const searchinfo = st['searchinfo'] as number
+        kv['homePillCorner'] = searchinfo & 127
+        kv['homePillOpacity'] = (searchinfo >> 7) & 127
+        kv['homePillStrokeOpacity'] = (searchinfo >> 14) & 127
+        kv['homePillStrokeWidth'] = (searchinfo >> 21) & 7
+        kv['homePillStyle'] = (searchinfo & 16777216) !== 0 ? 1 : 0
+      }
+      // custominfo（i9/b 位布局）：模糊 bit0 / 隐藏搜索区 bit1 /
+      // 背景不透明度 bits2-8（原版无消费方，忽略）→ 鸿蒙分散键
+      if (typeof st['custominfo'] === 'number') {
+        const custominfo = st['custominfo'] as number
+        kv['homeAdvEffect'] = (custominfo & 1) !== 0 ? 1 : 0
+        kv['homeAdvArea'] = (custominfo & 2) !== 0 ? 1 : 0
+      }
+      // appui2（w9/k.java:1524，默认 -1）：0传统/1工具栏在上/2工具栏在下/3双行（hb/n7.java）；
+      // 鸿蒙 appLayout 0-3 同序；-1 自动与 4 平板强制鸿蒙无对应，忽略
+      if (typeof st['appui2'] === 'number') {
+        const appui2 = st['appui2'] as number
+        if (appui2 >= 0 && appui2 <= 3) {
+          kv['appLayout'] = appui2
+        }
+      }
+      // urlbox（w9/k.java:973，默认 0）：0标题/1地址/2域名；鸿蒙 addressBarContent 同序
+      if (typeof st['urlbox'] === 'number') {
+        const urlbox = st['urlbox'] as number
+        if (urlbox >= 0 && urlbox <= 2) {
+          kv['addressBarContent'] = urlbox
+        }
+      }
+      // logochioce（w9/k.java:559，默认 0）：0默认/1图片/2文字/3HTML/4无；
+      // 鸿蒙 homeLogoType 0-4 同序
+      if (typeof st['logochioce'] === 'number') {
+        const logochioce = st['logochioce'] as number
+        if (logochioce >= 0 && logochioce <= 4) {
+          kv['homeLogoType'] = logochioce
+        }
+      }
       // videoorientation / cleardata2 / labflag：键名与默认值（0/7/0）均与原版一致，直传
-      const intDirectKeys: string[] = ['videoorientation', 'cleardata2', 'labflag']
+      // bookmarksviewmode / bookmarksorder：键名与默认值（0/0）与原版一致，直传（功能未实施仅存储）
+      // fab 族 / urlbarcolor：键名与默认值（80/12/13/23/1/-1）与原版一致，直传（功能未实施仅存储）
+      const intDirectKeys: string[] = ['videoorientation', 'cleardata2', 'labflag',
+        'bookmarksviewmode', 'bookmarksorder',
+        'fab', 'fableftaction', 'fabrightaction', 'fabupaction', 'fabdownaction', 'urlbarcolor']
       for (let dk = 0; dk < intDirectKeys.length; dk++) {
         const rawKey = intDirectKeys[dk]
         if (typeof st[rawKey] === 'number') {
@@ -753,6 +954,38 @@ export class BackupSettings {
       if (searchtoolbardisabled !== '') {
         kv['searchToolbarDisabled'] = searchtoolbardisabled
       }
+      // searchshortcuts（w9/k.java:943 f1）：搜索快捷词 JSON 串，原样存储，
+      // 引擎 id 键在 settingsData 合并后重映射（m9/l.k → m9/j.c）
+      const searchshortcuts = BackupSettings.getString(st, 'searchshortcuts', '')
+      if (searchshortcuts !== '') {
+        kv['searchshortcuts'] = searchshortcuts
+      }
+      // taghome（w9/k.java:751/1571）：主页 logo 内容（Base64 编码，v0.b(trim))；
+      // 原版形态由 logochioce 区分（不在本批映射），按解码内容推断归入本工程 logo 存储：
+      // '<br>'→无、'<img'开头→图片(取 src)、含'<'→HTML、其余→文字
+      const taghome = BackupSettings.getString(st, 'taghome', '')
+      if (taghome !== '') {
+        const logoContent = BackupCrypto.utf8Decode(BackupCrypto.base64Decode(taghome)).trim()
+        if (logoContent === '<br>') {
+          kv['homeLogoType'] = 4
+        } else if (logoContent.startsWith('<img')) {
+          const srcMatch = logoContent.match(/src="([^"]*)"/)
+          if (srcMatch !== null && srcMatch.length > 1) {
+            kv['homeLogoType'] = 1
+            kv['homeLogoImage'] = srcMatch[1]
+          } else {
+            kv['homeLogoType'] = 3
+            kv['homeLogoHtml'] = logoContent
+          }
+        } else if (logoContent.includes('<')) {
+          kv['homeLogoType'] = 3
+          kv['homeLogoHtml'] = logoContent
+        } else {
+          kv['homeLogoType'] = 2
+          kv['homeLogoText'] = logoContent
+        }
+      }
+      // version（w9/k.java:956）：偏好迁移版本，本工程无迁移系统，导入忽略
     }
 
     // ---- settingsData（m9/l.o → ja/c.n 恢复）----
@@ -869,6 +1102,12 @@ export class BackupSettings {
       ? kv['searchToolbarDisabled'] as string : ''
     if (disabledRaw !== '') {
       kv['searchToolbarDisabled'] = BackupSettings.remapIdList(disabledRaw, engineIdMap)
+    }
+    // searchshortcuts：引擎 id JSON 键重映射（m9/l.java:439 → m9/j.c）
+    const shortcutsRaw = typeof kv['searchshortcuts'] === 'string'
+      ? kv['searchshortcuts'] as string : ''
+    if (shortcutsRaw !== '') {
+      kv['searchshortcuts'] = BackupSettings.remapShortcutJson(shortcutsRaw, engineIdMap)
     }
     // 浏览器标识：uachoice>0 → type1 记录 content / uastring（z8/b4.c 默认分支）
     if (uachoice >= 1) {

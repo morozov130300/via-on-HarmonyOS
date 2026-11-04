@@ -1,4 +1,5 @@
-import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { AbilityConstant, ConfigurationConstant, UIAbility, Want, bundleManager } from '@kit.AbilityKit';
+import { tag } from '@kit.ConnectivityKit';
 import { Configuration } from '@ohos.app.ability.Configuration';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
@@ -26,6 +27,57 @@ const OPEN_DOWNLOADS_EVENT_ID = 10003;
 interface EntryUrl {
   url: string;
   external: boolean;
+}
+
+// 原版 AndroidManifest Shell NDEF_DISCOVERED intent-filter（scheme http/https/via）
+const NFC_TAG_FOUND_ACTION = 'ohos.nfc.tag.action.TAG_FOUND';
+
+// NFC Forum TS NDEF 1.0 URI 记录前缀码表（URI Record Type Definition 章节）
+const NDEF_URI_PREFIXES: string[] = [
+  '', 'http://www.', 'https://www.', 'http://', 'https://', 'tel:', 'mailto:',
+  'ftp://anonymous:anonymous@', 'ftp://ftp.', 'ftps://', 'sftp://', 'smb://',
+  'nfs://', 'ftp://', 'dav://', 'news:', 'telnet://', 'imap:', 'rtsp://',
+  'urn:', 'pop:', 'sip:', 'sips:', 'tftp:', 'btspp://', 'btl2cap://',
+  'btgoep://', 'tcpobex://', 'irdaobex://', 'file://', 'urn:epc:id:',
+  'urn:epc:tag:', 'urn:epc:pat:', 'urn:epc:raw:', 'urn:epc:', 'urn:nfc:'
+];
+
+function ndefBytesToString(bytes: number[]): string {
+  let text = '';
+  for (let i = 0; i < bytes.length; i++) {
+    text += String.fromCharCode(bytes[i]);
+  }
+  return text;
+}
+
+// 仅接受原版 intent-filter 声明的 scheme：http/https/via
+function isNfcHandledUri(uri: string): boolean {
+  return uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('via://');
+}
+
+// 解析 NDEF 消息中的 URI 记录（TNF well-known=1 + RTD 'U'=0x55，payload[0] 为前缀码）
+function parseNdefUriRecords(records: tag.NdefRecord[]): string {
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i];
+    if (record.tnf !== 1) {
+      continue;
+    }
+    const rtdType = record.rtdType;
+    if (rtdType === undefined || rtdType.length !== 1 || rtdType[0] !== 0x55) {
+      continue;
+    }
+    const payload = record.payload;
+    if (payload === undefined || payload.length === 0) {
+      continue;
+    }
+    const code = payload[0];
+    const prefix = code >= 0 && code < NDEF_URI_PREFIXES.length ? NDEF_URI_PREFIXES[code] : '';
+    const uri = prefix + ndefBytesToString(payload.slice(1));
+    if (isNfcHandledUri(uri)) {
+      return uri;
+    }
+  }
+  return '';
 }
 
 // 原版 Trampoline → Shell 深链解析：b0.A() 的 VIEW 分支（uri 直传）+ via:// 内部命令（z8/b0.Q）
@@ -75,11 +127,23 @@ export default class EntryAbility extends UIAbility {
     });
     // 原版 mark/via/Shell 启动时机：读 proxy config → enabled 则启动应用级代理
     ProxyManager.getInstance().applyOnStartup(this.context);
-    const entry = extractEntryUrl(want)
-    if (entry.url !== '') {
-      AppStorage.setOrCreate('via_launch_url', entry.url)
-      AppStorage.setOrCreate('via_launch_external', entry.external)
-      AppStorage.setOrCreate('via_shared_text', false)
+    // NFC 前台分发注册所需 ElementName（原版无前台分发，仅 NDEF_DISCOVERED 后台匹配；
+    // 鸿蒙侧按 NFC 标签读写开发指南在 onForeground/onBackground 注册/注销）
+    if (canIUse('SystemCapability.Communication.NFC.Tag')) {
+      this.nfcElementName = {
+        bundleName: this.context.abilityInfo.bundleName,
+        abilityName: this.context.abilityInfo.name,
+        moduleName: this.context.abilityInfo.moduleName
+      };
+    }
+    // 原版 Shell NDEF_DISCOVERED：NFC 碰一碰打开网址（want.uri 或解析 NDEF URI 记录）
+    if (!this.handleNfcWant(want, true)) {
+      const entry = extractEntryUrl(want)
+      if (entry.url !== '') {
+        AppStorage.setOrCreate('via_launch_url', entry.url)
+        AppStorage.setOrCreate('via_launch_external', entry.external)
+        AppStorage.setOrCreate('via_shared_text', false)
+      }
     }
     // 原版 Trampoline filter#3：ACTION_SEND text/plain 分享接收（b0.A ACTION_SEND → i0.v）
     this.handleSharedText(want, true)
@@ -126,12 +190,14 @@ export default class EntryAbility extends UIAbility {
 
   onNewEntry(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewEntry');
-    const entry = extractEntryUrl(want)
-    if (entry.url !== '') {
-      emitter.emit(
-        { eventId: EXTERNAL_LINK_EVENT_ID },
-        { data: { 'linkUrl': entry.url, 'external': entry.external, 'sharedText': false } }
-      )
+    if (!this.handleNfcWant(want, false)) {
+      const entry = extractEntryUrl(want)
+      if (entry.url !== '') {
+        emitter.emit(
+          { eventId: EXTERNAL_LINK_EVENT_ID },
+          { data: { 'linkUrl': entry.url, 'external': entry.external, 'sharedText': false } }
+        )
+      }
     }
     // 热启动 via:// 内部命令：通知 Index 立即消费 AppStorage 'via_internal_cmd'
     const pendingCmd = AppStorage.get<string>('via_internal_cmd') ?? ''
@@ -183,6 +249,94 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
   }
 
+  // NFC 前台分发注册状态（tag.registerForegroundDispatch / unregisterForegroundDispatch）
+  private nfcElementName: bundleManager.ElementName | null = null;
+  private nfcForegroundRegistered: boolean = false;
+
+  // TAG_FOUND want 处理：系统已解析 URI（NDEF 首记录为 URI 时以 want.uri 传递）直接用，
+  // 否则按 TagInfo 解析 NDEF URI 记录；返回是否为 NFC 启动（是则跳过普通深链管线）
+  private handleNfcWant(want: Want, cold: boolean): boolean {
+    if (want.action !== NFC_TAG_FOUND_ACTION) {
+      return false;
+    }
+    const uri = want.uri;
+    if (typeof uri === 'string' && isNfcHandledUri(uri)) {
+      this.dispatchNfcUri(uri, cold);
+      return true;
+    }
+    if (!canIUse('SystemCapability.Communication.NFC.Tag')) {
+      return true;
+    }
+    try {
+      const tagInfo = tag.getTagInfo(want);
+      this.consumeNdefTagInfo(tagInfo, cold);
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', 'getTagInfo failed. Cause: %{public}s', JSON.stringify(err));
+    }
+    return true;
+  }
+
+  // NDEF 技术标签：优先取发现时缓存的 NDEF 消息，无缓存再异步 readNdef
+  private consumeNdefTagInfo(tagInfo: tag.TagInfo, cold: boolean): void {
+    if (tagInfo === null || tagInfo === undefined) {
+      return;
+    }
+    const techs = tagInfo.technology;
+    if (techs === undefined || techs === null) {
+      return;
+    }
+    let hasNdef = false;
+    for (let i = 0; i < techs.length; i++) {
+      if (techs[i] === tag.NDEF) {
+        hasNdef = true;
+        break;
+      }
+    }
+    if (!hasNdef) {
+      return;
+    }
+    const ndefTag = tag.getNdef(tagInfo);
+    let message: tag.NdefMessage | null = null;
+    try {
+      message = ndefTag.getNdefMessage();
+    } catch (err) {
+      message = null;
+    }
+    if (message !== null && message !== undefined) {
+      this.dispatchNfcUri(parseNdefUriRecords(message.getNdefRecords()), cold);
+      return;
+    }
+    ndefTag.readNdef().then((msg: tag.NdefMessage) => {
+      this.dispatchNfcUri(parseNdefUriRecords(msg.getNdefRecords()), cold);
+    }).catch((error: BusinessError) => {
+      hilog.error(DOMAIN, 'testTag', 'readNdef failed. Cause: %{public}s', JSON.stringify(error));
+    });
+  }
+
+  // 原版 b0.A() VIEW 分支同款出口：网页 URL 走深链管线，via:// 走内部命令通道
+  private dispatchNfcUri(uri: string, cold: boolean): void {
+    if (uri === '') {
+      return;
+    }
+    if (uri.startsWith('via://')) {
+      AppStorage.setOrCreate('via_internal_cmd', uri);
+      if (!cold) {
+        emitter.emit({ eventId: VIA_CMD_EVENT_ID }, { data: {} });
+      }
+      return;
+    }
+    if (cold) {
+      AppStorage.setOrCreate('via_launch_url', uri);
+      AppStorage.setOrCreate('via_launch_external', true);
+      AppStorage.setOrCreate('via_shared_text', false);
+    } else {
+      emitter.emit(
+        { eventId: EXTERNAL_LINK_EVENT_ID },
+        { data: { 'linkUrl': uri, 'external': true, 'sharedText': false } }
+      );
+    }
+  }
+
   onWindowStageCreate(windowStage: window.WindowStage): void {
     // Main window is created, set main page for this ability
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
@@ -226,11 +380,35 @@ export default class EntryAbility extends UIAbility {
   onForeground(): void {
     // Ability has brought to foreground
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
+    // NFC 前台优先分发：应用前台时碰一碰 NDEF 标签直接交由本应用处理
+    if (this.nfcElementName !== null && !this.nfcForegroundRegistered) {
+      try {
+        tag.registerForegroundDispatch(this.nfcElementName, [tag.NDEF],
+          (error: BusinessError, tagInfo: tag.TagInfo) => {
+            if (!error) {
+              this.consumeNdefTagInfo(tagInfo, false);
+            }
+          });
+        this.nfcForegroundRegistered = true;
+      } catch (err) {
+        hilog.error(DOMAIN, 'testTag', 'registerForegroundDispatch failed. Cause: %{public}s', JSON.stringify(err));
+      }
+    }
   }
 
   onBackground(): void {
     // Ability has back to background
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+    if (this.nfcForegroundRegistered) {
+      this.nfcForegroundRegistered = false;
+      try {
+        if (this.nfcElementName !== null) {
+          tag.unregisterForegroundDispatch(this.nfcElementName);
+        }
+      } catch (err) {
+        hilog.error(DOMAIN, 'testTag', 'unregisterForegroundDispatch failed. Cause: %{public}s', JSON.stringify(err));
+      }
+    }
     this.applyClearOnExit();
   }
 

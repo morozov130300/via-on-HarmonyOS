@@ -17,6 +17,7 @@ import { FontStore } from '../common/FontStore'
 import { NetMonitor } from '../common/NetState'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { VideoOverlayState } from './VideoPlayerOverlay'
+import { TranslateState } from './TranslatePanel'
 import { AppIcon } from './AppIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
 
@@ -45,6 +46,9 @@ interface ScriptRunMsg {
   runAt: number
   from: string
 }
+
+// 划词菜单自定义「翻译」项 id（过滤系统 TRANSLATE 项后追加，点击开 f8.w0 面板）
+const EDIT_MENU_ID_VIA_TRANSLATE: string = 'via_translate'
 
 // window.via 桥对象（k6:1487 postMessage 通道）
 class ViaBridge {
@@ -132,6 +136,41 @@ export struct TabWeb {
     return !this.settings.noImage
   }
 
+  // 划词菜单：过滤系统翻译项，追加自定义「翻译」（k6.Eb → f8.w0 面板）
+  private buildEditMenu(menuItems: Array<TextMenuItem>): Array<TextMenuItem> {
+    const result: Array<TextMenuItem> = []
+    for (let i = 0; i < menuItems.length; i++) {
+      const item: TextMenuItem = menuItems[i]
+      if (item.id.equals(TextMenuItemId.TRANSLATE)) {
+        continue
+      }
+      result.push(item)
+    }
+    result.push({
+      content: $r('app.string.translate'),
+      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE)
+    })
+    return result
+  }
+
+  private onEditMenuItemClick(menuItem: TextMenuItem, range: TextRange): boolean {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE))) {
+      const js: string = 'JSON.stringify(window.getSelection().toString())'
+      this.tab.controller.runJavaScript(js).then((result: string) => {
+        let text: string = ''
+        try {
+          text = JSON.parse(result) as string
+        } catch (error) {
+          text = result
+        }
+        TranslateState.getInstance().open(text)
+      }).catch(() => {
+      })
+      return true
+    }
+    return false
+  }
+
   build() {
     Stack() {
       Web({ src: 'about:blank', controller: this.tab.controller, incognitoMode: this.tab.incognito })
@@ -155,6 +194,12 @@ export struct TabWeb {
           name: 'via',
           methodList: ['postMessage'],
           controller: this.tab.controller
+        })
+        // 划词菜单（k6.Eb 链路）：默认项 + 自定义「翻译」开翻译面板
+        .editMenuOptions({
+          onCreateMenu: (menuItems: Array<TextMenuItem>): Array<TextMenuItem> => this.buildEditMenu(menuItems),
+          onMenuItemClick: (menuItem: TextMenuItem, range: TextRange): boolean =>
+            this.onEditMenuItemClick(menuItem, range)
         })
         // 原版 k6:8598：v://blocker/jump 解码后加会话放行并重新加载
         .onLoadIntercept((event: OnLoadInterceptEvent) => {

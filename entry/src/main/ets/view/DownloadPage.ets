@@ -998,21 +998,24 @@ export struct DownloadPage {
           .width('100%')
           .padding({ left: 16, right: 16, top: 6, bottom: 6 })
           // tab 行（原版 b1.x3：全部/文档/压缩包/安装包/图片/视频/音频/其它）
-          Scroll() {
-            Row() {
-              this.TabLabel(TAB_CATS[0], $r('app.string.dl_tab_all'))
-              this.TabLabel(TAB_CATS[1], $r('app.string.dl_tab_docs'))
-              this.TabLabel(TAB_CATS[2], $r('app.string.dl_tab_archives'))
-              this.TabLabel(TAB_CATS[3], $r('app.string.dl_tab_apk'))
-              this.TabLabel(TAB_CATS[4], $r('app.string.dl_tab_images'))
-              this.TabLabel(TAB_CATS[5], $r('app.string.dl_tab_video'))
-              this.TabLabel(TAB_CATS[6], $r('app.string.dl_tab_audio'))
-              this.TabLabel(TAB_CATS[7], $r('app.string.dl_tab_others'))
+          // 原版 b1.m4：数据集为空且当前 tab 为「全部」(0) 时隐藏 tab 行，显示居中空态；有数据恢复
+          if (this.items.length > 0 || this.tab !== 0) {
+            Scroll() {
+              Row() {
+                this.TabLabel(TAB_CATS[0], $r('app.string.dl_tab_all'))
+                this.TabLabel(TAB_CATS[1], $r('app.string.dl_tab_docs'))
+                this.TabLabel(TAB_CATS[2], $r('app.string.dl_tab_archives'))
+                this.TabLabel(TAB_CATS[3], $r('app.string.dl_tab_apk'))
+                this.TabLabel(TAB_CATS[4], $r('app.string.dl_tab_images'))
+                this.TabLabel(TAB_CATS[5], $r('app.string.dl_tab_video'))
+                this.TabLabel(TAB_CATS[6], $r('app.string.dl_tab_audio'))
+                this.TabLabel(TAB_CATS[7], $r('app.string.dl_tab_others'))
+              }
             }
+            .scrollable(ScrollDirection.Horizontal)
+            .scrollBar(BarState.Off)
+            .width('100%')
           }
-          .scrollable(ScrollDirection.Horizontal)
-          .scrollBar(BarState.Off)
-          .width('100%')
           if (this.visibleItems().length === 0) {
             // 原版 b1.m4：空列表视图
             Column() {

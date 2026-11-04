@@ -55,18 +55,17 @@ const UA_CHOICES: UaChoice[] = [
   new UaChoice('symbian', '塞班 (Symbian)')
 ]
 
-// 原版 z8/h0.e + cleardata2：清除数据 7 项（显示顺序与 array c 一致）
+// 原版 z8/h0.e + cleardata2：清除数据项（显示顺序与 array c 一致，鸿蒙已移除「表单数据」）
 const CLEAR_DATA_ITEMS: string[] = [
   '缓存',
-  '表单数据',
   '历史',
   '关闭的标签页',
   '网页存储',
   'Cookies (登录状态)',
   '应用缓存'
 ]
-// 各项对应 cleardata2 位：缓存1|表单2|历史4|关闭的标签页64|网页存储8|Cookies16|应用缓存32
-const CLEAR_DATA_BITS: number[] = [1, 2, 4, 64, 8, 16, 32]
+// 各项对应 cleardata2 位：缓存1|历史4|关闭的标签页64|网页存储8|Cookies16|应用缓存32（表单数据位2仅保留存储语义）
+const CLEAR_DATA_BITS: number[] = [1, 4, 64, 8, 16, 32]
 
 // 原版 h2.java：举报网站上报接口与鉴权（Bearer Token 与 7.4.0 抓包一致）
 const REPORT_ENDPOINT: string = 'https://ra.viayoo.com/report_abuse'
@@ -101,8 +100,8 @@ export struct MenuSheet {
   @Local pageIndex: number = 0
   @Local showUaDialog: boolean = false
   @Local showClearDataDialog: boolean = false
-  // 默认 cleardata2=7（缓存|表单数据|历史），aboutToAppear 按 settings.clearData2 重算
-  @Local clearDataSelection: boolean[] = [true, true, true, false, false, false, false]
+  // 默认 cleardata2=7（缓存|历史），aboutToAppear 按 settings.clearData2 重算
+  @Local clearDataSelection: boolean[] = [true, true, false, false, false, false]
   @Local showImageModeDialog: boolean = false
   @Local showReportDialog: boolean = false
   @Local showOrientationDialog: boolean = false
@@ -992,21 +991,19 @@ export struct MenuSheet {
         console.error('clear web cache failed')
       }
     }
-    // 表单数据：ArkWeb 暂无表单自动填充数据清理 API（WebDataBase 仅 HTTP 认证凭据），
-    // 该项仅保留原版 UI 与位掩码语义
     // 历史
-    if (selected[2]) {
+    if (selected[1]) {
       BrowserDb.getInstance().clearHistory().catch((error: BusinessError) => {
         console.error(`clear history failed: ${error.message}`)
       })
       this.settings.clearSearchHistory()
     }
     // 关闭的标签页
-    if (selected[3]) {
+    if (selected[2]) {
       AppStorage.setOrCreate('via_undo_close_url', '')
     }
     // 网页存储
-    if (selected[4]) {
+    if (selected[3]) {
       try {
         webview.WebStorage.deleteAllData()
       } catch (error) {
@@ -1014,17 +1011,18 @@ export struct MenuSheet {
       }
     }
     // Cookies (登录状态)
-    if (selected[5]) {
+    if (selected[4]) {
       webview.WebCookieManager.clearAllCookies().catch((error: BusinessError) => {
         console.error(`clear cookies failed: ${error.message}`)
       })
     }
     // 应用缓存
-    if (selected[6]) {
+    if (selected[5]) {
       this.clearAppCache()
     }
-    // 原版 l.I0(i10)：确认后持久化本次勾选（cleardata2）
-    let flags = 0
+    // 原版 l.I0(i10)：确认后持久化本次勾选（cleardata2）；
+    // 「表单数据」位2已从 UI 移除，保留原存储值以保证与安卓端备份互操作
+    let flags = this.settings.clearData2 & 2
     for (let i = 0; i < CLEAR_DATA_BITS.length; i++) {
       if (selected[i]) {
         flags |= CLEAR_DATA_BITS[i]
