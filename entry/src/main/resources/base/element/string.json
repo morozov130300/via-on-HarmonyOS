@@ -1226,7 +1226,7 @@
     },
     {
       "name": "delete_items_confirm",
-      "value": "你确定删除 %d 个条目吗？"
+      "value": "你确定删除 %1$d 个条目吗?"
     },
     {
       "name": "new_bookmark",
@@ -1558,7 +1558,7 @@
     },
     {
       "name": "delete_count",
-      "value": "删除（%1$d）"
+      "value": "删除(%1$d)"
     },
     {
       "name": "download_url_hint",
@@ -1659,6 +1659,46 @@
     {
       "name": "triple_text",
       "value": "%1$s • %2$s • %3$s"
+    },
+    {
+      "name": "save_page_title",
+      "value": "保存网页"
+    },
+    {
+      "name": "save_page_name_hint",
+      "value": "标题"
+    },
+    {
+      "name": "save_as_pdf",
+      "value": "保存为 PDF"
+    },
+    {
+      "name": "page_saved_to_offline",
+      "value": "网页已保存至：书签 > 离线页面"
+    },
+    {
+      "name": "view_action",
+      "value": "查看"
+    },
+    {
+      "name": "open_in_background",
+      "value": "后台打开"
+    },
+    {
+      "name": "open_new_tab_short",
+      "value": "新标签打开"
+    },
+    {
+      "name": "offline_empty_hint",
+      "value": "下列为保存的网页，无论手机是否联网你都可以浏览它们。"
+    },
+    {
+      "name": "export_action",
+      "value": "导出"
+    },
+    {
+      "name": "offline_delete_name_confirm",
+      "value": "你确定删除 %1$s 吗？"
     }
   ]
 }

@@ -26,13 +26,14 @@ import { MediaListPage } from '../components/MediaListPage'
 import { LinkInterstitial } from '../components/LinkInterstitial'
 import { VideoPlayerOverlay, VideoOverlayState } from '../components/VideoPlayerOverlay'
 import { systemShare } from '@kit.ShareKit'
-import { uniformTypeDescriptor as utd } from '@kit.ArkData'
+import { uniformTypeDescriptor as utd, preferences } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
 import { webview } from '@kit.ArkWeb'
 import { window, mediaquery, display } from '@kit.ArkUI'
 import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError, emitter, pasteboard } from '@kit.BasicServicesKit'
 import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit'
+import { util } from '@kit.ArkTS'
 import { hostOf } from '../common/SearchEngines'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 
@@ -48,6 +49,38 @@ const OPEN_DOWNLOADS_EVENT_ID = 10003
 // 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 via-reader-body）
 const READ_ALOUD_EXTRACT_JS: string =
   '(function(){try{var e=document.getElementsByClassName("via-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
+// 保存网页降级序列化：canvas 转 img data URL（跨域污染 catch 跳过）+ outerHTML
+const SAVE_PAGE_SERIALIZE_JS: string =
+  '(function(){try{var cs=document.querySelectorAll("canvas");' +
+  'for(var i=0;i<cs.length;i++){var c=cs[i];try{var d=c.toDataURL("image/png");' +
+  'if(d&&d.length>0){var img=document.createElement("img");img.src=d;' +
+  'img.width=c.width;img.height=c.height;img.style.cssText=c.style.cssText;' +
+  'c.parentNode.replaceChild(img,c)}}catch(e){}}}catch(e){}' +
+  'return document.documentElement.outerHTML})()'
+
+// 原版 z8.c1.n：trim、[/\:*?"<>|]→'-'、UTF-8 ≤200 字节
+function sanitizeFileName(raw: string): string {
+  const trimmed = raw.trim()
+  if (trimmed === '') {
+    return ''
+  }
+  let cleaned = trimmed.replace(/[/\\:*?"<>|]/g, '-')
+  const encoder = new util.TextEncoder()
+  if (encoder.encodeInto(cleaned).length > 200) {
+    let lo = 0
+    let hi = cleaned.length
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2)
+      if (encoder.encodeInto(cleaned.substring(0, mid)).length <= 200) {
+        lo = mid
+      } else {
+        hi = mid - 1
+      }
+    }
+    cleaned = cleaned.substring(0, lo)
+  }
+  return cleaned
+}
 
 // 原版应用布局（Ya()）：0=传统 1=工具栏在上 2=工具栏在下 3=双行
 const LAYOUT_TRADITIONAL: number = 0
@@ -87,6 +120,10 @@ struct Index {
   @Local linkConfirmUrl: string = ''
   // 下载确认弹层（原版 mark/via/download/m.java）
   @Local downloadConfirm: PendingDownloadUi | null = null
+  // 保存网页弹窗（原版 k6.m0：标题/输入/保存为 PDF 复选框）
+  @Local showSavePage: boolean = false
+  @Local savePageName: string = ''
+  @Local saveAsPdf: boolean = false
   // 朗读：悬浮控件/面板/Snackbar（原版 k6.xb/ha/p3）
   private readAloudController: ReadAloudController = ReadAloudController.getInstance()
   @Local showReadAloudPanel: boolean = false
@@ -1100,7 +1137,7 @@ struct Index {
         }
         break
       case 'savePage':
-        this.saveCurrentPageAsPdf()
+        this.showSavePageDialog()
         break
       case 'viewSource':
         try {
@@ -1274,7 +1311,7 @@ struct Index {
             this.shareCurrentPage()
           },
           onSavePage: () => {
-            this.saveCurrentPageAsPdf()
+            this.showSavePageDialog()
           },
           onOpenAi: () => {
             this.openAi()
@@ -1364,6 +1401,21 @@ struct Index {
           info: this.downloadConfirm,
           onDone: () => {
             this.downloadConfirm = null
+          }
+        })
+      }
+      // 保存网页弹窗（原版 k6.m0：标题 ar、预填标题、hint kg、复选框 sb）
+      if (this.showSavePage) {
+        SavePageDialog({
+          initialName: this.savePageName,
+          asPdf: this.saveAsPdf,
+          onCancel: () => {
+            this.showSavePage = false
+          },
+          onConfirm: (name: string, asPdf: boolean) => {
+            this.savePageName = name
+            this.saveAsPdf = asPdf
+            this.applySavePage()
           }
         })
       }
@@ -1722,11 +1774,115 @@ struct Index {
     })
   }
 
-  private saveCurrentPageAsPdf(): void {
+  // ===== 保存网页（原版 na.P1 → k6.m0/e5 → na.O1/X）=====
+
+  // 原版 na.P1：内部页提示 dc，否则弹 m0（预填标题，空则 UUID 大写）
+  private showSavePageDialog(): void {
     const tab = this.tabStore.current()
-    if (tab.isHomePage()) {
+    if (tab.isHomePage() || tab.url === '') {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.mark_ad_http_only'), duration: 1500
+      })
       return
     }
+    const title = tab.title.trim()
+    this.savePageName = title !== '' ? title : util.generateRandomUUID(true).toUpperCase()
+    this.loadSaveAsPdfPref()
+    this.showSavePage = true
+  }
+
+  // 原版 k6.m0：复选框初始态 = w9.a.p()
+  private loadSaveAsPdfPref(): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
+      this.saveAsPdf = store.getSync('save_as_pdf', false) as boolean
+    }).catch((error: BusinessError) => {
+      console.error(`load save_as_pdf failed: ${error.message}`)
+    })
+  }
+
+  // 原版 k6.e5：勾选态变化时持久化 w9.a.I
+  private persistSaveAsPdf(value: boolean): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
+      store.put('save_as_pdf', value).then(() => {
+        store.flush()
+      }).catch((error: BusinessError) => {
+        console.error(`persist save_as_pdf failed: ${error.message}`)
+      })
+    }).catch((error: BusinessError) => {
+      console.error(`persist save_as_pdf failed: ${error.message}`)
+    })
+  }
+
+  private applySavePage(): void {
+    this.showSavePage = false
+    this.persistSaveAsPdf(this.saveAsPdf)
+    const tab = this.tabStore.current()
+    let name = sanitizeFileName(this.savePageName)
+    if (name === '') {
+      name = sanitizeFileName(tab.title) !== '' ? sanitizeFileName(tab.title) : hostOf(tab.url)
+    }
+    if (this.saveAsPdf) {
+      this.savePageAsPdf(name)
+    } else {
+      this.savePageAsHtml(name)
+    }
+  }
+
+  private ensureOfflineDir(): string {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const dir = `${context.filesDir}/offline`
+    if (!fileIo.accessSync(dir)) {
+      fileIo.mkdirSync(dir, true)
+    }
+    return dir
+  }
+
+  // 原版 z8.c1.L：name (n) 递增唯一化
+  private uniqueOfflineName(dir: string, name: string, ext: string): string {
+    let candidate = `${name}${ext}`
+    let n = 0
+    while (fileIo.accessSync(`${dir}/${candidate}`)) {
+      n++
+      candidate = `${name} (${n})${ext}`
+    }
+    return candidate
+  }
+
+  // 原版 na.X 非 PDF 分支：ArkWeb 无 saveWebArchive，降级为单文件 HTML
+  // （同步 JS 内联 canvas，跨域污染 catch 跳过；外部资源仍引用原 URL）
+  private savePageAsHtml(name: string): void {
+    const tab = this.tabStore.current()
+    const dir = this.ensureOfflineDir()
+    const path = `${dir}/${this.uniqueOfflineName(dir, name, '.html')}`
+    try {
+      tab.controller.runJavaScript(SAVE_PAGE_SERIALIZE_JS,
+        (error: BusinessError, result: string) => {
+          if (error) {
+            console.error(`serialize page failed: ${error.code}`)
+            return
+          }
+          try {
+            const file = fileIo.openSync(path,
+              fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+            fileIo.writeSync(file.fd, result)
+            fileIo.closeSync(file)
+            this.showSavedSnackbar()
+          } catch (ioError) {
+            console.error('write offline html failed')
+          }
+        })
+    } catch (error) {
+      console.error('runJavaScript save page failed')
+    }
+  }
+
+  // 原版 na.X PDF 分支：z8.v1.a 静默写 offline 目录（ISO_A4/无页边距）
+  private savePageAsPdf(name: string): void {
+    const tab = this.tabStore.current()
+    const dir = this.ensureOfflineDir()
+    const path = `${dir}/${this.uniqueOfflineName(dir, name, '.pdf')}`
     const pdfConfig: webview.PdfConfiguration = {
       width: 8.27,
       height: 11.69,
@@ -1738,11 +1894,9 @@ struct Index {
     }
     tab.controller.createPdf(pdfConfig).then((result: webview.PdfData) => {
       try {
-        const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-        const filePath = `${context.filesDir}/${hostOf(tab.url)}.pdf`
-        const file = fileIo.openSync(filePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE)
-        fileIo.write(file.fd, result.pdfArrayBuffer().buffer).then((writeLen: number) => {
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.page_saved'), duration: 1500 })
+        const file = fileIo.openSync(path, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+        fileIo.write(file.fd, result.pdfArrayBuffer().buffer).then(() => {
+          this.showSavedSnackbar()
         }).catch((error: BusinessError) => {
           console.error(`write pdf failed: ${error.message}`)
         }).finally(() => {
@@ -1754,6 +1908,21 @@ struct Index {
     }).catch((error: BusinessError) => {
       console.error(`create pdf failed: ${error.message}`)
     })
+  }
+
+  // 原版 k6.u5：Snackbar「网页已保存至：书签 > 离线页面」+ 查看 → ka()
+  private showSavedSnackbar(): void {
+    const ctx = this.getUIContext().getHostContext()
+    if (ctx === undefined) {
+      return
+    }
+    this.showSnackbar(
+      ctx.resourceManager.getStringSync($r('app.string.page_saved_to_offline').id),
+      ctx.resourceManager.getStringSync($r('app.string.view_action').id),
+      () => {
+        this.openPage('offlinePage')
+      }
+    )
   }
 }
 
@@ -1890,5 +2059,84 @@ struct DownloadConfirmOverlay {
     }
     this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_started'), duration: 1500 })
     this.onDone()
+  }
+}
+
+// 原版 k6.m0：标题 ar「保存网页」+ 预填输入 + hint kg「标题」+ 复选框 sb「保存为 PDF」+ 取消/确定
+@ComponentV2
+struct SavePageDialog {
+  @Param initialName: string = ''
+  @Param asPdf: boolean = false
+  @Event onCancel: () => void = () => {}
+  @Event onConfirm: (name: string, asPdf: boolean) => void = () => {}
+  @Local name: string = ''
+  @Local pdf: boolean = false
+
+  aboutToAppear(): void {
+    this.name = this.initialName
+    this.pdf = this.asPdf
+  }
+
+  build() {
+    Column() {
+      Column({ space: 16 }) {
+        Text($r('app.string.save_page_title'))
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.fg'))
+        TextInput({ text: this.name, placeholder: $r('app.string.save_page_name_hint') })
+          .height(40)
+          .fontSize(14)
+          .backgroundColor($r('app.color.surface'))
+          .fontColor($r('app.color.fg'))
+          .caretColor($r('app.color.accent'))
+          .onChange((value: string) => {
+            this.name = value
+          })
+        Row({ space: 8 }) {
+          Checkbox()
+            .select(this.pdf)
+            .onChange((value: boolean) => {
+              this.pdf = value
+            })
+          Text($r('app.string.save_as_pdf'))
+            .fontSize(14)
+            .fontColor($r('app.color.fg'))
+        }
+        .width('100%')
+        Row({ space: 12 }) {
+          Button($r('app.string.cancel'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.surface'))
+            .fontColor($r('app.color.fg'))
+            .onClick(() => {
+              this.onCancel()
+            })
+          Button($r('app.string.confirm'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.accent'))
+            .fontColor(Color.White)
+            .onClick(() => {
+              this.onConfirm(this.name, this.pdf)
+            })
+        }
+        .width('100%')
+      }
+      .width('80%')
+      .padding(20)
+      .borderRadius(16)
+      .backgroundColor($r('app.color.page_bg'))
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor('rgba(0,0,0,0.5)')
+    .onClick(() => {
+      this.onCancel()
+    })
   }
 }
