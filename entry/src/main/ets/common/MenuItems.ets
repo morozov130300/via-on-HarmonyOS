@@ -21,6 +21,71 @@ export function isMenuId(id: string): boolean {
   return MENU_DEFAULT_ORDER.indexOf(id) >= 0
 }
 
+// 原版 i8/l.a 菜单数字 id（1..41，21/22 为无条目占位）↔ 本工程字符串 id 映射。
+// 逐项按 i8/l.java case 表第三个字符串资源（标签）核对：
+// 1=夜间模式 2=书签 3=历史 4=下载 5=隐身 6=分享 7=添加书签 8=电脑模式
+// 9=工具箱 10=设置 11=页内查找 12=保存 13=离线页面 14=翻译 15=源码
+// 16=全屏 17=有图模式 18=资源嗅探 19=浏览器标识 20=网络日志 23=标记广告
+// 24=刷新网页 25=扫描二维码 26=网站设定 27=脚本 28=广告拦截 29=字体大小
+// 30=屏幕方向 31=清除数据 32=打印/PDF 33=朗读网页 34=添加到桌面 35=定制菜单
+// 36=阅读模式 37=其它应用打开 38=游戏模式 39=AI 40=添加主页收藏 41=举报网站
+export const MENU_NUMERIC_ID_TO_KEY: Record<string, string> = {
+  '1': 'night_mode', '2': 'bookmarks', '3': 'history', '4': 'downloads',
+  '5': 'incognito', '6': 'share', '7': 'add_bookmark', '8': 'pc_mode',
+  '9': 'toolbox', '10': 'settings', '11': 'find', '12': 'save',
+  '13': 'offline', '14': 'translate', '15': 'view_source', '16': 'fullscreen',
+  '17': 'image_mode', '18': 'res_sniffer', '19': 'ua', '20': 'netlog',
+  '23': 'mark_ad', '24': 'refresh_page', '25': 'scan_qr', '26': 'site_settings',
+  '27': 'script', '28': 'adblock', '29': 'font_size', '30': 'screen_orientation',
+  '31': 'clear_data', '32': 'print', '33': 'read_aloud', '34': 'add_to_desktop',
+  '35': 'customize_menu', '36': 'reading_mode', '37': 'open_with', '38': 'game_mode',
+  '39': 'ai', '40': 'add_home_fav', '41': 'report_site'
+}
+
+export function menuKeyToNumericId(id: string): number {
+  const keys = Object.keys(MENU_NUMERIC_ID_TO_KEY)
+  for (let i = 0; i < keys.length; i++) {
+    if (MENU_NUMERIC_ID_TO_KEY[keys[i]] === id) {
+      return Number(keys[i])
+    }
+  }
+  return 0
+}
+
+// 原版 displayedmenus/hiddenmenus 存逗号数字串（w9/k.java t0()/F2()/h5()，
+// g6.p.h(',', iArr) 拼接）；本工程 menuOrder/menuHidden 存字符串 id 数组。
+// 本工程字符串 id 数组 → 原版逗号数字串（未知 id 跳过）
+export function menuKeysToIdCsv(keys: string[]): string {
+  const parts: string[] = []
+  for (let i = 0; i < keys.length; i++) {
+    const num = menuKeyToNumericId(keys[i])
+    if (num > 0) {
+      parts.push(String(num))
+    }
+  }
+  return parts.join(',')
+}
+
+// 原版逗号数字串 → 本工程字符串 id 数组（g6.p.p 语义：未知数字 id 跳过，保序）
+export function menuIdCsvToKeys(csv: string): string[] {
+  const result: string[] = []
+  if (csv === '') {
+    return result
+  }
+  const tokens = csv.split(',')
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i].trim()
+    if (token === '') {
+      continue
+    }
+    const key = MENU_NUMERIC_ID_TO_KEY[token]
+    if (key !== undefined && result.indexOf(key) < 0) {
+      result.push(key)
+    }
+  }
+  return result
+}
+
 // 原版 i8/l.a：菜单条目皮肤图标名（lb.b.a 第二参字符串值，皮肤目录下 <name>.png 覆盖）
 // 菜单数字 id → 皮肤名（i8/l.java case 表，已逐项按字符串资源值核对）
 export function menuSkinIconName(id: string): string {

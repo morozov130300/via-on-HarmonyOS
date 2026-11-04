@@ -217,6 +217,14 @@
       "value": "广告拦截"
     },
     {
+      "name": "status_enabled",
+      "value": "%s 已开启"
+    },
+    {
+      "name": "status_disabled",
+      "value": "%s 已关闭"
+    },
+    {
       "name": "text_size",
       "value": "字体大小"
     },

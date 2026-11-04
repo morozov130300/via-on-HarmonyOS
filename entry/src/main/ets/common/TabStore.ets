@@ -49,8 +49,7 @@ export class TabStore {
   }
 
   // 原版 k6.ia()：restore_tabs 数组重建标签列表并选中 selected 项（快照已含 title）
-  restoreSaved(saved: SavedTab[], savedIndex: number): void {
-    const tabs: TabItem[] = []
+  restoreSaved(saved: SavedTab[], savedIndex: number): void {    const tabs: TabItem[] = []
     for (let i = 0; i < saved.length; i++) {
       const entry = saved[i]
       const tab = new TabItem(this.nextTabId, false)
@@ -104,6 +103,43 @@ export class TabStore {
       tab.url = entry.url
       tab.title = entry.title
       this.tabs.push(tab)
+    }
+    this.snapshot(AppSettings.getInstance())
+  }
+
+  // 原版 c8/na.F1（k6.u 8682：v://tabs/restore?ids=&selected=）：按 id 恢复标签并选中
+  // selected 指定项；仅恢复存在的 id，找不到的忽略。
+  // 本工程标签数字 id 仅存在于内存存活标签（快照 SavedTab 无 id 字段），
+  // 故语义为：命中现有标签则选中，全部缺失时不动作
+  restoreByIds(ids: string[], selected: string): void {
+    if (ids.length === 0) {
+      return
+    }
+    const matched: TabItem[] = []
+    for (let i = 0; i < this.tabs.length; i++) {
+      if (ids.indexOf(String(this.tabs[i].id)) >= 0) {
+        matched.push(this.tabs[i])
+      }
+    }
+    if (matched.length === 0) {
+      return
+    }
+    // 原版 F1：selected 匹配不到时选末位
+    let selectIdx = matched.length - 1
+    if (selected !== '') {
+      for (let i = 0; i < matched.length; i++) {
+        if (String(matched[i].id) === selected) {
+          selectIdx = i
+          break
+        }
+      }
+    }
+    const target = matched[selectIdx]
+    for (let i = 0; i < this.tabs.length; i++) {
+      if (this.tabs[i].id === target.id) {
+        this.currentIndex = i
+        break
+      }
     }
     this.snapshot(AppSettings.getInstance())
   }
