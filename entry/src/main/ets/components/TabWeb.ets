@@ -68,6 +68,8 @@ export struct TabWeb {
   private viaBridge: ViaBridge = new ViaBridge()
   // 原版 o5/a：window.via_gm GM_* 分派桥（每 tab 一实例，宿主回调 1:1 k6.s）
   private gmBridge: GmBridge = new GmBridge()
+  // 原版 Shell.dispatchKeyEvent → k6.n8：Web 获焦时按键先经宿主分发再进网页（onInterceptKeyEvent 等价层）
+  @Param onPcKey: (event: KeyEvent) => boolean = (_event: KeyEvent): boolean => false
   // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
@@ -313,6 +315,10 @@ export struct TabWeb {
         })
         .onContextMenuShow((event?: OnContextMenuShowEvent) => {
           return this.handleContextMenu(event)
+        })
+        // 原版 Shell.dispatchKeyEvent：按键先于网页处理（返回 true 消费，1:1 k6.n8）
+        .onInterceptKeyEvent((event: KeyEvent) => {
+          return this.onPcKey(event)
         })
         .onInterceptRequest((event: OnInterceptRequestEvent) => {
           const request = event.request
