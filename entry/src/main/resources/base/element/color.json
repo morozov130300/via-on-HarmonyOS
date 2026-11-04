@@ -155,6 +155,10 @@
     {
       "name": "dialog_hint",
       "value": "#8A000000"
+    },
+    {
+      "name": "on_accent",
+      "value": "#FFFFFF"
     }
   ]
 }

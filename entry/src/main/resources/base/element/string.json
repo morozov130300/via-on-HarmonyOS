@@ -102,7 +102,7 @@
     },
     {
       "name": "downloads",
-      "value": "下载"
+      "value": "下载内容"
     },
     {
       "name": "settings",
@@ -1210,7 +1210,7 @@
     },
     {
       "name": "resume_download",
-      "value": "继续"
+      "value": "恢复"
     },
     {
       "name": "restore_session_ask",
@@ -1507,6 +1507,158 @@
     {
       "name": "preview_pdf",
       "value": "预览 PDF"
+    },
+    {
+      "name": "dl_tab_all",
+      "value": "全部"
+    },
+    {
+      "name": "dl_tab_docs",
+      "value": "文档"
+    },
+    {
+      "name": "dl_tab_archives",
+      "value": "压缩包"
+    },
+    {
+      "name": "dl_tab_apk",
+      "value": "安装包"
+    },
+    {
+      "name": "dl_tab_images",
+      "value": "图片"
+    },
+    {
+      "name": "dl_tab_video",
+      "value": "视频"
+    },
+    {
+      "name": "dl_tab_audio",
+      "value": "音频"
+    },
+    {
+      "name": "dl_tab_others",
+      "value": "其它"
+    },
+    {
+      "name": "new_download",
+      "value": "新建"
+    },
+    {
+      "name": "new_download_download",
+      "value": "下载"
+    },
+    {
+      "name": "select_all",
+      "value": "全选"
+    },
+    {
+      "name": "cancel_select_all",
+      "value": "取消全选"
+    },
+    {
+      "name": "delete_count",
+      "value": "删除（%1$d）"
+    },
+    {
+      "name": "download_url_hint",
+      "value": "地址"
+    },
+    {
+      "name": "download_file_name_hint",
+      "value": "文件名"
+    },
+    {
+      "name": "url_invalid_toast",
+      "value": "仅可下载以\"http\"或\"https\"开头的网址"
+    },
+    {
+      "name": "rename_download",
+      "value": "重命名"
+    },
+    {
+      "name": "copy_download_link",
+      "value": "复制下载链接"
+    },
+    {
+      "name": "copy_text",
+      "value": "复制文本"
+    },
+    {
+      "name": "open_action",
+      "value": "打开"
+    },
+    {
+      "name": "delete_task_confirm",
+      "value": "删除这个下载任务吗？"
+    },
+    {
+      "name": "delete_task_with_file_confirm",
+      "value": "这会同时删除文件，你确定吗？"
+    },
+    {
+      "name": "delete_tasks_confirm",
+      "value": "你确定删除这些下载任务吗 (总共 %1$d 个任务)？"
+    },
+    {
+      "name": "delete_with_file_option",
+      "value": "同时删除已下载的文件"
+    },
+    {
+      "name": "redownload_confirm",
+      "value": "你确定删除已下载的文件并重新下载 %1$s 吗？"
+    },
+    {
+      "name": "no_app_to_open",
+      "value": "找不到相关应用来打开文件"
+    },
+    {
+      "name": "file_not_exist",
+      "value": "文件不存在"
+    },
+    {
+      "name": "download_failed_detail",
+      "value": "下载失败：%1$s"
+    },
+    {
+      "name": "download_contents",
+      "value": "下载内容"
+    },
+    {
+      "name": "waiting_for_network",
+      "value": "等待网络连接"
+    },
+    {
+      "name": "na_text",
+      "value": "N/A"
+    },
+    {
+      "name": "time_secs_left",
+      "value": "剩余 %d 秒"
+    },
+    {
+      "name": "time_mins_left",
+      "value": "剩余 %d 分钟"
+    },
+    {
+      "name": "time_hours_left",
+      "value": "剩余 %d 小时"
+    },
+    {
+      "name": "size_progress",
+      "value": "%1$s/%2$s"
+    },
+    {
+      "name": "size_only",
+      "value": "%1$s"
+    },
+    {
+      "name": "pair_text",
+      "value": "%1$s • %2$s"
+    },
+    {
+      "name": "triple_text",
+      "value": "%1$s • %2$s • %3$s"
     }
   ]
 }

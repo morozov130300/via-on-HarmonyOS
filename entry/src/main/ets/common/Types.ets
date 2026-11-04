@@ -210,6 +210,14 @@ export class DownloadRec {
   status: DownloadStatus
   created: number
   errorMessage: string
+  // 原版 downloader tasks 表列（g5.c/f5.d.java）：引擎状态码（90/91/92/95/80/100/200+），0=非引擎托管
+  state: number
+  speed: number
+  chunks: number
+  flags: number
+  priority: number
+  header: string
+  updatedAt: number
 
   constructor() {
     this.id = -1
@@ -221,6 +229,13 @@ export class DownloadRec {
     this.status = DownloadStatus.Running
     this.created = 0
     this.errorMessage = ''
+    this.state = 0
+    this.speed = 0
+    this.chunks = 1
+    this.flags = 0
+    this.priority = 0
+    this.header = ''
+    this.updatedAt = 0
   }
 
   static fromJson(obj: Record<string, Object>): DownloadRec | null {
@@ -255,6 +270,34 @@ export class DownloadRec {
       const errorMessage = obj['errorMessage']
       if (typeof errorMessage === 'string') {
         rec.errorMessage = errorMessage
+      }
+      const state = obj['state']
+      if (typeof state === 'number') {
+        rec.state = state
+      }
+      const speed = obj['speed']
+      if (typeof speed === 'number') {
+        rec.speed = speed
+      }
+      const chunks = obj['chunks']
+      if (typeof chunks === 'number') {
+        rec.chunks = chunks
+      }
+      const flags = obj['flags']
+      if (typeof flags === 'number') {
+        rec.flags = flags
+      }
+      const priority = obj['priority']
+      if (typeof priority === 'number') {
+        rec.priority = priority
+      }
+      const header = obj['header']
+      if (typeof header === 'string') {
+        rec.header = header
+      }
+      const updatedAt = obj['updatedAt']
+      if (typeof updatedAt === 'number') {
+        rec.updatedAt = updatedAt
       }
       return rec
     }

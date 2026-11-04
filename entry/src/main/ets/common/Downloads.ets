@@ -1,10 +1,11 @@
 import { webview } from '@kit.ArkWeb'
 import { fileIo } from '@kit.CoreFileKit'
-import { request, emitter } from '@kit.BasicServicesKit'
-import { BusinessError } from '@kit.BasicServicesKit'
+import { emitter, BusinessError } from '@kit.BasicServicesKit'
 import { BrowserDb } from './Database'
 import { AppSettings } from './Settings'
 import { DownloadRec, DownloadStatus } from './Types'
+import { DownloadEngine } from './DownloadEngine'
+import { DownloadNotifier } from './DownloadNotifier'
 
 // 原版 mark/via/download/m.java：下载前确认弹层（可编辑文件名 + 文件大小 + 取消/下载）
 export const DOWNLOAD_CONFIRM_EVENT_ID: number = 10003
@@ -27,8 +28,6 @@ export class DownloadCoordinator {
   // 已启动的 Web 下载项，供暂停/继续/取消（原版 download/c 状态机）
   private runningItems: Map<string, webview.WebDownloadItem> = new Map<string, webview.WebDownloadItem>()
   private dbIdToGuid: Map<number, string> = new Map<number, string>()
-  // request.downloadFile 任务（上下文菜单「下载链接」路径），同样支持暂停/继续/取消
-  private urlTasks: Map<number, request.DownloadTask> = new Map<number, request.DownloadTask>()
   private pendingUrl: PendingUrlDownload | null = null
   private appContext: Context | null = null
 
@@ -188,66 +187,22 @@ export class DownloadCoordinator {
     }
     this.pendingUrl = null
     const safeName = fileName.trim() !== '' ? fileName.trim() : pending.fileName
-    this.startUrlDownload(this.appContext, pending.url, pending.referer, pending.ua, safeName)
-  }
-
-  // 原版透传 User-Agent/Referer（download/m.java:100-105）
-  startUrlDownload(context: Context, url: string, referer: string = '', ua: string = '',
-    fileNameOverride: string = ''): void {
-    if (this.saveDir === '') {
-      return
-    }
-    const name = fileNameOverride !== '' ? fileNameOverride : this.fileNameFromUrl(url)
-    const path = `${this.saveDir}/${name}`
-    const rec = new DownloadRec()
-    rec.url = url
-    rec.path = path
-    rec.mime = ''
-    rec.size = 0
-    rec.received = 0
-    rec.status = DownloadStatus.Running
-    rec.created = Date.now()
-    this.db.insertDownload(rec).then((id: number) => {
-      this.launchUrlTask(context, id, url, path, referer, ua)
-    }).catch((error: BusinessError) => {
-      console.error(`insert download failed: ${error.message}`)
-    })
-  }
-
-  private launchUrlTask(context: Context, id: number, url: string, path: string,
-    referer: string, ua: string): void {
-    const headers: Record<string, string> = {}
-    if (referer !== '') {
-      headers['Referer'] = referer
-    }
-    if (ua !== '') {
-      headers['User-Agent'] = ua
-    }
-    request.downloadFile(context, { url: url, filePath: path, header: headers })
-      .then((task: request.DownloadTask) => {
-        this.urlTasks.set(id, task)
-        task.on('complete', () => {
-          this.urlTasks.delete(id)
-          this.db.updateDownload(id, 0, DownloadStatus.Completed).catch(() => {
-          })
-          this.copyToUserDir(path)
-        })
-        task.on('fail', () => {
-          this.urlTasks.delete(id)
-          this.db.updateDownload(id, 0, DownloadStatus.Failed).catch(() => {
-          })
-        })
-      })
+    // 自研分块引擎（原版 m5.i.f()）
+    DownloadEngine.getInstance().createTask(pending.url, safeName, pending.referer, pending.ua)
       .catch((error: BusinessError) => {
-        console.error(`start url download failed: ${error.message}`)
-        this.db.updateDownload(id, 0, DownloadStatus.Failed).catch(() => {
-        })
+        console.error(`create download task failed: ${error.message}`)
       })
   }
 
   // ===== 原版下载状态机（mark/via/download/c）：暂停/继续/取消/重新下载 =====
+  // state>0 为自研引擎托管任务；state=0 为 WebDownloadDelegate 旧任务
 
   pauseDownload(rec: DownloadRec): void {
+    if (rec.state > 0) {
+      DownloadEngine.getInstance().pauseById(rec.id).catch(() => {
+      })
+      return
+    }
     const guid = this.dbIdToGuid.get(rec.id)
     if (guid !== undefined) {
       const item = this.runningItems.get(guid)
@@ -262,18 +217,14 @@ export class DownloadCoordinator {
       }
       return
     }
-    const task = this.urlTasks.get(rec.id)
-    if (task !== undefined) {
-      task.suspend().then(() => {
-        this.db.updateDownload(rec.id, rec.received, DownloadStatus.Paused).catch(() => {
-        })
-      }).catch((error: BusinessError) => {
-        console.error(`suspend download failed: ${error.message}`)
-      })
-    }
   }
 
   resumeDownload(rec: DownloadRec): void {
+    if (rec.state > 0) {
+      DownloadEngine.getInstance().resumeById(rec.id).catch(() => {
+      })
+      return
+    }
     const guid = this.dbIdToGuid.get(rec.id)
     if (guid !== undefined) {
       const item = this.runningItems.get(guid)
@@ -288,18 +239,19 @@ export class DownloadCoordinator {
       }
       return
     }
-    const task = this.urlTasks.get(rec.id)
-    if (task !== undefined) {
-      task.restore().then(() => {
-        this.db.updateDownload(rec.id, rec.received, DownloadStatus.Running).catch(() => {
-        })
-      }).catch((error: BusinessError) => {
-        console.error(`restore download failed: ${error.message}`)
-      })
-    }
   }
 
   cancelDownload(rec: DownloadRec): void {
+    if (rec.state > 0) {
+      // 引擎任务：停跑 + 清库 + 清分块 + 撤通知
+      DownloadEngine.getInstance().pauseById(rec.id).then(() => {
+        return this.db.deleteDownload(rec.id)
+      }).then(() => {
+        DownloadNotifier.getInstance().cancel(rec.id)
+      }).catch(() => {
+      })
+      return
+    }
     const guid = this.dbIdToGuid.get(rec.id)
     if (guid !== undefined) {
       const item = this.runningItems.get(guid)
@@ -316,24 +268,23 @@ export class DownloadCoordinator {
       })
       return
     }
-    const task = this.urlTasks.get(rec.id)
-    if (task !== undefined) {
-      task.delete().then(() => {
-        this.urlTasks.delete(rec.id)
-        this.db.updateDownload(rec.id, rec.received, DownloadStatus.Canceled).catch(() => {
-        })
-      }).catch((error: BusinessError) => {
-        console.error(`delete download task failed: ${error.message}`)
-      })
-    }
   }
 
-  // 原版 an「重新下载」：按原 URL 重新发起下载
+  // 原版 an「重新下载」：清 ETag/探测标记，8 线程重下（m5.i.l()）
   retryDownload(rec: DownloadRec): void {
+    if (rec.state > 0) {
+      DownloadEngine.getInstance().restartById(rec.id).catch(() => {
+      })
+      return
+    }
     if (this.appContext === null) {
       return
     }
-    this.startUrlDownload(this.appContext, rec.url, '', '')
+    const name = this.fileNameFromUrl(rec.url)
+    DownloadEngine.getInstance().createTask(rec.url, name, '', '')
+      .catch((error: BusinessError) => {
+        console.error(`restart download failed: ${error.message}`)
+      })
   }
 
   private handleUpdated(item: webview.WebDownloadItem): void {

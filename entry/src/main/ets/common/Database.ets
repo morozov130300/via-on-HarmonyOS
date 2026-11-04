@@ -14,6 +14,10 @@ const SQL_CREATE_DOWNLOADS: string = 'CREATE TABLE IF NOT EXISTS downloads ' +
   'status INTEGER DEFAULT 0, created INTEGER)'
 const SQL_CREATE_SETTINGS: string = 'CREATE TABLE IF NOT EXISTS settings ' +
   '(id INTEGER PRIMARY KEY, data TEXT)'
+// 原版 downloader chunks 表 1:1（f5/d.java:256）
+const SQL_CREATE_DOWNLOAD_CHUNKS: string = 'CREATE TABLE IF NOT EXISTS download_chunks ' +
+  '(id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, start INTEGER, ' +
+  'length INTEGER, downloaded INTEGER, flags INTEGER)'
 // 原版主页收藏为独立存储（与书签分开），icon 存本地图标文件路径
 const SQL_CREATE_HOME_FAVS: string = 'CREATE TABLE IF NOT EXISTS home_favs ' +
   '(id INTEGER PRIMARY KEY, title TEXT, url TEXT, icon TEXT DEFAULT \'\', position INTEGER)'
@@ -91,6 +95,15 @@ export class BrowserDb {
     }
     // 原版 downloads 错误信息（gu 下载失败：%1$s）
     await this.addColumnIfMissing('downloads', 'error_message', "TEXT DEFAULT ''")
+    // 原版 downloader tasks 表引擎列（f5/d.java:255）
+    await this.addColumnIfMissing('downloads', 'state', 'INTEGER DEFAULT 0')
+    await this.addColumnIfMissing('downloads', 'speed', 'REAL DEFAULT 0')
+    await this.addColumnIfMissing('downloads', 'chunks', 'INTEGER DEFAULT 1')
+    await this.addColumnIfMissing('downloads', 'flags', 'INTEGER DEFAULT 0')
+    await this.addColumnIfMissing('downloads', 'priority', 'INTEGER DEFAULT 0')
+    await this.addColumnIfMissing('downloads', 'header', "TEXT DEFAULT ''")
+    await this.addColumnIfMissing('downloads', 'updated_at', 'INTEGER DEFAULT 0')
+    await this.rdb.executeSql(SQL_CREATE_DOWNLOAD_CHUNKS)
   }
 
   private async addColumnIfMissing(table: string, column: string, ddl: string): Promise<boolean> {
@@ -568,9 +581,47 @@ export class BrowserDb {
       'received': rec.received,
       'status': rec.status,
       'created': rec.created,
-      'error_message': rec.errorMessage
+      'error_message': rec.errorMessage,
+      'state': rec.state,
+      'speed': rec.speed,
+      'chunks': rec.chunks,
+      'flags': rec.flags,
+      'priority': rec.priority,
+      'header': rec.header,
+      'updated_at': rec.updatedAt
     }
     return await this.rdb.insert('downloads', bucket)
+  }
+
+  async getDownloadById(id: number): Promise<DownloadRec | null> {
+    if (this.rdb === null) {
+      return null
+    }
+    const predicates = new relationalStore.RdbPredicates('downloads')
+    predicates.equalTo('id', id)
+    const resultSet = await this.rdb.query(predicates)
+    let rec: DownloadRec | null = null
+    if (resultSet.goToNextRow()) {
+      rec = new DownloadRec()
+      rec.id = resultSet.getDouble(resultSet.getColumnIndex('id'))
+      rec.url = resultSet.getString(resultSet.getColumnIndex('url'))
+      rec.path = resultSet.getString(resultSet.getColumnIndex('path'))
+      rec.mime = resultSet.getString(resultSet.getColumnIndex('mime'))
+      rec.size = resultSet.getDouble(resultSet.getColumnIndex('size'))
+      rec.received = resultSet.getDouble(resultSet.getColumnIndex('received'))
+      rec.status = resultSet.getDouble(resultSet.getColumnIndex('status'))
+      rec.created = resultSet.getDouble(resultSet.getColumnIndex('created'))
+      rec.errorMessage = resultSet.getString(resultSet.getColumnIndex('error_message'))
+      rec.state = resultSet.getDouble(resultSet.getColumnIndex('state'))
+      rec.speed = resultSet.getDouble(resultSet.getColumnIndex('speed'))
+      rec.chunks = resultSet.getDouble(resultSet.getColumnIndex('chunks'))
+      rec.flags = resultSet.getDouble(resultSet.getColumnIndex('flags'))
+      rec.priority = resultSet.getDouble(resultSet.getColumnIndex('priority'))
+      rec.header = resultSet.getString(resultSet.getColumnIndex('header'))
+      rec.updatedAt = resultSet.getDouble(resultSet.getColumnIndex('updated_at'))
+    }
+    resultSet.close()
+    return rec
   }
 
   async updateDownload(id: number, received: number, status: DownloadStatus,
@@ -608,10 +659,161 @@ export class BrowserDb {
       rec.status = status
       rec.created = resultSet.getDouble(resultSet.getColumnIndex('created'))
       rec.errorMessage = resultSet.getString(resultSet.getColumnIndex('error_message'))
+      rec.state = resultSet.getDouble(resultSet.getColumnIndex('state'))
+      rec.speed = resultSet.getDouble(resultSet.getColumnIndex('speed'))
+      rec.chunks = resultSet.getDouble(resultSet.getColumnIndex('chunks'))
+      rec.flags = resultSet.getDouble(resultSet.getColumnIndex('flags'))
+      rec.priority = resultSet.getDouble(resultSet.getColumnIndex('priority'))
+      rec.header = resultSet.getString(resultSet.getColumnIndex('header'))
+      rec.updatedAt = resultSet.getDouble(resultSet.getColumnIndex('updated_at'))
       result.push(rec)
     }
     resultSet.close()
     return result
+  }
+
+  // ===== 下载引擎持久化（原版 f5/d.java tasks/chunks CRUD 1:1） =====
+
+  // f5/d.t()：任务字段全量更新
+  async updateEngineTask(rec: DownloadRec): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    const bucket: relationalStore.ValuesBucket = {
+      'path': rec.path,
+      'mime': rec.mime,
+      'size': rec.size,
+      'received': rec.received,
+      'status': rec.status,
+      'error_message': rec.errorMessage,
+      'state': rec.state,
+      'speed': rec.speed,
+      'chunks': rec.chunks,
+      'flags': rec.flags,
+      'priority': rec.priority,
+      'header': rec.header,
+      'updated_at': rec.updatedAt
+    }
+    const predicates = new relationalStore.RdbPredicates('downloads')
+    predicates.equalTo('id', rec.id)
+    await this.rdb.update(bucket, predicates)
+  }
+
+  // f5/d.f()：按状态查任务（state IN (...)，created ASC）
+  async listDownloadsByState(states: number[]): Promise<DownloadRec[]> {
+    const result: DownloadRec[] = []
+    if (this.rdb === null || states.length === 0) {
+      return result
+    }
+    const inList = states.join(',')
+    const resultSet = await this.rdb.querySql(
+      `SELECT * FROM downloads WHERE state IN (${inList}) ORDER BY created ASC`)
+    while (resultSet.goToNextRow()) {
+      const rec = new DownloadRec()
+      rec.id = resultSet.getDouble(resultSet.getColumnIndex('id'))
+      rec.url = resultSet.getString(resultSet.getColumnIndex('url'))
+      rec.path = resultSet.getString(resultSet.getColumnIndex('path'))
+      rec.mime = resultSet.getString(resultSet.getColumnIndex('mime'))
+      rec.size = resultSet.getDouble(resultSet.getColumnIndex('size'))
+      rec.received = resultSet.getDouble(resultSet.getColumnIndex('received'))
+      rec.status = resultSet.getDouble(resultSet.getColumnIndex('status'))
+      rec.created = resultSet.getDouble(resultSet.getColumnIndex('created'))
+      rec.errorMessage = resultSet.getString(resultSet.getColumnIndex('error_message'))
+      rec.state = resultSet.getDouble(resultSet.getColumnIndex('state'))
+      rec.speed = resultSet.getDouble(resultSet.getColumnIndex('speed'))
+      rec.chunks = resultSet.getDouble(resultSet.getColumnIndex('chunks'))
+      rec.flags = resultSet.getDouble(resultSet.getColumnIndex('flags'))
+      rec.priority = resultSet.getDouble(resultSet.getColumnIndex('priority'))
+      rec.header = resultSet.getString(resultSet.getColumnIndex('header'))
+      rec.updatedAt = resultSet.getDouble(resultSet.getColumnIndex('updated_at'))
+      result.push(rec)
+    }
+    resultSet.close()
+    return result
+  }
+
+  // f5/d.k()/s()：批量插入分块
+  async insertChunks(taskId: number, chunks: number[][]): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    for (let i = 0; i < chunks.length; i++) {
+      const bucket: relationalStore.ValuesBucket = {
+        'task_id': taskId,
+        'start': chunks[i][0],
+        'length': chunks[i][1],
+        'downloaded': 0,
+        'flags': 0
+      }
+      await this.rdb.insert('download_chunks', bucket)
+    }
+  }
+
+  // f5/d.i()/r()：读取任务分块
+  async listChunks(taskId: number): Promise<number[][]> {
+    const result: number[][] = []
+    if (this.rdb === null) {
+      return result
+    }
+    const resultSet = await this.rdb.querySql(
+      `SELECT id, start, length, downloaded FROM download_chunks WHERE task_id = ${taskId}`)
+    while (resultSet.goToNextRow()) {
+      result.push([resultSet.getDouble(resultSet.getColumnIndex('id')),
+        resultSet.getDouble(resultSet.getColumnIndex('start')),
+        resultSet.getDouble(resultSet.getColumnIndex('length')),
+        resultSet.getDouble(resultSet.getColumnIndex('downloaded'))])
+    }
+    resultSet.close()
+    return result
+  }
+
+  // 引擎运行期高频分块进度更新（原版经内存+周期落盘，此处直写）
+  async updateChunkDownloaded(chunkId: number, downloaded: number): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    const predicates = new relationalStore.RdbPredicates('download_chunks')
+    predicates.equalTo('id', chunkId)
+    const bucket: relationalStore.ValuesBucket = {
+      'downloaded': downloaded
+    }
+    await this.rdb.update(bucket, predicates)
+  }
+
+  // f5/d.o()：清零任务全部分块进度
+  async resetChunks(taskId: number): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    const predicates = new relationalStore.RdbPredicates('download_chunks')
+    predicates.equalTo('task_id', taskId)
+    const bucket: relationalStore.ValuesBucket = {
+      'downloaded': 0
+    }
+    await this.rdb.update(bucket, predicates)
+  }
+
+  // f5/d.m()：删除任务分块
+  async deleteChunks(taskId: number): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    const predicates = new relationalStore.RdbPredicates('download_chunks')
+    predicates.equalTo('task_id', taskId)
+    await this.rdb.delete(predicates)
+  }
+
+  // f5/d.j()：是否存在指定状态任务
+  async hasDownloadInState(states: number[]): Promise<boolean> {
+    if (this.rdb === null || states.length === 0) {
+      return false
+    }
+    const inList = states.join(',')
+    const resultSet = await this.rdb.querySql(
+      `SELECT id FROM downloads WHERE state IN (${inList}) LIMIT 1`)
+    const has = resultSet.goToNextRow()
+    resultSet.close()
+    return has
   }
 
   async deleteDownload(id: number): Promise<void> {
@@ -621,6 +823,7 @@ export class BrowserDb {
     const predicates = new relationalStore.RdbPredicates('downloads')
     predicates.equalTo('id', id)
     await this.rdb.delete(predicates)
+    await this.deleteChunks(id)
   }
 
   async clearDownloads(): Promise<void> {

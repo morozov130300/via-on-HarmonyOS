@@ -44,6 +44,7 @@ const PROGRESS_GRADIENT: LinearGradient = {
 }
 const SHORTCUT_URL_EVENT_ID = 10001
 const EXTERNAL_LINK_EVENT_ID = 10002
+const OPEN_DOWNLOADS_EVENT_ID = 10003
 // 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 via-reader-body）
 const READ_ALOUD_EXTRACT_JS: string =
   '(function(){try{var e=document.getElementsByClassName("via-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
@@ -211,6 +212,10 @@ struct Index {
     emitter.on({ eventId: OPEN_BOOKMARKS_EVENT_ID }, () => {
       this.openPage('bookmarks')
     })
+    // 下载通知点击：打开下载页
+    emitter.on({ eventId: OPEN_DOWNLOADS_EVENT_ID }, () => {
+      this.openPage('downloads')
+    })
     // 朗读任务监听（原版 k6.va：I1.b(d) → xb）
     this.readAloudController.addListener(this.readAloudListener)
   }
@@ -296,6 +301,10 @@ struct Index {
     await this.tabStore.init(this.settings)
     this.handleInternalCmd()
     this.askPendingRestore()
+    if (AppStorage.get<boolean>('via_open_downloads') === true) {
+      AppStorage.setOrCreate('via_open_downloads', false)
+      this.openPage('downloads')
+    }
     this.ready = true
     const launchUrl = AppStorage.get<string>('via_launch_url') ?? ''
     if (launchUrl !== '') {

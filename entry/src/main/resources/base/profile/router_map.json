@@ -81,6 +81,11 @@
       "buildFunction": "UserScriptsPageBuilder"
     },
     {
+      "name": "webScripts",
+      "pageSourceFile": "src/main/ets/view/WebScriptsPage.ets",
+      "buildFunction": "WebScriptsPageBuilder"
+    },
+    {
       "name": "offlinePage",
       "pageSourceFile": "src/main/ets/view/OfflinePage.ets",
       "buildFunction": "OfflinePageBuilder"
