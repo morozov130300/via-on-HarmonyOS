@@ -12,6 +12,8 @@ import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { SiteSetting } from '../common/Types'
+import { RemoteConfig } from '../common/RemoteConfig'
+import { scriptPatternMatches } from '../common/ScriptMatch'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
@@ -364,6 +366,15 @@ export struct MenuSheet {
       this.GridCellBody(menuIcon(id), $r('app.string.bookmark_added_state'), true, () => {
       }, () => {
       }, $r('app.color.accent'), null, null, '', menuSkinIconName(id))
+    } else if (id === 'script') {
+      // 原版 i8/k x3 id27（i8/k:419-423）：文案随勾选态变「脚本 已开启/已关闭」
+      // （a1(lr/lq, uc)）并染强调色；勾选 = i0.s(url) && m2().D() && !wls(url) && p5.C(url)
+      this.GridCellBody(menuIcon(id), menuLabel(id), true, () => {
+        this.scriptMenuAction()
+      }, () => {
+        this.menuLongPress(id)
+      }, this.scriptMenuChecked() ? $r('app.color.accent') : $r('app.color.menu_icon'),
+      this.scriptMenuChecked() ? '脚本 已开启' : '脚本 已关闭', null, '', menuSkinIconName(id))
     } else {
       // 原版 i8/k x3：开启态条目染强调色（电脑模式/全屏/浏览器标识/字体大小/广告拦截/游戏模式/隐身）
       this.GridCellBody(menuIcon(id), menuLabel(id), true, () => {
@@ -445,6 +456,50 @@ export struct MenuSheet {
       default:
         break
     }
+  }
+
+  // ===== 原版 k6 O9 case27「脚本」（k6:5259-5281），ua.y「网页脚本」页由 view/WebScriptsPage 承载 =====
+
+  // k6:5261-5264 z = i0.s(url) && !r9.g.a().e(url)（wls 豁免）&& lc.c().d().C(url)
+  private scriptWouldRun(): boolean {
+    const url = this.tabStore.current().url
+    if (!(url.startsWith('http://') || url.startsWith('https://'))) {
+      return false
+    }
+    if (RemoteConfig.getInstance().isInWls(url)) {
+      return false
+    }
+    return scriptPatternMatches(url, this.settings.userScripts)
+  }
+
+  // i8/k:421 勾选态 = z && m2().D()（w9/p.D() = !bit268435456，脚本已启用）
+  private scriptMenuChecked(): boolean {
+    return this.settings.scriptEnabled && this.scriptWouldRun()
+  }
+
+  private scriptMenuAction(): void {
+    const wouldRun = this.scriptWouldRun()
+    if (!this.settings.scriptEnabled) {
+      // k6:5265-5273：i0(true) 开启脚本并持久化（g0），z 时 wa() 重载当前页并收起菜单；toast Jb「脚本已启用」
+      this.settings.setScriptEnabled(true)
+      if (wouldRun) {
+        this.onClose()
+        try {
+          this.tabStore.current().controller.refresh()
+        } catch (error) {
+          console.error('refresh after script enable failed')
+        }
+      }
+      this.getUIContext().getPromptAction().showToast({ message: '脚本已启用', duration: 1500 })
+      return
+    }
+    if (!wouldRun) {
+      // k6:5274-5276：g6.i.g(sa.d1) → 脚本管理页
+      this.onOpenPage('userScripts')
+      return
+    }
+    // k6:5277-5280：d9() 收起菜单 + yb(url) → ua.y「网页脚本」页（该网址匹配脚本 + GM 菜单命令）
+    this.onOpenPage('webScripts')
   }
 
   // 原版 i8/k:380-383：file:// 页禁用保存
@@ -1063,7 +1118,7 @@ export struct MenuSheet {
         this.addToDesktop()
         break
       case 'script':
-        this.onOpenPage('userScripts')
+        this.scriptMenuAction()
         break
       case 'adblock':
         this.onOpenPage('rules')
