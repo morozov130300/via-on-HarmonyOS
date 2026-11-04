@@ -1731,6 +1731,14 @@
     {
       "name": "offline_delete_name_confirm",
       "value": "你确定删除 %1$s 吗？"
+    },
+    {
+      "name": "site_not_supported",
+      "value": "不支持该网站"
+    },
+    {
+      "name": "res_sniffer_unsupported",
+      "value": "该网站不支持资源嗅探"
     }
   ]
 }

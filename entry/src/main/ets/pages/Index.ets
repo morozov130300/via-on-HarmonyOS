@@ -36,6 +36,7 @@ import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit
 import { util } from '@kit.ArkTS'
 import { hostOf, buildSearchUrl, isUrlLike } from '../common/SearchEngines'
 import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID } from '../common/DeepLink'
+import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 
 const EXIT_INTERVAL: number = 1500
@@ -1659,6 +1660,14 @@ struct Index {
     Reader.isInReader(tab).then((inReader: boolean) => {
       if (inReader) {
         return Reader.exitReader(tab)
+      }
+      // 原版 k6.B8：进入阅读前 wld 命中 → g6.n.q(O1)「不支持该网站」，不执行阅读检查
+      if (RemoteConfig.getInstance().isInWld(tab.url)) {
+        this.getUIContext().getPromptAction().showToast({
+          message: $r('app.string.site_not_supported'),
+          duration: 1500
+        })
+        return
       }
       return Reader.injectReaderScripts(tab).then(() => {
         return Reader.enterReader(tab, READER_THEME_COLORS[this.settings.readerTheme],

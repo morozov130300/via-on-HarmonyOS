@@ -1385,10 +1385,17 @@ export struct MenuSheet {
     }
   }
 
-  // 资源嗅探：视频同款空结果提示（页面无资源时的 Snackbar 文案逐字一致）
+  // 资源嗅探：原版 na.t1 —— wlr 白名单页（v.qq/youku/iqiyi/mgtv/bilibili/ximalaya/film.qq）
+  // 直接 toast zn「该网站不支持资源嗅探」；否则空结果提示（页面无资源时的 Snackbar 文案逐字一致）
   private sniffResources(): void {
-    if (this.tabStore.current().isHomePage()) {
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
       this.homePageGuard()
+      return
+    }
+    if (RemoteConfig.getInstance().isInWlr(tab.url)) {
+      this.onClose()
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_unsupported'), duration: 2500 })
       return
     }
     this.onClose()
