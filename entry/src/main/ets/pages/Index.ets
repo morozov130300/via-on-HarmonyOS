@@ -32,7 +32,7 @@ import { webview } from '@kit.ArkWeb'
 import { window, mediaquery, display } from '@kit.ArkUI'
 import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError, emitter, pasteboard } from '@kit.BasicServicesKit'
-import { inputConsumer, KeyEvent, KeyCode } from '@kit.InputKit'
+import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit'
 import { hostOf } from '../common/SearchEngines'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 
@@ -107,9 +107,9 @@ struct Index {
   private landscapeListener: mediaquery.MediaQueryListener | null = null
   // 音量键翻页（原版操作设定）：开启时消费音量上/下键滚动网页
   private volumeKeyConsumed: boolean = false
-  private volumeUpFunc: (event: KeyEvent) => void = () => {
+  private volumeUpFunc: (event: InputKeyEvent) => void = () => {
   }
-  private volumeDownFunc: (event: KeyEvent) => void = () => {
+  private volumeDownFunc: (event: InputKeyEvent) => void = () => {
   }
 
   @Monitor('settings.volumePageFlip')
@@ -130,10 +130,10 @@ struct Index {
           action: 1,
           isRepeat: false
         }
-        this.volumeUpFunc = (_event: KeyEvent) => {
+        this.volumeUpFunc = (_event: InputKeyEvent) => {
           this.scrollCurrentPage(-1)
         }
-        this.volumeDownFunc = (_event: KeyEvent) => {
+        this.volumeDownFunc = (_event: InputKeyEvent) => {
           this.scrollCurrentPage(1)
         }
         inputConsumer.on('keyPressed', up, this.volumeUpFunc)
@@ -438,6 +438,457 @@ struct Index {
     return true
   }
 
+  // ===== 原版 PC 键盘快捷键（mark/via/Shell.dispatchKeyEvent → c8/k6.n8 → L9/M9）=====
+
+  // 原版 k6.n8：宿主按键分发入口（onInterceptKeyEvent / onKeyEvent 双通道共用）
+  private handlePcKey(event: KeyEvent): boolean {
+    if (event.type !== KeyType.Down) {
+      return false
+    }
+    const ctrl = this.pcModifierDown(event, 'Ctrl')
+    const alt = this.pcModifierDown(event, 'Alt')
+    const shift = this.pcModifierDown(event, 'Shift')
+    return this.dispatchPcKey(event.keyCode, ctrl, alt, shift)
+  }
+
+  // KeyEvent.getModifierKeyState（API 12）：查询 Ctrl/Alt/Shift 按下态
+  private pcModifierDown(event: KeyEvent, modifier: string): boolean {
+    try {
+      if (event.getModifierKeyState !== undefined) {
+        return event.getModifierKeyState([modifier])
+      }
+    } catch (error) {
+      console.error('getModifierKeyState failed')
+    }
+    return false
+  }
+
+  // 原版 k6.w9()：Fragment 栈空（无弹层）才进入快捷键主流程
+  private pcOverlayOpen(): boolean {
+    return this.showMenu || this.showSearch || this.showTabPanel || this.showFindBar || this.showAi ||
+      this.showMediaList || this.showLinkConfirm || this.downloadConfirm !== null || this.showReadAloudPanel
+  }
+
+  // 主场景：无弹层且未进入设置等二级页（原版设置页为独立 Activity，k6 不可见不处理）
+  private pcMainScene(): boolean {
+    return !this.pcOverlayOpen() && this.mainNavStack.size() === 0
+  }
+
+  // 原版 k6.n8 弹层分支：仅 ESC（keyCode 111 → d9/e1）关闭顶层弹层，其余按键放行
+  private pcEscape(): void {
+    if (this.pcOverlayOpen()) {
+      this.pcCloseTopOverlay()
+    }
+    // 原版 L9 case 111：无弹层时消费、无动作
+  }
+
+  // 关闭顶层弹层（顺序与 onBackPress 一致）
+  private pcCloseTopOverlay(): void {
+    if (this.showLinkConfirm) {
+      this.showLinkConfirm = false
+      this.linkConfirmUrl = ''
+      return
+    }
+    if (this.showMediaList) {
+      this.showMediaList = false
+      return
+    }
+    if (this.showSearch) {
+      this.showSearch = false
+      return
+    }
+    if (this.showAi) {
+      if (this.aiBackHandler !== null) {
+        this.aiBackHandler()
+      } else {
+        this.showAi = false
+      }
+      return
+    }
+    if (this.showMenu) {
+      this.showMenu = false
+      return
+    }
+    if (this.showTabPanel) {
+      this.showTabPanel = false
+      return
+    }
+    if (this.showFindBar) {
+      this.showFindBar = false
+      try {
+        this.tabStore.current().controller.clearMatches()
+      } catch (error) {
+        console.error('clearMatches failed')
+      }
+      return
+    }
+    if (this.downloadConfirm !== null) {
+      const info = this.downloadConfirm
+      if (info.kind === 'web') {
+        this.downloads.cancelPendingDownload(info.guid)
+      } else {
+        this.downloads.cancelPendingUrlDownload()
+      }
+      this.downloadConfirm = null
+      return
+    }
+    if (this.showReadAloudPanel) {
+      this.showReadAloudPanel = false
+    }
+  }
+
+  // 原版 k6.L9：主场景 keyCode → 动作 1:1（Ctrl/Alt/F 系全量分支）
+  private dispatchPcKey(keyCode: number, ctrl: boolean, alt: boolean, shift: boolean): boolean {
+    if (keyCode === KeyCode.KEYCODE_ESCAPE) {
+      this.pcEscape()
+      return true
+    }
+    if (this.pcOverlayOpen() || this.mainNavStack.size() > 0) {
+      return false
+    }
+    if (keyCode === KeyCode.KEYCODE_HOME) {
+      // 原版 case 3：Alt+Home → na.V0() 回主页
+      if (alt) {
+        this.pcGotoHome()
+        return true
+      }
+      return false
+    }
+    if (keyCode === KeyCode.KEYCODE_DPAD_LEFT) {
+      // 原版 case 21：Alt+← → ra(12)=U8 网页后退
+      if (alt) {
+        this.pcBackward()
+        return true
+      }
+      return false
+    }
+    if (keyCode === KeyCode.KEYCODE_DPAD_RIGHT) {
+      // 原版 case 22：Alt+→ → ra(13)=V8 网页前进
+      if (alt) {
+        this.pcForward()
+        return true
+      }
+      return false
+    }
+    if (keyCode === KeyCode.KEYCODE_TAB) {
+      // 原版 case 61：Ctrl+Tab → ra(11) 下一个标签；Ctrl+Shift+Tab → ra(10) 上一个标签
+      if (ctrl) {
+        if (shift) {
+          this.pcSwitchTab(-1)
+        } else {
+          this.pcSwitchTab(1)
+        }
+        return true
+      }
+      return false
+    }
+    if (keyCode === KeyCode.KEYCODE_MENU) {
+      // 原版 case 82：菜单键 → tb() 打开菜单
+      this.pcMenu()
+      return true
+    }
+    if (keyCode === KeyCode.KEYCODE_SEARCH) {
+      // 原版 case 84：搜索键 → ra(4) 聚焦地址栏
+      this.pcFocusAddress()
+      return true
+    }
+    if (keyCode === KeyCode.KEYCODE_F5) {
+      // 原版 case 135：F5 → ra(1) 刷新
+      this.pcRefresh()
+      return true
+    }
+    if (keyCode === KeyCode.KEYCODE_PAGE_UP) {
+      // 原版 case 92：上翻页 → z8.b0.V(wv, 2)
+      this.pcPageUp()
+      return true
+    }
+    if (keyCode === KeyCode.KEYCODE_PAGE_DOWN) {
+      // 原版 case 93：下翻页 → z8.b0.V(wv, 3)
+      this.pcPageDown()
+      return true
+    }
+    if (ctrl) {
+      if (keyCode === KeyCode.KEYCODE_T) {
+        // 原版 case 48：Ctrl+T → ra(5) 新建标签 + na() 聚焦地址
+        this.pcNewTab()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_U) {
+        // 原版 case 49：Ctrl+U → ra(20) 查看源码
+        this.pcSource()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_W) {
+        // 原版 case 51：Ctrl+W → ra(9)=na.B0() 关闭标签
+        this.pcCloseTab()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_B) {
+        // 原版 case 30：Ctrl+Shift+B → ra(7) 书签
+        if (shift) {
+          this.pcBookmarks()
+          return true
+        }
+        return false
+      }
+      if (keyCode === KeyCode.KEYCODE_L) {
+        // 原版 case 40：Ctrl+L → ra(4) 输入网址
+        this.pcFocusAddress()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_R) {
+        // 原版 case 46：Ctrl+R → ra(1) 刷新
+        this.pcRefresh()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_D) {
+        // 原版 case 32：Ctrl+D → ra(6)=P7() 添加书签
+        this.pcAddBookmark()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_F) {
+        // 原版 case 34：Ctrl+F → ra(14) 页内查找
+        this.pcFind()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_G) {
+        // 原版 case 35：Ctrl+G → ra(21)=E8(true) 查找下一个；+Shift → ra(22) 上一个
+        if (shift) {
+          this.pcFindPrev()
+        } else {
+          this.pcFindNext()
+        }
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_H) {
+        // 原版 case 36：Ctrl+H → ra(8) 历史
+        this.pcHistory()
+        return true
+      }
+      if (keyCode === KeyCode.KEYCODE_0) {
+        // 原版 case 16：Ctrl+0 → 切换到最后一个标签
+        this.pcTabDigit(0)
+        return true
+      }
+      if (keyCode >= KeyCode.KEYCODE_1 && keyCode <= KeyCode.KEYCODE_9) {
+        // 原版 case 8-15：Ctrl+1..9 → 切换到第 N 个标签
+        this.pcTabDigit(keyCode - KeyCode.KEYCODE_1 + 1)
+        return true
+      }
+      return false
+    }
+    if (alt && keyCode === KeyCode.KEYCODE_F) {
+      // 原版 case 34 Alt 分支：Alt+F → tb() 菜单
+      this.pcMenu()
+      return true
+    }
+    return false
+  }
+
+  // 原版 ra(5)+na()：新建前台标签（隐身会话内为隐身标签）并打开地址输入
+  private pcNewTab(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.tabStore.newTab(this.tabStore.sessionIncognito)
+    this.searchInitialText = ''
+    this.showSearch = true
+  }
+
+  // 原版 ra(9)=na.B0()：关闭当前标签
+  private pcCloseTab(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.tabStore.closeTab(this.tabStore.currentIndex)
+  }
+
+  // 原版 ra(10/11)：上/下一个标签（越界回绕）
+  private pcSwitchTab(delta: number): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    const count = this.tabStore.tabs.length
+    if (count === 0) {
+      return
+    }
+    let target = this.tabStore.currentIndex + delta
+    if (target < 0) {
+      target = count - 1
+    } else if (target >= count) {
+      target = 0
+    }
+    this.tabStore.switchTo(target)
+  }
+
+  // 原版 ra(12)=U8：网页后退
+  private pcBackward(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    const tab = this.tabStore.current()
+    if (tab.canBack) {
+      try {
+        tab.controller.backward()
+      } catch (error) {
+        console.error('backward failed')
+      }
+    }
+  }
+
+  // 原版 ra(13)=V8：网页前进
+  private pcForward(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    const tab = this.tabStore.current()
+    if (tab.canForward) {
+      try {
+        tab.controller.forward()
+      } catch (error) {
+        console.error('forward failed')
+      }
+    }
+  }
+
+  // 原版 tb()：打开菜单
+  private pcMenu(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.showMenu = true
+  }
+
+  // 原版 ra(7)=ja(true)：书签页
+  private pcBookmarks(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.openPage('bookmarks')
+  }
+
+  // 原版 ra(8)=ja(false)：历史页
+  private pcHistory(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.openPage('history')
+  }
+
+  // 原版 ra(14)：页内查找（弹层打开则先关闭再开查找，等价 d9 判断）
+  private pcFind(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.showFindBar = true
+  }
+
+  // 原版 ra(4)=ub()+na()：聚焦地址栏（带入当前网址/剪贴板语义同地址栏点击）
+  private pcFocusAddress(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.searchInitialText = this.addressTapInitialText()
+    this.showSearch = true
+  }
+
+  // 原版 ra(1)=wa()：刷新当前网页
+  private pcRefresh(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
+      return
+    }
+    try {
+      tab.controller.refresh()
+    } catch (error) {
+      console.error('refresh failed')
+    }
+  }
+
+  // 原版 ra(20)=na.i2()：查看源码（复用工具栏命令实现）
+  private pcSource(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.handleToolbarCommand('viewSource')
+  }
+
+  // 原版 ra(6)=P7()：添加书签（复用工具栏命令实现）
+  private pcAddBookmark(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.handleToolbarCommand('addBookmark')
+  }
+
+  // 原版 ra(21)=E8(true)：查找下一个
+  private pcFindNext(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    try {
+      this.tabStore.current().controller.searchNext(true)
+    } catch (error) {
+      console.error('searchNext failed')
+    }
+  }
+
+  // 原版 ra(22)=E8(false)：查找上一个
+  private pcFindPrev(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    try {
+      this.tabStore.current().controller.searchNext(false)
+    } catch (error) {
+      console.error('searchNext failed')
+    }
+  }
+
+  // 原版 na.V0()：回主页（已在主页则不动作）
+  private pcGotoHome(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    if (!this.tabStore.current().isHomePage()) {
+      this.tabStore.gotoHome()
+    }
+  }
+
+  // 原版 z8.b0.V(wv, 2)：上翻页（0.8 屏动画滚动）
+  private pcPageUp(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.scrollCurrentPage(-1)
+  }
+
+  // 原版 z8.b0.V(wv, 3)：下翻页
+  private pcPageDown(): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    this.scrollCurrentPage(1)
+  }
+
+  // 原版 case 8-16：Ctrl+数字切换标签（0=最后一个）
+  private pcTabDigit(digit: number): void {
+    if (!this.pcMainScene()) {
+      return
+    }
+    const count = this.tabStore.tabs.length
+    if (count === 0) {
+      return
+    }
+    const target = digit === 0 ? count - 1 : digit - 1
+    if (target < count) {
+      this.tabStore.switchTo(target)
+    }
+  }
+
   // 原版 k6.h 粘贴项：剪贴板文本经 AppStorage 传递后带入搜索输入框
   private addressTapInitialText(): string {
     const paste = AppStorage.get<string>('via_paste_url') ?? ''
@@ -712,7 +1163,11 @@ struct Index {
             ForEach(this.tabStore.tabs, (tab: TabItem) => {
               TabContent() {
                 Stack() {
-                  TabWeb({ tab: tab })
+                  TabWeb({
+                    tab: tab,
+                    // 原版 Shell.dispatchKeyEvent：Web 获焦时按键先经宿主处理（k6.n8 1:1）
+                    onPcKey: (event: KeyEvent): boolean => this.handlePcKey(event)
+                  })
                   if (tab.isHomePage()) {
                     HomePage({
                       searchOpen: this.showSearch,
@@ -995,6 +1450,33 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    // 原版 Shell.dispatchKeyEvent：无获焦组件时按键经根节点分发（k6.n8 1:1）
+    .onKeyEvent((event: KeyEvent): boolean => this.handlePcKey(event))
+    // 原版快捷键组合键窗口级响应（Web 获焦/无获焦场景兜底，动作经 pc* 门控与 n8 一致）
+    .keyboardShortcut('t', [ModifierKey.CTRL], (): void => this.pcNewTab())
+    .keyboardShortcut('w', [ModifierKey.CTRL], (): void => this.pcCloseTab())
+    .keyboardShortcut('l', [ModifierKey.CTRL], (): void => this.pcFocusAddress())
+    .keyboardShortcut('h', [ModifierKey.CTRL], (): void => this.pcHistory())
+    .keyboardShortcut('u', [ModifierKey.CTRL], (): void => this.pcSource())
+    .keyboardShortcut('d', [ModifierKey.CTRL], (): void => this.pcAddBookmark())
+    .keyboardShortcut('f', [ModifierKey.CTRL], (): void => this.pcFind())
+    .keyboardShortcut('f', [ModifierKey.ALT], (): void => this.pcMenu())
+    .keyboardShortcut('b', [ModifierKey.CTRL, ModifierKey.SHIFT], (): void => this.pcBookmarks())
+    .keyboardShortcut('r', [ModifierKey.CTRL], (): void => this.pcRefresh())
+    .keyboardShortcut('g', [ModifierKey.CTRL], (): void => this.pcFindNext())
+    .keyboardShortcut('g', [ModifierKey.CTRL, ModifierKey.SHIFT], (): void => this.pcFindPrev())
+    .keyboardShortcut(FunctionKey.F5, [], (): void => this.pcRefresh())
+    .keyboardShortcut(FunctionKey.ESC, [], (): void => this.pcEscape())
+    .keyboardShortcut('1', [ModifierKey.CTRL], (): void => this.pcTabDigit(1))
+    .keyboardShortcut('2', [ModifierKey.CTRL], (): void => this.pcTabDigit(2))
+    .keyboardShortcut('3', [ModifierKey.CTRL], (): void => this.pcTabDigit(3))
+    .keyboardShortcut('4', [ModifierKey.CTRL], (): void => this.pcTabDigit(4))
+    .keyboardShortcut('5', [ModifierKey.CTRL], (): void => this.pcTabDigit(5))
+    .keyboardShortcut('6', [ModifierKey.CTRL], (): void => this.pcTabDigit(6))
+    .keyboardShortcut('7', [ModifierKey.CTRL], (): void => this.pcTabDigit(7))
+    .keyboardShortcut('8', [ModifierKey.CTRL], (): void => this.pcTabDigit(8))
+    .keyboardShortcut('9', [ModifierKey.CTRL], (): void => this.pcTabDigit(9))
+    .keyboardShortcut('0', [ModifierKey.CTRL], (): void => this.pcTabDigit(0))
   }
 
   private windowFilterAlphaHex(): string {
