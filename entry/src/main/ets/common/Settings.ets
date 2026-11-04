@@ -59,8 +59,10 @@ const SYNC_KEYS: string[] = [
   'volumePageFlip', 'swipeSwitchTab', 'videoGesture', 'videoorientation', 'uifont', 'undoCloseToast', 'showStatusBar',
   'skin',
   'fullScreen', 'gameMode', 'wifiOnlyImages', 'cleardata2', 'labflag',
+  'bookmarksviewmode', 'bookmarksorder',
+  'fab', 'fableftaction', 'fabrightaction', 'fabupaction', 'fabdownaction', 'urlbarcolor',
   'jsEnabled',
-  'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled',
+  'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled', 'searchshortcuts',
   'keyback', 'keyforward', 'keyhome', 'keytab', 'keymenu',
   'gesturetoolbarleft', 'gesturetoolbarright', 'restoreclosedtabs', 'scriptNextId',
   'readaloudspeed'
@@ -274,6 +276,31 @@ export class AppSettings {
   @Trace clearData2: number = 7
   // 原版 labflag（w9/d）：位1=设置根页「实验」入口（hb/o6 五连点切换）、位2=模糊效果（hb/y1）
   @Trace labFlag: number = 0
+  // 原版 w9/k.f1()/l1()（键名 searchshortcuts）：搜索快捷词 JSON 串
+  // （{"<引擎id>":"<快捷词>"}，如 {"-1":"gg","-3":"bn"}，tb/c.java:78 f() 合并默认表）；
+  // 本工程功能未实施，仅备份互通存储
+  @Trace searchshortcuts: string = ''
+  // 原版 w9/k.java:564/992（键名 bookmarksviewmode）：书签视图 0=列表 1=网格，默认 0；
+  // 本工程书签页功能未实施，仅备份互通存储
+  @Trace bookmarksviewmode: number = 0
+  // 原版 w9/k.java:640/1212（键名 bookmarksorder）：书签排序方式，默认 0；
+  // 本工程书签页功能未实施，仅备份互通存储
+  @Trace bookmarksorder: number = 0
+  // 原版 w9/k.java:569/1249（键名 fab）：悬浮球布局位标志，默认 80（水平居中+垂直底部）；
+  // 位语义（c8/k6.java:4332 Ga）：bit0+bit1(3)=左、bit0+bit2(5)=右、否则居中；
+  // bit4+bit6(80)=下、否则上；本工程悬浮球功能未实施，仅备份互通存储
+  @Trace fab: number = 80
+  // 原版 w9/k.java:1479/1359（键名 fableftaction）：悬浮球左滑动作 id，默认 12；未实施仅存储
+  @Trace fableftaction: number = 12
+  // 原版 w9/k.java:832/1484（键名 fabrightaction）：悬浮球右滑动作 id，默认 13；未实施仅存储
+  @Trace fabrightaction: number = 13
+  // 原版 w9/k.java:1037/884（键名 fabupaction）：悬浮球上滑动作 id，默认 23；未实施仅存储
+  @Trace fabupaction: number = 23
+  // 原版 w9/k.java:1582/1403（键名 fabdownaction）：悬浮球下滑动作 id，默认 1；未实施仅存储
+  @Trace fabdownaction: number = 1
+  // 原版 w9/k.java:822/788（键名 urlbarcolor）：地址栏自定义颜色（Android ARGB 负数 int），
+  // 默认 -1（未设置；原版 c0() 将非负旧值迁移为 -1）；本工程地址栏自定义色未实施，仅备份互通存储
+  @Trace urlbarcolor: number = -1
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -533,6 +560,15 @@ export class AppSettings {
       this.wifiOnlyImages = await this.readBoolean('wifiOnlyImages', false)
       this.clearData2 = await this.readNumber('cleardata2', 7)
       this.labFlag = await this.readNumber('labflag', 0)
+      this.searchshortcuts = await this.readString('searchshortcuts', '')
+      this.bookmarksviewmode = await this.readNumber('bookmarksviewmode', 0)
+      this.bookmarksorder = await this.readNumber('bookmarksorder', 0)
+      this.fab = await this.readNumber('fab', 80)
+      this.fableftaction = await this.readNumber('fableftaction', 12)
+      this.fabrightaction = await this.readNumber('fabrightaction', 13)
+      this.fabupaction = await this.readNumber('fabupaction', 23)
+      this.fabdownaction = await this.readNumber('fabdownaction', 1)
+      this.urlbarcolor = await this.readNumber('urlbarcolor', -1)
       this.applyAppTheme()
     } catch (error) {
       const err = error as BusinessError

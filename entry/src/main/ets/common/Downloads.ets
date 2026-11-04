@@ -2,8 +2,7 @@ import { webview } from '@kit.ArkWeb'
 import { fileIo } from '@kit.CoreFileKit'
 import { emitter, BusinessError } from '@kit.BasicServicesKit'
 import { BrowserDb } from './Database'
-import { AppSettings } from './Settings'
-import { DownloadRec, DownloadStatus } from './Types'
+import { DownloadRec } from './Types'
 import { DownloadEngine } from './DownloadEngine'
 import { DownloadNotifier } from './DownloadNotifier'
 
@@ -21,13 +20,8 @@ export class DownloadCoordinator {
   private static instance: DownloadCoordinator | null = null
   private db: BrowserDb = BrowserDb.getInstance()
   private saveDir: string = ''
-  private activeIds: Map<string, number> = new Map<string, number>()
-  private lastWrittenPercent: Map<string, number> = new Map<string, number>()
   // 确认前的暂存（原版 m.java 弹层期间不启动下载）
   private pendingWeb: Map<string, PendingWebDownload> = new Map<string, PendingWebDownload>()
-  // 已启动的 Web 下载项，供暂停/继续/取消（原版 download/c 状态机）
-  private runningItems: Map<string, webview.WebDownloadItem> = new Map<string, webview.WebDownloadItem>()
-  private dbIdToGuid: Map<number, string> = new Map<number, string>()
   private pendingUrl: PendingUrlDownload | null = null
   private appContext: Context | null = null
 
@@ -51,18 +45,19 @@ export class DownloadCoordinator {
     } catch (error) {
       console.error('create download dir failed')
     }
+    // 网页内下载统一接管：onBeforeDownload 只取信息转交自研分块引擎，不调用 start()
     const delegate: webview.WebDownloadDelegate = new webview.WebDownloadDelegate()
     delegate.onBeforeDownload((downloadItem: webview.WebDownloadItem) => {
       this.handleBefore(downloadItem)
     })
     delegate.onDownloadUpdated((downloadItem: webview.WebDownloadItem) => {
-      this.handleUpdated(downloadItem)
+      console.info(`web download updated: ${downloadItem.getGuid()} (handled by DownloadEngine)`)
     })
     delegate.onDownloadFinish((downloadItem: webview.WebDownloadItem) => {
-      this.handleFinish(downloadItem)
+      console.info(`web download finish: ${downloadItem.getGuid()} (handled by DownloadEngine)`)
     })
     delegate.onDownloadFailed((downloadItem: webview.WebDownloadItem) => {
-      this.handleFailed(downloadItem)
+      console.info(`web download failed: ${downloadItem.getGuid()} (handled by DownloadEngine)`)
     })
     webview.WebDownloadManager.setDownloadDelegate(delegate)
   }
@@ -118,31 +113,31 @@ export class DownloadCoordinator {
     })
   }
 
-  // 确认层「下载」：按（可能已编辑的）文件名启动下载并入库
-  confirmWebDownload(guid: string, fileName: string): void {
+  // 确认层「下载」：不调用 item.start()，取 URL/文件名/Cookie 转交自研分块引擎（与下载链接同链路）
+  confirmWebDownload(guid: string, fileName: string, referer: string = '', ua: string = ''): void {
     const pending = this.pendingWeb.get(guid)
     if (pending === undefined) {
       return
     }
     this.pendingWeb.delete(guid)
     const safeName = fileName.trim() !== '' ? fileName.trim() : pending.fileName
-    const path = `${this.saveDir}/${safeName}`
-    pending.item.start(path)
-    this.runningItems.set(guid, pending.item)
-    const rec = new DownloadRec()
-    rec.url = pending.url
-    rec.path = path
-    rec.mime = pending.item.getMimeType()
-    rec.size = pending.size
-    rec.received = 0
-    rec.status = DownloadStatus.Running
-    rec.created = Date.now()
-    this.db.insertDownload(rec).then((id: number) => {
-      this.activeIds.set(guid, id)
-      this.dbIdToGuid.set(id, guid)
-    }).catch((error: BusinessError) => {
-      console.error(`insert download failed: ${error.message}`)
-    })
+    // 注入 Web Cookie 保证登录态下载（WebCookieManager.fetchCookieSync，API 11+）
+    let cookie = ''
+    try {
+      cookie = webview.WebCookieManager.fetchCookieSync(pending.url)
+    } catch (error) {
+      console.error('fetch cookie for download failed')
+    }
+    // 已由引擎接管，释放 ArkWeb 侧下载项
+    try {
+      pending.item.cancel()
+    } catch (error) {
+      console.error('cancel web download item failed')
+    }
+    DownloadEngine.getInstance().createTask(pending.url, safeName, referer, ua, 1, cookie)
+      .catch((error: BusinessError) => {
+        console.error(`create download task failed: ${error.message}`)
+      })
   }
 
   // 确认层「取消」：取消未启动的下载
@@ -195,27 +190,12 @@ export class DownloadCoordinator {
   }
 
   // ===== 原版下载状态机（mark/via/download/c）：暂停/继续/取消/重新下载 =====
-  // state>0 为自研引擎托管任务；state=0 为 WebDownloadDelegate 旧任务
+  // 网页内下载与下载链接统一走自研引擎（state>0）；state=0 旧记录无运行态
 
   pauseDownload(rec: DownloadRec): void {
     if (rec.state > 0) {
       DownloadEngine.getInstance().pauseById(rec.id).catch(() => {
       })
-      return
-    }
-    const guid = this.dbIdToGuid.get(rec.id)
-    if (guid !== undefined) {
-      const item = this.runningItems.get(guid)
-      if (item !== undefined) {
-        try {
-          item.pause()
-          this.db.updateDownload(rec.id, rec.received, DownloadStatus.Paused).catch(() => {
-          })
-        } catch (error) {
-          console.error('pause download failed')
-        }
-      }
-      return
     }
   }
 
@@ -223,21 +203,6 @@ export class DownloadCoordinator {
     if (rec.state > 0) {
       DownloadEngine.getInstance().resumeById(rec.id).catch(() => {
       })
-      return
-    }
-    const guid = this.dbIdToGuid.get(rec.id)
-    if (guid !== undefined) {
-      const item = this.runningItems.get(guid)
-      if (item !== undefined) {
-        try {
-          item.resume()
-          this.db.updateDownload(rec.id, rec.received, DownloadStatus.Running).catch(() => {
-          })
-        } catch (error) {
-          console.error('resume download failed')
-        }
-      }
-      return
     }
   }
 
@@ -250,23 +215,6 @@ export class DownloadCoordinator {
         DownloadNotifier.getInstance().cancel(rec.id)
       }).catch(() => {
       })
-      return
-    }
-    const guid = this.dbIdToGuid.get(rec.id)
-    if (guid !== undefined) {
-      const item = this.runningItems.get(guid)
-      if (item !== undefined) {
-        try {
-          item.cancel()
-        } catch (error) {
-          console.error('cancel download failed')
-        }
-      }
-      this.runningItems.delete(guid)
-      this.dbIdToGuid.delete(rec.id)
-      this.db.updateDownload(rec.id, rec.received, DownloadStatus.Canceled).catch(() => {
-      })
-      return
     }
   }
 
@@ -285,78 +233,6 @@ export class DownloadCoordinator {
       .catch((error: BusinessError) => {
         console.error(`restart download failed: ${error.message}`)
       })
-  }
-
-  private handleUpdated(item: webview.WebDownloadItem): void {
-    const id = this.activeIds.get(item.getGuid())
-    if (id === undefined) {
-      return
-    }
-    const percent = item.getPercentComplete()
-    const last = this.lastWrittenPercent.get(item.getGuid())
-    if (last !== undefined && percent - last < 10 && percent < 100) {
-      return
-    }
-    this.lastWrittenPercent.set(item.getGuid(), percent)
-    this.db.updateDownload(id, item.getReceivedBytes(), DownloadStatus.Running).catch((error: BusinessError) => {
-      console.error(`update download failed: ${error.message}`)
-    })
-  }
-
-  private copyToUserDir(sandboxPath: string): void {
-    const dir = AppSettings.getInstance().downloadDir
-    if (dir === '' || sandboxPath === '') {
-      return
-    }
-    try {
-      const slash = sandboxPath.lastIndexOf('/')
-      const name = slash >= 0 ? sandboxPath.substring(slash + 1) : ''
-      if (name === '') {
-        return
-      }
-      const destUri = dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`
-      const src = fileIo.openSync(sandboxPath, fileIo.OpenMode.READ_ONLY)
-      const dst = fileIo.openSync(destUri, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
-      fileIo.copyFileSync(src.fd, dst.fd)
-      fileIo.closeSync(src)
-      fileIo.closeSync(dst)
-    } catch (error) {
-      console.error('copy download to user dir failed')
-    }
-  }
-
-  private cleanupGuid(guid: string): void {
-    this.activeIds.delete(guid)
-    this.lastWrittenPercent.delete(guid)
-    this.runningItems.delete(guid)
-    for (const key of Array.from(this.dbIdToGuid.keys())) {
-      if (this.dbIdToGuid.get(key) === guid) {
-        this.dbIdToGuid.delete(key)
-      }
-    }
-  }
-
-  private handleFinish(item: webview.WebDownloadItem): void {
-    const id = this.activeIds.get(item.getGuid())
-    if (id === undefined) {
-      return
-    }
-    this.copyToUserDir(`${this.saveDir}/${this.fileNameFor(item)}`)
-    this.db.updateDownload(id, item.getReceivedBytes(), DownloadStatus.Completed).catch((error: BusinessError) => {
-      console.error(`finish download failed: ${error.message}`)
-    })
-    this.cleanupGuid(item.getGuid())
-  }
-
-  private handleFailed(item: webview.WebDownloadItem): void {
-    const id = this.activeIds.get(item.getGuid())
-    if (id === undefined) {
-      return
-    }
-    this.db.updateDownload(id, item.getReceivedBytes(), DownloadStatus.Failed).catch((error: BusinessError) => {
-      console.error(`fail download failed: ${error.message}`)
-    })
-    this.cleanupGuid(item.getGuid())
   }
 }
 

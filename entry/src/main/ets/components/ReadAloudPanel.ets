@@ -1,5 +1,6 @@
 import { display } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
+import { common, Want } from '@kit.AbilityKit'
 import { ReadAloudController, ReadAloudTask, ReadAloudListener } from '../common/ReadAloud'
 import { ReadAloudEngine } from '../common/Tts'
 import { AppSettings } from '../common/Settings'
@@ -71,8 +72,9 @@ export struct ReadAloudPanel {
     this.panelH = panelHeightVp()
     // 原版 X1：注册监听并初始化控制条
     this.controller.addListener(this.listener)
-    const speed = this.settings.readAloudSpeed
-    this.sliderValue = Math.max(0, Math.round(speed / 0.25) - 1)
+    // 朗读语速收敛 0.5x-2.0x：已存超界值显示 clamp 后的值
+    const speed = Math.max(0.5, Math.min(2.0, this.settings.readAloudSpeed))
+    this.sliderValue = Math.round((speed - 0.5) / 0.25)
     this.speedText = `${speed.toFixed(2)}x`
     this.refresh()
   }
@@ -196,13 +198,30 @@ export struct ReadAloudPanel {
     }, 300)
   }
 
-  // 原版 n3()：打开系统 TTS 设置（失败 Snackbar「操作失败」）
+  // 原版 n3()：暂停朗读（G3(true)）+ f1.e() 构造 com.android.settings.TTS_SETTINGS intent 跳系统 TTS 设置，
+  // 失败 Snackbar「操作失败」（string zl）。鸿蒙端无文档化的 TTS 设置页 Want（docs 已核实），
+  // 对应跳转系统设置应用（com.huawei.hmos.settings/MainAbility），拉起失败设备弹「操作失败」
   private openTtsSettings(): void {
-    try {
-      this.togglePlay(true)
-    } catch (error) {
-      console.error('readaloud pause before settings failed')
+    this.togglePlay(true)
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    if (context === undefined) {
+      this.showOperationFailedToast()
+      return
     }
+    const want: Want = {
+      bundleName: 'com.huawei.hmos.settings',
+      abilityName: 'com.huawei.hmos.settings.MainAbility'
+    }
+    context.startAbility(want).catch(() => {
+      this.showOperationFailedToast()
+    })
+  }
+
+  private showOperationFailedToast(): void {
+    this.getUIContext().getPromptAction().showToast({
+      message: $r('app.string.read_aloud_operation_failed'),
+      duration: 1500
+    })
   }
 
   // 原版 l3()：展开/收起语速滑条
@@ -211,13 +230,13 @@ export struct ReadAloudPanel {
   }
 
   private onSliderChange(value: number): void {
-    const speed = (value + 1) * 0.25
+    const speed = 0.5 + value * 0.25
     this.speedText = `${speed.toFixed(2)}x`
   }
 
   // 原版 SeekBar.onStopTrackingTouch
   private onSliderDone(value: number): void {
-    const speed = (value + 1) * 0.25
+    const speed = 0.5 + value * 0.25
     this.settings.setReadAloudSpeed(speed)
     this.engine.setSpeed(speed)
     this.onSpeedChanged(speed)
@@ -340,8 +359,8 @@ export struct ReadAloudPanel {
                   this.forward()
                 })
             } else {
-              // dk(E0)：语速滑条（max 13，步长 1）
-              Slider({ value: this.sliderValue, min: 0, max: 13, step: 1, style: SliderStyle.OutSet })
+              // dk(E0)：语速滑条（0.5x-2.0x，步长 0.25，索引 0-6）
+              Slider({ value: this.sliderValue, min: 0, max: 6, step: 1, style: SliderStyle.OutSet })
                 .layoutWeight(4)
                 .height(48)
                 .onChange((value: number, mode: SliderChangeMode) => {

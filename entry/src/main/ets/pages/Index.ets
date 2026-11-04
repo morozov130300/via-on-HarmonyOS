@@ -20,6 +20,7 @@ import { ReadAloudController, ReadAloudTask, ReadAloudListener, sentencesFromJso
 import { ReadAloudEngine } from '../common/Tts'
 import { ReadAloudPanel } from '../components/ReadAloudPanel'
 import { ReadAloudFloat } from '../components/ReadAloudFloat'
+import { TranslatePanel, TranslateState } from '../components/TranslatePanel'
 import { AiPanel } from '../components/AiPanel'
 import { CopilotStore, AiAttachment } from '../common/CopilotStore'
 import { MediaListPage } from '../components/MediaListPage'
@@ -249,12 +250,23 @@ struct Index {
       if (typeof url !== 'string' || typeof fileName !== 'string') {
         return
       }
+      // 网页内下载转自研引擎：带上触发页面 Referer 与 Web UA，保证登录态下载
+      let referer = ''
+      let pageUa = ''
+      try {
+        const currentTab = this.tabStore.current()
+        referer = currentTab.url
+        pageUa = currentTab.controller.getUserAgent()
+      } catch (error) {
+      }
       this.downloadConfirm = new PendingDownloadUi(
         kind === 'url' ? 'url' : 'web',
         typeof guid === 'string' ? guid : '',
         url,
         fileName,
-        typeof size === 'number' ? size : 0
+        typeof size === 'number' ? size : 0,
+        referer,
+        pageUa
       )
     })
     // 主页模式=书签：新标签打开书签页（原版 via://bookmark）
@@ -386,8 +398,9 @@ struct Index {
       case ViaCmdKind.SCANNER:
         this.startScan()
         break
-      // k6.u 8669：v://translator/translate?text= → Eb(text) 翻译文本弹窗（f8.w0 我方无对应弹窗，no-op）
+      // k6.u 8669：v://translator/translate?text= → Eb(text) 翻译文本弹窗（f8.w0）
       case ViaCmdKind.TRANSLATE_TEXT:
+        TranslateState.getInstance().open(cmd.text)
         break
       // k6.u 8682：v://tabs/restore?ids=&selected= → F1(ids, selected) 按 id 恢复标签并选中
       case ViaCmdKind.TABS_RESTORE:
@@ -518,6 +531,11 @@ struct Index {
       this.videoOverlay.requestExit()
       return true
     }
+    // 原版返回键：Fragment 栈顶 f8.w0 翻译面板先出栈
+    if (TranslateState.getInstance().visible) {
+      TranslateState.getInstance().close()
+      return true
+    }
     if (this.showLinkConfirm) {
       this.showLinkConfirm = false
       this.linkConfirmUrl = ''
@@ -638,7 +656,8 @@ struct Index {
   // 原版 k6.w9()：Fragment 栈空（无弹层）才进入快捷键主流程
   private pcOverlayOpen(): boolean {
     return this.showMenu || this.showSearch || this.showTabPanel || this.showFindBar || this.showAi ||
-      this.showMediaList || this.showLinkConfirm || this.downloadConfirm !== null || this.showReadAloudPanel
+      this.showMediaList || this.showLinkConfirm || this.downloadConfirm !== null || this.showReadAloudPanel ||
+      TranslateState.getInstance().visible
   }
 
   // 主场景：无弹层且未进入设置等二级页（原版设置页为独立 Activity，k6 不可见不处理）
@@ -656,6 +675,11 @@ struct Index {
 
   // 关闭顶层弹层（顺序与 onBackPress 一致）
   private pcCloseTopOverlay(): void {
+    // f8.w0 翻译面板：Fragment 栈顶，最先关闭
+    if (TranslateState.getInstance().visible) {
+      TranslateState.getInstance().close()
+      return
+    }
     if (this.showLinkConfirm) {
       this.showLinkConfirm = false
       this.linkConfirmUrl = ''
@@ -1577,6 +1601,9 @@ struct Index {
         })
       }
 
+      // 原版 k6.Eb/f8.w0：划词翻译浮层（竖屏 TOP|RIGHT / 横屏 BOTTOM|RIGHT，宽 N8()）
+      TranslatePanel()
+
       // 原版 g6.n.r：Snackbar（底部深色条 + 动作按钮）
       if (this.snackbarText !== '') {
         Column() {
@@ -1997,7 +2024,7 @@ struct Index {
     if (this.saveAsPdf) {
       this.savePageAsPdf(name)
     } else {
-      this.savePageAsHtml(name)
+      this.savePageAsMht(name)
     }
   }
 
@@ -2021,9 +2048,26 @@ struct Index {
     return candidate
   }
 
-  // 原版 na.X 非 PDF 分支：ArkWeb 无 saveWebArchive，降级为单文件 HTML
-  // （同步 JS 内联 canvas，跨域污染 catch 跳过；外部资源仍引用原 URL）
-  private savePageAsHtml(name: string): void {
+  // 原版 na.X 非 PDF 分支：saveWebArchive 存 .mht 单文件网页存档；
+  // ArkWeb 对应 WebviewController.storeWebArchive（autoName=false，baseName 为完整路径）
+  private savePageAsMht(name: string): void {
+    const tab = this.tabStore.current()
+    const dir = this.ensureOfflineDir()
+    const baseName = `${dir}/${this.uniqueOfflineName(dir, name, '.mht')}`
+    tab.controller.storeWebArchive(baseName, false).then((archivePath: string) => {
+      if (archivePath !== '' && fileIo.accessSync(archivePath)) {
+        this.showSavedSnackbar()
+      } else {
+        this.savePageAsHtmlFallback(name)
+      }
+    }).catch((error: BusinessError) => {
+      console.error(`store web archive failed: ${error.code}`)
+      this.savePageAsHtmlFallback(name)
+    })
+  }
+
+  // storeWebArchive 失败时降级：单文件 HTML（同步 JS 内联 canvas，跨域污染 catch 跳过；外部资源仍引用原 URL）
+  private savePageAsHtmlFallback(name: string): void {
     const tab = this.tabStore.current()
     const dir = this.ensureOfflineDir()
     const path = `${dir}/${this.uniqueOfflineName(dir, name, '.html')}`
@@ -2104,13 +2148,18 @@ class PendingDownloadUi {
   url: string = ''
   fileName: string = ''
   size: number = 0
+  referer: string = ''
+  ua: string = ''
 
-  constructor(kind: string, guid: string, url: string, fileName: string, size: number) {
+  constructor(kind: string, guid: string, url: string, fileName: string, size: number,
+    referer: string = '', ua: string = '') {
     this.kind = kind
     this.guid = guid
     this.url = url
     this.fileName = fileName
     this.size = size
+    this.referer = referer
+    this.ua = ua
   }
 }
 
@@ -2224,7 +2273,7 @@ struct DownloadConfirmOverlay {
 
   private confirm(): void {
     if (this.info.kind === 'web') {
-      this.coordinator.confirmWebDownload(this.info.guid, this.fileName)
+      this.coordinator.confirmWebDownload(this.info.guid, this.fileName, this.info.referer, this.info.ua)
     } else {
       this.coordinator.confirmUrlDownload(this.fileName)
     }

@@ -377,6 +377,14 @@
       "value": "下载完成"
     },
     {
+      "name": "downloaded_size",
+      "value": "%1$s 已下载"
+    },
+    {
+      "name": "download_size_unknown",
+      "value": "大小未知"
+    },
+    {
       "name": "download_paused",
       "value": "已暂停"
     },
@@ -1747,6 +1755,34 @@
     {
       "name": "res_sniffer_unsupported",
       "value": "该网站不支持资源嗅探"
+    },
+    {
+      "name": "translate_hint",
+      "value": "文字"
+    },
+    {
+      "name": "translate_detect_language",
+      "value": "检测语言"
+    },
+    {
+      "name": "translate_source_language",
+      "value": "源语言"
+    },
+    {
+      "name": "translate_target_language",
+      "value": "目标语言"
+    },
+    {
+      "name": "translate_swap_language",
+      "value": "交换语言"
+    },
+    {
+      "name": "translate_clear_text",
+      "value": "清除文本"
+    },
+    {
+      "name": "translate_exit",
+      "value": "退出"
     }
   ]
 }

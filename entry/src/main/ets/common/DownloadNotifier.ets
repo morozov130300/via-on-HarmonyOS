@@ -227,13 +227,17 @@ export class DownloadNotifier {
     // d：文本组装
     let text: ResourceStr
     if (completed) {
-      text = $r('app.string.download_finished')
+      // 完成态展示最终总字节数
+      text = $r('app.string.pair_text', $r('app.string.download_finished'),
+        dlSizeText(Math.max(rec.received, rec.size)))
     } else if (failed) {
       text = rec.errorMessage !== '' ?
         $r('app.string.download_failed_detail', rec.errorMessage) : $r('app.string.download_failed')
     } else {
+      // 未知大小（无 content-length）：文本进度「已下载 xx」+「大小未知」
       const base = rec.size <= 0 ?
-        $r('app.string.size_only', dlSizeText(rec.received)) :
+        $r('app.string.pair_text', $r('app.string.downloaded_size', dlSizeText(rec.received)),
+          $r('app.string.download_size_unknown')) :
         $r('app.string.size_progress', dlSizeText(rec.received), dlSizeText(rec.size))
       if (paused) {
         text = $r('app.string.pair_text', base, $r('app.string.download_paused'))
@@ -278,9 +282,9 @@ export class DownloadNotifier {
       },
       wantAgent: tapAgent
     }
-    // 进度模板（进行中且支持模板时）
-    if ((active || paused || waiting) && this.templateSupported) {
-      const progress = rec.size > 0 ? Math.floor(rec.received * 100 / rec.size) : 0
+    // 进度模板（进行中且支持模板且有已知总大小时；未知大小不设进度条字段，走文本进度）
+    if ((active || paused || waiting) && this.templateSupported && rec.size > 0) {
+      const progress = Math.floor(rec.received * 100 / rec.size)
       request.template = {
         name: 'downloadTemplate',
         data: { 'progressValue': progress }

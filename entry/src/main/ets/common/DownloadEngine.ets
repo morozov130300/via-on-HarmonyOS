@@ -468,6 +468,36 @@ function parseLong(value: string): number {
   return Number.isFinite(num) && num >= 0 ? num : -1
 }
 
+// m5.e：相对 Location 解析为绝对地址（协议相对 //、根相对 /、目录相对）
+function resolveLocation(base: string, location: string): string {
+  const trimmed = location.trim()
+  if (trimmed === '') {
+    return ''
+  }
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed
+  }
+  const schemeIndex = base.indexOf('://')
+  if (schemeIndex < 0) {
+    return ''
+  }
+  const scheme = base.substring(0, schemeIndex)
+  if (trimmed.startsWith('//')) {
+    return `${scheme}:${trimmed}`
+  }
+  const authorityEnd = base.indexOf('/', schemeIndex + 3)
+  const origin = authorityEnd < 0 ? base : base.substring(0, authorityEnd)
+  if (trimmed.startsWith('/')) {
+    return `${origin}${trimmed}`
+  }
+  const noQuery = base.split('#')[0].split('?')[0]
+  const dirEnd = noQuery.lastIndexOf('/')
+  if (dirEnd < 0) {
+    return `${origin}/${trimmed}`
+  }
+  return `${noQuery.substring(0, dirEnd + 1)}${trimmed}`
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise<void>((resolve: () => void) => {
     setTimeout(resolve, ms)
@@ -623,9 +653,16 @@ class ChunkDownloader {
 
   private writeData(data: ArrayBuffer, responseHeaders: Record<string, string>): DownloadErr | null {
     if (this.chunk.length <= 0 && this.chunk.start === 0) {
-      const learnErr = this.verifyLength(responseHeaders)
-      if (learnErr !== null) {
-        return learnErr
+      // 首块响应若能从 Content-Range 解析出总大小，回填切回真实进度条
+      const rangeTotal = totalFromContentRange(headerValue(responseHeaders, 'Content-Range'))
+      if (rangeTotal > 0) {
+        this.chunk.length = rangeTotal
+        this.task.rec.size = rangeTotal
+      } else {
+        const learnErr = this.verifyLength(responseHeaders)
+        if (learnErr !== null) {
+          return learnErr
+        }
       }
     }
     const err = this.runner.writeChunk(this.chunk, data)
@@ -751,7 +788,11 @@ class TaskRunner {
     }
     if (!task.isProbed()) {
       this.engine.setTaskState(task, ENGINE_STATE_PROBING)
-      err = await this.probe()
+      // m5.e：先解析重定向拿最终地址，再探测
+      err = await this.resolveRedirects()
+      if (err === null) {
+        err = await this.probe()
+      }
     }
     if (err === null) {
       this.engine.setTaskState(task, ENGINE_STATE_DOWNLOADING)
@@ -812,6 +853,71 @@ class TaskRunner {
       }
       this.file = null
     }
+  }
+
+  // m5.e：重定向解析——maxRedirects=0（API 23+）关闭自动跟随，3xx 读 Location 逐跳手动跟随（上限 20 跳）
+  // 低于 API 23 的设备忽略 maxRedirects 字段自动跟随，headersReceive 收到最终响应头无 Location，首跳即退出（降级为原路径）
+  private async resolveRedirects(): Promise<DownloadErr | null> {
+    if (!connection.hasDefaultNet()) {
+      return DownloadErr.make(32)
+    }
+    const task = this.task
+    let current = task.rec.url
+    for (let hop = 0; hop < 20; hop++) {
+      if (this.cancelled) {
+        return DownloadErr.make(1)
+      }
+      const session = http.createHttp()
+      this.addSession(session)
+      const headers: Record<string, string> = {}
+      const taskHeaders = Object.keys(task.headers)
+      for (let i = 0; i < taskHeaders.length; i++) {
+        headers[taskHeaders[i]] = task.headers[taskHeaders[i]]
+      }
+      headers['Accept-Encoding'] = 'identity'
+      let location = ''
+      let gotHeaders = false
+      const gotHeaderPromise: Promise<void> = new Promise<void>((resolve: () => void) => {
+        session.on('headersReceive', (header: Object) => {
+          location = headerValue(header as Record<string, string>, 'Location')
+          gotHeaders = true
+          resolve()
+        })
+      })
+      const options: http.HttpRequestOptions = {
+        method: http.RequestMethod.GET,
+        header: headers,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER,
+        readTimeout: 30000,
+        connectTimeout: 30000,
+        maxRedirects: 0
+      }
+      const done: Promise<void> = session.requestInStream(current, options)
+        .then((): void => {
+        }, (): void => {
+        })
+      await Promise.race([gotHeaderPromise, done])
+      session.destroy()
+      this.removeSession(session)
+      if (this.cancelled) {
+        return DownloadErr.make(1)
+      }
+      if (!gotHeaders || location === '') {
+        break
+      }
+      if (hop === 19) {
+        return DownloadErr.make(25)
+      }
+      const next = resolveLocation(current, location)
+      if (next === '') {
+        return DownloadErr.make(2)
+      }
+      current = next
+    }
+    if (current !== task.rec.url) {
+      task.rec.url = current
+    }
+    return null
   }
 
   // m5.e.j()+q()：HEAD 探测（Range: bytes=0-0），修正文件名/MIME/总长/ETag/线程数
@@ -1120,8 +1226,9 @@ export class DownloadEngine {
   }
 
   // m5.i.f()：新建任务入库并入队（threads：新建下载弹窗走原版 B3 的 8 线程，默认单线程）
+  // cookie：网页内下载接管时注入 Web Cookie，保证登录态下载
   async createTask(url: string, fileName: string, referer: string, ua: string,
-    threads: number = 1): Promise<number> {
+    threads: number = 1, cookie: string = ''): Promise<number> {
     const rec = new DownloadRec()
     rec.url = url
     rec.path = `${this.saveDir}/${fileName}`
@@ -1140,6 +1247,9 @@ export class DownloadEngine {
     }
     if (ua !== '') {
       headers['User-Agent'] = ua
+    }
+    if (cookie !== '') {
+      headers['Cookie'] = cookie
     }
     rec.header = JSON.stringify(headers)
     const id = await this.db.insertDownload(rec)
