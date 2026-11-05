@@ -99,8 +99,10 @@ export struct SettingsSearchToolbarPage {
     NavDestination() {
       Column() {
         AppBarSpacer()
-        Scroll() {
-          Column() {
+        // 原版 hb/i6.X1：单一 RecyclerView，[0]=开关行 [1]=「搜索引擎」分组头 [2..]=引擎行；
+        // ItemTouchHelper 长按拖拽仅对 index≥2 生效，落下后 v3() 把顺序写入 e2 键（searchToolbarOrder）
+        List() {
+          ListItem() {
             SettingCheckRow({
               rowLabel: '启用搜索工具栏',
               isChecked: this.settings.searchToolbarEnabled,
@@ -108,6 +110,8 @@ export struct SettingsSearchToolbarPage {
                 this.settings.setSearchToolbarEnabled(isOn)
               }
             })
+          }
+          ListItem() {
             Row() {
               Text('搜索引擎')
                 .fontSize(13)
@@ -115,8 +119,9 @@ export struct SettingsSearchToolbarPage {
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 14, bottom: 6 })
-
-            ForEach(this.rows, (row: EngineRow, index: number) => {
+          }
+          ForEach(this.rows, (row: EngineRow, index: number) => {
+            ListItem() {
               Row({ space: 12 }) {
                 Column({ space: 2 }) {
                   Text(row.name)
@@ -134,7 +139,7 @@ export struct SettingsSearchToolbarPage {
                   .select(row.enabled)
                   .enabled(this.settings.searchToolbarEnabled && row.subtitle === '')
                   .onChange((value: boolean) => {
-                    // 原版 i6.a.b：副标题非空（默认引擎）不可切换
+                    // 原版 i6.k3：副标题非空（默认引擎）不可切换
                     if (row.subtitle !== '') {
                       return
                     }
@@ -154,14 +159,30 @@ export struct SettingsSearchToolbarPage {
                 this.persistDisabled()
                 this.reload()
               })
-            }, (row: EngineRow) => `${row.key}_${row.enabled}_${row.subtitle}`)
-          }
-          .width('100%')
-          .padding({ bottom: 20 })
+            }
+          }, (row: EngineRow) => `${row.key}_${row.enabled}_${row.subtitle}`)
         }
         .width('100%')
         .layoutWeight(1)
-        .align(Alignment.Top)
+        .edgeEffect(EdgeEffect.Spring)
+        .onItemDragStart((event: ItemDragInfo, index: number) => {
+          // 原版 c.y()/c.r()：index<2（开关/分组头）不可拖拽
+          if (index < 2) {
+            return
+          }
+          return this.DragPreview(this.rows[index - 2])
+        })
+        .onItemDrop((event: ItemDragInfo, itemIndex: number, insertIndex: number, isSuccess: boolean) => {
+          if (!isSuccess || itemIndex < 2 || insertIndex < 2 || itemIndex === insertIndex) {
+            return
+          }
+          const from = itemIndex - 2
+          const to = insertIndex - 2
+          const moved = this.rows.splice(from, 1)[0]
+          this.rows.splice(to, 0, moved)
+          // 原版 v3()：拖拽落下后顺序写入 searchToolbarOrder
+          this.persistOrder()
+        })
       }
       .width('100%')
       .height('100%')
@@ -181,6 +202,21 @@ export struct SettingsSearchToolbarPage {
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
+  }
+
+  @Builder
+  DragPreview(row: EngineRow) {
+    Column() {
+      Text(row.name)
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+    }
+    .alignItems(HorizontalAlign.Start)
+    .padding({ left: 16, right: 16 })
+    .constraintSize({ minWidth: '100%' })
+    .height(52)
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor($r('app.color.surface'))
   }
 }
 

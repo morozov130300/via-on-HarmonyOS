@@ -3,8 +3,7 @@ import { fileIo, picker } from '@kit.CoreFileKit'
 import { webview } from '@kit.ArkWeb'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { dialogTransition } from '../common/Transitions'
-import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
-import { window, display } from '@kit.ArkUI'
+import { display } from '@kit.ArkUI'
 import { common, Want } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
 import { BackupManager } from '../common/Backup'
@@ -57,10 +56,6 @@ export struct SettingsGeneralPage {
             } })
             SettingNavRow({ rowLabel: '阅读模式', onTapRow: () => {
               this.navPathStack.pushPathByName('settingsReader', '', true)
-            } })
-            SettingCheckRow({ rowLabel: '显示状态栏', rowDesc: '关闭后页面内容铺满整个屏幕', isChecked: this.settings.showStatusBar, onCheckRow: (isOn: boolean) => {
-              this.settings.setShowStatusBar(isOn)
-              this.applyStatusBar(isOn)
             } })
             SettingNavRow({ rowLabel: '工具栏设置', onTapRow: () => {
               this.navPathStack.pushPathByName('toolbarCustom', '', true)
@@ -200,17 +195,6 @@ export struct SettingsGeneralPage {
       Math.max(0, this.settings.orientation - 1), false, (index: number): void => {
         this.applyOrientation(index + 1)
       })
-  }
-
-  private applyStatusBar(visible: boolean): void {
-    const win = AppStorage.get<window.Window>('mainWindow')
-    if (win === undefined) {
-      return
-    }
-    applyStatusBarVisible(win, visible)
-    setTimeout(() => {
-      UiInsets.getInstance().refresh(win)
-    }, 200)
   }
 
   private applyOrientation(value: number): void {

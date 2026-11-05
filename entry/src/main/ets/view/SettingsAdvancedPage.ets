@@ -63,13 +63,14 @@ export struct SettingsAdvancedPage {
                 this.settings.setDisableSafeBrowsing(isOn)
               }
             })
+            // 原版 hb/z.k3：行摘要固定 yx「请小心，忽略 SSL 证书警告可能会使网站的连接不安全」；
+            // 点击 → 白名单空时弹窗（yv 标题 + n_ 正文 + yw 复选框默认不勾 + ok/cancel），
+            // 确定后进入 SSL 白名单页；本端白名单机制以全局开关落地（TabWeb 消费）
             SettingNavRow({
               rowLabel: '忽略 SSL 证书警告',
-              rowValue: this.settings.ignoreSslWarning
-                ? '已忽略，点击可恢复默认'
-                : '请小心，忽略 SSL 证书警告可能会使网站的连接不安全',
+              rowValue: '请小心，忽略 SSL 证书警告可能会使网站的连接不安全',
               onTapRow: () => {
-                this.toggleSslWarning()
+                this.showSslWarningDialog()
               }
             })
           }
@@ -114,20 +115,18 @@ export struct SettingsAdvancedPage {
     }
   }
 
-  private toggleSslWarning(): void {
-    if (this.settings.ignoreSslWarning) {
-      this.settings.setIgnoreSslWarning(false)
-      this.getUIContext().getPromptAction().showToast({ message: '已恢复 SSL 证书警告', duration: 1500 })
-      return
-    }
+  // 原版 hb/z.k3：w5.k.l(I()).d0(yv 忽略 SSL 证书警告).I(n_ 正文)
+  // .w(yw 我了解这可能导致连接不安全, false).M(true).V(ok).N(cancel).f0()
+  private showSslWarningDialog(): void {
     this.sslAck = false
     this.getUIContext().getPromptAction().openCustomDialog({
-      builder: () => {
+      builder: (): void => {
         this.SslDialog()
       },
       isModal: true,
       autoCancel: true,
-      alignment: DialogAlignment.Center
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.sslDialogId = dialogId
     }).catch(() => {
@@ -136,27 +135,33 @@ export struct SettingsAdvancedPage {
   }
 
   private closeSslDialog(): void {
-    if (this.sslDialogId >= 0) {
-      try {
-        this.getUIContext().getPromptAction().closeCustomDialog(this.sslDialogId)
-      } catch (error) {
-        console.error('close ssl dialog failed')
-      }
+    if (this.sslDialogId < 0) {
+      return
     }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.sslDialogId)
+    this.sslDialogId = -1
   }
 
   @Builder
   SslDialog() {
-    Column({ space: 14 }) {
+    Column() {
       Text('忽略 SSL 证书警告')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
       Text('SSL 证书用于验证网站身份和加密连接。这就像是把信放在信封中再寄出，只有你和网站可以拆开这封信。\n\n一旦你忽略 SSL 警告，则与网站的连接可能不安全，这意味着与网站传输的数据可能被人窃取。这就像把信放在一个破损的信封上然后寄出它，伪造证书的人可以拆开它。')
-        .fontSize(13)
-        .fontColor($r('app.color.fg_secondary'))
-      Row({ space: 8 }) {
-        Checkbox({ name: 'ssl_ack', group: 'ssl' })
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .lineHeight(21)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      // 原版 w5.k.w(Zf, false)：复选框默认不勾，文字 yw
+      Row({ space: 10 }) {
+        Checkbox()
           .select(this.sslAck)
           .selectedColor($r('app.color.accent'))
           .onChange((value: boolean) => {
@@ -166,39 +171,44 @@ export struct SettingsAdvancedPage {
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .layoutWeight(1)
+          .onClick(() => {
+            this.sslAck = !this.sslAck
+          })
       }
       .width('100%')
-      .onClick(() => {
-        this.sslAck = !this.sslAck
-      })
-      Row({ space: 12 }) {
-        Button('取消')
-          .fontSize(15)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.page_bg'))
-          .fontColor($r('app.color.fg'))
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      Row() {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.closeSslDialog()
           })
-        Button('确定')
-          .fontSize(15)
-          .layoutWeight(1)
-          .enabled(this.sslAck)
-          .opacity(this.sslAck ? 1 : 0.4)
+        Text($r('app.string.confirm'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
-            if (!this.sslAck) {
-              return
-            }
             this.settings.setIgnoreSslWarning(true)
             this.closeSslDialog()
           })
       }
       .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('100%')
-    .padding(20)
-    .backgroundColor($r('app.color.page_bg'))
-    .borderRadius(16)
+    .width('90%')
+    .maxWidth(300)
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 }

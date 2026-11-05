@@ -540,6 +540,11 @@ export class ReadAloudController {
     if (current !== null) {
       this.service.publishNotification(current)
     }
+    if (paused) {
+      // 原版 ReadAloudService PAUSE → h(mark) 暂停成功后 f(false)：
+      // stopForeground(KEEP) + stopSelf（停长时任务，通知保留为非播放态）
+      this.service.stopContinuousTask()
+    }
     return paused
   }
 
@@ -571,10 +576,22 @@ export class ReadAloudController {
     return true
   }
 
-  // c.k/c.p：播当前句，完成回调 index+1 再播下一句
+  // c.k/c.p：播当前句，完成回调 index+1 再播下一句；读完（c()=null）置非播放并通知，
+  // 原版 ReadAloudService.g(t)：更新通知为非播放态，任务读完 → f(true) 停服务
+  // （stopForeground 移除通知 + 停长时任务）
   private playCurrent(task: ReadAloudTask): void {
     const text = task.sentenceAt(task.getIndex())
-    task.setPlaying(text !== null && this.engine.speak(text, () => {
+    if (text === null) {
+      // c.p：strC==null → setPlaying(false)，不触发完成回调（禁止递归）
+      task.setPlaying(false)
+      this.notifyListeners(task)
+      // ReadAloudService.g → s.c(t) 通知更新为非播放态 → f(true)：移除通知 + 停长时任务
+      this.service.publishNotification(task)
+      this.service.cancelNotification()
+      this.service.stopContinuousTask()
+      return
+    }
+    task.setPlaying(this.engine.speak(text, () => {
       task.setIndex(task.getIndex() + 1)
       this.playCurrent(task)
     }))

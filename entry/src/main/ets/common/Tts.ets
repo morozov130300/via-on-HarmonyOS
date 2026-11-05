@@ -1,5 +1,6 @@
 import { textToSpeech } from '@kit.CoreSpeechKit'
 import { BusinessError } from '@kit.BasicServicesKit'
+import { i18n } from '@kit.LocalizationKit'
 
 // 原版 z8/q3：TTS 引擎状态机
 // 0=初始化中 1=就绪 2=播报中 3=错误 4=已关闭
@@ -46,8 +47,18 @@ export class ReadAloudEngine {
     }
     this.initing = true
     this.initState = TTS_STATE_INIT
+    // 原版 q3.f()：setLanguage(Locale.getDefault())——按系统语言初始化引擎，失败回退 zh-CN
+    let engineLanguage = 'zh-CN'
+    try {
+      const sysLang = i18n.System.getSystemLanguage()
+      if (sysLang !== '') {
+        engineLanguage = sysLang
+      }
+    } catch (error) {
+      engineLanguage = 'zh-CN'
+    }
     const params: textToSpeech.CreateEngineParams = {
-      language: 'zh-CN',
+      language: engineLanguage,
       person: 0,
       online: 1,
       extraParams: { 'isBackStage': true } as Record<string, Object>

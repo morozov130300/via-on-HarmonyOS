@@ -84,7 +84,8 @@ function trFindLang(code: string): TrLangEntry {
   return TR_LANGS[0]
 }
 
-// w0.X1 默认目标：t1.m(t1.n(locale))（语言码），oa.a.a() 未命中回退表首（ar）
+// w0.X1 默认目标：t1.m(t1.n(locale))（语言码），zh 且 country==TW → "zh_HANT"（w0:213-214），
+// oa.a.a() 查表未命中回退表首（ar）；语言码列表 oa/a.java h(false) 首项为 ar
 function trDefaultTargetCode(): string {
   let lang = ''
   try {
@@ -92,7 +93,13 @@ function trDefaultTargetCode(): string {
   } catch (error) {
     lang = ''
   }
-  const m = lang.indexOf('-') < 0 ? lang : lang.substring(0, lang.indexOf('-'))
+  const parts = lang.split('-')
+  const m = parts.length > 0 ? parts[0] : ''
+  const region = parts.length > 1 ? parts[parts.length - 1].toUpperCase() : ''
+  // w0.X1:213-216：zh + TW → "zh_HANT" → oa.a.a() 未命中 → 表首 'ar'
+  if (m === 'zh' && region === 'TW') {
+    return 'ar'
+  }
   if (m === '') {
     return 'ar'
   }
@@ -139,6 +146,10 @@ export class TranslateState {
 
   // F0 请求序号（dispose 语义：y3 重入作废旧响应）
   private requestSeq: number = 0
+  // oa/c.java 会话内翻译结果缓存：g() 按 query+target 命中，未命中走网络成功后 f() 入缓存
+  private sessionCacheQuery: string[] = []
+  private sessionCacheTarget: string[] = []
+  private sessionCacheResult: string[] = []
   // E0.b()：上次请求的 sl 参数（g3 交换时解析 auto 源）
   private lastSl: string = 'auto'
   // w 动画回调（组件注册）
@@ -208,6 +219,16 @@ export class TranslateState {
     const sl = this.sourceCode === '' ? 'auto' : this.sourceCode
     this.lastSl = sl
     const seq = this.requestSeq
+    // oa/c.g()：会话内缓存命中（query+target）直接返回，不走网络
+    for (let i = 0; i < this.sessionCacheQuery.length; i++) {
+      if (this.sessionCacheQuery[i] === query && this.sessionCacheTarget[i] === this.targetCode) {
+        this.onProgress(100, true)
+        this.resultText = this.sessionCacheResult[i]
+        this.hasResult = true
+        this.setMode(2)
+        return
+      }
+    }
     TranslateState.fetch(query, sl, this.targetCode).then((trans: string | null) => {
       if (seq !== this.requestSeq) {
         return
@@ -219,6 +240,10 @@ export class TranslateState {
         this.setMode(1)
         return
       }
+      // oa/c.f()：网络成功结果入会话缓存
+      this.sessionCacheQuery.push(query)
+      this.sessionCacheTarget.push(this.targetCode)
+      this.sessionCacheResult.push(trans)
       this.resultText = trans
       this.hasResult = true
       this.setMode(2)
@@ -532,6 +557,8 @@ export struct TranslatePanel {
               .padding(12)
               .objectFit(ImageFit.Contain)
               .fillColor($r('app.color.translate_icon'))
+              .accessibilityText(this.state.inputText.length > 0
+                ? $r('app.string.translate_clear_text') : $r('app.string.translate_exit'))
               .onClick(() => {
                 this.state.clearOrExit()
               })

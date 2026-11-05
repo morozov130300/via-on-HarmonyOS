@@ -27,7 +27,7 @@ export struct SettingsNightPage {
   // 原版 z8.f.c()/h()：CN 地区显示中文文案，否则 Less is more.
   private previewText(): string {
     if (i18n.System.getSystemRegion().toUpperCase() === 'CN') {
-      return '莫忧世事兼身事，须信人间比梦间。'
+      return '莫忧世事兼身事，须著人间比梦间。'
     }
     return 'Less is more.'
   }

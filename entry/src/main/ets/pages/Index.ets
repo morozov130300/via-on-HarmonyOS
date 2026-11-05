@@ -50,6 +50,8 @@ const PROGRESS_GRADIENT: LinearGradient = {
 const SHORTCUT_URL_EVENT_ID = 10001
 const EXTERNAL_LINK_EVENT_ID = 10002
 const OPEN_DOWNLOADS_EVENT_ID = 10003
+// 原版 k6.i9() 双击返回显式退出 → m0.r0()（z8/h0.c 退出清除）：退出清除仅在显式退出时执行
+const EXIT_CLEAR_EVENT_ID = 10005
 // 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 via-reader-body）
 const READ_ALOUD_EXTRACT_JS: string =
   '(function(){try{var e=document.getElementsByClassName("via-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
@@ -621,6 +623,8 @@ struct Index {
     }
     const now = Date.now()
     if (now - this.exitHintTime < EXIT_INTERVAL) {
+      // 原版 k6.i9()：双击返回显式退出 → na.r0()（z8/h0.c）执行退出清除
+      emitter.emit({ eventId: EXIT_CLEAR_EVENT_ID }, { data: {} })
       return false
     }
     this.exitHintTime = now
@@ -1782,13 +1786,10 @@ struct Index {
   // 原版 k6.va()：朗读入口 —— JS 禁用提示 → 初始化控制器/引擎 → 稍等提示 → 抽取正文
   private startReadAloud(): void {
     const tab = this.tabStore.current()
-    if (tab.isHomePage()) {
-      this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_cannot'), duration: 1500
-      })
-      return
-    }
-    if (!this.settings.jsEnabled) {
+    // 原版 na.e1(url)：全局 JS 开关（webflag 位8）被网站设定 JavaScript 覆盖（ca.d 按 host 查 ba.b.B(zT)）
+    const siteSetting = this.settings.getSiteSetting(hostOf(tab.url))
+    const jsEnabled = siteSetting !== null ? siteSetting.javaScript : this.settings.jsEnabled
+    if (!jsEnabled) {
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.read_aloud_js_disabled'), duration: 1500
       })

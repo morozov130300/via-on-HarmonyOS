@@ -224,7 +224,8 @@ export class AppSettings {
   @Trace searchToolbarDisabled: string = '-1,-10'
   @Trace addressBarContent: number = 0
   @Trace toolbarColorAdapt: boolean = true
-  @Trace appLanguage: number = 1
+  // 原版 w9/k.K0()：language 默认 null = 跟随系统（0），1=简体中文，2=English
+  @Trace appLanguage: number = 0
   @Trace menuHidden: string[] = []
   // 菜单条目显示顺序（id 数组，仅含当前在菜单里的条目；
   // 空数组 = 从未定制过，使用 MenuItems.MENU_DEFAULT_ORDER 兜底）
@@ -476,7 +477,7 @@ export class AppSettings {
         await this.readString('searchToolbarDisabled', '-1,-10'), 'searchToolbarDisabled', '-1,-10')
       this.addressBarContent = await this.readNumber('addressBarContent', 0)
       this.toolbarColorAdapt = await this.readBoolean('toolbarColorAdapt', true)
-      this.appLanguage = await this.readNumber('appLanguage', 1)
+      this.appLanguage = await this.readNumber('appLanguage', 0)
       this.menuHidden = await this.readStringArray('menuHidden')
       this.menuOrder = await this.readStringArray('menuOrder')
       // 原版 hiddenctxmenus 默认 {6}（保存图片隐藏），未写入过时用默认值
