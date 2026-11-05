@@ -17,6 +17,7 @@ import { RemoteConfig } from '../common/RemoteConfig';
 import { ProxyManager } from '../common/ProxyConfig';
 import { DownloadEngine } from '../common/DownloadEngine';
 import { DownloadNotifier, DL_ACTION_PAUSE, DL_ACTION_RESUME } from '../common/DownloadNotifier';
+import { TabStore } from '../common/TabStore';
 import { webview } from '@kit.ArkWeb';
 import { fileIo } from '@kit.CoreFileKit';
 
@@ -78,6 +79,25 @@ function parseNdefUriRecords(records: tag.NdefRecord[]): string {
     }
   }
   return '';
+}
+
+// Via 可在新标签 file:// 打开的下载文件类型（文本/图片/音视频/PDF/HTML；
+// ArkWeb(Chromium) 原生渲染，pdf 由 TabWeb 拦截进内嵌查看器）
+const DOWNLOAD_PREVIEWABLE_EXT: string[] = [
+  'html', 'htm', 'xhtml', 'txt', 'text', 'log', 'json', 'xml', 'css', 'js', 'md', 'csv',
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico', 'avif',
+  'mp3', 'm4a', 'aac', 'wav', 'ogg', 'oga', 'flac', 'opus',
+  'mp4', 'm4v', 'webm', '3gp', '3g2', 'ogv', 'mov',
+  'pdf'
+];
+
+function isPreviewableDownloadFile(path: string): boolean {
+  const dot = path.lastIndexOf('.')
+  if (dot < 0 || dot === path.length - 1) {
+    return false
+  }
+  const ext = path.substring(dot + 1).toLowerCase()
+  return DOWNLOAD_PREVIEWABLE_EXT.indexOf(ext) >= 0
 }
 
 // 原版 Trampoline → Shell 深链解析：b0.A() 的 VIEW 分支（uri 直传）+ via:// 内部命令（z8/b0.Q）
@@ -147,10 +167,12 @@ export default class EntryAbility extends UIAbility {
     }
     // 原版 Trampoline filter#3：ACTION_SEND text/plain 分享接收（b0.A ACTION_SEND → i0.v）
     this.handleSharedText(want, true)
-    if (want.parameters?.['viaOpenPage'] === 'downloads') {
-      // 冷启动时 Index 尚未订阅 emitter，用 AppStorage 标志兜底
-      AppStorage.setOrCreate('via_open_downloads', true)
-      emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
+    if (!this.openDownloadedFileFromWant(want)) {
+      if (want.parameters?.['viaOpenPage'] === 'downloads') {
+        // 冷启动时 Index 尚未订阅 emitter，用 AppStorage 标志兜底
+        AppStorage.setOrCreate('via_open_downloads', true)
+        emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
+      }
     }
   }
 
@@ -206,9 +228,41 @@ export default class EntryAbility extends UIAbility {
     }
     // 原版 Shell onNewIntent → k6.c0 → b0.H：SEND 分享文本接收
     this.handleSharedText(want, false)
-    if (want.parameters?.['viaOpenPage'] === 'downloads') {
-      emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
+    if (!this.openDownloadedFileFromWant(want)) {
+      if (want.parameters?.['viaOpenPage'] === 'downloads') {
+        emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
+      }
     }
+  }
+
+  // 下载完成通知点击（viaOpenFile 参数）：校验路径位于下载目录内（防路径篡改越权）、
+  // 文件存在且为可预览类型 → 新标签 file:// 打开（OfflinePage/查看源码同款 newTabAt 管线）；
+  // 校验不通过返回 false，由调用方回退下载页
+  private openDownloadedFileFromWant(want: Want): boolean {
+    const params = want.parameters
+    if (params === undefined) {
+      return false
+    }
+    const rawPath = params['viaOpenFile']
+    if (typeof rawPath !== 'string' || rawPath === '') {
+      return false
+    }
+    const path = rawPath as string
+    const saveDir = `${this.context.filesDir}/Download`
+    if (!path.startsWith(`${saveDir}/`) || path.indexOf('../') >= 0) {
+      return false
+    }
+    let exists = false
+    try {
+      exists = fileIo.accessSync(path)
+    } catch (err) {
+      exists = false
+    }
+    if (!exists || !isPreviewableDownloadFile(path)) {
+      return false
+    }
+    TabStore.getInstance().newTabAt(`file://${path}`, false)
+    return true
   }
 
   // 原版 z8/b0.A() ACTION_SEND 分支：EXTRA_TEXT 文本 → i6.i0.v（URL 直开，否则默认引擎搜索）。
