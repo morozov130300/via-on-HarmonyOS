@@ -252,7 +252,11 @@ export class DownloadNotifier {
         }
       }
     }
-    // 点击通知体：原版完成后打开文件、进行中回主界面；鸿蒙统一回下载页
+    // 点击通知体：完成态 → 拉起应用带 viaOpenFile 路径参数（EntryAbility 校验后
+    // 新标签 file:// 打开，不可预览类型回退下载页）；进行中/失败 → 回下载页（现状）
+    const tapParams: Record<string, Object> = completed
+      ? { 'viaOpenPage': 'downloads', 'viaOpenFile': rec.path }
+      : { 'viaOpenPage': 'downloads' }
     const tapInfo: wantAgent.WantAgentInfo = {
       wants: [{
         deviceId: '',
@@ -261,9 +265,7 @@ export class DownloadNotifier {
         action: '',
         entities: [],
         uri: '',
-        parameters: {
-          'viaOpenPage': 'downloads'
-        }
+        parameters: tapParams
       }],
       actionType: wantAgent.OperationType.START_ABILITY,
       requestCode: 0,
