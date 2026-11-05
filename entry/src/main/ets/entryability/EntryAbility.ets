@@ -7,6 +7,7 @@ import { emitter } from '@kit.BasicServicesKit';
 import { commonEventManager } from '@kit.BasicServicesKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { systemShare } from '@kit.ShareKit';
+import { preferences } from '@kit.ArkData';
 import { AppSettings } from '../common/Settings';
 import { VIA_CMD_EVENT_ID } from '../common/DeepLink';
 import { BrowserDb } from '../common/Database';
@@ -24,6 +25,9 @@ import { fileIo } from '@kit.CoreFileKit';
 const DOMAIN = 0x0000;
 const EXTERNAL_LINK_EVENT_ID = 10002;
 const OPEN_DOWNLOADS_EVENT_ID = 10003;
+// 原版 k6.i9() 双击返回显式退出 → na.r0()（z8/h0.c 退出清除）：
+// 退出清除仅在显式退出路径触发，onBackground（切后台/回桌面）不执行
+const EXIT_CLEAR_EVENT_ID = 10005;
 
 interface EntryUrl {
   url: string;
@@ -167,6 +171,10 @@ export default class EntryAbility extends UIAbility {
     }
     // 原版 Trampoline filter#3：ACTION_SEND text/plain 分享接收（b0.A ACTION_SEND → i0.v）
     this.handleSharedText(want, true)
+    // 原版 k6.i9()：显式退出（Index 双击返回）时才执行退出清除（na.r0 → z8/h0.c）
+    emitter.on({ eventId: EXIT_CLEAR_EVENT_ID }, () => {
+      this.applyClearOnExit();
+    });
     if (!this.openDownloadedFileFromWant(want)) {
       if (want.parameters?.['viaOpenPage'] === 'downloads') {
         // 冷启动时 Index 尚未订阅 emitter，用 AppStorage 标志兜底
@@ -463,7 +471,6 @@ export default class EntryAbility extends UIAbility {
         hilog.error(DOMAIN, 'testTag', 'unregisterForegroundDispatch failed. Cause: %{public}s', JSON.stringify(err));
       }
     }
-    this.applyClearOnExit();
   }
 
   // 原版 BrowserApp::onConfigurationChanged → shouldNightMode2Change：
@@ -473,46 +480,62 @@ export default class EntryAbility extends UIAbility {
       newConfig != null && newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
   }
 
-  // 原版 z8/h0.c（clearonexit 位掩码）：[1 缓存,2 表单数据,4 历史,64 关闭的标签页,8 网页存储,16 Cookies,32 应用缓存]
+  // 原版 na.r0() → z8/h0.c（clearonexit 位掩码 cleardataonexit2）：
+  // [1 缓存,2 表单数据,4 历史,64 关闭的标签页,8 网页存储,16 Cookies,32 应用缓存]；
+  // 缓存位 1 勾选、或距 lastcleantime ≥432000000ms（h0.c:83 兜底）时清缓存并更新 lastcleantime
+  // （w9/k.C1()/Y()，键 lastcleantime，默认当前时间）
   private applyClearOnExit(): void {
-    try {
-      const settings = AppSettings.getInstance();
-      const mask = settings.clearOnExit;
-      if (mask === 0) {
-        return;
-      }
-      const db = BrowserDb.getInstance();
-      if ((mask & 1) !== 0) {
+    preferences.getPreferences(this.context, 'via_settings').then((store: preferences.Preferences): void => {
+      try {
+        const settings = AppSettings.getInstance();
+        const mask = settings.clearOnExit;
+        const now = Date.now();
+        let lastCleanTime = now;
         try {
-          webview.WebviewController.removeAllCache(true);
+          const stored = store.getSync('lastcleantime', now);
+          if (typeof stored === 'number') {
+            lastCleanTime = stored;
+          }
         } catch (err) {
-          hilog.error(DOMAIN, 'testTag', 'Failed to clear web cache. Cause: %{public}s', JSON.stringify(err));
+          lastCleanTime = now;
         }
-      }
-      if ((mask & 4) !== 0) {
-        db.clearHistory().catch(() => {
-        });
-      }
-      if ((mask & 8) !== 0) {
-        try {
-          webview.WebStorage.deleteAllData();
-        } catch (err) {
-          hilog.error(DOMAIN, 'testTag', 'Failed to clear web storage. Cause: %{public}s', JSON.stringify(err));
+        if ((mask & 1) !== 0 || now - lastCleanTime >= 432000000) {
+          try {
+            webview.WebviewController.removeAllCache(true);
+          } catch (err) {
+            hilog.error(DOMAIN, 'testTag', 'Failed to clear web cache. Cause: %{public}s', JSON.stringify(err));
+          }
+          store.putSync('lastcleantime', now);
+          store.flush();
         }
-      }
-      if ((mask & 16) !== 0) {
-        try {
-          webview.WebCookieManager.clearAllCookies();
-        } catch (err) {
-          hilog.error(DOMAIN, 'testTag', 'Failed to clear cookies. Cause: %{public}s', JSON.stringify(err));
+        const db = BrowserDb.getInstance();
+        if ((mask & 4) !== 0) {
+          db.clearHistory().catch(() => {
+          });
         }
+        if ((mask & 8) !== 0) {
+          try {
+            webview.WebStorage.deleteAllData();
+          } catch (err) {
+            hilog.error(DOMAIN, 'testTag', 'Failed to clear web storage. Cause: %{public}s', JSON.stringify(err));
+          }
+        }
+        if ((mask & 16) !== 0) {
+          try {
+            webview.WebCookieManager.clearAllCookies();
+          } catch (err) {
+            hilog.error(DOMAIN, 'testTag', 'Failed to clear cookies. Cause: %{public}s', JSON.stringify(err));
+          }
+        }
+        if ((mask & 32) !== 0) {
+          this.clearAppCache();
+        }
+      } catch (err) {
+        hilog.error(DOMAIN, 'testTag', 'Failed to clear on exit. Cause: %{public}s', JSON.stringify(err));
       }
-      if ((mask & 32) !== 0) {
-        this.clearAppCache();
-      }
-    } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to clear on exit. Cause: %{public}s', JSON.stringify(err));
-    }
+    }).catch((error: BusinessError) => {
+      hilog.error(DOMAIN, 'testTag', 'Failed to open preferences on exit. Cause: %{public}s', JSON.stringify(error.code));
+    });
   }
 
   private clearAppCache(): void {

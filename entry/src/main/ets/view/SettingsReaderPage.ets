@@ -41,10 +41,12 @@ export struct SettingsReaderPage {
     }
   }
 
-  // 原版 z8/f.c()：中文环境预览文案
+  // 原版 z8/f.c()：CN 地区（Locale country）显示中文文案，否则 Less is more.
   private fontPreviewText(): string {
-    const lang = i18n.System.getSystemLanguage()
-    return lang.startsWith('zh') ? '莫忆世事兼身事，须著人间比梦间。' : 'Less is more.'
+    if (i18n.System.getSystemRegion().toUpperCase() === 'CN') {
+      return '莫忧世事兼身事，须著人间比梦间。'
+    }
+    return 'Less is more.'
   }
 
   private bindAppBar(): void {
@@ -81,16 +83,21 @@ export struct SettingsReaderPage {
               .fontColor($r('app.color.accent'))
               .width('100%')
               .padding({ left: 16, right: 16, top: 18, bottom: 8 })
-            Row({ space: 14 }) {
+            // 原版 g8/j.d/l/k：横向 LinearLayout（padH 16）五个 weight=1 色块，
+            // 高 42dp、圆角 18dp（x8.h.e = dimen ae）、描边恒 2dp：
+            // 选中色 = accent（x8.h.j），未选中 = #30808080（color o）；
+            // 填充色 = 主题色，暗色下非 0 色按 30% 向黑混合（y.G），色 0 = 透明
+            Row({ space: 8 }) {
               ForEach(READER_THEME_ARG_BS, (argb: number, index: number) => {
                 Column()
-                  .width(52)
-                  .height(30)
+                  .layoutWeight(1)
+                  .height(42)
                   .backgroundColor(dotColorOf(argb, this.isDarkMode()))
-                  .borderRadius(15)
+                  .borderRadius(18)
                   .border({
-                    width: this.settings.readerTheme === index ? 2 : 0.5,
-                    color: this.settings.readerTheme === index ? $r('app.color.accent') : $r('app.color.fg_tertiary')
+                    width: 2,
+                    color: this.settings.readerTheme === index
+                      ? $r('app.color.accent') : $r('app.color.dialog_border')
                   })
                   .animation({ duration: 150 })
                   .onClick(() => {

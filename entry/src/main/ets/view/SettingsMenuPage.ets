@@ -199,6 +199,84 @@ export struct SettingsMenuPage {
     this.loadFromSettings()
   }
 
+  // 原版 i8/s.a3：重置 AppBar 按钮（ao 重置）→ 确认弹窗
+  // w5.k.l().d0(rw 重置为默认设置).I(g8 你确定继续吗？).V(Y=ao 重置).N(R.string.cancel).f0()
+  private confirmReset(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.ResetConfirmDialog()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.resetDialogId = dialogId
+    }).catch(() => {
+      console.error('open menu reset dialog failed')
+    })
+  }
+
+  private resetDialogId: number = -1
+
+  private closeResetDialog(): void {
+    if (this.resetDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.resetDialogId)
+    this.resetDialogId = -1
+  }
+
+  @Builder
+  ResetConfirmDialog() {
+    Column() {
+      Text('重置为默认设置')
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      Text('你确定继续吗？')
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .lineHeight(21)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      Row() {
+        Blank()
+        Text($r('app.string.cancel'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            this.closeResetDialog()
+          })
+        Text('重置')
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            this.resetToDefault()
+            this.closeResetDialog()
+          })
+      }
+      .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
+    }
+    .width('90%')
+    .maxWidth(300)
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
+  }
+
   private bindAppBar(): void {
     AppBar.show({
       title: '定制菜单',
@@ -207,7 +285,7 @@ export struct SettingsMenuPage {
         this.navPathStack.pop()
       },
       onRight: () => {
-        this.resetToDefault()
+        this.confirmReset()
       }
     }, this)
   }
