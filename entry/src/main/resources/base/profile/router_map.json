@@ -234,6 +234,16 @@
       "name": "adBlockException",
       "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
       "buildFunction": "AdBlockExceptionPageBuilder"
+    },
+    {
+      "name": "sslWhitelist",
+      "pageSourceFile": "src/main/ets/view/SslWhitelistPage.ets",
+      "buildFunction": "SslWhitelistPageBuilder"
+    },
+    {
+      "name": "closedTabs",
+      "pageSourceFile": "src/main/ets/view/ClosedTabsPage.ets",
+      "buildFunction": "ClosedTabsPageBuilder"
     }
   ]
 }
