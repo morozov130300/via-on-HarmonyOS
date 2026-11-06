@@ -186,15 +186,32 @@ export struct AddressBar {
     }
   }
 
-  // 原版胶囊底色：暗色态 0x22FFFFFF，亮色态 0x10000000（ToolbarsViewDelegate）
+  // 原版 k6.Tb(layout)：布局 0 透明；1/2/3 用 LayerDrawable
+  // 夜间 0x22FFFFFF / 浅色 0x10000000，圆角 dimens ae = 18dp
   private pillBackground(): ResourceColor {
-    if (this.style !== 'pill') {
+    if (this.style === 'plain') {
       return Color.Transparent
     }
     if (this.isDarkMode()) {
       return '#22FFFFFF'
     }
     return '#10000000'
+  }
+
+  // 原版 Tb()：非 0 布局 setLayerInset(0, 4dp, 4dp, 4dp, 4dp) → 视觉高 48-8=40dp
+  private barHeight(): number {
+    return this.style === 'plain' ? BAR_HEIGHT : BAR_HEIGHT - 8
+  }
+
+  // 原版布局 3 额外 paddingLeft/Right 16dp（背景与其同心）；1/2 仅 4dp 内缩
+  private barMargin(): Margin {
+    if (this.style === 'pill') {
+      return { left: 16, right: 16, top: 4, bottom: 4 }
+    }
+    if (this.style === 'card') {
+      return { left: 4, right: 4, top: 4, bottom: 4 }
+    }
+    return { left: 0, right: 0, top: 0, bottom: 0 }
   }
 
   private isDarkMode(): boolean {
@@ -432,10 +449,10 @@ export struct AddressBar {
       })
     }
     .width('100%')
-    .height(BAR_HEIGHT)
+    .height(this.barHeight())
     .backgroundColor(this.pillBackground())
-    .borderRadius(this.style === 'pill' ? BAR_HEIGHT / 2 : 0)
-    .margin(this.style === 'pill' ? { left: 16, right: 16 } : { left: 0, right: 0 })
+    .borderRadius(this.style === 'plain' ? 0 : 18)
+    .margin(this.barMargin())
     .onClick(() => {
       this.onAddressTap()
     })

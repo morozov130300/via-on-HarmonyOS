@@ -288,7 +288,8 @@ export struct Toolbar {
         Row() {
           AddressBar({
             tab: this.tab,
-            style: 'plain',
+            // 原版 k6.Tb()：布局 1/2 的嵌入式地址栏带 4dp 内缩的圆角底（非透明）
+            style: 'card',
             onAddressTap: () => {
               this.onAddressTap()
             },
