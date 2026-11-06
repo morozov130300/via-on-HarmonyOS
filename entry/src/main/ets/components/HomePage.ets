@@ -2,7 +2,6 @@ import { display } from '@kit.ArkUI'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { HomeFavRec } from '../common/Types'
-import { hostOf } from '../common/SearchEngines'
 import { AppSettings } from '../common/Settings'
 import { UiInsets } from '../common/Immersive'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
@@ -93,14 +92,16 @@ export struct HomePage {
         .height(this.contentTopOffset())
 
       if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示') {
-        Column({ space: 10 }) {
+        // 原版 .search_bar_wrapper margin:15px auto 0 → logo 与搜索框间距 15
+        Column({ space: 15 }) {
           if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
             Text(this.settings.homeLogoText)
               .fontSize(this.settings.homeLogoSize)
               .fontColor($r('app.color.home_text'))
               .fontWeight(this.logoBold())
               .fontStyle(this.logoItalic())
-              .maxLines(1)
+              // 原版 .logo 为 white-space:normal + overflow:auto，无行数限制
+              .textAlign(TextAlign.Center)
           } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '图片'
             && this.settings.homeLogoImage !== '') {
             Image(this.settings.homeLogoImage)
@@ -108,7 +109,7 @@ export struct HomePage {
               .height(this.logoHeight())
               .borderRadius(this.logoRadius())
               .objectFit(ImageFit.Contain)
-              .brightness(this.nightDim())
+              .brightness(this.logoDim())
           } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === 'HTML 代码'
             && this.settings.homeLogoHtml !== '') {
             RichText(this.settings.homeLogoHtml)
@@ -121,7 +122,7 @@ export struct HomePage {
               .borderRadius(this.logoRadius())
               // 原版 i6/o.java:277 img.smaller 为 object-fit: cover
               .objectFit(ImageFit.Cover)
-              .brightness(this.nightDim())
+              .brightness(this.logoDim())
           }
         }
         // 原版 logo 是 <a onclick="window.via.cmd(257)">：点击进入主页定制设置
@@ -147,7 +148,8 @@ export struct HomePage {
             })
           }
         })
-        .margin({ top: 15 })
+        // 原版 .search_bar_wrapper margin:15px auto 0 + .search_part margin:0 auto 20px
+        .margin({ top: 15, bottom: 20 })
         .justifyContent(FlexAlign.Center)
         .onClick(() => {
           // 原版 triggerSearchBar：内容上滑 72px 渐隐后唤起搜索
@@ -159,47 +161,41 @@ export struct HomePage {
         Grid() {
           ForEach(this.favs, (item: HomeFavRec) => {
             GridItem() {
-                Column({ space: 6 }) {
+                Column({ space: 2 }) {
                   Stack() {
-                    // 原版 .title（i6/o.java:350-354）：固定 15px
-                  Text(this.shortLabel(item.title, item.url))
+                    // 原版 .title（i6/o.java:344-355）：宽=图标宽、行高=高=图标高、字号 15
+                  Text(this.iconText(item))
                       .fontSize(15)
                       .fontColor(this.favColor(item) === '' ? this.favTextColor() : Color.White)
                       .textAlign(TextAlign.Center)
                       .width('100%')
                       .height('100%')
-                      // 原版 i6/o.java:291：夜间 .title 叠加 brightness(75%)
-                      .brightness(this.nightDim())
+                      // 原版 i6/o.java:290-291/412-413：.title 恒叠加 brightness(75%)
+                      .brightness(this.logoDim())
                     if (this.showFavicon() && item.icon !== '') {
                       Image(item.icon)
                         .width('100%')
                         .height('100%')
                         .borderRadius(this.favRadius())
                         .objectFit(ImageFit.Cover)
-                        // 原版 i6/o.java:291：夜间 .overlay 叠加 brightness(75%)
-                        .brightness(this.nightDim())
+                        // 原版同一条规则作用于 .overlay
+                        .brightness(this.logoDim())
                     }
                   }
                   .width(this.favSize())
                   .height(this.favHeight())
                   .borderRadius(this.favRadius())
                   .backgroundColor(this.favColor(item) === '' ? Color.Transparent : this.favColor(item))
-                  // 原版每个 box：title + url 两层文本（i6/o.c）
-                  Text(item.title !== '' ? item.title : hostOf(item.url))
-                    .fontSize(15)
-                    .fontColor(this.favTextColor())
-                    .maxLines(1)
-                    .constraintSize({ maxWidth: 76 })
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  // 原版 .url（i6/o.java:356）：margin-top 2px、height 20px、line-height 20px、font-size 10px
-                  Text(hostOf(item.url))
+                  // 原版 .url（i6/o.java:356）：宽=图标宽、margin-top 2px、height/line-height 20px、
+                  // font-size 10px、overflow:hidden + text-overflow:clip（原版仅两行：图标字 + 名称）
+                  Text(item.title)
                     .fontSize(10)
-                    .fontColor($r('app.color.fg_secondary'))
+                    .fontColor(this.favTextColor())
+                    .width(this.favSize())
                     .height(20)
                     .margin({ top: 2 })
                     .maxLines(1)
-                    .constraintSize({ maxWidth: 76 })
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .textOverflow({ overflow: TextOverflow.Clip })
                 }
                 .padding({ top: 4, bottom: 4 })
               }
@@ -217,8 +213,10 @@ export struct HomePage {
         .columnsGap(18)
         .rowsGap(8)
         .width(this.favColumns() * this.favSize() + (this.favColumns() - 1) * 18)
-        .margin({ top: 28 })
-        .height(Math.max(68, Math.ceil(this.favs.length / this.favColumns()) * (this.favHeight() + 60)))
+        // 原版 .box margin-top 4（与搜索框的 margin-bottom 20 累加 = 24）
+        .margin({ top: 4 })
+        // 每行高 = .box 上下 margin 8 + .title 高 f + .url 高 20 + .url margin-top 2
+        .height(Math.max(68, Math.ceil(this.favs.length / this.favColumns()) * (this.favHeight() + 30)))
       }
 
       Blank()
@@ -362,9 +360,11 @@ export struct HomePage {
     return Math.round(this.settings.homeLogoWidth * 90 / 124)
   }
 
-  // 原版 i6/o.java:290-291：夜间(img.smaller/.overlay/.title) 叠加 filter: brightness(75%)
-  private nightDim(): number {
-    return this.settings.isNightActive() ? 0.75 : 1
+  // 原版 i6/o.java:290-291（z12=夜间，顶层）与 412-413（!z12，落在
+  // @media (prefers-color-scheme: light) 块内）两处互补分支各写一次同一条规则，
+  // 即任何主题下都会命中：img.smaller/.overlay/.title 恒为 brightness(75%)
+  private logoDim(): number {
+    return 0.75
   }
 
   // 原版 r8/d.java:133：圆角按**设置里的声明值** max(宽, 高) 计算（宽为 0 时按 0 参与，
@@ -440,8 +440,11 @@ export struct HomePage {
     return Math.max(0, (this.screenW - 600) / 2)
   }
 
-  // 原版 i6/o.java:374-379：#content top 按屏高分档
+  // 原版 i6/o.java:371-379：#content top —— 搜索区隐藏时固定 18px，否则按屏高分档
   private contentTopOffset(): Length {
+    if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '隐藏') {
+      return 18
+    }
     if (this.screenH >= 850) {
       return 255
     }
@@ -524,11 +527,8 @@ export struct HomePage {
     return this.favColors[item.url] ?? ''
   }
 
-  // 透明样式下标题转灰（原版 CSS 禁用彩色时 .box 标题走灰阶）
+  // 原版 .title/.url 文字色 = str17：浅色 #afafaf、深色 #fafafa（与 .logo 同色，即 home_text）
   private favTextColor(): ResourceColor {
-    if (HOME_FAV_SHADOWS[this.settings.homeFavShadow] === '透明') {
-      return $r('app.color.fg_secondary')
-    }
     return $r('app.color.home_text')
   }
 
@@ -536,11 +536,13 @@ export struct HomePage {
     return HOME_FAV_ICON_STYLES[this.settings.homeFavIconStyle] === '图标优先'
   }
 
-  private shortLabel(title: string, url: string): string {
-    const source = title.trim() !== '' ? title : hostOf(url)
-    if (source === '') {
-      return '书'
+  // 原版 g6/p.a + r8/d.java:82：iconText = 标题首个码点，标题为空即空串（无回退、无占位字）
+  private iconText(item: HomeFavRec): string {
+    const title = item.title
+    if (title === '') {
+      return ''
     }
-    return source.substring(0, 1)
+    const cp: number = title.codePointAt(0) ?? 0
+    return cp > 0xFFFF ? title.substring(0, 2) : title.substring(0, 1)
   }
 }
