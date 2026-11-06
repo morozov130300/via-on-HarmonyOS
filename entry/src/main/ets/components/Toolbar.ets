@@ -9,6 +9,42 @@ const BAR_HEIGHT: number = 48
 // 原版 dimens a=13dp 内边距 → 88px(@4x)=22dp 图标本体
 const ICON_SIZE: number = 22
 
+// 原版 k6.Nb()：网页 theme-color 规范化为 ArkUI 可用的 #RRGGBB，无法解析返回空串
+function normalizeThemeColor(raw: string): string {
+  const s: string = raw.trim()
+  if (s === '') {
+    return ''
+  }
+  if (s.startsWith('#')) {
+    if (s.length === 4) {
+      return `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`
+    }
+    if (s.length === 7 || s.length === 9) {
+      return s
+    }
+    return ''
+  }
+  const matched: RegExpMatchArray | null = s.match(/^rgba?\(([^)]+)\)$/i)
+  if (matched === null) {
+    return ''
+  }
+  const parts: string[] = matched[1].split(',')
+  if (parts.length < 3) {
+    return ''
+  }
+  const r: number = Math.round(Number(parts[0].trim()))
+  const g: number = Math.round(Number(parts[1].trim()))
+  const b: number = Math.round(Number(parts[2].trim()))
+  if (isNaN(r) || isNaN(g) || isNaN(b)) {
+    return ''
+  }
+  let hex: string = '#'
+  hex += Math.min(255, Math.max(0, r)).toString(16).padStart(2, '0')
+  hex += Math.min(255, Math.max(0, g)).toString(16).padStart(2, '0')
+  hex += Math.min(255, Math.max(0, b)).toString(16).padStart(2, '0')
+  return hex
+}
+
 @ComponentV2
 export struct Toolbar {
   @Param @Require tab: TabItem
@@ -43,6 +79,13 @@ export struct Toolbar {
   private bounceCurve = curves.cubicBezier(0.2, 0.2, 0.8, 0.8)
 
   private toolbarBg(): ResourceColor {
+    // 原版 k6.Nb()：颜色模式开启且非夜间时，工具栏底色取自网页 meta theme-color
+    if (this.settings.toolbarColorAdapt && !this.settings.isNightActive()) {
+      const themed: string = normalizeThemeColor(this.tab.themeColor)
+      if (themed !== '') {
+        return themed
+      }
+    }
     if (this.tab.isHomePage() && this.settings.homeBgColor !== '') {
       // 原版夜间联动：自设背景色经黑滤镜后用于工具栏
       return this.settings.nightBlend(this.settings.homeBgColor)

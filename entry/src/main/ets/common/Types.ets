@@ -34,6 +34,8 @@ export class TabItem {
   @Trace liveZoom: number = 0
   // 原版 p4/c.java:110 onReceivedIcon：标签捕获的站点图标
   @Trace icon: image.PixelMap | null
+  // 原版 k6.Nb()：网页 meta theme-color，用于工具栏/地址栏配色自适应
+  @Trace themeColor: string = ''
   controller: webview.WebviewController
 
   constructor(id: number, incognito: boolean) {

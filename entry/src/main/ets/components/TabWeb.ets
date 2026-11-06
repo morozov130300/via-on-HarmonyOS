@@ -383,6 +383,7 @@ export struct TabWeb {
           this.prepareReader()
           this.expandFullText()
           this.settings.persistAdBlockTotal()
+          this.syncThemeColor()
         })
         .onProgressChange((event: OnProgressChangeEvent) => {
           this.tab.progress = event.newProgress
@@ -1345,6 +1346,21 @@ export struct TabWeb {
     }
     const js = '(function(){var k=/(展开全文|阅读全文|查看全文|显示全文|展开剩余|show more|read more|view more)/i;if(k.test(document.body?document.body.innerText:"")){var els=document.querySelectorAll("button,a,div,span,p");for(var i=0;i<els.length;i++){var t=(els[i].innerText||"").trim();if(t&&t.length<=10&&k.test(t)){els[i].click();break}}}})()'
     this.tab.controller.runJavaScript(js).catch(() => {
+    })
+  }
+
+  // 原版 k6.Nb()：网页 meta theme-color 决定工具栏/地址栏配色（颜色模式开关控制）
+  private syncThemeColor(): void {
+    if (this.tab.isHomePage()) {
+      this.tab.themeColor = ''
+      return
+    }
+    const js = '(function(){var m=document.querySelector("meta[name=theme-color]");' +
+      'return (m&&m.content)?m.content:"";})()'
+    this.tab.controller.runJavaScript(js).then((result: string) => {
+      this.tab.themeColor = typeof result === 'string' ? result.trim() : ''
+    }).catch(() => {
+      this.tab.themeColor = ''
     })
   }
 
