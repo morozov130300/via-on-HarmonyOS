@@ -3,7 +3,6 @@ import { dialogTransition } from '../common/Transitions'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
-import { ConfigurationConstant, common } from '@kit.AbilityKit'
 
 const LAYOUT_TRADITIONAL: number = 0
 const LAYOUT_TOOLBAR_TOP: number = 1
@@ -21,6 +20,57 @@ class OptionItem {
     this.value = value
   }
 }
+
+// 原版 hb/v4.b()：动作编号 → 文案（逐条对应 x7.u 资源）
+const ACTION_NAMES: Record<number, string> = {
+  0: '无操作',
+  1: '刷新网页',
+  2: '返回顶部',
+  3: '滑到底部',
+  4: '输入网址',
+  5: '新建标签',
+  6: '添加书签',
+  7: '打开书签',
+  8: '打开历史',
+  9: '关闭标签',
+  10: '上一个标签',
+  11: '下一个标签',
+  12: '网页后退',
+  13: '网页前进',
+  14: '页内查找',
+  15: '翻译',
+  16: '关闭所有标签页',
+  17: '向上翻页',
+  18: '向下翻页',
+  19: '保存网页',
+  20: '源码',
+  23: '显示标签面板',
+  24: '朗读网页',
+  25: '阅读模式',
+  26: '打开设置',
+  27: '复制标签页',
+  28: '打开下载',
+  29: '打开 AI 面板',
+  30: '打开书签对话框'
+}
+
+class ActionGroup {
+  title: string
+  items: number[]
+
+  constructor(title: string, items: number[]) {
+    this.title = title
+    this.items = items
+  }
+}
+
+// 原版 hb/l6.i3()：分组顺序与归属
+const ACTION_GROUPS: ActionGroup[] = [
+  new ActionGroup('标签页行为', [5, 10, 11, 12, 13, 9, 16, 27]),
+  new ActionGroup('特性行为', [7, 30, 8, 23, 28, 26, 14, 15, 24, 25, 29]),
+  new ActionGroup('地址栏行为', [4]),
+  new ActionGroup('网页行为', [19, 1, 20, 6, 18, 17, 2, 3])
+]
 
 // 应用布局数组 = 原版 arrays array i（a07/a06/a05/a03）
 const LAYOUT_OPTIONS: OptionItem[] = [
@@ -52,6 +102,9 @@ export struct SettingsToolbarPage {
   @Local autoHideDialogId: number = -1
   @Local addressContentDialogId: number = -1
   @Local tabBarPickDialogId: number = -1
+  @Local pickerDialogId: number = -1
+  @Local pickerTarget: string = ''
+  @Local pickerValue: number = 0
 
   private bindAppBar(): void {
     AppBar.show({
@@ -133,127 +186,235 @@ export struct SettingsToolbarPage {
     })
   }
 
-  // 原版 ToolbarsViewDelegate.d()/B()/A()：预览容器圆角 18dp + 2dp #30808080 描边；
-  // 布局 0 = 透明底 + 左右 12dp；布局 1/2 = 胶囊底（亮 0x10000000/暗 0x22FFFFFF）+ 4dp；
-  // 布局 3 = 同胶囊底 + 16dp
+  // 原版 ib/m.d()：预览 = 说明文字 + 一条真实工具栏（g0）
+  // 提示文案 x7.u.zu：「点击下列按钮来设置它的长按事件，长按查看它的事件。你也可以滑动工具栏来设置滑动事件。」
+  // 文字 padding 16/10（h6.a.H(1,16,10,16,10)），工具栏高 48dp（dimen b），无圆角/描边/卡片容器
   @Builder
   PreviewItem() {
     Column() {
-      // 标签栏预览行（原版 f10006i：globe 图标 + 「网页」文本，仅布局 1/2 且启用时显示）
-      if (this.settings.tabBarEnabled && this.tabBarVisible()) {
-        Row({ space: 10 }) {
-          ViaIcon({ icon: $r('app.media.via_ic_globe'), iconSize: 20, iconColor: $r('app.color.icon') })
-          Text($r('app.string.webpage'))
-            .fontSize(14)
-            .fontColor($r('app.color.fg_secondary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
-        }
+      Text('点击下列按钮来设置它的长按事件，长按查看它的事件。你也可以滑动工具栏来设置滑动事件。')
+        .fontSize(14)
+        .fontColor($r('app.color.fg_secondary'))
         .width('100%')
-        .height(36)
-        .padding({ left: 12, right: 12 })
-      }
+        .padding({ left: 16, right: 16, top: 10, bottom: 10 })
 
-      // 地址栏预览（原版 n0：左钮 + 标题 + 右刷新钮；标题按地址栏内容三态）
+      // 原版 g0.i()：地址槽未填充时宽度 0，五个图标槽各 weight 1
       Row() {
-        ViaIcon({ icon: $r('app.media.via_ic_site_info'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
-          .margin({ left: 13 })
-        Text(this.previewTitle())
-          .fontSize(16)
-          .fontColor($r('app.color.appbar_text'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-        ViaIcon({ icon: $r('app.media.via_ic_refresh'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
-          .margin({ right: 13 })
+        this.PreviewSlot('back', $r('app.media.via_ic_back'), 0)
+        this.PreviewSlot('forward', $r('app.media.via_ic_back'), 180)
+        this.PreviewSlot('home', $r('app.media.via_ic_home'), 0)
+        this.PreviewTabsSlot()
+        this.PreviewSlot('menu', $r('app.media.via_ic_menu'), 0)
       }
       .width('100%')
       .height(ROW_H)
-
-      // 工具栏预览（原版 g0：返回/前进/主页/标签/菜单，accent 着色）
-      Row() {
-        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.accent') })
-          .layoutWeight(1)
-        // 原版前进 = 返回图标旋转 180°
-        ViaIcon({
-          icon: $r('app.media.via_ic_back'),
-          iconSize: 22,
-          iconColor: $r('app.color.accent'),
-          rotateDeg: 180
-        })
-          .layoutWeight(1)
-        ViaIcon({ icon: $r('app.media.via_ic_home'), iconSize: 22, iconColor: $r('app.color.accent') })
-          .layoutWeight(1)
-        Text('1')
-          .fontSize(11)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.accent'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-        ViaIcon({ icon: $r('app.media.via_ic_menu'), iconSize: 22, iconColor: $r('app.color.accent') })
-          .layoutWeight(1)
-      }
-      .width('100%')
-      .height(ROW_H)
+      // 原版 ib/m.n()：拖动距离 |f10| >= 0.8（84dp 拖距）时按方向打开滑动动作设置
+      .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 1 })
+        .onActionEnd((event: GestureEvent) => {
+          const fraction = px2vp(event.offsetX) / 84
+          if (Math.abs(fraction) < 0.8) {
+            return
+          }
+          this.openActionPicker(fraction > 0 ? 'swipe0' : 'swipe1')
+        }))
     }
     .width('100%')
-    .constraintSize({ maxHeight: 300 })
-    .margin({ left: 16, right: 16, top: 12, bottom: 8 })
-    .borderRadius(18)
-    .border({
-      width: 2,
-      color: $r('app.color.appbar_divider')
+  }
+
+  // 原版 g0.g()：图标 22dp（48 - 13*2 内容区），accent 着色；点击/长按设置该按钮长按动作
+  @Builder
+  PreviewSlot(target: string, icon: Resource, rotate: number) {
+    Column() {
+      ViaIcon({
+        icon: icon,
+        iconSize: 22,
+        iconColor: $r('app.color.accent'),
+        rotateDeg: rotate
+      })
+    }
+    .layoutWeight(1)
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .onClick(() => {
+      this.openActionPicker(target)
     })
-    .backgroundColor(this.previewBackground())
-    .padding(this.previewPadding())
-    .alignItems(HorizontalAlign.Start)
+    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+      this.openActionPicker(target)
+    }))
   }
 
-  // 原版 A()：地址栏预览标题三态（f14069m0=「网页」/完整地址/域名）
-  private previewTitle(): string {
-    const mode = this.settings.addressBarContent
-    if (mode === 1) {
-      return 'https://example.com/'
+  // 原版 g0.h()：标签槽 = 方框图标 + 居中加粗数字
+  @Builder
+  PreviewTabsSlot() {
+    Stack() {
+      ViaIcon({ icon: $r('app.media.via_ic_tabs'), iconSize: 22, iconColor: $r('app.color.accent') })
+      Text('1')
+        .fontSize(11)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.accent'))
+        .maxLines(1)
     }
-    if (mode === 2) {
-      return 'example.com'
-    }
-    return '网页'
+    .layoutWeight(1)
+    .height('100%')
+    .alignContent(Alignment.Center)
+    .onClick(() => {
+      this.openActionPicker('tab')
+    })
+    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+      this.openActionPicker('tab')
+    }))
   }
 
-  // 原版 B()：按布局设置预览容器底色与 padding
-  private previewBackground(): ResourceColor {
-    const layout = this.settings.appLayout
-    if (layout === LAYOUT_TRADITIONAL) {
-      return Color.Transparent
-    }
-    return this.isDarkMode() ? '#22FFFFFF' : '#10000000'
+  // 原版 hb/l6.i3()：动作选择列表（无操作 + 四分组，顺序与分组归属逐项照搬）
+  private openActionPicker(target: string): void {
+    this.pickerTarget = target
+    this.pickerValue = this.actionValueOf(target)
+    this.getUIContext().getPromptAction().openCustomDialog({
+      builder: (): void => {
+        this.ActionPicker()
+      },
+      isModal: true,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.2)'
+    }).then((dialogId: number) => {
+      this.pickerDialogId = dialogId
+    }).catch(() => {
+      console.error('open action picker failed')
+    })
   }
 
-  private previewPadding(): Padding {
-    const layout = this.settings.appLayout
-    if (layout === LAYOUT_TRADITIONAL) {
-      return { left: 12, right: 12 }
+  private actionValueOf(target: string): number {
+    if (target === 'back') {
+      return this.settings.keyback
     }
-    if (layout === LAYOUT_DOUBLE) {
-      return { left: 16, right: 16 }
+    if (target === 'forward') {
+      return this.settings.keyforward
     }
-    return { left: 4, right: 4 }
+    if (target === 'home') {
+      return this.settings.keyhome
+    }
+    if (target === 'tab') {
+      return this.settings.keytab
+    }
+    if (target === 'menu') {
+      return this.settings.keymenu
+    }
+    if (target === 'swipe0') {
+      return this.settings.gesturetoolbarleft
+    }
+    return this.settings.gesturetoolbarright
   }
 
-  private isDarkMode(): boolean {
+  // 原版 l6.l3()：点「保存」才写入
+  private saveActionPicker(): void {
+    if (this.pickerTarget === 'swipe0' || this.pickerTarget === 'swipe1') {
+      this.settings.setGestureToolbar(this.pickerTarget === 'swipe0' ? 0 : 1, this.pickerValue)
+    } else {
+      this.settings.setToolbarKey(this.pickerTarget, this.pickerValue)
+    }
+    this.closeActionPicker()
+  }
+
+  private closeActionPicker(): void {
+    if (this.pickerDialogId < 0) {
+      return
+    }
     try {
-      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
-      return ctx.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+      this.getUIContext().getPromptAction().closeCustomDialog(this.pickerDialogId)
     } catch (error) {
-      return false
+      console.error('close action picker failed')
     }
+    this.pickerDialogId = -1
   }
 
-  private tabBarVisible(): boolean {
-    return this.settings.appLayout === LAYOUT_TOOLBAR_TOP || this.settings.appLayout === LAYOUT_TOOLBAR_BOTTOM
+  @Builder
+  ActionPicker() {
+    Column() {
+      Text(this.pickerTitle())
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+
+      Scroll() {
+        Column() {
+          this.ActionRow(0)
+          ForEach(ACTION_GROUPS, (group: ActionGroup) => {
+            Text(group.title)
+              .fontSize(13)
+              .fontColor($r('app.color.fg_secondary'))
+              .width('100%')
+              .height(34)
+              .textAlign(TextAlign.Start)
+            ForEach(group.items, (action: number) => {
+              this.ActionRow(action)
+            }, (action: number) => `act-${action}`)
+          }, (group: ActionGroup) => `grp-${group.title}`)
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .constraintSize({ maxHeight: 400 })
+      .scrollBar(BarState.Auto)
+
+      Row() {
+        Blank()
+        Text('取消')
+          .fontSize(15)
+          .fontColor($r('app.color.fg_secondary'))
+          .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+          .onClick(() => {
+            this.closeActionPicker()
+          })
+        Text('保存')
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+          .onClick(() => {
+            this.saveActionPicker()
+          })
+      }
+      .width('100%')
+      .margin({ top: 8 })
+    }
+    .width('78%')
+    .padding(20)
+    .backgroundColor($r('app.color.menu_bg'))
+    .borderRadius(16)
+    .transition(dialogTransition())
+  }
+
+  @Builder
+  ActionRow(action: number) {
+    Row() {
+      Text(ACTION_NAMES[action])
+        .fontSize(15)
+        .fontColor(this.pickerValue === action ? $r('app.color.accent') : $r('app.color.fg'))
+        .fontWeight(this.pickerValue === action ? FontWeight.Medium : FontWeight.Normal)
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .height(42)
+    .onClick(() => {
+      this.pickerValue = action
+    })
+  }
+
+  private pickerTitle(): string {
+    const titles: Record<string, string> = {
+      'back': '返回',
+      'forward': '前进',
+      'home': '主页',
+      'tab': '标签',
+      'menu': '菜单',
+      'swipe0': '向左滑动',
+      'swipe1': '向右滑动'
+    }
+    const title = titles[this.pickerTarget]
+    return title !== undefined ? title : ''
   }
 
   private layoutLabel(): string {
