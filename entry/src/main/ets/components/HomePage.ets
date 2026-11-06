@@ -139,15 +139,8 @@ export struct HomePage {
         .backgroundBlurStyle(this.settings.homeAdvEffect === 1 ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
         .borderRadius(this.pillRadius())
         .border(this.pillBorder())
-        .stateStyles({
-          pressed: {
-            .backgroundColor('#20FFFFFF')
-            .border({
-              width: this.settings.homePillStrokeWidth,
-              color: '#20FFFFFF'
-            })
-          }
-        })
+        // 原版 .search_bar 无任何按压态样式（全 CSS 只有 .opSug_wpr tr:hover 与
+        // #search_bar_trigger:focus-visible），故不加 stateStyles
         // 原版 .search_bar_wrapper margin:15px auto 0 + .search_part margin:0 auto 20px
         .margin({ top: 15, bottom: 20 })
         .justifyContent(FlexAlign.Center)
@@ -170,6 +163,8 @@ export struct HomePage {
                       .textAlign(TextAlign.Center)
                       .width('100%')
                       .height('100%')
+                      // 原版 line-height = height = 图标高 → 文字垂直居中
+                      .align(Alignment.Center)
                       // 原版 i6/o.java:290-291/412-413：.title 恒叠加 brightness(75%)
                       .brightness(this.logoDim())
                     if (this.showFavicon() && item.icon !== '') {
@@ -195,6 +190,8 @@ export struct HomePage {
                     .height(20)
                     .margin({ top: 2 })
                     .maxLines(1)
+                    // 原版 line-height 20 = height 20 → 单行垂直居中
+                    .align(Alignment.Center)
                     .textOverflow({ overflow: TextOverflow.Clip })
                 }
                 .padding({ top: 4, bottom: 4 })
