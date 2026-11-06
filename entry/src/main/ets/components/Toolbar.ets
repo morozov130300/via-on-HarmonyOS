@@ -10,7 +10,7 @@ const BAR_HEIGHT: number = 48
 const ICON_SIZE: number = 22
 
 // 原版 k6.Nb()：网页 theme-color 规范化为 ArkUI 可用的 #RRGGBB，无法解析返回空串
-function normalizeThemeColor(raw: string): string {
+export function normalizeThemeColor(raw: string): string {
   const s: string = raw.trim()
   if (s === '') {
     return ''
@@ -43,6 +43,21 @@ function normalizeThemeColor(raw: string): string {
   hex += Math.min(255, Math.max(0, g)).toString(16).padStart(2, '0')
   hex += Math.min(255, Math.max(0, b)).toString(16).padStart(2, '0')
   return hex
+}
+
+// 原版 k6.Nb()/g0：工具栏底色（含网页 theme-color 自适应、主页自设背景色夜间联动）。
+// 抽成公共函数供 Index 底部容器复用：背景铺满含导航条避让区的整个底栏，组件仍单独避让。
+export function toolbarBackgroundColor(tab: TabItem, settings: AppSettings): ResourceColor {
+  if (settings.toolbarColorAdapt && !settings.isNightActive()) {
+    const themed: string = normalizeThemeColor(tab.themeColor)
+    if (themed !== '') {
+      return themed
+    }
+  }
+  if (tab.isHomePage() && settings.homeBgColor !== '') {
+    return settings.nightBlend(settings.homeBgColor)
+  }
+  return $r('app.color.home_bg')
 }
 
 @ComponentV2
@@ -79,18 +94,7 @@ export struct Toolbar {
   private bounceCurve = curves.cubicBezier(0.2, 0.2, 0.8, 0.8)
 
   private toolbarBg(): ResourceColor {
-    // 原版 k6.Nb()：颜色模式开启且非夜间时，工具栏底色取自网页 meta theme-color
-    if (this.settings.toolbarColorAdapt && !this.settings.isNightActive()) {
-      const themed: string = normalizeThemeColor(this.tab.themeColor)
-      if (themed !== '') {
-        return themed
-      }
-    }
-    if (this.tab.isHomePage() && this.settings.homeBgColor !== '') {
-      // 原版夜间联动：自设背景色经黑滤镜后用于工具栏
-      return this.settings.nightBlend(this.settings.homeBgColor)
-    }
-    return $r('app.color.home_bg')
+    return toolbarBackgroundColor(this.tab, this.settings)
   }
 
   // 原版 g0.m()：按宽度决定返回/前进是否显示及地址槽权重

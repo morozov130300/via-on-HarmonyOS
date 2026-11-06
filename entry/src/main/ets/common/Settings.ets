@@ -196,14 +196,14 @@ export class AppSettings {
   @Trace homePillStrokeOpacity: number = 24
   @Trace homePillStyle: number = 0
   @Trace homeLogoWidth: number = 0
-  @Trace homeLogoHeight: number = 0
+  @Trace homeLogoHeight: number = 72
   @Trace homeLogoCorner: number = 50
   @Trace homeBgImage: string = ''
   @Trace homeLogoImage: string = ''
   @Trace homeLogoHtml: string = ''
   @Trace homeFavCorner: number = 100
   @Trace homeFavShadow: number = 0
-  @Trace homeFavWidth: number = 0
+  @Trace homeFavWidth: number = 46
   @Trace homeFavHeight: number = 0
   @Trace homeFavIconStyle: number = 0
   @Trace homeBgOpacity: number = 0
@@ -474,14 +474,14 @@ export class AppSettings {
       this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 24)
       this.homePillStyle = await this.readNumber('homePillStyle', 0)
       this.homeLogoWidth = await this.readNumber('homeLogoWidth', 0)
-      this.homeLogoHeight = await this.readNumber('homeLogoHeight', 0)
+      this.homeLogoHeight = await this.readNumber('homeLogoHeight', 72)
       this.homeLogoCorner = await this.readNumber('homeLogoCorner', 50)
       this.homeBgImage = await this.readString('homeBgImage', '')
       this.homeLogoImage = await this.readString('homeLogoImage', '')
       this.homeLogoHtml = await this.readString('homeLogoHtml', '')
       this.homeFavCorner = await this.readNumber('homeFavCorner', 100)
       this.homeFavShadow = await this.readNumber('homeFavShadow', 0)
-      this.homeFavWidth = await this.readNumber('homeFavWidth', 0)
+      this.homeFavWidth = await this.readNumber('homeFavWidth', 46)
       this.homeFavHeight = await this.readNumber('homeFavHeight', 0)
       this.homeFavIconStyle = await this.readNumber('homeFavIconStyle', 0)
       this.homeBgOpacity = await this.readNumber('homeBgOpacity', 0)
@@ -1863,7 +1863,7 @@ export class AppSettings {
     this.setHomeLogoSize(28)
     this.setHomeLogoStyle(1)
     this.setHomeLogoWidth(0)
-    this.setHomeLogoHeight(0)
+    this.setHomeLogoHeight(72)
     this.setHomeLogoCorner(50)
     this.setHomeLogoImage('')
     this.setHomeLogoHtml('')
@@ -1874,11 +1874,12 @@ export class AppSettings {
     this.setHomePillStyle(0)
     this.setHomeFavCorner(100)
     this.setHomeFavShadow(0)
-    this.setHomeFavWidth(0)
+    this.setHomeFavWidth(46)
     this.setHomeFavHeight(0)
     this.setHomeFavIconStyle(0)
     this.setHomeBgOpacity(0)
     this.setHomeThemeColor('')
+    this.setCustomCss('')
     this.setHomeAdvEffect(0)
     this.setHomeAdvArea(0)
   }
