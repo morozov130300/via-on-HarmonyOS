@@ -204,7 +204,7 @@ export struct SettingsAdvancedPage {
       .margin({ left: 16, right: 16, top: 12 })
     }
     .width('90%')
-    .maxWidth(300)
+    .constraintSize({ maxWidth: 300 })
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)

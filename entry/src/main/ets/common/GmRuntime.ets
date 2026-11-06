@@ -8,8 +8,10 @@ import { common } from '@kit.AbilityKit'
 import { fileIo } from '@kit.CoreFileKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { AppSettings } from './Settings'
-import { UserScriptRec } from './Types'
+import { UserScriptRec, md5Hex } from './Types'
 import { startScriptsAutoUpdate } from './ScriptUpdater'
+import { initScriptResources, loadScriptMeta, readScriptResourceText, readScriptResourceDataUrl,
+  resourceUrlOf, ensureScriptResourceCached, scriptIdOf } from './ScriptResources'
 
 const TAG = 'GmRuntime'
 const DOMAIN = 0x0000
@@ -624,6 +626,8 @@ export function initGmRuntime(context: common.Context): void {
     hilog.error(DOMAIN, TAG, 'init gm store failed: %{public}s', error.message)
   })
   GmRequireStore.getInstance().init(context)
+  // @resource 缓存目录 + 脚本元数据旁路存储（p5/b 资源目录构造）
+  initScriptResources(context)
   // 原版启动链 k6.i9() → c8/na.q0() → sb/q：脚本自动更新（fire-and-forget）
   startScriptsAutoUpdate(context)
 }
@@ -633,32 +637,55 @@ export function initGmRuntime(context: common.Context): void {
 class GmResponseState {
   contextJson: string = ''
   readyState: number = 0
+  // o5/c.n：原版 null 字段被 JSONObject.put 移除，responseHeaders/finalUrl 仅在赋值后输出
+  // （responseHeaders 在 readyState=2 触发后、readyState=3 触发前赋值，o5/b.e:376/399；
+  //   finalUrl 在收到响应码时赋值，o5/b.e:351）
+  hasResponseHeaders: boolean = false
   responseHeaders: string = ''
-  responseType: string = ''
-  responseText: string = ''
-  responseDataUrl: string = ''
-  status: number = 0
-  statusText: string = ''
+  hasFinalUrl: boolean = false
   finalUrl: string = ''
+  // o5/c.n：responseType/responseDataUrl/responseText 仅在赋值后输出
+  // （原版 null 字段被 JSONObject.put 移除；onloadstart/进度事件阶段均未赋值）
+  hasResponseType: boolean = false
+  responseType: string = ''
+  hasResponseDataUrl: boolean = false
+  responseDataUrl: string = ''
+  hasResponseText: boolean = false
+  responseText: string = ''
+  status: number = 0
+  // o5/b.e:350：响应消息（仅在收到响应码后输出，且原版 getResponseMessage 为 null 时移除该键）
+  statusText: string = ''
   isProgress: boolean = false
   loaded: number = 0
   lengthComputable: boolean = false
   total: number = 0
   isUpload: boolean = false
 
-  // o5/c.n + o：生成 JSON 文本并整体加引号（供 j0.i JSON.parse）
+  // o5/c.n + o：生成 JSON 文本并整体加引号（供 j0.i JSON.parse）。
+  // 字段顺序与原版一致：finalUrl, readyState, status, statusText, responseHeaders；
+  // finalUrl/statusText/responseHeaders 未赋值（null）时整体省略
   quotedJson(): string {
     let json = ''
     if (!this.isUpload) {
-      json = `{"finalUrl":${JSON.stringify(this.finalUrl)},"readyState":${this.readyState},` +
-        `"status":${this.status},"statusText":${JSON.stringify(this.statusText)},` +
-        `"responseHeaders":${JSON.stringify(this.responseHeaders)}`
+      json = '{'
+      if (this.hasFinalUrl) {
+        json += `"finalUrl":${JSON.stringify(this.finalUrl)},`
+      }
+      json += `"readyState":${this.readyState},"status":${this.status}`
+      if (this.status > 0 && this.statusText !== '') {
+        json += `,"statusText":${JSON.stringify(this.statusText)}`
+      }
+      if (this.hasResponseHeaders) {
+        json += `,"responseHeaders":${JSON.stringify(this.responseHeaders)}`
+      }
       if (!this.isProgress) {
-        json += `,"responseType":${JSON.stringify(this.responseType === '' ? 'undefined' : this.responseType)}`
-        if (this.responseDataUrl !== '') {
+        if (this.hasResponseType) {
+          json += `,"responseType":${JSON.stringify(this.responseType === '' ? 'undefined' : this.responseType)}`
+        }
+        if (this.hasResponseDataUrl) {
           json += `,"responseDataUrl":${JSON.stringify(this.responseDataUrl)}`
         }
-        if (this.responseText !== '') {
+        if (this.hasResponseText) {
           json += `,"responseText":${JSON.stringify(this.responseText)}`
         }
         if (this.contextJson !== '') {
@@ -672,6 +699,76 @@ class GmResponseState {
     }
     return JSON.stringify(`{"lengthComputable":${this.lengthComputable},"loaded":${this.loaded},` +
       `"total":${this.total}}`)
+  }
+}
+
+// o5/b.e:350 getResponseMessage 的规范短语（ArkWS 不透传服务器 reason phrase）
+function httpReasonPhrase(code: number): string {
+  switch (code) {
+    case 100:
+      return 'Continue'
+    case 101:
+      return 'Switching Protocols'
+    case 200:
+      return 'OK'
+    case 201:
+      return 'Created'
+    case 202:
+      return 'Accepted'
+    case 204:
+      return 'No Content'
+    case 206:
+      return 'Partial Content'
+    case 301:
+      return 'Moved Permanently'
+    case 302:
+      return 'Found'
+    case 303:
+      return 'See Other'
+    case 304:
+      return 'Not Modified'
+    case 307:
+      return 'Temporary Redirect'
+    case 308:
+      return 'Permanent Redirect'
+    case 400:
+      return 'Bad Request'
+    case 401:
+      return 'Unauthorized'
+    case 403:
+      return 'Forbidden'
+    case 404:
+      return 'Not Found'
+    case 405:
+      return 'Method Not Allowed'
+    case 406:
+      return 'Not Acceptable'
+    case 408:
+      return 'Request Timeout'
+    case 409:
+      return 'Conflict'
+    case 410:
+      return 'Gone'
+    case 413:
+      return 'Payload Too Large'
+    case 415:
+      return 'Unsupported Media Type'
+    case 416:
+      return 'Range Not Satisfiable'
+    case 429:
+      return 'Too Many Requests'
+    case 500:
+      return 'Internal Server Error'
+    case 501:
+      return 'Not Implemented'
+    case 502:
+      return 'Bad Gateway'
+    case 503:
+      return 'Service Unavailable'
+    case 504:
+      return 'Gateway Timeout'
+    default:
+      return ''
   }
 }
 
@@ -697,6 +794,8 @@ export class GmHttpRequest {
   private headers: Record<string, string> = {} as Record<string, string>
   private responseType: string = ''
   private overrideMimeType: string = ''
+  // o5/b.b:164：synchronous=true 时原版在桥接线程同步执行（鸿蒙桥不可阻塞，见 start 注释）
+  private synchronous: boolean = false
   private timeout: number = 0
   private user: string = ''
   private password: string = ''
@@ -731,6 +830,10 @@ export class GmHttpRequest {
       const responseType = raw['responseType']
       if (typeof responseType === 'string') {
         this.responseType = responseType
+      }
+      const synchronous = raw['synchronous']
+      if (typeof synchronous === 'boolean') {
+        this.synchronous = synchronous
       }
       const overrideMimeType = raw['overrideMimeType']
       if (typeof overrideMimeType === 'string') {
@@ -854,17 +957,20 @@ export class GmHttpRequest {
     this.fire(this.cb.uploadOnprogress, state, false)
   }
 
-  // o5/b.e()：执行请求（ArkWeb 侧 @ohos.net.http requestInStream 实现）
-  start(): void {
+  // o5/b.e()：执行请求（ArkWS requestInStream 实现）。
+  // synchronous=true 时原版在桥接线程阻塞执行、回调仍经 webView.post 投递；ArkTS 桥接方法
+  // 不可阻塞（阻塞主线程会冻结 UI），故统一 async 执行——回调同样仅在请求完成后触发，
+  // 观感语义与原版一致。
+  async start(): Promise<void> {
     if (this.url === '') {
       const state = new GmResponseState()
       this.fireError(state)
       return
     }
     const state = new GmResponseState()
-    state.finalUrl = this.url
+    // o5/b.e:351：finalUrl 在收到响应码时赋值（getURL()，重定向后地址）；
+    // ArkWS requestInStream 不透传重定向链，以请求地址近似，onloadstart 阶段不输出该字段
     state.contextJson = this.contextJson
-    state.responseType = this.responseType
     state.readyState = 1
     const session = http.createHttp()
     let aborted = false
@@ -926,13 +1032,16 @@ export class GmHttpRequest {
         hilog.error(DOMAIN, TAG, 'basic auth encode failed')
       }
     }
+    // o5/b.e:325-326：timeout 原样透传，缺省 0 = 无限；鸿蒙 http 超时上限 600000ms，
+    // 0（无限）取平台上限近似，正值超出上限按平台规则收敛
+    const effectiveTimeout = this.timeout > 0 ? Math.min(this.timeout, 600000) : 600000
     const options: http.HttpRequestOptions = {
       method: this.toHttpMethod(),
       header: header,
       usingCache: false,
       expectDataType: http.HttpDataType.ARRAY_BUFFER,
-      connectTimeout: this.timeout > 0 ? this.timeout : 60000,
-      readTimeout: this.timeout > 0 ? this.timeout : 60000
+      connectTimeout: effectiveTimeout,
+      readTimeout: effectiveTimeout
     }
     if (this.data !== '') {
       options.extraData = this.data
@@ -958,7 +1067,12 @@ export class GmHttpRequest {
       for (let i = 0; i < keys.length; i++) {
         responseHeaders += keys[i].toLowerCase() + ': ' + headerMap[keys[i]] + '\r\n'
       }
+      // o5/b.e:362-399：readyState=2 先触发（此时 responseHeaders 尚未赋值，原版
+      // h() 在 f(2) 之后调用），随后赋值响应头与 contentLength，再以 readyState=3 触发
+      state.readyState = 2
+      this.fireReadyStateChange(state)
       state.responseHeaders = responseHeaders
+      state.hasResponseHeaders = true
       let contentLength = -1
       const lenValue = headerMap['content-length'] ?? headerMap['Content-Length']
       if (typeof lenValue === 'string' && lenValue !== '') {
@@ -969,8 +1083,6 @@ export class GmHttpRequest {
       }
       state.lengthComputable = contentLength > 0
       state.total = contentLength > 0 ? contentLength : -1
-      state.readyState = 2
-      this.fireReadyStateChange(state)
       state.readyState = 3
       this.fireReadyStateChange(state)
     })
@@ -994,9 +1106,12 @@ export class GmHttpRequest {
       chunks.push(chunk)
       loaded += chunk.byteLength
       state.loaded = loaded
-      if (loaded - lastProgress > GmHttpRequest.PROGRESS_STEP) {
-        this.fireProgress(state)
-        lastProgress = loaded
+      // o5/b.e:432-439：二进制分支进度仅在 contentLength > 0 时触发，文本分支无此门槛
+      if (!isBinary || state.total > 0) {
+        if (loaded - lastProgress > GmHttpRequest.PROGRESS_STEP) {
+          this.fireProgress(state)
+          lastProgress = loaded
+        }
       }
     })
     session.on('dataEnd', () => {
@@ -1004,22 +1119,38 @@ export class GmHttpRequest {
         return
       }
     })
+    // o5/b.e:244-247：readyState=1 时先触发 onloadstart（前置 onreadystatechange），随后才连接
+    this.fire(this.cb.onloadstart, state, true)
     session.requestInStream(this.url, options).then((responseCode: number) => {
       if (aborted) {
         return
       }
       aborted = true
       state.status = responseCode
+      // o5/b.e:349-351：status = 响应码、statusText = 响应消息、finalUrl = 最终地址
+      // （ArkWS 不透传 reason phrase 与重定向链，按规范短语补齐、以请求地址近似）
+      state.statusText = httpReasonPhrase(responseCode)
+      state.finalUrl = this.url
+      state.hasFinalUrl = true
       if (responseCode < 200 || responseCode >= 300) {
         hilog.error(DOMAIN, TAG, 'HTTP error from url: %{public}s, HTTP Response %{public}d', this.url, responseCode)
         this.fireError(state)
         return
       }
+      // o5/b.e:504：完成前最后一次进度触发（i(cVar5)，仅成功路径，二进制分支需 contentLength > 0）
+      if (!isBinary || state.total > 0) {
+        this.fireProgress(state)
+      }
+      // o5/b.e:507：responseType 在读取完成后赋值（此前各回调不含该字段）
+      state.hasResponseType = true
+      state.responseType = this.responseType
       if (this.method !== 'HEAD') {
         if (isBinary) {
           state.responseDataUrl = this.buildDataUrl(chunks, state)
+          state.hasResponseDataUrl = true
         } else {
           state.responseText = this.decodeText(chunks, state)
+          state.hasResponseText = true
         }
       }
       state.readyState = 4
@@ -1303,21 +1434,63 @@ export class GmBridge {
           const details = argsMap['details']
           const request = new GmHttpRequest(typeof details === 'string' ? details : '{}',
             this.evaluateJs, this.userAgent())
-          request.start()
+          request.start().catch((error: BusinessError) => {
+            hilog.error(DOMAIN, TAG, 'gm http request failed: %{public}s', error.message)
+          })
           return null
         }
         case 'getResourceText': {
+          // o5/a.c → p5/a.E：资源文本，缺失返回 undefined
           if (this.grantDenied(identifier, 32)) {
             return null
           }
-          // 本端未实现 @resource 文件库（原版 p5 文件表），无资源时与原版一致返回 undefined
-          return 'undefined'
+          const resourceText = argsMap['resource']
+          return gmResourceTextOf(this.findScript(identifier),
+            typeof resourceText === 'string' ? resourceText : '')
         }
         case 'getResourceURL': {
+          // o5/a.d → p5/a.D：data:<mime>;base64 资源地址，缺失返回 undefined
           if (this.grantDenied(identifier, 67108880)) {
             return null
           }
-          return 'undefined'
+          const resourceUrl = argsMap['resource']
+          return gmResourceUrlOf(this.findScript(identifier),
+            typeof resourceUrl === 'string' ? resourceUrl : '')
+        }
+        case 'openOptions': {
+          // o5/a.n：原版仅记录日志（假 Tampermonkey openOptions 无实际动作），无 grant 校验
+          const optName = argsMap['name']
+          const optNamespace = argsMap['namespace']
+          hilog.info(DOMAIN, TAG, 'open options, name: %{public}s, namespace: %{public}s',
+            typeof optName === 'string' ? optName : '',
+            typeof optNamespace === 'string' ? optNamespace : '')
+          return null
+        }
+        case 'isInstalled': {
+          // o5/a.h：无 grant 校验；script_id = MD5(namespace + name)
+          const instName = argsMap['name']
+          const instNamespace = argsMap['namespace']
+          if (typeof instName !== 'string' || typeof instNamespace !== 'string') {
+            return null
+          }
+          const target = md5Hex(instNamespace + instName)
+          if (target === '') {
+            return null
+          }
+          const installed = this.settings.userScripts
+          let found: UserScriptRec | null = null
+          for (let i = 0; i < installed.length; i++) {
+            if (scriptIdOf(installed[i]) === target) {
+              found = installed[i]
+              break
+            }
+          }
+          let result = `{"name":${JSON.stringify(instName)},"installed":${found !== null}}`
+          if (found !== null) {
+            result = result.substring(0, result.length - 1) +
+              `,"enabled":${found.enabled},"version":${JSON.stringify(found.version)}}`
+          }
+          return result
         }
         default:
           return null
@@ -1336,9 +1509,62 @@ export class GmBridge {
     const rec = this.findScript(identifier)
     let scriptJson = '{}'
     if (rec !== null) {
+      const meta = loadScriptMeta(rec.id)
+      // r5/c.f/h → o5/a.g:209/211：lastModified = last_updated_at，supportURL = @supportURL
+      //（supportURL 为空时原版 JSONObject.put(null) 移除该键，此处同样省略）
+      const supportUrl = rec.supportUrl !== '' ? rec.supportUrl : (meta !== null ? meta.supportUrl : '')
+      const lastModified = meta !== null ? meta.lastUpdatedAt : 0
       scriptJson = `{"version":${JSON.stringify(rec.version)},"downloadURL":${JSON.stringify(rec.downloadUrl)},` +
-        `"homepage":${JSON.stringify(rec.homepageUrl)},"name":${JSON.stringify(rec.name)}}`
+        `"homepage":${JSON.stringify(rec.homepageUrl)},"lastModified":${lastModified},` +
+        `"name":${JSON.stringify(rec.name)}`
+      if (supportUrl !== '') {
+        scriptJson += `,"supportURL":${JSON.stringify(supportUrl)}`
+      }
+      scriptJson += '}'
     }
     return `{"scriptHandler":"Via","version":"2.0.0","scriptWillUpdate":false,"script":${scriptJson}}`
   }
+}
+
+// ===================== o5/a.c/d → p5/a.E/D @resource 读取 =====================
+
+// p5/a.P：脚本 @resource 表中查资源地址（rec 无表时回退元数据旁路存储）
+function resourceUrlOfScript(rec: UserScriptRec | null, name: string): string | null {
+  if (rec === null || name === '') {
+    return null
+  }
+  let resourcesJson = rec.resources
+  if (resourcesJson === '') {
+    const meta = loadScriptMeta(rec.id)
+    resourcesJson = meta !== null ? meta.resources : ''
+  }
+  return resourceUrlOf(resourcesJson, name)
+}
+
+// o5/a.c → p5/a.E：GM_getResourceText（未缓存时后台补拉并返回 undefined，与原版一致）
+function gmResourceTextOf(rec: UserScriptRec | null, name: string): string {
+  const url = resourceUrlOfScript(rec, name)
+  if (url === null) {
+    return 'undefined'
+  }
+  const text = readScriptResourceText(url)
+  if (text === null) {
+    ensureScriptResourceCached(url)
+    return 'undefined'
+  }
+  return text
+}
+
+// o5/a.d → p5/a.D：GM_getResourceURL（data:<mime>;base64；未缓存时后台补拉）
+function gmResourceUrlOf(rec: UserScriptRec | null, name: string): string {
+  const url = resourceUrlOfScript(rec, name)
+  if (url === null) {
+    return 'undefined'
+  }
+  const dataUrl = readScriptResourceDataUrl(url)
+  if (dataUrl === null) {
+    ensureScriptResourceCached(url)
+    return 'undefined'
+  }
+  return dataUrl
 }

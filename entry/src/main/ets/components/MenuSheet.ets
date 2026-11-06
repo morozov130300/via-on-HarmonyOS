@@ -18,6 +18,7 @@ import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } f
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
 import { ZoomSlider } from './ZoomSlider'
+import { TranslateState } from './TranslatePanel'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { dialogTransition, menuTransition, dimTransition } from '../common/Transitions'
@@ -72,8 +73,9 @@ const REPORT_ENDPOINT: string = 'https://ra.viayoo.com/report_abuse'
 const REPORT_TOKEN: string = 'Bearer tk_o4s4ghe1tqu60mj0ljy5im762ebrr'
 
 // 原版 C9「标记广告」：注入元素选择器，点击广告元素后经 console 通道
-// （TabWeb.onConsole）回传资源域名，加入自定义拦截规则并刷新
-const MARK_AD_INJECT_JS: string = `(function(){if(window.__via_mark_ad__){return;}`
+// （TabWeb.onConsole）回传资源域名，加入自定义拦截规则并刷新。
+// 图片长按菜单「标记广告」项（k6.Q3 case23 → C9()）复用同一注入脚本
+export const MARK_AD_INJECT_JS: string = `(function(){if(window.__via_mark_ad__){return;}`
   + `window.__via_mark_ad__=true;var prev=null;`
   + `function host(u){try{var h=new URL(u,location.href).hostname;return h&&h!==location.hostname?h:'';}catch(e){return '';}}`
   + `function findUrl(el){var c=[el.getAttribute('src'),el.getAttribute('data-src'),el.getAttribute('href')];`
@@ -106,12 +108,18 @@ export struct MenuSheet {
   @Local showReportDialog: boolean = false
   @Local showOrientationDialog: boolean = false
   @Local showAddHomeFavDialog: boolean = false
+  // 原版 k6.Db(true)：长按「翻译」的翻译菜单弹窗
+  @Local showTranslateMenuDialog: boolean = false
+  // 原版 k6.P9 case7 → Wa() → Xa → a8.u1：添加书签弹窗（标题/网址可编辑）
+  @Local showAddBookmarkDialog: boolean = false
   @Local reportFlag1: boolean = false
   @Local reportFlag2: boolean = false
   @Local reportFlag3: boolean = false
   @Local reportRemarks: string = ''
   @Local addHomeFavTitle: string = ''
   @Local addHomeFavUrl: string = ''
+  @Local addBookmarkTitle: string = ''
+  @Local addBookmarkUrl: string = ''
   @Local orientationIndex: number = 0
   // 原版 i8/k:363-368：已收藏时「添加书签」条目文案变「已添加」
   @Local bookmarkUrls: string[] = []
@@ -193,6 +201,12 @@ export struct MenuSheet {
       }
       if (this.showAddHomeFavDialog) {
         this.AddHomeFavDialog()
+      }
+      if (this.showTranslateMenuDialog) {
+        this.TranslateMenuDialog()
+      }
+      if (this.showAddBookmarkDialog) {
+        this.AddBookmarkDialog()
       }
     }
     .width('100%')
@@ -348,10 +362,11 @@ export struct MenuSheet {
       null, this.settings.isNightActive() ? $r('app.color.accent') : null,
       this.nightAccessibilityText(), menuSkinIconName(id))
     } else if (id === 'image_mode') {
-      // 原版 id=17：点击循环切换三态，标签随状态切换（i8/k.java:398-404）；
-      // 无图/仅 Wi-Fi 态染强调色（x3 aVarV310.j(z13)）
+      // 原版 id=17：点击弹三选一弹窗（k6.O9 case17:5224-5234，标题 kt「图像」，
+      // 选项 有图模式 w6/无图模式 v6/仅 Wi-Fi 有图 u6，勾选当前态 r()?2:q()?0:1）；
+      // 标签随状态切换（i8/k.java:398-404），无图/仅 Wi-Fi 态染强调色（x3 aVarV310.j(z13)）
       this.GridCellBody(menuIcon(id), this.imageModeLabel(), true, () => {
-        this.cycleImageMode()
+        this.menuAction(id)
       }, () => {
       }, this.settings.noImage || this.settings.wifiOnlyImages ? $r('app.color.accent') : $r('app.color.menu_icon'),
       null, null, '', menuSkinIconName(id))
@@ -417,14 +432,16 @@ export struct MenuSheet {
     return active ? $r('app.color.accent') : $r('app.color.menu_icon')
   }
 
-  // 原版 k6.P9：长按直达对应设置页（O9/P9 由 X5 按 flags 分发）
+  // 原版 k6.P9（k6.java:5454-5556）：长按直达对应页面/弹窗（O9/P9 由 i8/k X2 按 flags 分发）
   private menuLongPress(id: string): void {
     switch (id) {
       case 'settings':
+        // 原版 P9 case10 → i8.s：定制菜单页
         this.onClose()
         this.onOpenPage('menuCustom')
         break
       case 'ua':
+        // 原版 P9 case19 → hb.y7：浏览器标识页
         this.onClose()
         this.onOpenPage('uaPage')
         break
@@ -434,10 +451,12 @@ export struct MenuSheet {
         this.onOpenPage('rules')
         break
       case 'font_size':
+        // 原版 P9 case29 → jb.k5：字体大小页
         this.onClose()
         this.onOpenPage('fontSettings')
         break
       case 'site_settings':
+        // 原版 P9 case26 → jb.y4：网站设定页
         this.onClose()
         this.onOpenPage('siteSettings')
         break
@@ -446,12 +465,66 @@ export struct MenuSheet {
         this.onOpenPage('settingsReader')
         break
       case 'ai':
+        // 原版 P9 case39 → a9.o：AI 设置页
         this.onClose()
         this.onOpenPage('aiSettings')
         break
-      // 原版 k6.P9 case7 → Wa() → Xa：长按「添加书签」= 添加到桌面
+      // 原版 k6.P9 case2 → W9()：书签快捷选择弹窗（a8.k）——接书签管理页
+      case 'bookmarks':
+        this.onClose()
+        this.onOpenPage('bookmarks')
+        break
+      // 原版 k6.P9 case3 → na.s1(3)：历史内部页
+      case 'history':
+        this.onClose()
+        this.onOpenPage('history')
+        break
+      // 原版 k6.P9 case4 → w5.k 下载管理弹窗（下载器选择：内建/系统/第三方）。
+      // 工程无下载器选择能力，接最近似：打开下载管理页
+      case 'downloads':
+        this.onClose()
+        this.onOpenPage('downloads')
+        break
+      // 原版 k6.P9 case6 → pa(S8())：分享当前页
+      case 'share':
+        this.onClose()
+        this.onShare()
+        break
+      // 原版 k6.P9 case7 → Wa() → Xa → a8.u1：添加书签弹窗（标题/网址可编辑后入库）
       case 'add_bookmark':
-        this.addToDesktop()
+        this.openAddBookmarkDialog()
+        break
+      // 原版 k6.P9 case8 → eb()：浏览器标识单选弹窗
+      case 'pc_mode':
+        this.showUaDialog = true
+        break
+      // 原版 k6.P9 case9 → na.t1()：资源嗅探
+      case 'toolbox':
+        this.sniffResources()
+        break
+      // 原版 k6.P9 case14 → Db(true)：翻译菜单弹窗（微软/百度/谷歌页内/谷歌/谷歌文本）
+      case 'translate':
+        this.showTranslateMenuDialog = true
+        break
+      // 原版 k6.P9 case16 → hb.n7：工具栏设置页
+      case 'fullscreen':
+        this.onClose()
+        this.onOpenPage('toolbarCustom')
+        break
+      // 原版 k6.P9 case20 / case23 → z7.v：自定义拦截规则页（网络日志/标记广告长按同页）
+      case 'netlog':
+      case 'mark_ad':
+        this.onClose()
+        this.onOpenPage('rules')
+        break
+      // 原版 k6.P9 case27 → sa.d1：脚本管理页
+      case 'script':
+        this.onClose()
+        this.onOpenPage('userScripts')
+        break
+      // 原版 k6.P9 case33 → ha()：朗读网页
+      case 'read_aloud':
+        this.readAloud()
         break
       default:
         break
@@ -518,21 +591,6 @@ export struct MenuSheet {
       return $r('app.string.image_mode_wifi')
     }
     return $r('app.string.image_mode')
-  }
-
-  // 原版点击循环：有图→无图→仅Wi-Fi→有图
-  private cycleImageMode(): void {
-    const next = (this.imageModeIndex() + 1) % 3
-    if (next === 2) {
-      this.settings.setWifiOnlyImages(true)
-      this.settings.setNoImage(false)
-    } else if (next === 1) {
-      this.settings.setWifiOnlyImages(false)
-      this.settings.setNoImage(true)
-    } else {
-      this.settings.setWifiOnlyImages(false)
-      this.settings.setNoImage(false)
-    }
   }
 
   // 原版 k6.qb(false, 0)：菜单「字体大小」点击快捷弹窗。
@@ -688,7 +746,8 @@ export struct MenuSheet {
     })
   }
 
-  // 原版图片模式三选一：初始 r()?2:q()?0:1（wifiOnly→2，无图→1，有图→0）
+  // 原版图片模式三选一：初始勾选 = r()?2:q()?0:1（w9/p：r=bit32 仅Wi-Fi，q=bit16 有图），
+  // 即 wifiOnly→2、无图→1、有图→0（k6.O9 case17:5227）
   private imageModeIndex(): number {
     if (this.settings.wifiOnlyImages) {
       return 2
@@ -703,7 +762,8 @@ export struct MenuSheet {
   ImageModeDialog() {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
-        Text($r('app.string.image_mode'))
+        // 原版弹窗标题 = kt「图像」（k6.O9 case17 d0(x7.u.f14235y6)），非「有图模式」
+        Text('图像')
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
@@ -961,6 +1021,146 @@ export struct MenuSheet {
     })
   }
 
+  // 原版 k6.Db(true)（k6.java:4070-4096）：长按「翻译」弹翻译菜单。
+  // 选项与动作 1:1 对齐 y3（k6.java:3536）：
+  // 微软翻译(Ng)→b2()：translate.js client.edge 页内；百度翻译(Jg)→i1(f0.a)：百度翻译网页新标签；
+  // 谷歌页内翻译(Lg)→a2()：Google element.js 页内；谷歌翻译(Kg)→i1(f0.c)：谷歌翻译网页新标签；
+  // 谷歌文本翻译(Mg)→Eb(null)：f8.w0 文本翻译面板。
+  // 标题 = aw「翻译」（f13985g0）；页内翻译后 toast Nh「稍等片刻…」（na.a2/b2）
+  @Builder
+  TranslateMenuDialog() {
+    Stack({ alignContent: Alignment.Center }) {
+      Column() {
+        Text($r('app.string.translate'))
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.fg'))
+          .width('100%')
+          .padding({ left: 20, top: 18, bottom: 8 })
+        Column() {
+          this.TranslateMenuRow('微软翻译', (): void => {
+            this.translateViaEdgeJs()
+          })
+          this.TranslateMenuRow('百度翻译', (): void => {
+            this.translateBaiduPage()
+          })
+          this.TranslateMenuRow('谷歌页内翻译', (): void => {
+            this.translatePage()
+            this.showTranslateMenuDialog = false
+            this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
+          })
+          this.TranslateMenuRow('谷歌翻译', (): void => {
+            this.translateGooglePage()
+          })
+          this.TranslateMenuRow('谷歌文本翻译', (): void => {
+            this.showTranslateMenuDialog = false
+            TranslateState.getInstance().open('')
+            this.onClose()
+          })
+        }
+        .width('100%')
+        .padding({ bottom: 12 })
+      }
+      .width('82%')
+      .constraintSize({ maxHeight: '70%' })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .transition(dialogTransition())
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('rgba(0,0,0,0.2)')
+    .transition(dimTransition(240))
+    .onClick(() => {
+      this.showTranslateMenuDialog = false
+    })
+  }
+
+  @Builder
+  TranslateMenuRow(label: string, action: () => void) {
+    Text(label)
+      .fontSize(15)
+      .fontColor($r('app.color.fg'))
+      .width('100%')
+      .height(44)
+      .padding({ left: 20, right: 20 })
+      .onClick(() => {
+        action()
+      })
+  }
+
+  // 原版 a8.u1 添加书签弹窗：标题/网址可编辑，确认入库（Xa → a8.u1.x3）
+  @Builder
+  AddBookmarkDialog() {
+    Stack({ alignContent: Alignment.Center }) {
+      Column({ space: 12 }) {
+        Text($r('app.string.add_bookmark'))
+          .fontSize(17)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('app.color.fg'))
+          .width('100%')
+        Text('标题')
+          .fontSize(13)
+          .fontColor($r('app.color.fg_secondary'))
+          .width('100%')
+        TextInput({ text: this.addBookmarkTitle })
+          .fontSize(14)
+          .fontColor($r('app.color.fg'))
+          .backgroundColor($r('app.color.surface'))
+          .width('100%')
+          .onChange((value: string) => {
+            this.addBookmarkTitle = value
+          })
+        Text('网址')
+          .fontSize(13)
+          .fontColor($r('app.color.fg_secondary'))
+          .width('100%')
+        TextInput({ text: this.addBookmarkUrl })
+          .fontSize(14)
+          .fontColor($r('app.color.fg'))
+          .backgroundColor($r('app.color.surface'))
+          .width('100%')
+          .onChange((value: string) => {
+            this.addBookmarkUrl = value
+          })
+        Row({ space: 24 }) {
+          Blank()
+          Text($r('app.string.cancel'))
+            .fontSize(15)
+            .fontColor($r('app.color.fg_secondary'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.showAddBookmarkDialog = false
+            })
+          Text($r('app.string.confirm'))
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.accent'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.submitAddBookmark()
+            })
+        }
+        .width('100%')
+        .margin({ top: 6 })
+      }
+      .width('80%')
+      .padding(24)
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .transition(dialogTransition())
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('rgba(0,0,0,0.2)')
+    .transition(dimTransition(240))
+    .onClick(() => {
+      this.showAddBookmarkDialog = false
+    })
+  }
+
   // 原版同款：扫码结果按网址/搜索词分流
   private startScan(): void {
     const context = this.getUIContext().getHostContext()
@@ -1082,10 +1282,17 @@ export struct MenuSheet {
       case 'pc_mode':
         this.togglePcMode()
         break
-      // 工具箱即往后翻一页（与原版一致：菜单整体翻页，不存在独立的二级面板）
-      case 'toolbox':
-        this.swiperController.showNext()
+      // 工具箱即往后翻一页（与原版一致：菜单整体翻页，不存在独立的二级面板）；
+      // 末页回绕到第 0 页（原版 i8/k m3：i11>=size→0、currentIndex→0）
+      case 'toolbox': {
+        const pageCount = this.chunk(this.mainItemIds(), 10).length
+        if (this.pageIndex >= pageCount - 1) {
+          this.swiperController.changeIndex(0, true)
+        } else {
+          this.swiperController.showNext()
+        }
         break
+      }
       case 'settings':
         this.onOpenPage('settings')
         break
@@ -1344,6 +1551,124 @@ export struct MenuSheet {
     }
   }
 
+  // 原版 k6.Db 首段：非 http(s) 页 toast dc「仅支持 http/https 开头的网址」
+  private translateHttpGuard(): boolean {
+    const tab = this.tabStore.current()
+    if (!tab.url.startsWith('http://') && !tab.url.startsWith('https://')) {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.mark_ad_http_only'),
+        duration: 1500
+      })
+      return false
+    }
+    return true
+  }
+
+  // 原版 z8.t1.g()：系统语言 BCP-47（如 zh-Hans-CN）
+  private translateTargetLang(): string {
+    let lang = 'zh-CN'
+    try {
+      lang = i18n.System.getSystemLanguage()
+    } catch (error) {
+      lang = 'zh-CN'
+    }
+    return lang
+  }
+
+  // 原版 y3 case6 → na.b2() → i6/f0.g → e0.b：translate.js client.edge 页内翻译（微软翻译）
+  private translateViaEdgeJs(): void {
+    if (!this.translateHttpGuard()) {
+      return
+    }
+    const lang = this.translateTargetLang()
+    const js = '(function(){var e="via-translate-bridge",t=document.getElementById(e);' +
+      `if(t)if("undefined"!=typeof translate)"${lang}"!=translate.to&&translate.changeLanguage("${lang}");` +
+      'else{var n=document.createElement("script");n.id=e;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t)}' +
+      'else{(t=document.createElement("script")).id=e;' +
+      't.src="https://fastly.jsdelivr.net/gh/xnx3/translate@v3.14.0/translate.js/translate.min.js";' +
+      't.onload=function(){translate.selectLanguageTag.show=!1;translate.service.use("client.edge");' +
+      `translate.changeLanguage("${lang}")};document.head.appendChild(t)}})();`
+    try {
+      this.tabStore.current().controller.runJavaScript(js)
+      this.showTranslateMenuDialog = false
+      this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
+      this.onClose()
+    } catch (error) {
+      console.error('inject edge translate failed')
+    }
+  }
+
+  // 原版 y3 case1 → i1(f0.a)：百度翻译网页（新标签）。
+  // i6/f0.a：query=Uri.encode(url)&from=auto&to=e(lang)（'-' 前主语言码）
+  private translateBaiduPage(): void {
+    if (!this.translateHttpGuard()) {
+      return
+    }
+    const tab = this.tabStore.current()
+    let encoded = tab.url
+    try {
+      encoded = encodeURIComponent(tab.url)
+    } catch (error) {
+      encoded = tab.url
+    }
+    const lang = this.translateTargetLang()
+    const dash = lang.indexOf('-')
+    const shortLang = dash > 0 ? lang.substring(0, dash) : lang
+    this.tabStore.newTabAt(
+      `https://fanyi.baidu.com/transpage?query=${encoded}&source=url&ie=utf8&from=auto&to=${shortLang}&render=1`,
+      false)
+    this.showTranslateMenuDialog = false
+    this.onClose()
+  }
+
+  // 原版 y3 case3 → i1(f0.c)：谷歌翻译网页（新标签，tl 用完整语言码）
+  private translateGooglePage(): void {
+    if (!this.translateHttpGuard()) {
+      return
+    }
+    const tab = this.tabStore.current()
+    let encoded = tab.url
+    try {
+      encoded = encodeURIComponent(tab.url)
+    } catch (error) {
+      encoded = tab.url
+    }
+    const lang = this.translateTargetLang()
+    this.tabStore.newTabAt(
+      `https://translate.google.com/translate?sl=auto&tl=${lang}&u=${encoded}`, false)
+    this.showTranslateMenuDialog = false
+    this.onClose()
+  }
+
+  // 原版 k6.P9 case7 → Wa() → Xa → a8.u1：添加书签弹窗
+  private openAddBookmarkDialog(): void {
+    const tab = this.tabStore.current()
+    if (tab.isHomePage()) {
+      this.homePageGuard()
+      return
+    }
+    this.addBookmarkTitle = tab.title !== '' ? tab.title : hostOf(tab.url)
+    this.addBookmarkUrl = tab.url
+    this.showAddBookmarkDialog = true
+  }
+
+  private submitAddBookmark(): void {
+    const title = this.addBookmarkTitle.trim()
+    const url = this.addBookmarkUrl.trim()
+    if (title === '' || url === '') {
+      return
+    }
+    BrowserDb.getInstance().addBookmark(title, url).then(() => {
+      this.showAddBookmarkDialog = false
+      this.onClose()
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.bookmark_added'), duration: 1500
+      })
+    }).catch((error: BusinessError) => {
+      console.error(`add bookmark dialog failed: ${error.message}`)
+    })
+  }
+
   private printPage(): void {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
@@ -1589,15 +1914,19 @@ export struct MenuSheet {
     this.onClose()
   }
 
+  // 原版 k6.Z4（c8/k6.java:2548）：选中项写位（0 有图=U(false)T(true) / 1 无图=U(false)T(false) /
+  // 2 仅 Wi-Fi=U(true)T(true)）→ 持久化 g0 → 工具栏刷新 m1(true) → toast 所选项文案。
+  // 原版不重载当前页（na.n1 → r4/d.t 仅应用 WebView 设置，无 reload）
   private applyImageMode(index: number): void {
     this.settings.setWifiOnlyImages(index === 2)
     this.settings.setNoImage(index === 1)
     this.showImageModeDialog = false
-    try {
-      this.tabStore.current().controller.refresh()
-    } catch (error) {
-      console.error('refresh after image mode change failed')
-    }
+    const labels: Resource[] = [
+      $r('app.string.image_mode'),
+      $r('app.string.image_mode_block'),
+      $r('app.string.image_mode_wifi')
+    ]
+    this.getUIContext().getPromptAction().showToast({ message: labels[index], duration: 1500 })
     this.onClose()
   }
 

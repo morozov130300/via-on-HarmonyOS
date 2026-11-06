@@ -65,7 +65,10 @@ const SYNC_KEYS: string[] = [
   'searchToolbarEnabled', 'searchToolbarOrder', 'searchToolbarDisabled', 'searchshortcuts',
   'keyback', 'keyforward', 'keyhome', 'keytab', 'keymenu',
   'gesturetoolbarleft', 'gesturetoolbarright', 'restoreclosedtabs', 'scriptNextId',
-  'readaloudspeed'
+  'readaloudspeed',
+  'cookiesEnabled', 'cookiesBlockThirdParty', 'popupAskFirst',
+  'clipboardState', 'openAppState', 'geoAskFirst', 'cameraAskFirst', 'micAskFirst',
+  'redirectAskFirst', 'vibrateEnabled', 'backReloadEnabled'
 ]
 const SNAPSHOT_DEBOUNCE_MS: number = 1500
 const AD_BLOCK_ESTIMATED_BYTES: number = 20 * 1024
@@ -302,6 +305,28 @@ export class AppSettings {
   // 原版 w9/k.java:822/788（键名 urlbarcolor）：地址栏自定义颜色（Android ARGB 负数 int），
   // 默认 -1（未设置；原版 c0() 将非负旧值迁移为 -1）；本工程地址栏自定义色未实施，仅备份互通存储
   @Trace urlbarcolor: number = -1
+  // ---- 网站设定全局态（原版 w9/p webflag 位，默认 96495261；jb/i0、u3、e0、f3、j2、t、u2、q3、z5）----
+  // Cookies（jb/i0：bit8192 启用、bit16384 清位 = 拦截第三方），默认 允许
+  @Trace cookiesEnabled: boolean = true
+  @Trace cookiesBlockThirdParty: boolean = false
+  // 弹出式窗口（jb/u3：bit32768 置位 = 优先询问），默认 允许
+  @Trace popupAskFirst: boolean = false
+  // 剪贴板（jb/e0：w9/p.e() 1 允许 / 2 已禁止 / 3 优先询问），默认 允许
+  @Trace clipboardState: number = 1
+  // 打开应用（jb/f3：w9/p.f()），默认 优先询问
+  @Trace openAppState: number = 3
+  // 位置信息（jb/j2：bit2 置位 = 优先询问，否则已禁止），默认 已禁止
+  @Trace geoAskFirst: boolean = false
+  // 摄像头（jb/t：bit8388608），默认 优先询问
+  @Trace cameraAskFirst: boolean = true
+  // 麦克风（jb/u2：bit16777216），默认 优先询问
+  @Trace micAskFirst: boolean = true
+  // 页面重定向（jb/q3：bit134217728 置位 = 优先询问），默认 允许
+  @Trace redirectAskFirst: boolean = false
+  // 振动（jb/z5：bit1073741824），默认 已禁用
+  @Trace vibrateEnabled: boolean = false
+  // 返回不重载（jb/c1：bit512），默认 打开
+  @Trace backReloadEnabled: boolean = true
 
   static getInstance(): AppSettings {
     if (AppSettings.instance === null) {
@@ -414,6 +439,18 @@ export class AppSettings {
       this.ruleSubscriptions = await this.readRuleSubs()
       this.scriptEnabled = await this.readBoolean('scriptEnabled', true)
       this.jsEnabled = await this.readBoolean('jsEnabled', true)
+      // 网站设定全局态（webflag 位默认见字段注释）
+      this.cookiesEnabled = await this.readBoolean('cookiesEnabled', true)
+      this.cookiesBlockThirdParty = await this.readBoolean('cookiesBlockThirdParty', false)
+      this.popupAskFirst = await this.readBoolean('popupAskFirst', false)
+      this.clipboardState = await this.readNumber('clipboardState', 1)
+      this.openAppState = await this.readNumber('openAppState', 3)
+      this.geoAskFirst = await this.readBoolean('geoAskFirst', false)
+      this.cameraAskFirst = await this.readBoolean('cameraAskFirst', true)
+      this.micAskFirst = await this.readBoolean('micAskFirst', true)
+      this.redirectAskFirst = await this.readBoolean('redirectAskFirst', false)
+      this.vibrateEnabled = await this.readBoolean('vibrateEnabled', false)
+      this.backReloadEnabled = await this.readBoolean('backReloadEnabled', true)
       // 原版 w9/k.O()：max(0.25, min(5.0, readNumber('readaloudspeed', 100)/100))
       this.readAloudSpeed = Math.max(0.25, Math.min(5.0, (await this.readNumber('readaloudspeed', 100)) / 100))
       this.doNotTrack = await this.readBoolean('doNotTrack', false)
@@ -1334,6 +1371,74 @@ export class AppSettings {
     this.flushKey('jsEnabled', on)
   }
 
+  // ---- 网站设定全局态 setters（原版 w9/p webflag 位映射见字段注释）----
+
+  // jb/i0.l3：M(z) → bit8192
+  setCookiesEnabled(on: boolean): void {
+    this.cookiesEnabled = on
+    this.flushKey('cookiesEnabled', on)
+  }
+
+  // jb/i0.m3：h0(!z) → bit16384 清位 = 拦截第三方（置位 = 允许第三方）
+  setCookiesBlockThirdParty(on: boolean): void {
+    this.cookiesBlockThirdParty = on
+    this.flushKey('cookiesBlockThirdParty', on)
+  }
+
+  // jb/u3.j3：J(!z) → bit32768（置位 = 优先询问）
+  setPopupAskFirst(on: boolean): void {
+    this.popupAskFirst = on
+    this.flushKey('popupAskFirst', on)
+  }
+
+  // jb/e0.u3：t(s3(i)) → w9/p.L(int)：bit262144 = 优先询问、bit131072 = 已禁止
+  setClipboardState(state: number): void {
+    this.clipboardState = state
+    this.flushKey('clipboardState', state)
+  }
+
+  // jb/f3：w9/p.b0(int)：bit67108864 = 优先询问、bit33554432 = 已禁止
+  setOpenAppState(state: number): void {
+    this.openAppState = state
+    this.flushKey('openAppState', state)
+  }
+
+  // jb/j2：t(i) → w9/p.e0/l0：bit2 置位 = 优先询问
+  setGeoAskFirst(on: boolean): void {
+    this.geoAskFirst = on
+    this.flushKey('geoAskFirst', on)
+  }
+
+  // jb/t：bit8388608 置位 = 优先询问
+  setCameraAskFirst(on: boolean): void {
+    this.cameraAskFirst = on
+    this.flushKey('cameraAskFirst', on)
+  }
+
+  // jb/u2：bit16777216 置位 = 优先询问
+  setMicAskFirst(on: boolean): void {
+    this.micAskFirst = on
+    this.flushKey('micAskFirst', on)
+  }
+
+  // jb/q3：t(z) → bit134217728（置位 = 优先询问）
+  setRedirectAskFirst(on: boolean): void {
+    this.redirectAskFirst = on
+    this.flushKey('redirectAskFirst', on)
+  }
+
+  // jb/z5.j3：j0(z) → bit1073741824
+  setVibrateEnabled(on: boolean): void {
+    this.vibrateEnabled = on
+    this.flushKey('vibrateEnabled', on)
+  }
+
+  // jb/c1：w9/p.P(z) → bit512
+  setBackReloadEnabled(on: boolean): void {
+    this.backReloadEnabled = on
+    this.flushKey('backReloadEnabled', on)
+  }
+
   // 原版 w9/k.u0(float)：存储 int(clamp(speed,0.25,5)*100)
   setReadAloudSpeed(speed: number): void {
     const clamped = Math.max(0.25, Math.min(5.0, speed))
@@ -1867,9 +1972,82 @@ export class AppSettings {
       entry['allowAds'] = item.allowAds
       entry['forceDark'] = item.forceDark
       entry['javaScript'] = item.javaScript
+      entry['enabled'] = item.enabled
+      entry['fontZoom'] = item.fontZoom
+      entry['uaMode'] = item.uaMode
+      entry['customUa'] = item.customUa
+      entry['desktopMode'] = item.desktopMode
+      entry['imageMode'] = item.imageMode
+      entry['javaScriptMode'] = item.javaScriptMode
+      entry['adBlockMode'] = item.adBlockMode
+      entry['incognitoMode'] = item.incognitoMode
+      entry['backReloadMode'] = item.backReloadMode
+      entry['redirectMode'] = item.redirectMode
+      entry['clipboardMode'] = item.clipboardMode
+      entry['openAppMode'] = item.openAppMode
+      entry['geoMode'] = item.geoMode
+      entry['cameraMode'] = item.cameraMode
+      entry['micMode'] = item.micMode
       payload.push(entry)
     }
     this.flushKey('siteSettings', JSON.stringify(payload))
+  }
+
+  // 原版 k8/p：所有网站列表按域名排序
+  sortedSiteHosts(): string[] {
+    const hosts = this.siteSettings.map((item: SiteSetting): string => item.host)
+    hosts.sort((a: string, b: string): number => {
+      if (a === b) {
+        return 0
+      }
+      return a < b ? -1 : 1
+    })
+    return hosts
+  }
+
+  // 原版 ca/d.c(str, str2)：重命名（目标已存在返回 false）
+  renameSiteSetting(fromHost: string, toHost: string): boolean {
+    if (fromHost === toHost || this.getSiteSetting(toHost) !== null) {
+      return false
+    }
+    const site = this.getSiteSetting(fromHost)
+    if (site === null) {
+      return false
+    }
+    site.host = toHost
+    const next: SiteSetting[] = []
+    for (let i = 0; i < this.siteSettings.length; i++) {
+      if (this.siteSettings[i].host === fromHost) {
+        next.push(site)
+      } else {
+        next.push(this.siteSettings[i])
+      }
+    }
+    this.siteSettings = next
+    this.persistSiteSettings()
+    return true
+  }
+
+  // 原版 jb/u4 各三态弹窗写入路径：写 SiteConf 新字段的同时同步旧布尔字段，
+  // 保证既有 Web 层消费者（TabWeb/AdBlock/MenuSheet）行为一致
+  applySiteConf(site: SiteSetting): void {
+    const globalDesktop = this.desktopAllSites === 1
+    site.pcMode = site.desktopMode === 1 || (site.desktopMode === 0 && globalDesktop)
+    const globalNoImage = this.noImage
+    site.noImage = site.imageMode === 2 || (site.imageMode === 0 && globalNoImage)
+    // allowAds = 该站点不拦截广告：覆盖关闭(2) 或 跟随时全局关闭
+    site.allowAds = site.adBlockMode === 2 || (site.adBlockMode === 0 && !this.adBlockOn)
+    site.javaScript = site.javaScriptMode === 1 || (site.javaScriptMode === 0 && this.jsEnabled)
+    this.upsertSiteSetting(site)
+  }
+
+  // 原版 ca/d.i(str)：取站点条目，无则新建（不落盘，由 applySiteConf/upsert 提交）
+  obtainSiteSetting(host: string): SiteSetting {
+    const found = this.getSiteSetting(host)
+    if (found !== null) {
+      return found
+    }
+    return new SiteSetting(host)
   }
 
   private async readSiteSettings(): Promise<SiteSetting[]> {

@@ -227,9 +227,8 @@ export class DownloadNotifier {
     // d：文本组装
     let text: ResourceStr
     if (completed) {
-      // 完成态展示最终总字节数
-      text = $r('app.string.pair_text', $r('app.string.download_finished'),
-        dlSizeText(Math.max(rec.received, rec.size)))
+      // mark/via/download/d.java:223 P3：完成通知文本仅「下载完成」（文件名在标题）
+      text = $r('app.string.download_finished')
     } else if (failed) {
       text = rec.errorMessage !== '' ?
         $r('app.string.download_failed_detail', rec.errorMessage) : $r('app.string.download_failed')
@@ -284,12 +283,21 @@ export class DownloadNotifier {
       },
       wantAgent: tapAgent
     }
-    // 进度模板（进行中且支持模板且有已知总大小时；未知大小不设进度条字段，走文本进度）
-    if ((active || paused || waiting) && this.templateSupported && rec.size > 0) {
-      const progress = Math.floor(rec.received * 100 / rec.size)
-      request.template = {
-        name: 'downloadTemplate',
-        data: { 'progressValue': progress }
+    // 进度模板（进行中且支持模板）：已知总大小→真实百分比；未知总大小→模拟不确定进度
+    // （value<max 动态上调形成走不到头的视觉，对齐原版 d.java:283-287 l(100,50,true)；文案保留「大小未知」）
+    if ((active || paused || waiting) && this.templateSupported) {
+      if (rec.size > 0) {
+        const progress = Math.floor(rec.received * 100 / rec.size)
+        request.template = {
+          name: 'downloadTemplate',
+          data: { 'progressValue': progress, 'progressMax': 100 }
+        }
+      } else if (active) {
+        const sim = Math.max(1, Math.floor(rec.received / 1024))
+        request.template = {
+          name: 'downloadTemplate',
+          data: { 'progressValue': sim, 'progressMax': sim * 2 }
+        }
       }
     }
     // 暂停/恢复按钮（进行中→暂停；等待网络/已暂停→恢复）

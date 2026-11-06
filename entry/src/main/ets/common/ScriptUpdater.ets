@@ -2,7 +2,8 @@
 // - 触发链：浏览器启动 k6 onViewCreated → i9() → c8/na.q0() → sb/q 静默执行；
 //   鸿蒙侧入口 = EntryAbility.onCreate → GmRuntime.initGmRuntime() → runScriptsAutoUpdate()
 // - 节流（sb/q.a）：interval = 「自动更新」档位；interval < 1h（「从不」档为 0）直接跳过；
-//   距上次自动更新（lastScriptUpdate）未满间隔直接跳过；单脚本按独立 lastUpdatedAt 过滤
+//   距上次自动更新（lastScriptUpdate）未满间隔直接跳过；单脚本按独立 last_updated_at 过滤
+//   （p5 scripts.last_updated_at 列 → 元数据旁路存储 metaStoreLoadScript）
 // - 更新（sb/q.e → p5/b.p）：下载→重新解析→整体替换；无版本比较、无 UI、无 toast，静默；
 //   失败仅记录 "Unknown error, script: name"；enabled 用解析默认值 true（原版未回写原启用位）
 // - 下载（s5/b.d）：GET 文本（readTimeout 5000），空/失败回退 s5/b.f 的 jsdelivr 镜像重试
@@ -13,13 +14,11 @@ import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { UserScriptRec, parseUserScriptMeta } from './Types'
 import { AppSettings } from './Settings'
+import { META_STORE_NAME, metaStoreLoadScript, metaStoreSaveScript } from './ScriptResources'
 
 const DAY_MS: number = 86400000
 // sb/q.java:46：jZ < 3600000 视为关闭（「从不」档 interval=0）
 const MIN_INTERVAL_MS: number = 3600000
-// 单脚本 lastUpdatedAt 独立存储（对应 p5 数据库 last_updated_at 列；
-// Settings.ets 禁改、UserScriptRec 持久化字段固定，故不入 via_settings 的脚本 JSON）
-const UPDATER_STORE_NAME: string = 'script_updater'
 const KEY_USER_SCRIPTS: string = 'userScripts'
 const WAIT_SLICE_MS: number = 100
 const WAIT_MAX_SLICES: number = 100
@@ -56,7 +55,7 @@ async function runScriptsAutoUpdate(context: common.Context): Promise<void> {
   }
   autoUpdateRunning = true
   try {
-    const updaterStore = await preferences.getPreferences(context, UPDATER_STORE_NAME)
+    const metaStore = await preferences.getPreferences(context, META_STORE_NAME)
     // sb/q.b(long, r5.c)：enabled && downloadUrl 非空 && last_updated_at < now - interval
     const threshold = now - intervalMs
     for (let i = 0; i < settings.userScripts.length; i++) {
@@ -64,7 +63,8 @@ async function runScriptsAutoUpdate(context: common.Context): Promise<void> {
       if (!script.enabled || script.downloadUrl === '') {
         continue
       }
-      const lastUpdatedAt = (await updaterStore.get(String(script.id), 0)) as number
+      const meta = metaStoreLoadScript(metaStore, script.id)
+      const lastUpdatedAt = meta !== null ? meta.lastUpdatedAt : 0
       if (lastUpdatedAt >= threshold) {
         continue
       }
@@ -83,9 +83,10 @@ async function runScriptsAutoUpdate(context: common.Context): Promise<void> {
       parsed.id = script.id
       parsed.enabled = true
       settings.saveScript(parsed)
-      await updaterStore.put(String(script.id), Date.now())
+      // p5/b.p：last_updated_at 刷新（r5/a.f:231-232 解析即当前时间）
+      metaStoreSaveScript(metaStore, parsed)
     }
-    await updaterStore.flush()
+    await metaStore.flush()
     // sb/q.a 完成回调：w9/k.p0("scripts", now)
     settings.markScriptsUpdated()
   } finally {
@@ -121,8 +122,8 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
-// s5/b.d(String)：抓取脚本文本；空/失败回退镜像地址重试
-async function fetchScriptText(url: string): Promise<string | null> {
+// s5/b.d(String)：抓取脚本文本；空/失败回退镜像地址重试（手动安装/更新共用）
+export async function fetchScriptText(url: string): Promise<string | null> {
   const first = await httpGetText(url)
   if (first !== null && first !== '') {
     return first
@@ -154,23 +155,35 @@ async function httpGetText(url: string): Promise<string | null> {
   }
 }
 
-// s5/b.f(String)：CDN 镜像回退（fastly.jsdelivr.net / gh / npm）
+// s5/b.f(String)：CDN 镜像回退（fastly.jsdelivr.net / gh / npm）1:1
 function mirrorUrlOf(url: string): string | null {
-  if (url.startsWith('https://cdn.jsdelivr.net/')) {
-    return `https://fastly.jsdelivr.net/${url.substring('https://cdn.jsdelivr.net/'.length)}`
+  if (url.startsWith('https://fastly.jsdelivr.net/')) {
+    return null
   }
-  if (url.startsWith('https://raw.githubusercontent.com/')) {
-    const rest = url.substring('https://raw.githubusercontent.com/'.length)
-    return `https://fastly.jsdelivr.net/gh/${rest}`
+  if (url.startsWith('https://cdn.jsdelivr.net/') && url.length > 25) {
+    return `https://fastly.jsdelivr.net/${url.substring(25)}`
   }
-  const blobPrefix = 'https://github.com/'
-  const blobIn = blobPrefix.length
-  if (url.startsWith(blobPrefix) && url.includes('/blob/')) {
-    const rest = url.substring(blobIn).replace('/blob/', '@')
-    return `https://fastly.jsdelivr.net/gh/${rest}`
+  if (url.startsWith('https://raw.githubusercontent.com/') && url.length > 34) {
+    // s5/b.f:458-465：user/repo 与 branch/path 之间的斜杠替换为 '@'——
+    // gh 镜像地址必须为 fastly.jsdelivr.net/gh/user/repo@branch/path
+    let secondSlash = url.indexOf('/', 34)
+    if (secondSlash >= 0) {
+      secondSlash = url.indexOf('/', secondSlash + 1)
+    }
+    if (secondSlash <= 0) {
+      return null
+    }
+    return `https://fastly.jsdelivr.net/gh/${url.substring(34, secondSlash)}@${url.substring(secondSlash + 1)}`
   }
-  if (url.startsWith('https://unpkg.com/')) {
-    return `https://fastly.jsdelivr.net/npm/${url.substring('https://unpkg.com/'.length)}`
+  if (url.startsWith('https://github.com/') && url.length > 19) {
+    const blobIdx = url.indexOf('/blob/', 19)
+    if (blobIdx < 0 || blobIdx >= url.length - 6) {
+      return null
+    }
+    return `https://fastly.jsdelivr.net/gh/${url.substring(19, blobIdx)}@${url.substring(blobIdx + 6)}`
+  }
+  if (url.startsWith('https://unpkg.com/') && url.length > 18) {
+    return `https://fastly.jsdelivr.net/npm/${url.substring(18)}`
   }
   return null
 }

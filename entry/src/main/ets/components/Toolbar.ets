@@ -146,10 +146,12 @@ export struct Toolbar {
         this.tabStore.newTab(false)
         break
       case 6:
-      case 30:
         this.onCommand('addBookmark')
         break
       case 7:
+      case 30:
+        // 原版 k6.ra case30（k6.java:8353-8355）→ W9()：书签快捷选择对话框（a8.k，
+        // 动作文案 hb/v4 case30 = pn「打开书签对话框」）——接书签管理页
         this.onOpenBookmarks()
         break
       case 8:
@@ -299,7 +301,7 @@ export struct Toolbar {
           }, 140)
           this.onTabs()
         })
-        .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+        .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
           this.longPressAction(this.keyOf('tabs'))
         }))
       }
@@ -357,7 +359,7 @@ export struct Toolbar {
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .opacity(enabled ? 1 : 0.3)
-    .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
       this.longPressAction(this.keyOf(id))
     }))
     .onClick(() => {

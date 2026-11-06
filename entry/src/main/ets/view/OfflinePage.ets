@@ -60,6 +60,9 @@ export struct OfflinePage {
   @Local showDelete: boolean = false
   @Local deleteCount: number = 0
   @Local deleteName: string = ''
+  // 原版 eb.Y2/e3：导出成功弹「导出数据到：%s」对话框（提示 g6），路径为空才 toast「导出成功」(il)
+  @Local showExportDialog: boolean = false
+  @Local exportPath: string = ''
   private pendingDelete: OfflineEntry[] = []
   private searchTimer: number = -1
   private searchPending: string = ''
@@ -197,6 +200,11 @@ export struct OfflinePage {
   // ===== 打开（原版 eb.C3：0=当前标签 1=新标签 2=后台）=====
 
   private openEntry(entry: OfflineEntry, mode: number): void {
+    // 原版 eb.C3：pdf 一律走内置查看器（za.g 等价 = pdfViewer 路由），不分标签模式
+    if (entry.isPdf) {
+      this.navPathStack.pushPathByName('pdfViewer', entry.path)
+      return
+    }
     const url = `file://${entry.path}`
     if (mode === 1) {
       this.tabStore.newTabAt(url, false)
@@ -422,10 +430,15 @@ export struct OfflinePage {
       } finally {
         fileIo.closeSync(target)
       }
-      // 原版 eb.e3/Y2：导出成功提示（ii 导出数据到：%1$s）
-      this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.ai_exported_to', uris[0]), duration: 1500
-      })
+      // 原版 eb.e3/Y2：导出成功弹「导出数据到：%s」对话框（标题 g6 提示）；路径为空才 toast il 导出成功
+      if (uris[0] !== '') {
+        this.exportPath = uris[0]
+        this.showExportDialog = true
+      } else {
+        this.getUIContext().getPromptAction().showToast({
+          message: '导出成功', duration: 1500
+        })
+      }
     } catch (error) {
       console.error('export offline files failed')
     }
@@ -467,6 +480,35 @@ export struct OfflinePage {
           })
       }
       .width('100%')
+    }
+    .width('86%')
+    .padding(20)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(16)
+  }
+
+  // 原版 eb.Y2/e3：导出成功对话框（g6 提示 + ii 导出数据到：%s + 确定单键）
+  @Builder
+  ExportDialog() {
+    Column({ space: 14 }) {
+      Text('提示')
+        .fontSize(17)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+      Text($r('app.string.ai_exported_to', this.exportPath))
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+      Button($r('app.string.confirm'))
+        .fontSize(14)
+        .height(38)
+        .width('100%')
+        .backgroundColor($r('app.color.accent'))
+        .fontColor($r('app.color.on_accent'))
+        .onClick(() => {
+          this.showExportDialog = false
+        })
     }
     .width('86%')
     .padding(20)
@@ -565,6 +607,7 @@ export struct OfflinePage {
           $r('app.string.delete_count', this.selected.length))
           .fontSize(14)
           .fontColor($r('app.color.accent'))
+          .enabled(this.selected.length > 0)
           .padding({ left: 16, right: 16 })
           .height(48)
           .onClick(() => {
@@ -671,6 +714,18 @@ export struct OfflinePage {
           .backgroundColor('rgba(0,0,0,0.5)')
           .onClick(() => {
             this.showDelete = false
+          })
+        }
+        if (this.showExportDialog) {
+          Column() {
+            this.ExportDialog()
+          }
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('rgba(0,0,0,0.5)')
+          .onClick(() => {
+            this.showExportDialog = false
           })
         }
       }
