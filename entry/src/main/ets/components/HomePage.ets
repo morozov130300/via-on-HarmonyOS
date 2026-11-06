@@ -149,8 +149,11 @@ export struct HomePage {
         // 不能用 backgroundBlurStyle(BlurStyle.*)：该材质自带背板色/蒙层，与 backgroundColor 的 α 无关，
         // 表现为「不透明度 0 仍有一层蒙版」。改用 backdropBlur 对应原版 backdrop-filter。
         .backdropBlur(this.settings.homeAdvEffect === 1 ? 0 : 10)
-        .borderRadius(this.pillRadius())
+        // 官方 ts-universal-attributes-border / faqs-arkui-1376：border 的适用范围大于 borderRadius，
+        // 两者都生效要求 border 配置在 borderRadius **之前**；否则 border 缺省的 radius=0 会覆盖圆角，
+        // 搜索框变方角并显出一整圈突兀描边（原版是 q() 圆角的下划线）。
         .border(this.pillBorder())
+        .borderRadius(this.pillRadius())
         // 原版 .search_bar 无任何按压态样式（全 CSS 只有 .opSug_wpr tr:hover 与
         // #search_bar_trigger:focus-visible），故不加 stateStyles
         // 原版 .search_bar_wrapper margin:15px auto 0 + .search_part margin:0 auto 20px
@@ -419,25 +422,50 @@ export struct HomePage {
     return (this.settings.homePillCorner / 100) * (this.settings.homePillStrokeWidth + 23)
   }
 
-  // 搜索框背景（原版 i6/o.java:146-157 + r8/d.java:139）：
-  // 线条样式强制 searchBarAlpha=0；否则浅色 rgba(255,255,255,α)、深色 rgba(0,0,0,α)
+  // 原版 r8/d.java:109 mVar.P(lVarJ.d())：isNight = 应用夜间模式（w9/k.java:863 d()：nightmode2 1/3）
+  private isNight(): boolean {
+    return this.settings.isNightActive()
+  }
+
+  // 原版 r8/d.java:147 mVar.I(bginfo.c() ? bginfo.d() : y.C(accentColor))：isLight。
+  // bginfo bit7/8 鸿蒙未落地、urlbarcolor 默认 -1（y.C(-1) 亮度 255>=192 → true），
+  // 故以主页资源随系统深浅切换的同一轴（home_bg / home_text）近似：系统浅色即 isLight。
+  private homeIsLight(): boolean {
+    try {
+      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+      return ctx.config.colorMode !== ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+    } catch (error) {
+      return true
+    }
+  }
+
+  // 搜索框背景（原版 i6/o.java:147-157,213 + r8/d.java:139）：
+  // str21 = !isNight ? (isLight ? 黑 : 白) : 白；α = config.n()（searchBarAlpha）
+  // 线条样式时 r8/d.java:139 把 config.n() 置 0 → rgba(...,0) 自然透明，非 CSS 特判
   private pillBackground(): ResourceColor {
     if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
       return Color.Transparent
     }
     const alpha = this.settings.homePillOpacity / 100
-    if (this.isDarkHome()) {
-      return `rgba(0,0,0,${alpha})`
+    if (this.isNight()) {
+      return `rgba(255, 255, 255, ${alpha})`
     }
-    return `rgba(255,255,255,${alpha})`
+    return this.homeIsLight()
+      ? `rgba(0, 0, 0, ${alpha})`
+      : `rgba(255, 255, 255, ${alpha})`
   }
 
-  // 原版 .search_bar color（i6/o.java:158-161,318）：浅色 α>=0.5 → #1b1b1b 否则 #afafaf；深色 #fafafa
+  // 原版 .search_bar color（i6/o.java:158-161,217-219,318）：
+  // str22 = !isNight ? (α>=0.5 ? #1b1b1b : #afafaf)
+  //       : (α<0.5 ? str11 : #1b1b1b)，str11 = !isLight ? #fafafa : #1b1b1b
   private pillTextColor(): string {
-    if (this.isDarkHome()) {
-      return '#fafafa'
+    const alpha = this.settings.homePillOpacity / 100
+    if (this.isNight()) {
+      return alpha < 0.5
+        ? (this.homeIsLight() ? '#1b1b1b' : '#fafafa')
+        : '#1b1b1b'
     }
-    return this.settings.homePillOpacity >= 50 ? '#1b1b1b' : '#afafaf'
+    return alpha >= 0.5 ? '#1b1b1b' : '#afafaf'
   }
 
   // 原版 i6/o.java:357-370：#box_container 列数由 min-width 媒体查询逐级覆盖，
@@ -500,44 +528,36 @@ export struct HomePage {
   }
 
   private pillBorder(): BorderOptions {
-    // 原版 i6/o.java:304-316：线条(searchBarLineEnabled)→四边 border；矩形→仅 border-bottom
+    // 原版 i6/o.java:304-316,401,503,582 四条三元全部位于 jadx 标注
+    // "Code decompiled incorrectly" 的 b() 方法内，字面 !config.p() 的取反系反编译错误产物，不可照抄。
+    // config.p() = searchBarLineEnabled = usingLine（i6/m.toString / i9/e bit24 / r8/d.java:138）。
+    // 依据 r8/d.java:139,142（p()⇒alpha=0 透明底、radius=0）与 o.java:301（q() 圆角仅在四边框可见）：
+    // 线条(p()=true) → 透明底 + 无圆角 + 仅 border-bottom 一条线；
+    // 矩形(p()=false) → 有底色 + 圆角 + border 四边。
     if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
       return {
-        width: this.settings.homePillStrokeWidth,
+        width: { bottom: this.settings.homePillStrokeWidth },
         color: this.strokeColor()
       }
     }
     return {
-      width: { bottom: this.settings.homePillStrokeWidth },
+      width: this.settings.homePillStrokeWidth,
       color: this.strokeColor()
     }
   }
 
   private strokeColor(): string {
-    // 原版 i6/o.java:145,309：浅色 rgba(233, 233, 233, α)；深色 rgba(255, 255, 255, α)；主题色自定义时用主题色
+    // 原版 i6/o.java:138-145,209：str20 = !isNight ? str13 : string4
+    // str13 = rgba(233, 233, 233, r)；string4 = isLight ? rgba(0,0,0,r) : rgba(255,255,255,r)
+    // α = config.r()（searchBarStrokeAlpha，r8/d.java:140 ↔ homePillStrokeOpacity）
+    // accentColor/config.a() 不参与描边（o.java 全文无 config.a()），主题色绝不用于描边
     const alpha = this.settings.homePillStrokeOpacity / 100
-    const theme = this.settings.homeThemeColor
-    if (theme.length >= 7) {
-      const r = parseInt(theme.substring(theme.length - 6, theme.length - 4), 16)
-      const g = parseInt(theme.substring(theme.length - 4, theme.length - 2), 16)
-      const b = parseInt(theme.substring(theme.length - 2), 16)
-      if (!Number.isNaN(r) && !Number.isNaN(g) && !Number.isNaN(b)) {
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`
-      }
+    if (!this.isNight()) {
+      return `rgba(233, 233, 233, ${alpha})`
     }
-    if (this.isDarkHome()) {
-      return `rgba(255, 255, 255, ${alpha})`
-    }
-    return `rgba(233, 233, 233, ${alpha})`
-  }
-
-  private isDarkHome(): boolean {
-    try {
-      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
-      return ctx.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK
-    } catch (error) {
-      return false
-    }
+    return this.homeIsLight()
+      ? `rgba(0, 0, 0, ${alpha})`
+      : `rgba(255, 255, 255, ${alpha})`
   }
 
   private favRadius(): number {
