@@ -12,9 +12,12 @@ import { computeDialogWidthVp } from './ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 
 const BAR_HEIGHT: number = 48
-const ICON_SIZE: number = 24
+// 原版图标 PNG 为 88px(@4x) = 22dp
+const ICON_SIZE: number = 22
 // 原版 n0.j()：按钮左右 margin 13dp（dimens bh=13dp）
 const ICON_MARGIN: number = 13
+// 原版 n0.j()：图标视图宽 48dp（dimens bi=48dp）
+const ICON_SLOT: number = 48
 
 // 原版标题长按菜单项（k6.h.onLongClick：复制/粘贴/粘贴并前往）
 class TitleMenuItem {
@@ -356,6 +359,7 @@ export struct AddressBar {
           .accessibilityText(this.readerHint
             ? $r('app.string.open_reader_mode') : $r('app.string.site_info'))
       }
+      .width(ICON_SLOT)
       .height('100%')
       .alignContent(Alignment.Center)
       .margin({ left: ICON_MARGIN })
@@ -376,8 +380,10 @@ export struct AddressBar {
         .fontSize(this.titleFontSize())
         .fontColor($r('app.color.fg'))
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .textAlign(TextAlign.Center)
+        // 原版 n0.p()：setEllipsize(null) + setSingleLine(true) → 不显示省略号，超出裁切
+        .textOverflow({ overflow: TextOverflow.Clip })
+        // 原版 n0.d()：setGravity(16) 仅垂直居中，水平方向靠左
+        .textAlign(TextAlign.Start)
         .layoutWeight(1)
         // 原版 z5.a 弹窗：k6.h 标题长按 → 复制/粘贴/粘贴并前往 横排 pill 弹窗
         .bindPopup(this.showTitleMenu, {
@@ -403,6 +409,7 @@ export struct AddressBar {
         Stack() {
           ViaIcon({ icon: $r('app.media.via_ic_resource'), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
         }
+        .width(ICON_SLOT)
         .height('100%')
         .alignContent(Alignment.Center)
         .accessibilityText($r('app.string.res_sniffer'))
@@ -416,6 +423,7 @@ export struct AddressBar {
       Stack() {
         ViaIcon({ icon: this.actionIcon(), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
       }
+      .width(ICON_SLOT)
       .height('100%')
       .alignContent(Alignment.Center)
       .margin({ right: ICON_MARGIN })

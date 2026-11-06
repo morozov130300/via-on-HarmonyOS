@@ -39,6 +39,10 @@ export struct HomePage {
   // 屏幕宽高（vp），用于原版按屏宽/屏高的媒体查询分档（i6/o.java、qa/e1.java）
   private screenW: number = 360
   private screenH: number = 780
+  // 主页实际视口宽高（vp）：原版媒体查询 min-width/min-height 匹配的是 WebView 视口，
+  // 即「屏幕 - 状态栏 - 地址栏 - 操作栏」，不等于物理屏幕高（i6/o.java:357-379）
+  @Local vpW: number = 0
+  @Local vpH: number = 0
 
   aboutToAppear(): void {
     try {
@@ -92,8 +96,9 @@ export struct HomePage {
         .height(this.contentTopOffset())
 
       if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示') {
-        // 原版 .search_bar_wrapper margin:15px auto 0 → logo 与搜索框间距 15
-        Column({ space: 15 }) {
+        // 原版 .search_part 内：a.logo 后紧跟 .search_bar_wrapper（margin:15px auto 0），
+        // 间距只有 15px —— 由 pill 自身 margin.top 15 提供，此处不得再加 Column space
+        Column() {
           if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
             Text(this.settings.homeLogoText)
               .fontSize(this.settings.homeLogoSize)
@@ -108,7 +113,8 @@ export struct HomePage {
               .width(this.logoWidth())
               .height(this.logoHeight())
               .borderRadius(this.logoRadius())
-              .objectFit(ImageFit.Contain)
+              // 原版 i6/o.java:277-284：所有 logo 图（含自定义图）都走 img.smaller，object-fit:cover
+              .objectFit(ImageFit.Cover)
               .brightness(this.logoDim())
           } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === 'HTML 代码'
             && this.settings.homeLogoHtml !== '') {
@@ -125,6 +131,9 @@ export struct HomePage {
               .brightness(this.logoDim())
           }
         }
+        // 原版 .search_part { display:table; width:90%; margin:0 auto 20px }：
+        // 90% 相对 body 宽（min(600, 视口宽)），内部 .search_bar 为 width:100%
+        .width('90%')
         // 原版 logo 是 <a onclick="window.via.cmd(257)">：点击进入主页定制设置
         .onClick(() => {
           this.onLogoTap()
@@ -134,7 +143,7 @@ export struct HomePage {
         // 静态主页搜索框是纯描边空 pill，不含图标与占位文字
         Row()
         .height(HOME_PILL_HEIGHT)
-        .width('90%')
+        .width('100%')
         .backgroundColor(this.pillBackground())
         .backgroundBlurStyle(this.settings.homeAdvEffect === 1 ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
         .borderRadius(this.pillRadius())
@@ -154,12 +163,15 @@ export struct HomePage {
         Grid() {
           ForEach(this.favs, (item: HomeFavRec) => {
             GridItem() {
-                Column({ space: 2 }) {
+                // 原版 .url { margin: 2px 0 0 } —— 间距只有 2，不能再叠 Column space
+                Column() {
                   Stack() {
                     // 原版 .title（i6/o.java:344-355）：宽=图标宽、行高=高=图标高、字号 15
                   Text(this.iconText(item))
                       .fontSize(15)
-                      .fontColor(this.favColor(item) === '' ? this.favTextColor() : Color.White)
+                      // 原版 i6/o.java:347：.title color = !config.d() ? str17 : "#ffffff"
+                      // d()=多彩底色被禁用（本工程「透明」）→ 恒白字；多彩时用标题灰
+                      .fontColor(this.favColor(item) === '' ? Color.White : this.favTextColor())
                       .textAlign(TextAlign.Center)
                       .width('100%')
                       .height('100%')
@@ -208,12 +220,15 @@ export struct HomePage {
         // 原版 i6/o.java:357-370：列数按屏宽动态，上限 540/(item+18)
         .columnsTemplate(this.favColumnsTemplate())
         .columnsGap(18)
-        .rowsGap(8)
-        .width(this.favColumns() * this.favSize() + (this.favColumns() - 1) * 18)
+        // 原版 .box { margin: 4px 9px 4px } 自带上下 4px 间距，行间无额外 gap
+        .rowsGap(0)
+        // 原版 #box_container 宽 = (.box 宽 + 左右 margin 18) × 列数，首尾各含 9px 外边距
+        .width(this.favColumns() * (this.favSize() + 18))
+        .padding({ left: 9, right: 9 })
         // 原版 .box margin-top 4（与搜索框的 margin-bottom 20 累加 = 24）
         .margin({ top: 4 })
-        // 每行高 = .box 上下 margin 8 + .title 高 f + .url 高 20 + .url margin-top 2
-        .height(Math.max(68, Math.ceil(this.favs.length / this.favColumns()) * (this.favHeight() + 30)))
+        // 每行高 = .box 上下 margin 8 + .title 高 f + .url margin-top 2 + .url 高 20
+        .height(Math.ceil(this.favs.length / this.favColumns()) * (this.favHeight() + 30))
       }
 
       Blank()
@@ -223,8 +238,8 @@ export struct HomePage {
       .width('100%')
       .height('100%')
       // 原版 i6/o.java:244-246：body/#content/#gesture-indicator 均 max-width:600px（margin auto 居中）
+      // 顶部不额外加 insets.top：本组件已位于地址栏之下（Index 的 TopBarArea 已消费状态栏）
       .padding({
-        top: this.insets.top,
         left: this.contentSidePad(),
         right: this.contentSidePad()
       })
@@ -248,6 +263,11 @@ export struct HomePage {
     }
     .width('100%')
     .height('100%')
+    // 原版媒体查询按 WebView 视口（= 本组件实际宽高）分档，不用物理屏幕尺寸
+    .onAreaChange((_old: Area, area: Area) => {
+      this.vpW = Number(area.width)
+      this.vpH = Number(area.height)
+    })
     .backgroundColor(this.homeBackground())
     // 原版 qa.e1：主页收藏管理底部弹层
     .bindSheet($$this.showEditor, this.HomeFavSheet(), {
@@ -416,11 +436,14 @@ export struct HomePage {
     return this.settings.homePillOpacity >= 50 ? '#1b1b1b' : '#afafaf'
   }
 
-  // 原版 i6/o.java:357-370：#box_container 列数按屏宽动态，上限 540/(item+18)
+  // 原版 i6/o.java:357-370：#box_container 列数由 min-width 媒体查询逐级覆盖，
+  // 命中列数 = floor(视口宽/(item+18)) - (搜索区隐藏 ? 1 : 0)，上限 540/(item+18)
   private favColumns(): number {
     const unit = this.favSize() + 18
     const cap = Math.floor(540 / unit)
-    const fit = Math.floor(this.screenW / unit)
+    const w = this.vpW > 0 ? this.vpW : this.screenW
+    const hidden = HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示' ? 0 : 1
+    const fit = Math.floor(w / unit) - hidden
     return Math.max(1, Math.min(fit, cap))
   }
 
@@ -434,27 +457,30 @@ export struct HomePage {
 
   // 原版 i6/o.java:244-246：body/#content/#gesture-indicator max-width:600px 居中（margin:auto）
   private contentSidePad(): number {
-    return Math.max(0, (this.screenW - 600) / 2)
+    const w = this.vpW > 0 ? this.vpW : this.screenW
+    return Math.max(0, (w - 600) / 2)
   }
 
   // 原版 i6/o.java:371-379：#content top —— 搜索区隐藏时固定 18px，否则按屏高分档
+  // 分档依据是 WebView 视口高（min-height 媒体查询），非物理屏幕高
   private contentTopOffset(): Length {
     if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '隐藏') {
       return 18
     }
-    if (this.screenH >= 850) {
+    const h = this.vpH > 0 ? this.vpH : this.screenH
+    if (h >= 850) {
       return 255
     }
-    if (this.screenH >= 650) {
+    if (h >= 650) {
       return 195
     }
-    if (this.screenH >= 450) {
+    if (h >= 450) {
       return 135
     }
-    if (this.screenH >= 350) {
+    if (h >= 350) {
       return 87
     }
-    if (this.screenH >= 250) {
+    if (h >= 250) {
       return 62
     }
     return '25%'

@@ -12,6 +12,8 @@ export struct ViaIcon {
   // Grid 拖拽场景（如定制菜单宫格）内置的 Image 拖拽会抢走宿主 GridItem 的拖拽事件，
   // 需要在宫格内禁用（ faqs-arkui-1188），因此暴露开关，默认保持原行为
   @Param imageDraggable: boolean = true
+  // 原版前进图标为 rotate 180° 的返回图标（drawable/a3.xml：<rotate drawable=@drawable/b2 ...>）
+  @Param rotateDeg: number = 0
 
   // 等价原版 PorterDuff.SRC_IN 着色：out.rgb = color.rgb * src.alpha，out.a = src.a * color.a
   // 对纯黑/纯白 alpha 蒙版 PNG（via_menu_* / via_ic_*）均生效
@@ -78,6 +80,7 @@ export struct ViaIcon {
         .height(this.iconSize)
         .objectFit(ImageFit.Contain)
         .colorFilter(this.tintMatrix)
+        .rotate({ angle: this.rotateDeg })
         .draggable(this.imageDraggable)
     } else {
       Image(this.icon)
@@ -85,6 +88,7 @@ export struct ViaIcon {
         .height(this.iconSize)
         .objectFit(ImageFit.Contain)
         .colorFilter(this.tintMatrix)
+        .rotate({ angle: this.rotateDeg })
         .draggable(this.imageDraggable)
     }
   }

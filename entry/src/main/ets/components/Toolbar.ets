@@ -6,7 +6,8 @@ import { curves } from '@kit.ArkUI'
 import { ViaIcon } from './ViaIcon'
 
 const BAR_HEIGHT: number = 48
-const ICON_SIZE: number = 24
+// 原版 dimens a=13dp 内边距 → 88px(@4x)=22dp 图标本体
+const ICON_SIZE: number = 22
 
 @ComponentV2
 export struct Toolbar {
@@ -266,9 +267,10 @@ export struct Toolbar {
         })
       }
       if (this.showNavButtons('forward')) {
-        this.ToolButton('forward', $r('app.media.via_ic_forward'), this.tab.canForward, () => {
+        // 原版前进 = drawable/a3.xml：<rotate drawable=@drawable/b2 180°>
+        this.ToolButton('forward', $r('app.media.via_ic_back'), this.tab.canForward, () => {
           this.onForward()
-        })
+        }, 180)
       }
       if (!this.hidden('home')) {
         this.ToolButton('home', $r('app.media.via_ic_home'), true, () => {
@@ -349,10 +351,15 @@ export struct Toolbar {
   }
 
   @Builder
-  ToolButton(id: string, icon: Resource, enabled: boolean, action: () => void) {
+  ToolButton(id: string, icon: Resource, enabled: boolean, action: () => void, rotate: number = 0) {
     Column() {
       // 原版 g0.setAccentColor：五个工具栏图标全部着 accent 色
-      ViaIcon({ icon: icon, iconSize: ICON_SIZE, iconColor: $r('app.color.accent') })
+      ViaIcon({
+        icon: icon,
+        iconSize: ICON_SIZE,
+        iconColor: $r('app.color.accent'),
+        rotateDeg: rotate
+      })
     }
     .layoutWeight(1)
     .height('100%')
@@ -367,10 +374,11 @@ export struct Toolbar {
         action()
       }
     })
-    // 原版按钮前景 ripple 的按压反馈近似
+    // 原版按钮背景 drawable q.xml：oval ripple，颜色 @color/l = #30808080
+    // （ArkUI 无 oval ripple，用同色整块按压近似）
     .stateStyles({
       pressed: {
-        .backgroundColor('#1F000000')
+        .backgroundColor('#30808080')
       }
     })
   }
