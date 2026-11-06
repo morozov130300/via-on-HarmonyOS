@@ -1,5 +1,6 @@
 import { TabItem } from './Types'
 import { AppSettings, SavedTab } from './Settings'
+import { ClosedTabsStore, ClosedBatchResult, ClosedSingleResult } from './ClosedTabsStore'
 import { emitter } from '@kit.BasicServicesKit'
 
 const BLANK_URL: string = 'about:blank'
@@ -29,6 +30,18 @@ export class TabStore {
   }
 
   async init(settings: AppSettings): Promise<void> {
+    // 原版 na.k（c8/na.java:420）：崩溃快照存在（na.e.d RESTORED_TABS）时强制恢复，
+    // 不受 restoreTabsMode 设置约束。鸿蒙侧以 ClosedTabsStore 的 lastQuitClean 标记
+    // 等价判定：EntryAbility 正常退出写 true，本方法读取后置回 false。
+    await ClosedTabsStore.getInstance().ensureInit()
+    const flags = await ClosedTabsStore.getInstance().consumeQuitFlags()
+    if (flags[0] && !flags[1]) {
+      const crashed = await settings.readTabsSnapshot()
+      if (crashed.length > 0) {
+        this.restoreSaved(crashed, await settings.readTabsSnapshotIndex())
+      }
+      return
+    }
     // 原版三态：0 禁用 / 1 总是恢复 / 2 优先询问（restoreclosedtabs，默认 0）
     if (settings.restoreTabsMode === 2) {
       const saved = await settings.readTabsSnapshot()
@@ -181,13 +194,26 @@ export class TabStore {
     return true
   }
 
-  // 原版 o4/c.b(i10)：关闭当前标签时先选前一个（i11>0 ? i11-1 : 有后继则后继），再删除
-  closeTab(index: number): string {
+  // 关闭标签入恢复库（原版 na.M：非隐身非主页标签关闭时写入 na.h 恢复库）
+  private closeInfoOf(tab: TabItem): ClosedSingleResult | null {
+    if (tab.incognito || tab.isHomePage() || tab.url === '') {
+      return null
+    }
+    const entry = ClosedTabsStore.getInstance().add(tab.url, tab.title)
+    if (entry === null) {
+      return null
+    }
+    return new ClosedSingleResult(tab.url, tab.title, entry.id)
+  }
+
+  // 原版 o4/c.b(i10)：关闭当前标签时先选前一个（i11>0 ? i11-1 : 有后继则后继），再删除。
+  // 返回关闭信息供撤销 snackbar（原版 na.f0：已关闭 %1$s），无信息（主页/隐身）返回 null
+  closeTab(index: number): ClosedSingleResult | null {
     if (index < 0 || index >= this.tabs.length) {
-      return ''
+      return null
     }
     const closed = this.tabs[index]
-    const closedUrl = !closed.incognito && !closed.isHomePage() ? closed.url : ''
+    const info = this.closeInfoOf(closed)
     const wasCurrent = index === this.currentIndex
     this.tabs.splice(index, 1)
     if (this.tabs.length === 0) {
@@ -196,7 +222,7 @@ export class TabStore {
       this.tabs.push(tab)
       this.currentIndex = 0
       this.snapshot(AppSettings.getInstance())
-      return closedUrl
+      return info
     }
     if (wasCurrent) {
       // 原版 j(i11>0 ? i11-1 : (i11<size-1 ? i11+1 : -1))：选中前一个，首个则选中后继
@@ -205,44 +231,103 @@ export class TabStore {
       this.currentIndex = this.currentIndex - 1
     }
     this.snapshot(AppSettings.getInstance())
-    return closedUrl
+    return info
   }
 
-  closeOthers(index: number): void {
+  // 批量关闭收集（原版 k6.j8：4=所有 2=下方 1=其它 3=上方，被关标签入恢复库）
+  private batchInfoOf(removed: TabItem[]): ClosedBatchResult {
+    const urls: string[] = []
+    const titles: string[] = []
+    for (let i = 0; i < removed.length; i++) {
+      if (removed[i].incognito || removed[i].isHomePage() || removed[i].url === '') {
+        continue
+      }
+      const entry = ClosedTabsStore.getInstance().add(removed[i].url, removed[i].title)
+      if (entry !== null) {
+        urls.push(entry.url)
+        titles.push(entry.title)
+      }
+    }
+    return new ClosedBatchResult(urls, titles, urls.length - 1)
+  }
+
+  closeOthers(index: number): ClosedBatchResult | null {
     if (index < 0 || index >= this.tabs.length) {
-      return
+      return null
     }
     const kept = this.tabs[index]
-    const next: TabItem[] = [kept]
-    this.tabs = next
+    const removed: TabItem[] = []
+    for (let i = 0; i < this.tabs.length; i++) {
+      if (i !== index) {
+        removed.push(this.tabs[i])
+      }
+    }
+    const info = this.batchInfoOf(removed)
+    this.tabs = [kept]
     this.currentIndex = 0
+    this.snapshot(AppSettings.getInstance())
+    return info
   }
 
   // 原版 k6.j8：关闭所有标签页删除全部，随后留空白新页
-  closeAll(): void {
+  closeAll(): ClosedBatchResult | null {
+    const info = this.batchInfoOf(this.tabs)
     this.tabs = []
     const tab = new TabItem(this.nextTabId, false)
     this.nextTabId = this.nextTabId + 1
     this.tabs.push(tab)
     this.currentIndex = 0
+    this.snapshot(AppSettings.getInstance())
+    return info
   }
 
-  closeAbove(index: number): void {
+  // 原版 k6.j8 i11==3：关闭上方（0..index-1）
+  closeAbove(index: number): ClosedBatchResult | null {
     if (index <= 0 || index >= this.tabs.length) {
-      return
+      return null
     }
+    const info = this.batchInfoOf(this.tabs.slice(0, index))
     this.tabs = this.tabs.slice(index)
     this.currentIndex = this.currentIndex >= index ? this.currentIndex - index : 0
+    this.snapshot(AppSettings.getInstance())
+    return info
   }
 
-  closeBelow(index: number): void {
+  // 原版 k6.j8 i11==2：关闭下方（index+1..末尾）
+  closeBelow(index: number): ClosedBatchResult | null {
     if (index < 0 || index >= this.tabs.length - 1) {
-      return
+      return null
     }
+    const info = this.batchInfoOf(this.tabs.slice(index + 1))
     this.tabs = this.tabs.slice(0, index + 1)
     if (this.currentIndex > index) {
       this.currentIndex = index
     }
+    this.snapshot(AppSettings.getInstance())
+    return info
+  }
+
+  // 原版 na.F1：撤销批量关闭——按恢复库条目重建标签（第一个转前台，其余后台）
+  restoreClosedBatch(result: ClosedBatchResult | null): void {
+    if (result === null) {
+      return
+    }
+    for (let i = 0; i < result.urls.length; i++) {
+      this.newTabAt(result.urls[i], i > 0)
+    }
+    // 撤销后从恢复库移除已重建条目（原版 K1：恢复的标签加载后移除对应条目）
+    const store = ClosedTabsStore.getInstance()
+    const entryIds: string[] = []
+    for (let i = 0; i < result.urls.length; i++) {
+      const all = store.entries
+      for (let j = 0; j < all.length; j++) {
+        if (all[j].url === result.urls[i]) {
+          entryIds.push(all[j].id)
+          break
+        }
+      }
+    }
+    store.removeByIds(entryIds)
   }
 
   duplicateTab(index: number): void {

@@ -1053,6 +1053,15 @@ function parseRuleLine(line: string): ParsedLine {
   return NetFilter.parse(line)
 }
 
+// b5.c.v()：规则行可解析判定（规则编辑器 z7.v.q3 非法行校验用；空行/! 注释视为有效跳过）
+export function isValidRuleLine(line: string): boolean {
+  try {
+    return parseRuleLine(line) !== null
+  } catch (error) {
+    return false
+  }
+}
+
 // ---- 拦截页 HTML（u9/a.a + uz/v0/ef 文案）----
 
 export function buildBlockedPageHtml(pageUrl: string, rule: string, blockedText: string, reasonText: string,

@@ -108,6 +108,7 @@ export struct HomePage {
               .height(this.logoHeight())
               .borderRadius(this.logoRadius())
               .objectFit(ImageFit.Contain)
+              .brightness(this.nightDim())
           } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === 'HTML 代码'
             && this.settings.homeLogoHtml !== '') {
             RichText(this.settings.homeLogoHtml)
@@ -118,7 +119,9 @@ export struct HomePage {
               .width(this.logoWidth())
               .height(this.logoHeight())
               .borderRadius(this.logoRadius())
-              .objectFit(ImageFit.Contain)
+              // 原版 i6/o.java:277 img.smaller 为 object-fit: cover
+              .objectFit(ImageFit.Cover)
+              .brightness(this.nightDim())
           }
         }
         // 原版 logo 是 <a onclick="window.via.cmd(257)">：点击进入主页定制设置
@@ -165,12 +168,16 @@ export struct HomePage {
                       .textAlign(TextAlign.Center)
                       .width('100%')
                       .height('100%')
+                      // 原版 i6/o.java:291：夜间 .title 叠加 brightness(75%)
+                      .brightness(this.nightDim())
                     if (this.showFavicon() && item.icon !== '') {
                       Image(item.icon)
                         .width('100%')
                         .height('100%')
                         .borderRadius(this.favRadius())
                         .objectFit(ImageFit.Cover)
+                        // 原版 i6/o.java:291：夜间 .overlay 叠加 brightness(75%)
+                        .brightness(this.nightDim())
                     }
                   }
                   .width(this.favSize())
@@ -220,7 +227,12 @@ export struct HomePage {
       .opacity(Math.min(this.searchFade, 1 - this.pullShift / 98 * 0.9))
       .width('100%')
       .height('100%')
-      .padding({ top: this.insets.top })
+      // 原版 i6/o.java:244-246：body/#content/#gesture-indicator 均 max-width:600px（margin auto 居中）
+      .padding({
+        top: this.insets.top,
+        left: this.contentSidePad(),
+        right: this.contentSidePad()
+      })
       }
       .scrollBar(BarState.Off)
       .width('100%')
@@ -330,25 +342,42 @@ export struct HomePage {
     return style === '斜体' || style === '粗体 斜体' ? FontStyle.Italic : FontStyle.Normal
   }
 
+  // 原版 r8/d.java:127-133（i9.d LogoDesignInfo）：宽高都为 0 时只把**高**置 72，宽保持 0；
+  // i6/o.java:255-278 的 img.smaller 规则在宽或高为 0 时省略该维度 → 由 124:90 内在比例决定另一维
   private logoWidth(): number {
-    // 原版 r8.d：logoWidth==0 && logoHeight==0 时 logoWidth=72
     if (this.settings.homeLogoWidth !== 0) {
       return this.settings.homeLogoWidth
-    }
-    if (this.settings.homeLogoHeight === 0) {
-      return 72
     }
     return Math.round(this.logoHeight() * 124 / 90)
   }
 
   private logoHeight(): number {
-    // 原版 logoinfo2 默认解码高 72
-    return this.settings.homeLogoHeight === 0 ? 72 : this.settings.homeLogoHeight
+    if (this.settings.homeLogoHeight !== 0) {
+      return this.settings.homeLogoHeight
+    }
+    // 宽高双 0：高 72（r8/d.java:130-132），宽自动 = 72*124/90 ≈ 99
+    if (this.settings.homeLogoWidth === 0) {
+      return 72
+    }
+    return Math.round(this.settings.homeLogoWidth * 90 / 124)
+  }
+
+  // 原版 i6/o.java:290-291：夜间(img.smaller/.overlay/.title) 叠加 filter: brightness(75%)
+  private nightDim(): number {
+    return this.settings.isNightActive() ? 0.75 : 1
+  }
+
+  // 原版 r8/d.java:133：圆角按**设置里的声明值** max(宽, 高) 计算（宽为 0 时按 0 参与，
+  // 不能用渲染时补出的比例宽，否则默认 99×72 会算成 49.5 而非原版 36）
+  private logoDeclHeight(): number {
+    if (this.settings.homeLogoHeight !== 0) {
+      return this.settings.homeLogoHeight
+    }
+    return this.settings.homeLogoWidth === 0 ? 72 : 0
   }
 
   private logoRadius(): number {
-    // 原版 r8/d:133：logo 圆角按 max(宽,高)
-    const size = Math.max(this.logoWidth(), this.logoHeight())
+    const size = Math.max(this.settings.homeLogoWidth, this.logoDeclHeight())
     return size / 2 * (this.settings.homeLogoCorner / 100)
   }
 
@@ -404,6 +433,11 @@ export struct HomePage {
       tpl += '1fr '
     }
     return tpl.trim()
+  }
+
+  // 原版 i6/o.java:244-246：body/#content/#gesture-indicator max-width:600px 居中（margin:auto）
+  private contentSidePad(): number {
+    return Math.max(0, (this.screenW - 600) / 2)
   }
 
   // 原版 i6/o.java:374-379：#content top 按屏高分档

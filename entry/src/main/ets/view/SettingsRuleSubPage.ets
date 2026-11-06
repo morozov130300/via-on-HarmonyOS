@@ -9,6 +9,34 @@ import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 const AUTO_UPDATE_DAYS: number[] = [0, 1, 3, 7, 15]
 const AUTO_UPDATE_LABELS: string[] = ['从不', '每天', '每 3 天', '每周', '每 15 天']
 
+// z8/u3.a：相对时间（<1 分钟「刚刚」，DateUtils.getRelativeTimeSpanString zh 语义）
+export function relativeUpdateTime(ts: number): string {
+  const now = Date.now()
+  if (ts <= 0 || ts > now) {
+    return '从未更新'
+  }
+  const mins = Math.floor((now - ts) / 60000)
+  if (mins < 1) {
+    return '刚刚'
+  }
+  if (mins < 60) {
+    return `${mins} 分钟前`
+  }
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) {
+    return `${hours} 小时前`
+  }
+  const days = Math.floor(hours / 24)
+  if (days === 1) {
+    return '昨天'
+  }
+  if (days < 7) {
+    return `${days} 天前`
+  }
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
 // 原版 z7/q0.java：规则订阅页
 // 列表行：名称 + 「%d 条规则，从未更新/已更新」(ib/g.java) + 启用圆点；点击切换、长按菜单 [预览/更新/编辑/复制链接/删除]（G3/t3）
 // 工具栏：＋新建（预设单选 + 自定义，z3/u3/m3）、更新（ch→K3）
@@ -20,11 +48,8 @@ export struct SettingsRuleSubPage {
   @Local newUrl: string = 'https://'
   @Local editUrl: string = ''
   @Local editKey: string = ''
-  @Local previewLines: string[] = []
-  @Local previewTitle: string = ''
   private addDialogId: number = -1
   private editDialogId: number = -1
-  private previewDialogId: number = -1
 
   private bindAppBar(): void {
     AppBar.show({
@@ -76,13 +101,16 @@ export struct SettingsRuleSubPage {
             ForEach(this.settings.ruleSubscriptions, (sub: RuleSubEntry) => {
               Row({ space: 12 }) {
                 Column() {
+                  // 原版 ib/g：名称 MIDDLE 省略
                   Text(sub.name)
                     .fontSize(15)
                     .fontColor($r('app.color.fg'))
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  // 原版 ib/g.java:28：「%d 条规则，%s」；%s = 从未更新(k7) / 「%s 已更新」(a0t)
-                  Text(`${sub.ruleCount} 条规则，${this.lastUpdateLabel(sub.lastUpdate)}`)
+                    // 原版 ib/g：名称 MIDDLE 省略（ellipsisMode 需配合 Ellipsis 生效）
+                    .ellipsisMode(EllipsisMode.CENTER)
+                  // 原版 ib/g.java:28：「%1$d，%2$s」（规则数 + 相对更新时间 a0t/k7）
+                  Text(`${sub.ruleCount}，${relativeUpdateTime(sub.lastUpdate)}`)
                     .fontSize(12)
                     .fontColor($r('app.color.fg_secondary'))
                     .maxLines(1)
@@ -90,10 +118,16 @@ export struct SettingsRuleSubPage {
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
-                Circle({ width: 22, height: 22 })
-                  .fill(sub.enabled ? $r('app.color.accent') : Color.Transparent)
-                  .stroke(sub.enabled ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-                  .strokeWidth(1.5)
+                // 原版 a6.o.f124k：CheckBox 启用控件
+                Checkbox()
+                  .select(sub.enabled)
+                  .selectedColor($r('app.color.accent'))
+                  .onChange((value: boolean) => {
+                    if (value === sub.enabled) {
+                      return
+                    }
+                    this.toggleSub(sub)
+                  })
               }
               .width('100%')
               .padding({ left: 16, right: 16, top: 11, bottom: 11 })
@@ -144,12 +178,7 @@ export struct SettingsRuleSubPage {
   }
 
   private lastUpdateLabel(ts: number): string {
-    if (ts === 0) {
-      return '从未更新'
-    }
-    const d = new Date(ts)
-    const pad = (n: number): string => n < 10 ? `0${n}` : `${n}`
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} 已更新`
+    return relativeUpdateTime(ts)
   }
 
   private pickAutoUpdate(): void {
@@ -210,35 +239,9 @@ export struct SettingsRuleSubPage {
     })
   }
 
-  // 原版 v0：预览本地规则文件
+  // 原版 t3:0：预览 → 独立预览页（z7/v0，参数 path/title）
   private previewSub(sub: RuleSubEntry): void {
-    const context = this.getUIContext().getHostContext()
-    if (context === undefined) {
-      return
-    }
-    this.previewLines = RuleSubManager.getInstance().readSubLines(context, sub.key)
-    this.previewTitle = sub.name
-    this.getUIContext().getPromptAction().openCustomDialog({
-      builder: (): void => {
-        this.PreviewDialog()
-      },
-      isModal: true,
-      autoCancel: true,
-      alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
-    }).then((dialogId: number) => {
-      this.previewDialogId = dialogId
-    }).catch((error: BusinessError) => {
-      console.error(`open preview dialog failed: ${error.message}`)
-    })
-  }
-
-  private closePreview(): void {
-    if (this.previewDialogId < 0) {
-      return
-    }
-    this.getUIContext().getPromptAction().closeCustomDialog(this.previewDialogId)
-    this.previewDialogId = -1
+    this.navPathStack.pushPathByName('rulePreview', { 'key': sub.key, 'title': sub.name } as Record<string, string>)
   }
 
   // 原版 t3:1：更新单条（a0q 开始更新…）
@@ -295,13 +298,10 @@ export struct SettingsRuleSubPage {
     }
   }
 
+  // 原版 z7/q0.F3：点击仅切换启用（无自动下载超集行为）
   private toggleSub(sub: RuleSubEntry): void {
-    const enabled = !sub.enabled
-    this.settings.setRuleSubEnabled(sub.key, enabled)
+    this.settings.setRuleSubEnabled(sub.key, !sub.enabled)
     this.reloadBlocker()
-    if (enabled && sub.ruleCount === 0) {
-      this.updateOne(sub)
-    }
   }
 
   // 原版 l3：删除（fl 你确定删除 %s 吗？）
@@ -564,59 +564,11 @@ export struct SettingsRuleSubPage {
       }
       .width('100%')
     }
-    .width('80%')
-    .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
-    .transition(dialogTransition())
-  }
-
-  @Builder
-  PreviewDialog() {
-    Column() {
-      Text(this.previewTitle)
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
-        .width('100%')
-        .maxLines(1)
-      Scroll() {
-        Column() {
-          if (this.previewLines.length === 0) {
-            Text('暂无规则')
-              .fontSize(14)
-              .fontColor($r('app.color.fg_secondary'))
-              .margin({ top: 20 })
-          }
-          ForEach(this.previewLines, (line: string, index: number) => {
-            Text(line)
-              .fontSize(12)
-              .fontColor($r('app.color.fg_secondary'))
-              .width('100%')
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .padding({ top: 3, bottom: 3 })
-          }, (line: string, index: number) => `${index}-${line}`)
-        }
-        .width('100%')
-      }
-      .layoutWeight(1)
-      .align(Alignment.Top)
-      .margin({ top: 12 })
-      Text($r('app.string.cancel'))
-        .fontSize(15)
-        .fontColor($r('app.color.fg_secondary'))
-        .padding({ left: 8, right: 8, top: 12, bottom: 4 })
-        .onClick(() => {
-          this.closePreview()
-        })
-    }
-    .width('85%')
-    .height('70%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
-    .transition(dialogTransition())
+      .width('80%')
+      .padding(24)
+      .backgroundColor($r('app.color.menu_bg'))
+      .borderRadius(16)
+      .transition(dialogTransition())
   }
 }
 

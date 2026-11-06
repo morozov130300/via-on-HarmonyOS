@@ -1,4 +1,5 @@
 import { http, connection } from '@kit.NetworkKit'
+import { webview } from '@kit.ArkWeb'
 import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
@@ -326,6 +327,12 @@ function totalFromContentRange(range: string): number {
 }
 
 // ===== g5.a：分块 =====
+// m5.e：单次探测尝试结果（err=请求错误；matched=响应类型与任务匹配并已应用 q()）
+interface ProbeAttempt {
+  err: DownloadErr | null
+  matched: boolean
+}
+
 class EngineChunk {
   id: number
   taskId: number
@@ -504,6 +511,15 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+// i5.b:88-94 + m5.d.e()：每请求实时取网页 Cookie（失败返回空，回退任务快照）
+function freshWebCookie(url: string): string {
+  try {
+    return webview.WebCookieManager.fetchCookieSync(url)
+  } catch (error) {
+    return ''
+  }
+}
+
 // ===== m5.d：分块下载器 =====
 class ChunkDownloader {
   private task: EngineTask
@@ -554,6 +570,11 @@ class ChunkDownloader {
       headers[taskHeaders[i]] = this.task.headers[taskHeaders[i]]
     }
     headers['Accept-Encoding'] = 'identity'
+    headers['Connection'] = 'close'
+    const freshCookie = freshWebCookie(this.task.rec.url)
+    if (freshCookie !== '') {
+      headers['Cookie'] = freshCookie
+    }
     if (this.chunk.length > 0) {
       headers['Range'] = `bytes=${this.chunk.start + this.chunk.downloaded}-${this.chunk.start + this.chunk.length - 1}`
       const etag = this.task.headerOf('ETag')
@@ -632,11 +653,12 @@ class ChunkDownloader {
     return null
   }
 
-  // m5.d.j()：Content-Length 校验（可续传且起始为 0 时学习总长）
+  // m5.d.j()：Content-Length 校验（无 Range 且响应非 Connection: close/chunked 时学习总长）
   private verifyLength(responseHeaders: Record<string, string>): DownloadErr | null {
     const contentLength = parseLong(headerValue(responseHeaders, 'Content-Length'))
     const mayLearn = this.chunk.length <= 0 && this.chunk.start === 0 &&
-      headerValue(responseHeaders, 'Transfer-Encoding') === ''
+      headerValue(responseHeaders, 'Transfer-Encoding') === '' &&
+      headerValue(responseHeaders, 'Connection').toLowerCase() !== 'close'
     if (contentLength < 0 && mayLearn) {
       return DownloadErr.make(24)
     }
@@ -783,7 +805,7 @@ class TaskRunner {
     const task = this.task
     let err: DownloadErr | null = null
     if (engineStateIsCompleted(task.rec.state) || engineStateIsFailed(task.rec.state)) {
-      this.engine.onTaskFinished(task, null)
+      // m5.e.call()：已完成/失败任务重复调度静默返回，不触发持久化/监听/通知
       return
     }
     if (!task.isProbed()) {
@@ -855,15 +877,16 @@ class TaskRunner {
     }
   }
 
-  // m5.e：重定向解析——maxRedirects=0（API 23+）关闭自动跟随，3xx 读 Location 逐跳手动跟随（上限 20 跳）
-  // 低于 API 23 的设备忽略 maxRedirects 字段自动跟随，headersReceive 收到最终响应头无 Location，首跳即退出（降级为原路径）
+  // m5.e：重定向解析——maxRedirects=0（API 23+）关闭自动跟随，3xx 读 Location 逐跳手动跟随
+  // 上限 5 跳（i5.b:61-72 i10>=5 → 错误 25）；低于 API 23 的设备忽略 maxRedirects 字段自动跟随，
+  // headersReceive 收到最终响应头无 Location，首跳即退出（降级为原路径）
   private async resolveRedirects(): Promise<DownloadErr | null> {
     if (!connection.hasDefaultNet()) {
       return DownloadErr.make(32)
     }
     const task = this.task
     let current = task.rec.url
-    for (let hop = 0; hop < 20; hop++) {
+    for (let hop = 0; hop < 5; hop++) {
       if (this.cancelled) {
         return DownloadErr.make(1)
       }
@@ -875,6 +898,10 @@ class TaskRunner {
         headers[taskHeaders[i]] = task.headers[taskHeaders[i]]
       }
       headers['Accept-Encoding'] = 'identity'
+      const freshCookie = freshWebCookie(current)
+      if (freshCookie !== '') {
+        headers['Cookie'] = freshCookie
+      }
       let location = ''
       let gotHeaders = false
       const gotHeaderPromise: Promise<void> = new Promise<void>((resolve: () => void) => {
@@ -905,7 +932,8 @@ class TaskRunner {
       if (!gotHeaders || location === '') {
         break
       }
-      if (hop === 19) {
+      if (hop === 4) {
+        // i5.b：第 5 次请求仍重定向 → 错误 25
         return DownloadErr.make(25)
       }
       const next = resolveLocation(current, location)
@@ -920,19 +948,78 @@ class TaskRunner {
     return null
   }
 
-  // m5.e.j()+q()：HEAD 探测（Range: bytes=0-0），修正文件名/MIME/总长/ETag/线程数
+  // m5.e.j()：探测——普通 GET（不预发 Range），Referer×UA 候选回退循环（e.j():333-363），
+  // 任一候选命中（2xx 且 q() 类型匹配）即成功；全部候选耗尽返回最后一次错误（q() 不匹配视为放行）
   private async probe(): Promise<DownloadErr | null> {
     if (!connection.hasDefaultNet()) {
       return DownloadErr.make(32)
     }
+    // Referer 候选（原版 strArr，o()=备用 URL，这里以任务 Referer 为备用语义）：
+    // 无备用→[无, 主URL]；备用==主→[主, 无]；否则→[备用, 主URL, 无]（按原版从末位起试）
+    const referer = this.task.headerOf('Referer')
+    let refererCandidates: string[] = []
+    if (referer === '') {
+      refererCandidates = ['', this.task.rec.url]
+    } else if (referer === this.task.rec.url) {
+      refererCandidates = [referer, '']
+    } else {
+      refererCandidates = [referer, this.task.rec.url, '']
+    }
+    // UA 候选（原版 strArr2）：有任务 UA→[任务UA, 无]；无→[无]
+    const taskUa = this.task.headerOf('User-Agent')
+    const uaCandidates: string[] = taskUa === '' ? [''] : [taskUa, '']
+    let lastErr: DownloadErr | null = null
+    for (let uaIdx = 0; uaIdx < uaCandidates.length; uaIdx++) {
+      for (let refIdx = 0; refIdx < refererCandidates.length; refIdx++) {
+        if (this.cancelled) {
+          return DownloadErr.make(1)
+        }
+        const attempt = await this.probeOnce(refererCandidates[refIdx], uaCandidates[uaIdx])
+        if (attempt.matched) {
+          // m5.e.q()：命中即保存生效的 Referer/UA 并完成探测
+          if (refererCandidates[refIdx] !== '') {
+            this.task.setHeader('Referer', refererCandidates[refIdx])
+          }
+          if (uaCandidates[uaIdx] !== '') {
+            this.task.setHeader('User-Agent', uaCandidates[uaIdx])
+          }
+          return null
+        }
+        if (attempt.err !== null) {
+          lastErr = attempt.err
+        } else {
+          // 2xx 但类型不匹配（q() false）→ 下一候选；全部不匹配照原版放行下载
+          lastErr = null
+        }
+      }
+    }
+    return lastErr
+  }
+
+  // m5.e.a.d()/c()：单次探测请求（普通 GET，maxRedirects=0，Cookie 每次实时取）
+  private async probeOnce(referer: string, ua: string): Promise<ProbeAttempt> {
     const session = http.createHttp()
     this.addSession(session)
+    // m5.e.f()：任务头复制但排除 Referer/User-Agent（由候选值决定）
     const headers: Record<string, string> = {}
     const taskHeaders = Object.keys(this.task.headers)
     for (let i = 0; i < taskHeaders.length; i++) {
-      headers[taskHeaders[i]] = this.task.headers[taskHeaders[i]]
+      const key = taskHeaders[i]
+      if (key.toLowerCase() !== 'referer' && key.toLowerCase() !== 'user-agent') {
+        headers[key] = this.task.headers[key]
+      }
     }
-    headers['Range'] = 'bytes=0-0'
+    headers['Accept-Encoding'] = 'identity'
+    const freshCookie = freshWebCookie(this.task.rec.url)
+    if (freshCookie !== '') {
+      headers['Cookie'] = freshCookie
+    }
+    if (referer !== '') {
+      headers['Referer'] = referer
+    }
+    if (ua !== '') {
+      headers['User-Agent'] = ua
+    }
     let responseHeaders: Record<string, string> = {}
     const gotHeaders: Promise<boolean> = new Promise<boolean>((resolve: (v: boolean) => void) => {
       session.on('headersReceive', (header: Object) => {
@@ -945,47 +1032,46 @@ class TaskRunner {
       header: headers,
       expectDataType: http.HttpDataType.ARRAY_BUFFER,
       readTimeout: 30000,
-      connectTimeout: 30000
+      connectTimeout: 30000,
+      maxRedirects: 0
     }
     const result: Promise<number> = session.requestInStream(this.task.rec.url, options)
     result.then((): void => {
     }, (): void => {
     })
     // 头到达或请求结束（失败）都放行，避免挂起
-    await Promise.race([gotHeaders, result.then((): boolean => true).catch((): boolean => true)])
-    // 206 → 支持 Range；200 → 服务器忽略 Range，立即中断避免拉全量
-    const supportsRange = headerValue(responseHeaders, 'Content-Range') !== ''
-    if (!supportsRange) {
-      session.destroy()
-      this.removeSession(session)
-      return this.applyProbeResult(200, responseHeaders)
-    }
     let code = 0
     try {
+      await Promise.race([gotHeaders, result.then((): boolean => true).catch((): boolean => true)])
       code = await result
     } catch (error) {
       this.removeSession(session)
       session.destroy()
       if (this.cancelled) {
-        return DownloadErr.make(1)
+        return { err: DownloadErr.make(1), matched: false }
       }
       const be = error as BusinessError
-      return DownloadErr.make(20, be.message)
+      return { err: DownloadErr.make(20, be.message), matched: false }
     }
     this.removeSession(session)
     session.destroy()
-    if (code !== 206 && code !== 200) {
-      return DownloadErr.httpError(code, '')
+    if (this.cancelled) {
+      return { err: DownloadErr.make(1), matched: false }
     }
-    return this.applyProbeResult(code, responseHeaders)
+    if (code !== 200 && code !== 206) {
+      return { err: DownloadErr.httpError(code, ''), matched: false }
+    }
+    // m5.e.q()：响应头与任务类型匹配时应用并标记探测完成
+    const matched = this.applyProbeResult(code, responseHeaders)
+    if (matched) {
+      this.task.setProbed(true)
+    }
+    return { err: null, matched }
   }
 
-  // m5.e.q()：应用探测结果
-  private applyProbeResult(code: number, responseHeaders: Record<string, string>): DownloadErr | null {
+  // m5.e.q()：应用探测结果（修正文件名/MIME/总长/续传判定/ETag/线程数）；false=类型与任务不匹配（q() 返回 false）
+  private applyProbeResult(code: number, responseHeaders: Record<string, string>): boolean {
     const task = this.task
-    if (code !== 200 && code !== 206) {
-      return DownloadErr.httpError(code, '')
-    }
     let contentType = headerValue(responseHeaders, 'Content-Type')
     const semi = contentType.indexOf(';')
     if (semi > 0) {
@@ -1002,49 +1088,51 @@ class TaskRunner {
       }
     }
     const html = looksLikeHtml(contentType, ext === null ? '' : ext)
+    // m5.e.q()：zD != "text/html".equals(task.k()) → 返回 false 换下一候选
     if (html !== (task.rec.mime === 'text/html')) {
-      // 修正文件名扩展（m5.e.q() T() 分支）
-      if (task.canRename() && contentType !== '' && contentType !== task.rec.mime) {
-        let name = this.baseName()
-        if (ext !== null && ext !== '' && ext !== 'bin') {
-          const dot = name.lastIndexOf('.')
-          if (dot >= 0) {
-            name = `${name.substring(0, dot + 1)}${ext}`
-          } else {
-            name = `${name}.${ext}`
-          }
-        }
-        task.rec.path = `${this.engine.saveDirOf()}/${name}`
-      }
-      let total = parseLong(headerValue(responseHeaders, 'Content-Length'))
-      if (headerValue(responseHeaders, 'Transfer-Encoding') !== '') {
-        total = -1
-      }
-      if (total === -1) {
-        total = totalFromContentRange(headerValue(responseHeaders, 'Content-Range'))
-      }
-      const acceptRanges = headerValue(responseHeaders, 'Accept-Ranges').toLowerCase() === 'bytes' ||
-        headerValue(responseHeaders, 'Content-Range') !== ''
-      task.setResumable(acceptRanges)
-      if (html) {
-        total = -1
-        task.setResumable(false)
-      }
-      task.rec.size = total
-      const etag = headerValue(responseHeaders, 'ETag')
-      if (etag !== '') {
-        task.setHeader('ETag', etag)
-      }
-      task.setProbed(true)
-      if (task.rec.size <= 0 || !task.isResumable()) {
-        task.threads = 1
-        task.setResumable(false)
-      } else {
-        task.threads = Math.min(Math.max(1, task.threads),
-          Math.max(1, Math.ceil(task.rec.size / 1048576)))
-      }
+      return false
     }
-    return null
+    // 修正文件名扩展（m5.e.q() T() 分支：canRename 且类型有变）
+    if (task.canRename() && contentType !== '' && contentType !== task.rec.mime) {
+      let name = this.baseName()
+      if (ext !== null && ext !== '' && ext !== 'bin') {
+        const dot = name.lastIndexOf('.')
+        if (dot >= 0) {
+          name = `${name.substring(0, dot + 1)}${ext}`
+        } else {
+          name = `${name}.${ext}`
+        }
+      }
+      task.rec.path = `${this.engine.saveDirOf()}/${name}`
+    }
+    let total = parseLong(headerValue(responseHeaders, 'Content-Length'))
+    if (headerValue(responseHeaders, 'Transfer-Encoding') !== '') {
+      total = -1
+    }
+    if (total === -1) {
+      total = totalFromContentRange(headerValue(responseHeaders, 'Content-Range'))
+    }
+    // m5.e.q():456：Accept-Ranges: bytes 或存在 Content-Range 才判可续传（即使 206）
+    const acceptRanges = headerValue(responseHeaders, 'Accept-Ranges').toLowerCase() === 'bytes' ||
+      headerValue(responseHeaders, 'Content-Range') !== ''
+    task.setResumable(acceptRanges)
+    if (html) {
+      total = -1
+      task.setResumable(false)
+    }
+    task.rec.size = total
+    const etag = headerValue(responseHeaders, 'ETag')
+    if (etag !== '') {
+      task.setHeader('ETag', etag)
+    }
+    if (task.rec.size <= 0 || !task.isResumable()) {
+      task.threads = 1
+      task.setResumable(false)
+    } else {
+      task.threads = Math.min(Math.max(1, task.threads),
+        Math.max(1, Math.ceil(task.rec.size / 1048576)))
+    }
+    return true
   }
 
   private baseName(): string {
@@ -1068,17 +1156,30 @@ class TaskRunner {
     }
     task.chunks = chunks
     task.rec.received = task.downloadedSize()
-    // r()：文件长度校验，不一致清零重下
+    // m5.e.r()：文件长度≠预期时无条件截断/预分配到精确总长，仅 ≤0 才重置分块
     try {
+      const expected = task.isResumable() ? task.rec.size : 0
+      let size = -1
       if (fileIo.accessSync(task.rec.path)) {
-        const stat = fileIo.statSync(task.rec.path)
-        const expected = task.isResumable() ? task.rec.size : 0
-        if (stat.size !== expected) {
-          if (stat.size <= 0) {
-            await this.engine.resetChunks(task)
-            for (let i = 0; i < task.chunks.length; i++) {
-              task.chunks[i].downloaded = 0
-            }
+        size = fileIo.statSync(task.rec.path).size
+      }
+      if (size !== expected) {
+        if (size >= 0 && size <= 0) {
+          await this.engine.resetChunks(task)
+          for (let i = 0; i < task.chunks.length; i++) {
+            task.chunks[i].downloaded = 0
+          }
+        }
+        // 截断/预分配（openFile 已持句柄；size<0=文件不存在，CREATE 后同样校正）
+        if (this.file === null) {
+          this.openFile()
+        }
+        if (this.file !== null) {
+          if (size > expected) {
+            fileIo.truncateSync(this.file.fd, expected)
+          } else if (expected > 0) {
+            // 稀疏写末字节预分配到精确总长（等价 setLength）
+            fileIo.writeSync(this.file.fd, new ArrayBuffer(1), { offset: expected - 1 })
           }
         }
       }
@@ -1225,13 +1326,30 @@ export class DownloadEngine {
     }
   }
 
+  // mark/via/download/i1.h：目标文件已存在时，扩展名前自动加 `_+时间戳hex` 后缀（1:1 冲突处理）
+  private conflictFreeName(fileName: string): string {
+    try {
+      if (!fileIo.accessSync(`${this.saveDir}/${fileName}`)) {
+        return fileName
+      }
+    } catch (error) {
+      return fileName
+    }
+    const suffix = `_${Date.now().toString(16)}`
+    const dot = fileName.lastIndexOf('.')
+    if (dot > 0) {
+      return `${fileName.substring(0, dot)}${suffix}${fileName.substring(dot)}`
+    }
+    return `${fileName}${suffix}`
+  }
+
   // m5.i.f()：新建任务入库并入队（threads：新建下载弹窗走原版 B3 的 8 线程，默认单线程）
   // cookie：网页内下载接管时注入 Web Cookie，保证登录态下载
   async createTask(url: string, fileName: string, referer: string, ua: string,
     threads: number = 1, cookie: string = ''): Promise<number> {
     const rec = new DownloadRec()
     rec.url = url
-    rec.path = `${this.saveDir}/${fileName}`
+    rec.path = `${this.saveDir}/${this.conflictFreeName(fileName)}`
     rec.mime = ''
     rec.size = 0
     rec.received = 0

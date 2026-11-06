@@ -231,9 +231,44 @@
       "buildFunction": "PermissionPageBuilder"
     },
     {
+      "name": "cookiesSetting",
+      "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
+      "buildFunction": "CookiesSettingPageBuilder"
+    },
+    {
+      "name": "popupSetting",
+      "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
+      "buildFunction": "PopupSettingPageBuilder"
+    },
+    {
       "name": "adBlockException",
       "pageSourceFile": "src/main/ets/view/SiteSubPages.ets",
       "buildFunction": "AdBlockExceptionPageBuilder"
+    },
+    {
+      "name": "siteDetail",
+      "pageSourceFile": "src/main/ets/view/SiteConfPages.ets",
+      "buildFunction": "SiteConfDetailPageBuilder"
+    },
+    {
+      "name": "desktopMode",
+      "pageSourceFile": "src/main/ets/view/SiteConfPages.ets",
+      "buildFunction": "DesktopModePageBuilder"
+    },
+    {
+      "name": "uaException",
+      "pageSourceFile": "src/main/ets/view/SiteConfPages.ets",
+      "buildFunction": "UaExceptionPageBuilder"
+    },
+    {
+      "name": "imageSetting",
+      "pageSourceFile": "src/main/ets/view/SiteConfPages.ets",
+      "buildFunction": "ImageSettingPageBuilder"
+    },
+    {
+      "name": "jsSetting",
+      "pageSourceFile": "src/main/ets/view/SiteConfPages.ets",
+      "buildFunction": "JavaScriptSettingPageBuilder"
     },
     {
       "name": "sslWhitelist",

@@ -225,11 +225,12 @@ export struct AddressBar {
     return items
   }
 
-  // 原版标题长按菜单：复制（仅 URL 非内部页）/ 粘贴 / 粘贴并前往
+  // 原版标题长按菜单（k6.h.onLongClick，k6.java:855-873）：首项「复制」（R.string.copy，
+  // 仅 URL 非内部页）/「粘贴」（h.a → oa）/「粘贴并前往」（→ sa() 剪贴板多 URL 流程）
   private titleMenuItems(): TitleMenuItem[] {
     const items: TitleMenuItem[] = []
     if (this.tab.url !== '' && !this.tab.isHomePage()) {
-      items.push(new TitleMenuItem($r('app.string.copy_link'), (): void => {
+      items.push(new TitleMenuItem($r('app.string.copy'), (): void => {
         const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.tab.url)
         pasteboard.getSystemPasteboard().setData(data).then(() => {
           // 原版 g6.n.a(context, url, x7.u.pg)：复制后弹「已复制链接」
@@ -247,15 +248,79 @@ export struct AddressBar {
         }
       }).catch(() => {})
     }))
+    // 原版粘贴并前往 → k6.sa()（k6.java:8423）：剪贴板含多个 URL 时弹选择弹窗
     items.push(new TitleMenuItem($r('app.string.paste_and_go'), (): void => {
-      pasteboard.getSystemPasteboard().getData().then((data: pasteboard.PasteData) => {
-        const text = data.getPrimaryText().trim()
-        if (text !== '') {
-          this.tabStore.navigate(text)
-        }
-      }).catch(() => {})
+      this.pasteAndGo()
     }))
     return items
+  }
+
+  // 原版 k6.sa（k6.java:8423）：剪贴板文本提取 URL（i6/g0.e）；
+  // 多个 URL → 弹选择弹窗（标题 g6「提示」/正文=剪贴板文本/逐条列出），
+  // 点击一条 = 新标签打开（na.i1(url,true)）、末项「打开全部」= 逐个新标签打开
+  // （k6.T5：最后一个前台）；单个/无 URL → 当前往（Ra）
+  private pasteAndGo(): void {
+    pasteboard.getSystemPasteboard().getData().then((data: pasteboard.PasteData) => {
+      const text = data.getPrimaryText().trim()
+      if (text === '') {
+        return
+      }
+      const urls = this.extractUrls(text)
+      if (urls.length > 1) {
+        this.showMultiUrlDialog(text, urls)
+        return
+      }
+      this.tabStore.navigate(urls.length === 1 ? urls[0] : text)
+    }).catch(() => {})
+  }
+
+  // i6/g0.e（i6/g0.java:75）等价实现：扫描 http(s):// 起始的连续段，
+  // 段止于空白/引号/括号等定界符，尾部句读剥离后逐条收集
+  private extractUrls(text: string): string[] {
+    const urls: string[] = []
+    if (text.length < 8) {
+      return urls
+    }
+    const pattern: RegExp = /https?:\/\/[^\s"'<>（）【】\[\]{}（）]+/g
+    let match: RegExpExecArray | null = pattern.exec(text)
+    while (match !== null) {
+      let url = match[0]
+      while (url.length > 0 && '.,;:!?，。；：！？'.indexOf(url.charAt(url.length - 1)) >= 0) {
+        url = url.substring(0, url.length - 1)
+      }
+      if (url.length > 8 && url.indexOf('.') > 0 && urls.indexOf(url) < 0) {
+        urls.push(url)
+      }
+      match = pattern.exec(text)
+    }
+    return urls
+  }
+
+  private showMultiUrlDialog(text: string, urls: string[]): void {
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i]
+      sheets.push({
+        title: url,
+        action: (): void => {
+          this.tabStore.newTabAt(url, false)
+        }
+      })
+    }
+    // 原版确定钮 oy「打开全部」（k6.T5）：逐个新标签打开，最后一个前台
+    sheets.push({
+      title: '打开全部',
+      action: (): void => {
+        for (let i = 0; i < urls.length; i++) {
+          this.tabStore.newTabAt(urls[i], i < urls.length - 1)
+        }
+      }
+    })
+    ActionSheet.show({
+      title: '提示',
+      message: text,
+      sheets: sheets
+    })
   }
 
   // 原版 k6.h：左图标长按 → w5.k.l(I()).d0(sp=搜索引擎).b0(引擎名数组, 当前项, 选中回调).f0()
@@ -303,7 +368,7 @@ export struct AddressBar {
         }
       })
       // 原版 k6.h：左图标长按 → 搜索引擎单选对话框（sp=搜索引擎，选中写 searchengine）
-      .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+      .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
         this.openEngineDialog()
       }))
 
@@ -328,11 +393,12 @@ export struct AddressBar {
           }
         })
         // 原版标题长按 → 复制/粘贴/粘贴并前往（k6.h.onLongClick）
-        .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+        .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
           this.showTitleMenu = true
         }))
 
-      // 原版 n0.m()：资源嗅探图标 f9707j 位于标题与右图标之间；t() 渐隐渐显（rz=资源嗅探）
+      // 原版 n0.m()：资源嗅探图标 f9707j 位于标题与右图标之间；t() 渐隐渐显
+      // （mark/via/common/widget/n0.java:296-306：150ms + x8.h.b() 曲线，rz=资源嗅探）
       if (this.tab.sniffedMedia.length > 0) {
         Stack() {
           ViaIcon({ icon: $r('app.media.via_ic_resource'), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
@@ -340,7 +406,7 @@ export struct AddressBar {
         .height('100%')
         .alignContent(Alignment.Center)
         .accessibilityText($r('app.string.res_sniffer'))
-        .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: this.pulseCurve }))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 150, curve: this.pulseCurve }))
         .onClick(() => {
           // 原版 k6.f：f9703w 点击 → u1() 打开资源嗅探面板
           this.onOpenMedia(this.tab.sniffedMedia)

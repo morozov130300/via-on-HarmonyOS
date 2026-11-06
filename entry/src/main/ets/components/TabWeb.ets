@@ -4,12 +4,14 @@ import { webview, WebNetErrorList } from '@kit.ArkWeb'
 import { http } from '@kit.NetworkKit'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
+import { detectBarcode, scanBarcode } from '@kit.ScanKit'
+import { fileIo } from '@kit.CoreFileKit'
 import { TabItem, globMatches, parseJsonArray } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker, buildBlockedPageHtml, TYPE_ALL_MASK, TYPE_DOCUMENT } from '../common/AdBlock'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
-import { hostOf } from '../common/SearchEngines'
+import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { Reader, READER_THEME_COLORS } from '../common/Reader'
 import { DownloadCoordinator } from '../common/Downloads'
 import { GmBridge, gmSecret, gmFakeTampermonkeyJs, gmSandboxJs, GmRequireStore } from '../common/GmRuntime'
@@ -18,6 +20,7 @@ import { NetMonitor } from '../common/NetState'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { VideoOverlayState } from './VideoPlayerOverlay'
 import { TranslateState } from './TranslatePanel'
+import { MARK_AD_INJECT_JS } from './MenuSheet'
 import { AppIcon } from './AppIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
 
@@ -47,8 +50,53 @@ interface ScriptRunMsg {
   from: string
 }
 
-// 划词菜单自定义「翻译」项 id（过滤系统 TRANSLATE 项后追加，点击开 f8.w0 面板）
+// 划词菜单自定义项 id（过滤系统 TRANSLATE 项后追加）：
+// 搜索=划词搜索（k6.C → Ua(str,false,true)）、查找=页内查找（k6.C → ob）、翻译=划词翻译面板
+const EDIT_MENU_ID_VIA_SEARCH: string = 'via_search'
+const EDIT_MENU_ID_VIA_FIND: string = 'via_find'
 const EDIT_MENU_ID_VIA_TRANSLATE: string = 'via_translate'
+
+// 原版 k6.Qa（k6.java:5651）以图搜图引擎表：12 引擎名称与 URL 模板 1:1（k6.k6 分发）
+class ImageSearchEngine {
+  name: string
+  template: string
+
+  constructor(name: string, template: string) {
+    this.name = name
+    this.template = template
+  }
+}
+
+const IMAGE_SEARCH_ENGINES: ImageSearchEngine[] = [
+  new ImageSearchEngine('谷歌', 'https://www.google.com/searchbyimage?safe=off&sbisrc=tg&image_url='),
+  new ImageSearchEngine('谷歌 Lens', 'https://lens.google.com/uploadbyurl?url='),
+  new ImageSearchEngine('必应',
+    'https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:'),
+  new ImageSearchEngine('TinEye', 'https://tineye.com/search/?url='),
+  new ImageSearchEngine('Yandex', 'https://yandex.com/images/touch/search?family=yes&rpt=imageview&url='),
+  new ImageSearchEngine('百度',
+    'https://graph.baidu.com/details?isfromtusoupc=1&tn=pc&carousel=0&promotion_name=pc_image_shituindex&extUiData%5bisLogoShow%5d=1&image='),
+  new ImageSearchEngine('360 搜索', 'https://st.so.com/r?img_url='),
+  new ImageSearchEngine('SauceNAO', 'https://saucenao.com/search.php?db=999&url='),
+  new ImageSearchEngine('IQDB', 'https://iqdb.org/?url='),
+  new ImageSearchEngine('3D IQDB', 'https://3d.iqdb.org/?url='),
+  new ImageSearchEngine('WhatAnime', 'https://trace.moe/?url='),
+  new ImageSearchEngine('Ascii2D', 'https://ascii2d.net/search/url/')
+]
+
+// 原版 c8/db.a「看图模式」脚本 1:1：收集页面 >99px 图片以 Viewer.js 画廊打开
+// （window.open 经 onWindowNew 落为新标签）；无图片时 alert od「无图片」
+const PICTURE_MODE_JS: string =
+  '(function(){var b=document.getElementsByTagName("img"),f=b.length,d=0,e=new Set,a=[];' +
+  'a.push(\'<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=1,minimal-ui"><title>Images</title>\');' +
+  'a.push(\'<link href="https://fastly.jsdelivr.net/npm/viewerjs@1.11.7/dist/viewer.min.css" rel="stylesheet">\');' +
+  'a.push(\'<script src="https://fastly.jsdelivr.net/npm/viewerjs@1.11.7/dist/viewer.min.js">\\x3c/script>\');' +
+  'a.push(\'<style type="text/css">*{padding:0;margin:0}body{background-color:#fff}p{color:#000}@media (prefers-color-scheme:dark){body{background-color:#000}p{color:#fff}}#images img{display:block;margin:auto;text-align:center;max-width:100%}.viewer-backdrop{background-color:rgba(0,0,0,.9)}.viewer-toolbar>ul>li{width:32px;height:32px;padding:4px;box-sizing:border-box}.viewer-download{content:"Download";background-color:transparent;background-image:url(\\\'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="-494 -494 1500 1500"%3E%3Cpath fill="%23fff" d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 242.7-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7 288 32zM64 352c-35.3 0-64 28.7-64 64l0 32c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-32c0-35.3-28.7-64-64-64l-101.5 0-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352 64 352zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/%3E%3C/svg%3E\\\');background-repeat:no-repeat;background-size:32px;color:transparent;display:block;font-size:0;line-height:0}</style>\');' +
+  'a.push("</head><body>");a.push(\'<div><ul id="images">\');' +
+  'for(var c=0;c<f;c++)e.has(b[c].src)||(e.add(b[c].src),b[c].src&&99<b[c].height&&99<b[c].width&&(a.push(\'<li><img src="\'+b[c].src+\'"/></li>\'),d++));' +
+  'a.push("</ul></div>");' +
+  '0==d?alert("无图片"):(a.push(\'<script>var viewer = new Viewer(document.getElementById("images"), {toolbar: {zoomIn: true, zoomOut: true, oneToOne: true, reset: true, prev: true, next: true, rotateLeft: true\'),a.push("},});\\x3c/script>"),a.push("</body></html>"),b=window.open(""),' +
+  'b.document.write(a.join("")),b.focus())})();'
 
 // window.via 桥对象（k6:1487 postMessage 通道）
 class ViaBridge {
@@ -77,6 +125,13 @@ export struct TabWeb {
   // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
+  // —— 原版 GestureTouchEvent 横滑前进/后退（mark/via/common/widget/GestureTouchEvent.java 对齐）——
+  // 位移按 0.8 增益累计并限幅 ±80% 宽度；提交阈值 80% 宽度、300ms 动画
+  @Local swipeNavOffset: number = 0
+  @Local swipeNavAlpha: number = 1
+  private swipeNavActive: boolean = false
+  private swipeNavLocked: boolean = false
+  private swipeNavWidth: number = 0
 
   aboutToAppear(): void {
     this.viaBridge.handler = (msg: string): void => {
@@ -136,7 +191,10 @@ export struct TabWeb {
     return !this.settings.noImage
   }
 
-  // 划词菜单：过滤系统翻译项，追加自定义「翻译」（k6.Eb → f8.w0 面板）
+  // 划词菜单：过滤系统翻译项，追加自定义「搜索/查找/翻译」。
+  // 原版 e8/i.C(t4.b)（e8/i.java:135-153）划词 ActionMode 自定义项 1:1：
+  // 搜索(sy)→k6.C Ua(str,false,true) 划词搜索新标签；查找(jh)→ob(str) 页内查找；
+  // 翻译项为已拍板划词翻译功能（k6.Eb → f8.w0 面板），保留
   private buildEditMenu(menuItems: Array<TextMenuItem>): Array<TextMenuItem> {
     const result: Array<TextMenuItem> = []
     for (let i = 0; i < menuItems.length; i++) {
@@ -147,24 +205,73 @@ export struct TabWeb {
       result.push(item)
     }
     result.push({
+      content: $r('app.string.search'),
+      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH)
+    })
+    result.push({
+      content: '查找',
+      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND)
+    })
+    result.push({
       content: $r('app.string.translate'),
       id: TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE)
     })
     return result
   }
 
+  // 取当前选中文本（window.getSelection）
+  private fetchSelection(onText: (text: string) => void): void {
+    const js: string = 'JSON.stringify(window.getSelection().toString())'
+    this.tab.controller.runJavaScript(js).then((result: string) => {
+      let text: string = ''
+      try {
+        text = JSON.parse(result) as string
+      } catch (error) {
+        text = result
+      }
+      onText(text)
+    }).catch(() => {
+    })
+  }
+
+  // 原版 k6.C(n4.a) id=f4823f → Ua(str, false, true)（k6.java:5994）：
+  // 划词为网址直接打开，否则按当前引擎搜索，均新标签打开（z11=true → i1）
+  private searchSelection(text: string): void {
+    const trimmed = text.trim()
+    if (trimmed === '') {
+      return
+    }
+    let target: string
+    if (isUrlLike(trimmed)) {
+      target = normalizeUrl(trimmed)
+    } else {
+      target = buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), trimmed)
+    }
+    this.tabStore.newTabAt(target, false)
+  }
+
   private onEditMenuItemClick(menuItem: TextMenuItem, range: TextRange): boolean {
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE))) {
-      const js: string = 'JSON.stringify(window.getSelection().toString())'
-      this.tab.controller.runJavaScript(js).then((result: string) => {
-        let text: string = ''
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH))) {
+      this.fetchSelection((text: string): void => {
+        this.searchSelection(text)
+      })
+      return true
+    }
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND))) {
+      // 原版 k6.C id=f4824g → ob(str)：页内查找（预填划词）。
+      // ArkTS FindBar 无法从本组件拉起，直接以同一 searchAllAsync 管线执行查找
+      this.fetchSelection((text: string): void => {
         try {
-          text = JSON.parse(result) as string
+          this.tab.controller.searchAllAsync(text)
         } catch (error) {
-          text = result
+          console.error('find selection failed')
         }
+      })
+      return true
+    }
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE))) {
+      this.fetchSelection((text: string): void => {
         TranslateState.getInstance().open(text)
-      }).catch(() => {
       })
       return true
     }
@@ -450,6 +557,26 @@ export struct TabWeb {
         .onFullScreenExit(() => {
           VideoOverlayState.getInstance().end()
         })
+        // 原版「滑动屏幕前进后退」（cm 开关=swipeSwitchTab）：GestureTouchEvent 状态机横滑，
+        // 0.8 增益位移、80% 宽度提交、300ms 动画
+        .translate({ x: this.swipeNavOffset })
+        .opacity(this.swipeNavAlpha)
+        .onAreaChange((_old: Area, newArea: Area) => {
+          this.swipeNavWidth = Number(newArea.width)
+        })
+        .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 4 })
+          .onActionStart(() => {
+            this.swipeNavReset()
+          })
+          .onActionUpdate((event: GestureEvent) => {
+            this.swipeNavUpdate(event)
+          })
+          .onActionEnd(() => {
+            this.swipeNavFinish()
+          })
+          .onActionCancel(() => {
+            this.swipeNavReset()
+          }))
       // 原版 k6 f2570c1：网页容器前景黑色蒙版，夜间生效时 alpha=nightfilter（默认 77）
       if (this.settings.isNightActive()) {
         Column()
@@ -536,6 +663,76 @@ export struct TabWeb {
           console.error('swipe nav failed')
         }
       }))
+  }
+
+  // 检测段（GestureTouchEvent.c）：4dp 检测阈值、横向优势、速度 0.5px/ms；
+  // 方向闸 k6.a.f→V7/W7：右滑后退需 canBack、左滑前进需 canForward；
+  // 拖动段（o()）：0.8 增益、±80% 宽度限幅
+  private swipeNavUpdate(event: GestureEvent): void {
+    if (!this.settings.swipeSwitchTab || this.swipeNavLocked) {
+      return
+    }
+    const dx = event.offsetX
+    const dy = event.offsetY
+    if (!this.swipeNavActive) {
+      if (Math.abs(dx) < 4 || Math.abs(dx) <= Math.abs(dy)) {
+        return
+      }
+      // 0.5px/ms ≈ 500px/s；GestureEvent.velocityX 单位为 vp/s
+      if (Math.abs(event.velocityX) < px2vp(500)) {
+        return
+      }
+      if ((dx > 0 && !this.tab.canBack) || (dx < 0 && !this.tab.canForward)) {
+        this.swipeNavLocked = true
+        return
+      }
+      this.swipeNavActive = true
+    }
+    const max = this.swipeNavWidth * 0.8
+    this.swipeNavOffset = Math.max(-max, Math.min(max, dx * 0.8))
+  }
+
+  private swipeNavReset(): void {
+    this.swipeNavActive = false
+    this.swipeNavLocked = false
+    this.swipeNavOffset = 0
+    this.swipeNavAlpha = 1
+  }
+
+  // 松手（GestureTouchEvent.h/e）：过 80% 宽度 → 300ms 淡出并触发导航
+  // （右滑后退/左滑前进），否则 300ms 比例时长回弹
+  private swipeNavFinish(): void {
+    if (!this.swipeNavActive) {
+      this.swipeNavReset()
+      return
+    }
+    const max = this.swipeNavWidth * 0.8
+    const passed = max > 0 && Math.abs(this.swipeNavOffset) >= max
+    if (passed) {
+      const goBack = this.swipeNavOffset > 0
+      this.getUIContext().animateTo({ duration: 300, curve: Curve.Linear }, () => {
+        this.swipeNavAlpha = 0
+      })
+      setTimeout(() => {
+        try {
+          const tab = this.tabStore.current()
+          if (goBack) {
+            tab.controller.backward()
+          } else {
+            tab.controller.forward()
+          }
+        } catch (error) {
+          console.error('swipe navigate failed')
+        }
+        this.swipeNavReset()
+      }, 300)
+    } else {
+      const ratio = max > 0 ? Math.abs(this.swipeNavOffset) / max : 0
+      const duration = Math.max(1, Math.round(ratio * 300))
+      this.getUIContext().animateTo({ duration: duration, curve: Curve.Linear }, () => {
+        this.swipeNavOffset = 0
+      })
+    }
   }
 
   // 原版 i6/i0.c(str)：取 URL 路径扩展名（忽略查询串），判断是否 pdf
@@ -695,11 +892,18 @@ export struct TabWeb {
     TabStore.getInstance().snapshot(this.settings)
   }
 
+  // 原版 k6.A9（k6.java:3623）统一上下文菜单：str=链接、str2=图片、str3=锚文本。
+  // 普通网页（iD==-1）分支：图片 src 非空走图片菜单（10 项），否则链接非空走链接菜单
   private handleContextMenu(event?: OnContextMenuShowEvent): boolean {
     if (event === undefined) {
       return false
     }
     const link = event.param.getLinkUrl()
+    const src = event.param.getSourceUrl()
+    if (src !== '') {
+      this.showImageMenu(event, link, src)
+      return true
+    }
     if (link === '') {
       return false
     }
@@ -707,30 +911,25 @@ export struct TabWeb {
     return true
   }
 
+  // 原版 A9 链接分支（普通网页 iD==-1）：后台打开(0)/新标签打开(1)/复制链接(3)/分享(31)。
+  // 原版无「打开」「下载链接」项；无标题无正文（w5.k 仅条目列表）。
+  // 保留工程 longPressHidden 定制管线过滤条目
   private showLinkMenu(link: string): void {
     const hidden = this.settings.longPressHidden
     const sheets: SheetInfo[] = []
-    if (hidden.indexOf('open') < 0) {
-      sheets.push({
-        title: '打开',
-        action: (): void => {
-          this.tabStore.navigate(link)
-        }
-      })
-    }
-    if (hidden.indexOf('open_new_tab') < 0) {
-      sheets.push({
-        title: '新标签页打开',
-        action: (): void => {
-          this.tabStore.newTabAt(link, false)
-        }
-      })
-    }
     if (hidden.indexOf('open_background') < 0) {
       sheets.push({
         title: '后台打开',
         action: (): void => {
           this.tabStore.newTabAt(link, true)
+        }
+      })
+    }
+    if (hidden.indexOf('open_new_tab') < 0) {
+      sheets.push({
+        title: '新标签打开',
+        action: (): void => {
+          this.tabStore.newTabAt(link, false)
         }
       })
     }
@@ -742,17 +941,9 @@ export struct TabWeb {
         }
       })
     }
-    if (hidden.indexOf('download') < 0) {
-      sheets.push({
-        title: '下载链接',
-        action: (): void => {
-          this.downloadLink(link)
-        }
-      })
-    }
     if (hidden.indexOf('share') < 0) {
       sheets.push({
-        title: '分享链接',
+        title: '分享',
         action: (): void => {
           this.shareLink(link)
         }
@@ -762,9 +953,247 @@ export struct TabWeb {
       return
     }
     ActionSheet.show({
-      title: hostOf(link),
-      message: link,
+      // ArkUI ActionSheetOptions 的 title/message 为必填（API 18 起），原版菜单无标题正文
+      title: '',
+      message: '',
       sheets: sheets
+    })
+  }
+
+  // 原版 A9 普通网页图片分支（str2 非空）10 项 + 链接 2 项，
+  // 项集/顺序/条件/文案 1:1（条件 z11=s||k||l，点击分发见 k6.Q3 k6.java:1984）
+  private showImageMenu(event: OnContextMenuShowEvent, link: string, src: string): void {
+    const pageUrl = this.tab.url
+    const pageHttp = pageUrl.startsWith('http://') || pageUrl.startsWith('https://')
+    // A9 z11 = s(http)||k(data:)||l(file://)（按图片 src 判定）
+    const shareable = src.startsWith('http://') || src.startsWith('https://') ||
+      src.startsWith('data:') || src.startsWith('file://')
+    const selection = event.param.getSelectionText()
+    const sheets: SheetInfo[] = []
+    // (2, b0) 查看图片：Q3 case2 → na.k1 图片地址新标签打开
+    sheets.push({
+      title: '查看图片',
+      action: (): void => {
+        this.tabStore.newTabAt(src, false)
+      }
+    })
+    // (38, a1) 下载图片：Q3 case38 → q8 下载管线（mime image/*）
+    sheets.push({
+      title: '下载图片',
+      action: (): void => {
+        this.downloadLink(src)
+      }
+    })
+    // (6, aq) 保存图片：Q3 case6 → La → Ea(str,4) 下载管线存图。
+    // 工程下载管线无存图分类，接最近似：同走下载管线
+    sheets.push({
+      title: '保存图片',
+      action: (): void => {
+        this.downloadLink(src)
+      }
+    })
+    if (shareable) {
+      // (33, ts) 分享图片：Q3 case33 → hb → Ea(str,1) 系统分享
+      sheets.push({
+        title: '分享图片',
+        action: (): void => {
+          this.shareLink(src)
+        }
+      })
+    }
+    if (src.startsWith('http')) {
+      // (7, sw) 以图搜图：Q3 case7 → Qa 12 引擎选择弹窗
+      sheets.push({
+        title: '以图搜图',
+        action: (): void => {
+          this.showImageSearchMenu(src)
+        }
+      })
+    }
+    if (pageHttp && this.imageAllowedNow()) {
+      // (8, ak) 看图模式：Q3 case8 → z8 → y9(db.a)（条件 e1=当前有图）
+      sheets.push({
+        title: '看图模式',
+        action: (): void => {
+          this.openPictureMode()
+        }
+      })
+    }
+    // (22, ah) 页面信息：Q3 case22 标题/页面链接/选中链接
+    sheets.push({
+      title: '页面信息',
+      action: (): void => {
+        this.showPageInfo(link)
+      }
+    })
+    if (pageHttp && this.settings.adBlockOn) {
+      // (23, aa) 标记广告：Q3 case23 → C9() 注入元素选择器（条件 b1=广告拦截开启）
+      sheets.push({
+        title: '标记广告',
+        action: (): void => {
+          try {
+            this.tab.controller.runJavaScript(MARK_AD_INJECT_JS)
+          } catch (error) {
+            console.error('inject mark ad failed')
+          }
+        }
+      })
+    }
+    if (selection !== '') {
+      // (29, u) 复制链接文本：Q3 case29（原版取 requestFocusNodeHref 锚文本，
+      // ArkWeb 无锚文本源，以当前选中文本近似）
+      sheets.push({
+        title: '复制链接文本',
+        action: (): void => {
+          this.copyText(selection)
+        }
+      })
+    }
+    if (shareable) {
+      // (34, si) 扫描二维码：Q3 case34 → Pa → Ea(str,2) 下载后识码
+      sheets.push({
+        title: '扫描二维码',
+        action: (): void => {
+          this.scanQrFromImage(src)
+        }
+      })
+    }
+    if (link !== '') {
+      // (3, s) 复制链接 / (31, at) 分享
+      sheets.push({
+        title: '复制链接',
+        action: (): void => {
+          this.copyLink(link)
+        }
+      })
+      sheets.push({
+        title: '分享',
+        action: (): void => {
+          this.shareLink(link)
+        }
+      })
+    }
+    ActionSheet.show({
+      // ArkUI ActionSheetOptions 的 title/message 为必填（API 18 起），原版菜单无标题正文
+      title: '',
+      message: '',
+      sheets: sheets
+    })
+  }
+
+  // 原版 k6.Qa（k6.java:5651）：以图搜图 12 引擎选择（标题 sw），k6.k6 拼 URL 新标签打开
+  private showImageSearchMenu(src: string): void {
+    let encoded = src
+    try {
+      encoded = encodeURIComponent(src)
+    } catch (error) {
+      encoded = src
+    }
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < IMAGE_SEARCH_ENGINES.length; i++) {
+      const engine = IMAGE_SEARCH_ENGINES[i]
+      const template = engine.template
+      sheets.push({
+        title: engine.name,
+        action: (): void => {
+          this.tabStore.newTabAt(template + encoded, false)
+        }
+      })
+    }
+    ActionSheet.show({
+      title: '以图搜图',
+      message: '',
+      sheets: sheets
+    })
+  }
+
+  // 原版 c8/db.a：看图模式注入（无图片 alert od「无图片」）
+  private openPictureMode(): void {
+    try {
+      this.tab.controller.runJavaScript(PICTURE_MODE_JS)
+    } catch (error) {
+      console.error('open picture mode failed')
+    }
+  }
+
+  // 原版 Q3 case22：AlertDialog 标题 ah「页面信息」，正文 标题：/页面链接：/选中链接：
+  private showPageInfo(link: string): void {
+    this.getUIContext().showAlertDialog({
+      title: '页面信息',
+      message: `标题：${this.tab.title}\n\n页面链接：${this.tab.url}\n\n选中链接：${link}`,
+      primaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+        }
+      },
+      cancel: () => {
+      }
+    })
+  }
+
+  private copyText(text: string): void {
+    const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text)
+    pasteboard.getSystemPasteboard().setData(data).then(() => {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied'), duration: 1500 })
+    }).catch(() => {
+      console.error('copy text failed')
+    })
+  }
+
+  // 原版 Q3 case34 → Pa → Ea(str,2)：下载图片后识码（k6 t1 911 结果弹窗：确定=当前页打开、复制）。
+  // ArkTS：http 拉图落盘 cache → detectBarcode.decode 识码 → 结果弹窗，用后即删临时文件
+  private scanQrFromImage(src: string): void {
+    if (!src.startsWith('http')) {
+      return
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const client = http.createHttp()
+    client.request(src, {
+      method: http.RequestMethod.GET,
+      expectDataType: http.HttpDataType.ARRAY_BUFFER
+    }).then((resp: http.HttpResponse) => {
+      client.destroy()
+      const data = resp.result instanceof ArrayBuffer ? resp.result : new ArrayBuffer(0)
+      const path = `${context.cacheDir}/via_qr_image`
+      const file = fileIo.openSync(path,
+        fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+      fileIo.writeSync(file.fd, data)
+      fileIo.closeSync(file)
+      const input: detectBarcode.InputImage = { uri: `file://${path}` }
+      detectBarcode.decode(input).then((results: Array<scanBarcode.ScanResult>) => {
+        try {
+          fileIo.unlinkSync(path)
+        } catch (error) {
+          console.error('remove qr temp image failed')
+        }
+        if (results.length === 0 || results[0].originalValue === '') {
+          return
+        }
+        const value = results[0].originalValue
+        this.getUIContext().showAlertDialog({
+          title: '提示',
+          message: value,
+          primaryButton: {
+            value: $r('app.string.confirm'),
+            action: () => {
+              this.tabStore.navigate(value)
+            }
+          },
+          secondaryButton: {
+            value: $r('app.string.copy'),
+            action: () => {
+              this.copyText(value)
+            }
+          },
+          cancel: () => {
+          }
+        })
+      }).catch(() => {
+        console.error('decode qr image failed')
+      })
+    }).catch(() => {
+      client.destroy()
+      console.error('fetch qr image failed')
     })
   }
 

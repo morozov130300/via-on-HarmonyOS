@@ -1,6 +1,8 @@
 import { webview } from '@kit.ArkWeb'
 import { image } from '@kit.ImageKit'
 import { i18n } from '@kit.LocalizationKit'
+import { util } from '@kit.ArkTS'
+import { cryptoFramework } from '@kit.CryptoArchitectureKit'
 
 export enum DownloadStatus {
   Running = 0,
@@ -305,6 +307,13 @@ export class DownloadRec {
   }
 }
 
+// 原版 ba/b（SiteConf）三态取值：0 = 跟随全局（无覆盖），1/2 = 开关两态覆盖
+export const SITE_MODE_DEFAULT: number = 0
+export const SITE_MODE_ON: number = 1
+export const SITE_MODE_OFF: number = 2
+// 原版 ba/b 权限类四态取值（jb/e0：0 跟随 / 1 允许 / 2 禁止 / 3 优先询问）
+export const SITE_PERM_ASK: number = 3
+
 export class SiteSetting {
   host: string
   pcMode: boolean
@@ -313,6 +322,35 @@ export class SiteSetting {
   forceDark: boolean
   // 原版网站设定 JavaScript（jb/y4）：默认允许（true）
   javaScript: boolean
+  // ---- 原版 ba/b SiteConf 扩展（jb/u4 单站点页 1:1）----
+  // bit1：启用 "%1$s" 的网站设定（ba/b.S/s），未启用时各行为默认值
+  enabled: boolean
+  // 每站字体缩放（ba/b d0/i），0 = 跟随全局
+  fontZoom: number
+  // 每站浏览器标识（ba/b e0/j/c）：'' = 跟随全局，'custom' = 自定义（customUa），其余为 UA_TABLE key
+  uaMode: string
+  // 每站自定义 UA（ba/b Q/c）
+  customUa: string
+  // 电脑模式（ba/b bit8：R/G/p/q）
+  desktopMode: number
+  // 图像（ba/b bit4：X/J/x/y）
+  imageMode: number
+  // JavaScript（ba/b bit2：Z/B/C）——0 跟随 / 1 允许 / 2 禁止
+  javaScriptMode: number
+  // 广告拦截（ba/b bit16：W/D/l/m）
+  adBlockMode: number
+  // 隐身（ba/b bit32：Y/K/z/A）
+  incognitoMode: number
+  // 返回不重载（ba/b bit131072：W/I/v/w）
+  backReloadMode: number
+  // 页面重定向（ba/b bit1024：P/F/n/o）——0 跟随 / 1 允许 / 2 优先询问
+  redirectMode: number
+  // 权限四态（0 跟随 / 1 允许 / 2 禁止 / 3 优先询问）
+  clipboardMode: number
+  openAppMode: number
+  geoMode: number
+  cameraMode: number
+  micMode: number
 
   constructor(host: string) {
     this.host = host
@@ -321,6 +359,34 @@ export class SiteSetting {
     this.allowAds = false
     this.forceDark = false
     this.javaScript = true
+    this.enabled = false
+    this.fontZoom = 0
+    this.uaMode = ''
+    this.customUa = ''
+    this.desktopMode = SITE_MODE_DEFAULT
+    this.imageMode = SITE_MODE_DEFAULT
+    this.javaScriptMode = SITE_MODE_DEFAULT
+    this.adBlockMode = SITE_MODE_DEFAULT
+    this.incognitoMode = SITE_MODE_DEFAULT
+    this.backReloadMode = SITE_MODE_DEFAULT
+    this.redirectMode = SITE_MODE_DEFAULT
+    this.clipboardMode = SITE_MODE_DEFAULT
+    this.openAppMode = SITE_MODE_DEFAULT
+    this.geoMode = SITE_MODE_DEFAULT
+    this.cameraMode = SITE_MODE_DEFAULT
+    this.micMode = SITE_MODE_DEFAULT
+  }
+
+  // 原版 ba/b.r()：全部字段均为默认值（无任何覆盖）时站点条目可删除；
+  // 注意原版 r() 用 (enabledFlags >> 1) == 0 —— 启用位(bit1)不计入空判定
+  isEmptyConf(): boolean {
+    return this.customUa === '' && this.uaMode === '' && this.fontZoom === 0 &&
+      this.desktopMode === SITE_MODE_DEFAULT && this.imageMode === SITE_MODE_DEFAULT &&
+      this.javaScriptMode === SITE_MODE_DEFAULT && this.adBlockMode === SITE_MODE_DEFAULT &&
+      this.incognitoMode === SITE_MODE_DEFAULT && this.backReloadMode === SITE_MODE_DEFAULT &&
+      this.redirectMode === SITE_MODE_DEFAULT && this.clipboardMode === SITE_MODE_DEFAULT &&
+      this.openAppMode === SITE_MODE_DEFAULT && this.geoMode === SITE_MODE_DEFAULT &&
+      this.cameraMode === SITE_MODE_DEFAULT && this.micMode === SITE_MODE_DEFAULT
   }
 
   static fromJson(obj: Record<string, Object>): SiteSetting | null {
@@ -334,6 +400,70 @@ export class SiteSetting {
     const allowAds = obj['allowAds']
     const forceDark = obj['forceDark']
     const javaScript = obj['javaScript']
+    const enabled = obj['enabled']
+    const fontZoom = obj['fontZoom']
+    const uaMode = obj['uaMode']
+    const customUa = obj['customUa']
+    const desktopMode = obj['desktopMode']
+    const imageMode = obj['imageMode']
+    const javaScriptMode = obj['javaScriptMode']
+    const adBlockMode = obj['adBlockMode']
+    const incognitoMode = obj['incognitoMode']
+    const backReloadMode = obj['backReloadMode']
+    const redirectMode = obj['redirectMode']
+    const clipboardMode = obj['clipboardMode']
+    const openAppMode = obj['openAppMode']
+    const geoMode = obj['geoMode']
+    const cameraMode = obj['cameraMode']
+    const micMode = obj['micMode']
+    if (typeof enabled === 'boolean') {
+      setting.enabled = enabled
+    }
+    if (typeof fontZoom === 'number' && fontZoom >= 0) {
+      setting.fontZoom = fontZoom
+    }
+    if (typeof uaMode === 'string') {
+      setting.uaMode = uaMode
+    }
+    if (typeof customUa === 'string') {
+      setting.customUa = customUa
+    }
+    if (typeof desktopMode === 'number') {
+      setting.desktopMode = desktopMode
+    }
+    if (typeof imageMode === 'number') {
+      setting.imageMode = imageMode
+    }
+    if (typeof javaScriptMode === 'number') {
+      setting.javaScriptMode = javaScriptMode
+    }
+    if (typeof adBlockMode === 'number') {
+      setting.adBlockMode = adBlockMode
+    }
+    if (typeof incognitoMode === 'number') {
+      setting.incognitoMode = incognitoMode
+    }
+    if (typeof backReloadMode === 'number') {
+      setting.backReloadMode = backReloadMode
+    }
+    if (typeof redirectMode === 'number') {
+      setting.redirectMode = redirectMode
+    }
+    if (typeof clipboardMode === 'number') {
+      setting.clipboardMode = clipboardMode
+    }
+    if (typeof openAppMode === 'number') {
+      setting.openAppMode = openAppMode
+    }
+    if (typeof geoMode === 'number') {
+      setting.geoMode = geoMode
+    }
+    if (typeof cameraMode === 'number') {
+      setting.cameraMode = cameraMode
+    }
+    if (typeof micMode === 'number') {
+      setting.micMode = micMode
+    }
     if (typeof pcMode === 'boolean') {
       setting.pcMode = pcMode
     }
@@ -370,6 +500,14 @@ export class UserScriptRec {
   version: string
   // r5/a.f：@require 解析结果（JSON 数组串，s5.e.d）
   requires: string
+  // r5/a.f:289：script_id = MD5(来源 host + 脚本名)（p5.i/o5 isInstalled 的匹配键）
+  scriptId: string
+  // r5/a.f:364-368 → r5/c.p：@icon 图标地址（icon_url 列）
+  iconUrl: string
+  // r5/a.f:343-348 → r5/c.u：@supportURL 支持地址（support_url 列）
+  supportUrl: string
+  // r5/a.f:355-363 → r5/b.z：@resource 解析结果（JSON 对象串 {资源名: 解析后 URL}，无资源为空串，s5.e.e）
+  resources: string
 
   constructor() {
     this.id = -1
@@ -385,6 +523,10 @@ export class UserScriptRec {
     this.homepageUrl = ''
     this.version = ''
     this.requires = '[]'
+    this.scriptId = ''
+    this.iconUrl = ''
+    this.supportUrl = ''
+    this.resources = ''
   }
 
   static fromJson(obj: Record<string, Object>): UserScriptRec | null {
@@ -436,9 +578,46 @@ export class UserScriptRec {
       if (typeof requires === 'string') {
         rec.requires = requires
       }
+      const scriptId = obj['scriptId']
+      if (typeof scriptId === 'string') {
+        rec.scriptId = scriptId
+      }
+      const iconUrl = obj['iconUrl']
+      if (typeof iconUrl === 'string') {
+        rec.iconUrl = iconUrl
+      }
+      const supportUrl = obj['supportUrl']
+      if (typeof supportUrl === 'string') {
+        rec.supportUrl = supportUrl
+      }
+      const resources = obj['resources']
+      if (typeof resources === 'string') {
+        rec.resources = resources
+      }
       return rec
     }
     return null
+  }
+}
+
+// s5/c.a(String)：MD5 十六进制小写（script_id 与 @resource 缓存文件名共用；失败返回空串）
+export function md5Hex(text: string): string {
+  if (text === '') {
+    return ''
+  }
+  try {
+    const bytes = new util.TextEncoder().encodeInto(text)
+    const md = cryptoFramework.createMd('MD5')
+    const blob: cryptoFramework.DataBlob = { data: bytes }
+    md.updateSync(blob)
+    const digest = md.digestSync().data
+    let hex = ''
+    for (let i = 0; i < digest.length; i++) {
+      hex += (digest[i] < 16 ? '0' : '') + digest[i].toString(16)
+    }
+    return hex
+  } catch (error) {
+    return ''
   }
 }
 
@@ -588,29 +767,97 @@ export function grantBitOf(name: string): number {
   }
 }
 
-// s5/b.k()：@require 相对地址解析
-function resolveRequireUrl(url: string, baseUrl: string): string {
-  if (url.startsWith('http://') || url.startsWith('https://')) {
+// s5/b.k()：@require/@resource 相对地址解析——java.net.URL(base, spec) 语义：
+// data: 直接返回；绝对 spec 原样；相对 spec = 基 origin + 基目录合并，并做 . / .. 段归一化
+// （基址无路径时目录为根，如 https://example.com + lib.js → https://example.com/lib.js）；
+// 基址缺失/非法且 spec 为相对地址时返回 null（原版异常路径，调用方跳过）
+function resolveRequireUrl(url: string, baseUrl: string): string | null {
+  if (url.length > 5 && url.substring(0, 5).toLowerCase() === 'data:') {
     return url
   }
-  if (baseUrl === '') {
-    return url
-  }
-  const schemeIdx = baseUrl.indexOf('://')
-  if (schemeIdx < 0) {
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) {
     return url
   }
   if (url.startsWith('//')) {
-    return baseUrl.substring(0, schemeIdx) + url
+    const colonIdx = baseUrl.indexOf('://')
+    if (colonIdx < 0) {
+      return null
+    }
+    return baseUrl.substring(0, colonIdx) + ':' + url
   }
-  const hostStart = schemeIdx + 3
-  const pathIdx = baseUrl.indexOf('/', hostStart)
-  const origin = pathIdx < 0 ? baseUrl : baseUrl.substring(0, pathIdx)
+  const schemeIdx = baseUrl.indexOf('://')
+  if (baseUrl === '' || schemeIdx < 0) {
+    return null
+  }
+  const originEnd = nextCharOf(baseUrl, schemeIdx + 3, '/?#')
+  const origin = originEnd < 0 ? baseUrl : baseUrl.substring(0, originEnd)
   if (url.startsWith('/')) {
     return origin + url
   }
-  const dirIdx = baseUrl.lastIndexOf('/')
-  return baseUrl.substring(0, dirIdx + 1) + url
+  const pathStart = originEnd < 0 ? baseUrl.length : originEnd
+  const pathEnd = nextCharOf(baseUrl, pathStart, '?#')
+  const basePath = pathEnd < 0 ? baseUrl.substring(pathStart) : baseUrl.substring(pathStart, pathEnd)
+  let specPath = url
+  let suffix = ''
+  const queryIdx = url.indexOf('?')
+  if (queryIdx >= 0) {
+    specPath = url.substring(0, queryIdx)
+    suffix = url.substring(queryIdx)
+  }
+  const dirIdx = basePath.lastIndexOf('/')
+  const merged = dirIdx < 0 ? '/' + specPath : basePath.substring(0, dirIdx + 1) + specPath
+  return origin + removeDotSegments(merged) + suffix
+}
+
+// 在 from 起始位置后查找首个属于 chars 的字符下标
+function nextCharOf(text: string, from: number, chars: string): number {
+  for (let i = from; i < text.length; i++) {
+    if (chars.indexOf(text.charAt(i)) >= 0) {
+      return i
+    }
+  }
+  return -1
+}
+
+// RFC 3986 5.2.4：移除路径中的 . / .. 段（java.net.URL 相对解析的归一化行为）
+function removeDotSegments(path: string): string {
+  let output = ''
+  let input = path
+  while (input !== '') {
+    if (input.startsWith('../')) {
+      input = input.substring(3)
+    } else if (input.startsWith('./')) {
+      input = input.substring(2)
+    } else if (input.startsWith('/./')) {
+      input = '/' + input.substring(3)
+    } else if (input === '/.') {
+      input = '/'
+    } else if (input.startsWith('/../')) {
+      input = '/' + input.substring(4)
+      output = removeLastSegment(output)
+    } else if (input === '/..') {
+      input = '/'
+      output = removeLastSegment(output)
+    } else if (input === '.' || input === '..') {
+      input = ''
+    } else {
+      let idx = input.indexOf('/', 1)
+      if (idx < 0) {
+        idx = input.length
+      }
+      output += input.substring(0, idx)
+      input = input.substring(idx)
+    }
+  }
+  return output
+}
+
+function removeLastSegment(path: string): string {
+  const idx = path.lastIndexOf('/')
+  if (idx < 0) {
+    return ''
+  }
+  return path.substring(0, idx)
 }
 
 // r5/a.f()：解析用户脚本元数据块，未找到 ==/UserScript== 结束标记返回 null
@@ -648,9 +895,19 @@ export function parseUserScriptMeta(code: string, sourceUrl: string): UserScript
   const excludes: string[] = []
   const excludeMatches: string[] = []
   const requires: string[] = []
+  const resourceMap: Record<string, string> = {} as Record<string, string>
   let localizedMetaName: string | null = null
   const lines = code.split('\n')
-  const langTag = `name:${i18n.System.getSystemLanguage().split('-')[0].toLowerCase()}`
+  // r5/a.f:274-275：langTag = "name:" + 系统语言；country 识别 lang-COUNTRY 变体（zh-Hans-CN → CN）
+  const sysLangSegments = i18n.System.getSystemLanguage().split('-')
+  const langTag = `name:${sysLangSegments[0].toLowerCase()}`
+  let sysCountry = ''
+  if (sysLangSegments.length >= 3) {
+    sysCountry = sysLangSegments[sysLangSegments.length - 1]
+  } else if (sysLangSegments.length === 2 && sysLangSegments[1].length === 2 &&
+    sysLangSegments[1] === sysLangSegments[1].toUpperCase()) {
+    sysCountry = sysLangSegments[1]
+  }
   let inMeta = false
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
@@ -661,17 +918,23 @@ export function parseUserScriptMeta(code: string, sourceUrl: string): UserScript
       continue
     }
     if (line.startsWith('// ==/UserScript==')) {
-      if (fileName === null || sourceHost === null) {
-        return null
-      }
+      // r5/a.f:283-296：名称必填（本地化名 > @name > 来源文件名）；来源 host 允许为空
+      // （编辑器新建脚本以 null 基址解析，仍须可保存）
       let name = localizedMetaName
       if (name === null) {
         name = fileName
       }
+      if (name === null || name === '') {
+        return null
+      }
       rec.name = name
+      rec.scriptId = md5Hex((sourceHost === null ? '' : sourceHost) + name)
       rec.includes = JSON.stringify(includes.concat(matches))
       rec.excludes = JSON.stringify(excludes.concat(excludeMatches))
       rec.requires = JSON.stringify(requires)
+      if (Object.keys(resourceMap).length > 0) {
+        rec.resources = JSON.stringify(resourceMap)
+      }
       return rec
     }
     const metaMatch = /^\/\/[\s\u200B]*@(\S+)(?:[\s\u200B]+(.*))?$/.exec(line)
@@ -702,10 +965,25 @@ export function parseUserScriptMeta(code: string, sourceUrl: string): UserScript
             rec.runAt = 4
           }
           break
+        case 'supportURL':
+          rec.supportUrl = trimmed
+          break
         case 'exclude-match':
           excludeMatches.push(trimmed)
           break
+        case 'resource': {
+          // r5/a.f:355-363：值格式 "资源名 地址"（(\S+)\s+(.*)），地址按 s5.b.k 解析
+          const resMatch = /^(\S+)\s+(.*)$/.exec(trimmed)
+          if (resMatch !== null && resMatch[1] !== '') {
+            const resolved = resolveRequireUrl(resMatch[2], sourceUrl)
+            if (resolved !== null) {
+              resourceMap[resMatch[1]] = resolved
+            }
+          }
+          break
+        }
         case 'icon':
+          rec.iconUrl = trimmed
           break
         case 'name':
           fileName = trimmed
@@ -719,9 +997,14 @@ export function parseUserScriptMeta(code: string, sourceUrl: string): UserScript
         case 'version':
           rec.version = trimmed
           break
-        case 'require':
-          requires.push(resolveRequireUrl(trimmed, sourceUrl))
+        case 'require': {
+          // r5/a.f:394-402：解析失败（null）跳过
+          const required = resolveRequireUrl(trimmed, sourceUrl)
+          if (required !== null) {
+            requires.push(required)
+          }
           break
+        }
         case 'namespace':
           break
         case 'homepageURL':
@@ -731,8 +1014,11 @@ export function parseUserScriptMeta(code: string, sourceUrl: string): UserScript
           includes.push(trimmed)
           break
         default:
-          if (key.startsWith('name:')) {
-            if (localizedMetaName === null || key === langTag) {
+          if (key.startsWith(langTag)) {
+            // r5/a.f:420-429：首个 name:<系统语言>* 生效；其后仅精确语言键或
+            // 国家变体（endsWith(country)，如 zh 系统 name:zh-CN）覆盖
+            if (localizedMetaName === null || key === langTag ||
+              (sysCountry !== '' && key.endsWith(sysCountry))) {
               localizedMetaName = trimmed
             }
           }

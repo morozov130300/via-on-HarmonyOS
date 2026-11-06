@@ -2,9 +2,10 @@ import { display, curves } from '@kit.ArkUI'
 import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
+import { ClosedTabsStore, ClosedSingleResult, ClosedBatchResult, OPEN_CLOSED_TABS_EVENT_ID } from '../common/ClosedTabsStore'
 import { AppIcon } from './AppIcon'
 import { ViaIcon } from './ViaIcon'
-import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
+import { BusinessError, pasteboard, emitter } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
 import { dimTransition, dialogTransition } from '../common/Transitions'
 
@@ -17,7 +18,10 @@ export struct TabPanel {
   private settings: AppSettings = AppSettings.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
   @Local undoDialogId: number = -1
-  @Local undoUrl: string = ''
+  @Local undoMessage: string = ''
+  // 撤销数据（原版 na.f0/R：单关 e4「已关闭 %1$s」，批闭复数 plurals g「已关闭 %d 个标签页」）
+  @Local pendingSingle: ClosedSingleResult | null = null
+  @Local pendingBatch: ClosedBatchResult | null = null
   @Local swipeOffsets: Record<number, number> = {}
   @Local longPressIndex: number = -1
   @Local panelMaxHeight: number = 120
@@ -30,6 +34,10 @@ export struct TabPanel {
   private panelCurve = curves.cubicBezier(0.2, 0.2, 0.8, 0.8)
 
   aboutToAppear(): void {
+    // 关闭标签入恢复库依赖 ClosedTabsStore（EntryAbility 已注入 AppContextHolder）
+    ClosedTabsStore.getInstance().ensureInit().catch((error: BusinessError) => {
+      console.error(`closed tabs init failed: ${error.message}`)
+    })
     // 原版 f8/l0.p3：面板高度 ValueAnimator 350ms bezier 展开
     this.getUIContext().animateTo({ duration: 350, curve: this.panelCurve }, () => {
       this.panelMaxHeight = Math.min(this.tabStore.tabs.length * 48, Math.max(0, this.maxPanelHeight() - 64))
@@ -111,7 +119,7 @@ export struct TabPanel {
                     this.dragFromIndex = -1
                     this.dragToIndex = -1
                   }))
-                Text(tab.isHomePage() ? $r('app.string.home_page') : tab.displayTitle(''))
+                Text(tab.isHomePage() ? $r('app.string.home_page') : this.rowTitle(tab))
                   .fontSize(16)
                   .fontWeight(index === this.tabStore.currentIndex ? FontWeight.Bold : FontWeight.Normal)
                   .fontColor(index === this.tabStore.currentIndex ? $r('app.color.accent') : PANEL_FG)
@@ -119,10 +127,12 @@ export struct TabPanel {
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .layoutWeight(1)
                 AppIcon({ icon: $r('sys.symbol.xmark'), iconSize: 20, iconColor: PANEL_FG })
+                  .accessibilityText(tab.isHomePage() ? '关闭主页标签' : `关闭 ${this.rowTitle(tab)} 标签`)
                   .onClick(() => {
-                    const closedUrl = this.tabStore.closeTab(index)
-                    if (closedUrl !== '') {
-                      this.showUndoToast(closedUrl)
+                    // 原版 na.M/f0：单关入恢复库 + snackbar「已关闭 %1$s」（标题）
+                    const info = this.tabStore.closeTab(index)
+                    if (info !== null) {
+                      this.showUndoSingle(info)
                     }
                   })
               }
@@ -174,13 +184,20 @@ export struct TabPanel {
         .scrollBar(BarState.Off)
 
         Row() {
-          AppIcon({ icon: $r('sys.symbol.plus'), iconSize: 24, iconColor: PANEL_FG })
+          // 原版 + 按钮 = drawable ay（Rd ic_add）：点击新建标签，长按打开「关闭的标签页」
+          // （f8/l0.c3：contentDescription ad「新建标签」，longClick → b.f() → k6.ia()）
+          ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 24, iconColor: PANEL_FG })
             .padding(12)
+            .accessibilityText('新建标签')
             .onClick(() => {
               // 原版隐身会话中新建标签同为隐身（k6.cb/l8 会话模型）
               this.tabStore.newTab(this.tabStore.sessionIncognito)
               this.onClose()
             })
+            .gesture(LongPressGesture({ repeat: false, duration: 500 })
+              .onAction(() => {
+                this.openClosedTabs()
+              }))
         }
         .width('100%')
         .justifyContent(FlexAlign.Center)
@@ -211,10 +228,27 @@ export struct TabPanel {
   }
 
   private removeTab(index: number): void {
-    const closedUrl = this.tabStore.closeTab(index)
-    if (closedUrl !== '') {
-      this.showUndoToast(closedUrl)
+    const info = this.tabStore.closeTab(index)
+    if (info !== null) {
+      this.showUndoSingle(info)
     }
+  }
+
+  // 行标题渲染层回退（不改 Types）：空标题且无 URL→「无标题」（bh）
+  private rowTitle(tab: TabItem): string {
+    if (tab.title !== '') {
+      return tab.title
+    }
+    if (tab.url !== '') {
+      return tab.url
+    }
+    return '无标题'
+  }
+
+  // TabPanel 无 NavPathStack：经 emitter 由 Index openPage（原版 k6.ia）——需主控接线监听
+  private openClosedTabs(): void {
+    emitter.emit({ eventId: OPEN_CLOSED_TABS_EVENT_ID, priority: emitter.EventPriority.HIGH })
+    this.onClose()
   }
 
   // 原版 f8.l0.t3 长按菜单项与顺序（w5.k 弹出卡片：宽 min(240dp, 屏宽*4/7)，
@@ -224,20 +258,25 @@ export struct TabPanel {
     Column() {
       if (this.tabStore.tabs.length > 1) {
         this.MenuItem($r('app.string.close_all_tabs'), (): void => {
-          this.tabStore.closeAll()
+          // 原版 j8 i11==4 → i8：批量关闭入恢复库 + 撤销 snackbar（na.R）
+          const result = this.tabStore.closeAll()
+          this.showUndoBatch(result)
           this.onClose()
         })
         this.MenuItem($r('app.string.close_other_tabs'), (): void => {
-          this.tabStore.closeOthers(index)
+          const result = this.tabStore.closeOthers(index)
+          this.showUndoBatch(result)
         })
       }
       // 原版 t3：该行既非首也非尾才同时给「关闭上方/下方」（f8/l0.java:459）
       if (index > 0 && index < this.tabStore.tabs.length - 1) {
         this.MenuItem($r('app.string.close_tabs_above'), (): void => {
-          this.tabStore.closeAbove(index)
+          const result = this.tabStore.closeAbove(index)
+          this.showUndoBatch(result)
         })
         this.MenuItem($r('app.string.close_tabs_below'), (): void => {
-          this.tabStore.closeBelow(index)
+          const result = this.tabStore.closeBelow(index)
+          this.showUndoBatch(result)
         })
       }
       if (this.isHttpTab(index)) {
@@ -314,12 +353,35 @@ export struct TabPanel {
     return `https://${host}/favicon.ico`
   }
 
-  private showUndoToast(closedUrl: string): void {
+  // 单关撤销 snackbar（原版 na.f0：undoCloseToast 关闭位 gate；文案 e4「已关闭 %1$s」标题）
+  private showUndoSingle(info: ClosedSingleResult): void {
     if (!this.settings.undoCloseToast) {
       return
     }
-    this.undoUrl = closedUrl
-    AppStorage.setOrCreate('via_undo_close_url', closedUrl)
+    this.pendingSingle = info
+    this.pendingBatch = null
+    this.openUndoDialog(`已关闭 ${info.title}`)
+  }
+
+  // 批量关闭撤销 snackbar（原版 na.R：单条且有标题 → e4，否则复数 plurals g）
+  private showUndoBatch(result: ClosedBatchResult | null): void {
+    if (result === null || result.count() === 0) {
+      return
+    }
+    if (!this.settings.undoCloseToast) {
+      return
+    }
+    this.pendingSingle = null
+    this.pendingBatch = result
+    if (result.count() === 1) {
+      this.openUndoDialog(`已关闭 ${result.titles[0]}`)
+      return
+    }
+    this.openUndoDialog(`已关闭 ${result.count()} 个标签页`)
+  }
+
+  private openUndoDialog(message: string): void {
+    this.undoMessage = message
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
         this.UndoDialog()
@@ -348,7 +410,7 @@ export struct TabPanel {
   @Builder
   UndoDialog() {
     Row() {
-      Text($r('app.string.tab_closed'))
+      Text(this.undoMessage)
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .layoutWeight(1)
@@ -357,10 +419,17 @@ export struct TabPanel {
         .fontColor($r('app.color.accent'))
         .padding({ left: 12, right: 12, top: 8, bottom: 8 })
         .onClick(() => {
-          const url = AppStorage.get<string>('via_undo_close_url') ?? this.undoUrl
+          const single = this.pendingSingle
+          const batch = this.pendingBatch
           this.closeUndoToast(this.undoDialogId)
-          if (url !== '') {
-            this.tabStore.newTabAt(url, false)
+          if (single !== null) {
+            // 原版 F1：撤销恢复后从恢复库移除条目（K1）
+            this.tabStore.newTabAt(single.url, false)
+            ClosedTabsStore.getInstance().removeByIds([single.entryId])
+            return
+          }
+          if (batch !== null) {
+            this.tabStore.restoreClosedBatch(batch)
           }
         })
     }
