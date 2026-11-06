@@ -174,11 +174,17 @@ export struct SettingsToolbarPage {
 
       // 工具栏预览（原版 g0：返回/前进/主页/标签/菜单，accent 着色）
       Row() {
-        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 24, iconColor: $r('app.color.accent') })
+        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.accent') })
           .layoutWeight(1)
-        ViaIcon({ icon: $r('app.media.via_ic_forward'), iconSize: 24, iconColor: $r('app.color.accent') })
+        // 原版前进 = 返回图标旋转 180°
+        ViaIcon({
+          icon: $r('app.media.via_ic_back'),
+          iconSize: 22,
+          iconColor: $r('app.color.accent'),
+          rotateDeg: 180
+        })
           .layoutWeight(1)
-        ViaIcon({ icon: $r('app.media.via_ic_home'), iconSize: 24, iconColor: $r('app.color.accent') })
+        ViaIcon({ icon: $r('app.media.via_ic_home'), iconSize: 22, iconColor: $r('app.color.accent') })
           .layoutWeight(1)
         Text('1')
           .fontSize(11)
@@ -186,7 +192,7 @@ export struct SettingsToolbarPage {
           .fontColor($r('app.color.accent'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-        ViaIcon({ icon: $r('app.media.via_ic_menu'), iconSize: 24, iconColor: $r('app.color.accent') })
+        ViaIcon({ icon: $r('app.media.via_ic_menu'), iconSize: 22, iconColor: $r('app.color.accent') })
           .layoutWeight(1)
       }
       .width('100%')
