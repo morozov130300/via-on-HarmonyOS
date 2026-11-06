@@ -1247,6 +1247,37 @@ export class AppSettings {
     this.flushKey('toolbarColorAdapt', on)
   }
 
+  // 原版 w9.k：工具栏按钮长按动作写入（hb/l6 保存 → ToolbarsViewDelegate GestureTarget 分派）
+  setToolbarKey(target: string, action: number): void {
+    if (target === 'back') {
+      this.keyback = action
+      this.flushKey('keyback', action)
+    } else if (target === 'forward') {
+      this.keyforward = action
+      this.flushKey('keyforward', action)
+    } else if (target === 'home') {
+      this.keyhome = action
+      this.flushKey('keyhome', action)
+    } else if (target === 'tab') {
+      this.keytab = action
+      this.flushKey('keytab', action)
+    } else if (target === 'menu') {
+      this.keymenu = action
+      this.flushKey('keymenu', action)
+    }
+  }
+
+  // 原版 w9.k：工具栏横滑方向动作写入（0=左滑 1=右滑）
+  setGestureToolbar(side: number, action: number): void {
+    if (side === 0) {
+      this.gesturetoolbarleft = action
+      this.flushKey('gesturetoolbarleft', action)
+    } else {
+      this.gesturetoolbarright = action
+      this.flushKey('gesturetoolbarright', action)
+    }
+  }
+
   setUaMode(mode: number): void {
     this.uaMode = mode
     this.flushKey('uaMode', mode)

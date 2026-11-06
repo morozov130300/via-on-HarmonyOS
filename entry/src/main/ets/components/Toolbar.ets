@@ -259,7 +259,8 @@ export struct Toolbar {
         }
         .layoutWeight(this.addressWeight())
         .height('100%')
-        .padding({ left: 13, right: 13 })
+        // 原版 g0.i()：地址槽 P(1,12) 左 12dp / L(1,0) 右 0
+        .padding({ left: 12, right: 0 })
       }
       if (this.showNavButtons('back')) {
         this.ToolButton('back', $r('app.media.via_ic_back'), this.tab.canBack, () => {
@@ -365,7 +366,7 @@ export struct Toolbar {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .opacity(enabled ? 1 : 0.3)
+    // 原版 g0.g()：图标 ImageView 无禁用态灰化，不可后退时仍为 accent 原色（k6 点击分支自行判断）
     .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
       this.longPressAction(this.keyOf(id))
     }))
