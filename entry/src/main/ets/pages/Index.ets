@@ -8,7 +8,7 @@ import { DownloadCoordinator, DOWNLOAD_CONFIRM_EVENT_ID } from '../common/Downlo
 import { TabWeb } from '../components/TabWeb'
 import { HomePage } from '../components/HomePage'
 import { AddressBar } from '../components/AddressBar'
-import { Toolbar } from '../components/Toolbar'
+import { Toolbar, toolbarBackgroundColor } from '../components/Toolbar'
 import { SearchOverlay } from '../components/SearchOverlay'
 import { SearchToolbar } from '../components/SearchToolbar'
 import { TabPanel } from '../components/TabPanel'
@@ -1169,19 +1169,26 @@ struct Index {
         })
       }
       .padding({ top: this.insets.top })
+      // 背景延伸进状态栏避让区（只有组件需要避让，背景不需要）
+      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
     }
   }
 
   @Builder
   BottomBarArea() {
+    // 原版 z8/l3.m + k6.r9：窗口全屏布局、系统导航栏透明，背景铺到导航条下，
+    // 仅交互组件用 insets.bottom 避让。故底栏容器自身必须有底色，
+    // 否则 padding 出来的导航条那一段没有背景（背景缺肉）。
     if (this.effectiveLayout() === LAYOUT_TOOLBAR_TOP) {
       Column()
         .height(6 + this.insets.bottom)
+        .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
     } else if (this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM) {
       Column() {
         this.ChromeToolbar(true)
       }
       .padding({ bottom: this.insets.bottom })
+      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
     } else if (this.effectiveLayout() === LAYOUT_DOUBLE) {
       Column() {
         // 原版主页地址栏保留（uiautomator home.xml 实证），点击进搜索不带文本
@@ -1207,11 +1214,13 @@ struct Index {
         this.ChromeToolbar(false)
       }
       .padding({ bottom: this.insets.bottom })
+      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
     } else {
       Column() {
         this.ChromeToolbar(false)
       }
       .padding({ bottom: this.insets.bottom })
+      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
     }
   }
 

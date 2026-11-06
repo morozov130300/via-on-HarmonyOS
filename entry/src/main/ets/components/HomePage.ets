@@ -4,7 +4,6 @@ import { BrowserDb } from '../common/Database'
 import { HomeFavRec } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { UiInsets } from '../common/Immersive'
-import { ConfigurationConstant, common } from '@kit.AbilityKit'
 import {
   HOME_ADV_AREAS,
   HOME_FAV_ICON_STYLES,
@@ -143,12 +142,13 @@ export struct HomePage {
         .height(HOME_PILL_HEIGHT)
         .width('100%')
         .backgroundColor(this.pillBackground())
-        // 原版 i6/o.java:229-235,315：`.search_bar { background: rgba(...,α); <str6> }`，
-        // 其中 str6 = usingBlur() ? "" : "backdrop-filter: blur(10px);"（r8/d.java:145 由 custominfo bit0 写入）。
+        // 原版 i6/o.java:229-235,315：`.search_bar { background: rgba(...,α); <str6> }`。
+        // str6 方向经 jadx fallback 指令级代码坐实（L1a8）：config.t()(usingBlur)==true 才写
+        // "backdrop-filter: blur(10px);"；Java 反编译产物把 if 方向印反了。
         // 即毛玻璃只做「背后内容模糊」，底色一律由 rgba 的 α 决定。
         // 不能用 backgroundBlurStyle(BlurStyle.*)：该材质自带背板色/蒙层，与 backgroundColor 的 α 无关，
         // 表现为「不透明度 0 仍有一层蒙版」。改用 backdropBlur 对应原版 backdrop-filter。
-        .backdropBlur(this.settings.homeAdvEffect === 1 ? 0 : 10)
+        .backdropBlur(this.settings.homeAdvEffect === 1 ? 10 : 0)
         // 官方 ts-universal-attributes-border / faqs-arkui-1376：border 的适用范围大于 borderRadius，
         // 两者都生效要求 border 配置在 borderRadius **之前**；否则 border 缺省的 radius=0 会覆盖圆角，
         // 搜索框变方角并显出一整圈突兀描边（原版是 q() 圆角的下划线）。
@@ -405,13 +405,20 @@ export struct HomePage {
     return size / 2 * (this.settings.homeLogoCorner / 100)
   }
 
+  // 原版 r8/d.java:113-123：width=d()、height=b()；height==0 → height=(width==0?54:width)；
+  // width==0 → width=height。favinfo 默认 1638446 → width=46、height=0 → 46×46
   private favSize(): number {
-    // 原版 favinfo 默认解码宽 54（r8/d.java:116-121：宽高为 0 时回退 54）
-    return this.settings.homeFavWidth === 0 ? 54 : this.settings.homeFavWidth
+    if (this.settings.homeFavWidth !== 0) {
+      return this.settings.homeFavWidth
+    }
+    return this.settings.homeFavHeight !== 0 ? this.settings.homeFavHeight : 54
   }
 
   private favHeight(): number {
-    return this.settings.homeFavHeight === 0 ? 54 : this.settings.homeFavHeight
+    if (this.settings.homeFavHeight !== 0) {
+      return this.settings.homeFavHeight
+    }
+    return this.settings.homeFavWidth !== 0 ? this.settings.homeFavWidth : 54
   }
 
   private pillRadius(): number {
@@ -428,15 +435,15 @@ export struct HomePage {
   }
 
   // 原版 r8/d.java:147 mVar.I(bginfo.c() ? bginfo.d() : y.C(accentColor))：isLight。
-  // bginfo bit7/8 鸿蒙未落地、urlbarcolor 默认 -1（y.C(-1) 亮度 255>=192 → true），
-  // 故以主页资源随系统深浅切换的同一轴（home_bg / home_text）近似：系统浅色即 isLight。
+  // bginfo bit7/8 手动明暗开关（e9/i.java:141-143,169-170）鸿蒙端无对应设置项，恒 false，
+  // 故只移植 else 分支 y.C(urlbarcolor)：g6/y.java:290-299，R*.299+G*.587+B*.114 >= 192 → 亮。
+  // urlbarcolor 默认 -1=0xFFFFFFFF → 亮度 255 → 恒 isLight=true，与系统深浅无关。
   private homeIsLight(): boolean {
-    try {
-      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
-      return ctx.config.colorMode !== ConfigurationConstant.ColorMode.COLOR_MODE_DARK
-    } catch (error) {
-      return true
-    }
+    const argb = this.settings.urlbarcolor
+    const r = (argb >> 16) & 255
+    const g = (argb >> 8) & 255
+    const b = argb & 255
+    return r * 0.299 + g * 0.587 + b * 0.114 >= 192
   }
 
   // 搜索框背景（原版 i6/o.java:147-157,213 + r8/d.java:139）：
@@ -453,19 +460,6 @@ export struct HomePage {
     return this.homeIsLight()
       ? `rgba(0, 0, 0, ${alpha})`
       : `rgba(255, 255, 255, ${alpha})`
-  }
-
-  // 原版 .search_bar color（i6/o.java:158-161,217-219,318）：
-  // str22 = !isNight ? (α>=0.5 ? #1b1b1b : #afafaf)
-  //       : (α<0.5 ? str11 : #1b1b1b)，str11 = !isLight ? #fafafa : #1b1b1b
-  private pillTextColor(): string {
-    const alpha = this.settings.homePillOpacity / 100
-    if (this.isNight()) {
-      return alpha < 0.5
-        ? (this.homeIsLight() ? '#1b1b1b' : '#fafafa')
-        : '#1b1b1b'
-    }
-    return alpha >= 0.5 ? '#1b1b1b' : '#afafaf'
   }
 
   // 原版 i6/o.java:357-370：#box_container 列数由 min-width 媒体查询逐级覆盖，
