@@ -143,7 +143,12 @@ export struct HomePage {
         .height(HOME_PILL_HEIGHT)
         .width('100%')
         .backgroundColor(this.pillBackground())
-        .backgroundBlurStyle(this.settings.homeAdvEffect === 1 ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
+        // 原版 i6/o.java:229-235,315：`.search_bar { background: rgba(...,α); <str6> }`，
+        // 其中 str6 = usingBlur() ? "" : "backdrop-filter: blur(10px);"（r8/d.java:145 由 custominfo bit0 写入）。
+        // 即毛玻璃只做「背后内容模糊」，底色一律由 rgba 的 α 决定。
+        // 不能用 backgroundBlurStyle(BlurStyle.*)：该材质自带背板色/蒙层，与 backgroundColor 的 α 无关，
+        // 表现为「不透明度 0 仍有一层蒙版」。改用 backdropBlur 对应原版 backdrop-filter。
+        .backdropBlur(this.settings.homeAdvEffect === 1 ? 0 : 10)
         .borderRadius(this.pillRadius())
         .border(this.pillBorder())
         // 原版 .search_bar 无任何按压态样式（全 CSS 只有 .opSug_wpr tr:hover 与
