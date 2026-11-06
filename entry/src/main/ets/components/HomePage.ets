@@ -115,7 +115,6 @@ export struct HomePage {
               .borderRadius(this.logoRadius())
               // 原版 i6/o.java:277-284：所有 logo 图（含自定义图）都走 img.smaller，object-fit:cover
               .objectFit(ImageFit.Cover)
-              .brightness(this.logoDim())
           } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === 'HTML 代码'
             && this.settings.homeLogoHtml !== '') {
             RichText(this.settings.homeLogoHtml)
@@ -128,7 +127,6 @@ export struct HomePage {
               .borderRadius(this.logoRadius())
               // 原版 i6/o.java:277 img.smaller 为 object-fit: cover
               .objectFit(ImageFit.Cover)
-              .brightness(this.logoDim())
           }
         }
         // 原版 .search_part { display:table; width:90%; margin:0 auto 20px }：
@@ -231,12 +229,13 @@ export struct HomePage {
         .height(Math.ceil(this.favs.length / this.favColumns()) * (this.favHeight() + 30))
       }
 
-      Blank()
       }
       .translate({ y: this.searchShift + this.pullShift })
       .opacity(Math.min(this.searchFade, 1 - this.pullShift / 98 * 0.9))
       .width('100%')
-      .height('100%')
+      // 原版 #content 是 absolute 定位、高度随内容自适应；此处用 minHeight 撑满视口，
+      // 内容超出时随 Scroll 滚动（固定 height:100% 会压缩收藏行、且无法滚到超出部分）
+      .constraintSize({ minHeight: '100%' })
       // 原版 i6/o.java:244-246：body/#content/#gesture-indicator 均 max-width:600px（margin auto 居中）
       // 顶部不额外加 insets.top：本组件已位于地址栏之下（Index 的 TopBarArea 已消费状态栏）
       .padding({
