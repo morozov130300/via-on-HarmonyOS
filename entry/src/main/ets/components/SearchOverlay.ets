@@ -16,6 +16,7 @@ import {
   normalizeUrl
 } from '../common/SearchEngines'
 import { ViaIcon } from './ViaIcon'
+import { computeDialogWidthVp } from './ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 
 // 原版 tb/k0.C1：输入行高 = 图标槽 = 建议行图标 = dimen bi(48dp)

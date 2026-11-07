@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
