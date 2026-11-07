@@ -5,11 +5,10 @@ import { TabStore } from '../common/TabStore'
 import { ViaIcon } from './ViaIcon'
 import { hostOf, getBuiltinEngines } from '../common/SearchEngines'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
-import { curves } from '@kit.ArkUI'
 import { i18n } from '@kit.LocalizationKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from './ViaDialogCard'
-import { dialogTransition } from '../common/Transitions'
+import { BEZIER_0202_CURVE, dialogTransition } from '../common/Transitions'
 
 const BAR_HEIGHT: number = 48
 // 原版图标 PNG 为 88px(@4x) = 22dp
@@ -63,21 +62,33 @@ export struct AddressBar {
   // 原版 n0.v(true)：阅读图标 3s 显示窗口（postDelayed 3000 → v(false) 复位）
   @Local readerHint: boolean = false
   private readerHintTimer: number = -1
-  // 原版共用插值器 x8/h.b()：cubic-bezier(0.2,0.2,0.8,0.8)
-  private pulseCurve = curves.cubicBezier(0.2, 0.2, 0.8, 0.8)
   private pulseEventId: number = 30001
 
   aboutToAppear(): void {
-    // 原版 n0.v(true)/q()：阅读模式触发左图标 1↔1.15↔1 缩放脉冲 1200ms + 阅读图标 3s
+    // 原版 mark/via/common/widget/n0.java:208-222 q()：
+    //   ValueAnimator.ofFloat(1.0f, 1.15f, 1.0f)；setInterpolator(x8.h.b()) 即
+    //   PathInterpolator(0.2,0.2,0.8,0.8)；setDuration(1200L)；作用属性 = 左图标 scaleX/scaleY；
+    //   addListener 的 onAnimationCancel 把 scale 复位为 1.0。
+    // 单条 1200ms 三关键帧动画（关键帧 0 / 0.5 / 1），鸿蒙用 keyframeAnimateTo 一条时间轴承载
+    // 两段 600ms，替代原分段 animateTo + setTimeout 拼接（后者相位与曲线都会断）。
     emitter.on({ eventId: this.pulseEventId }, () => {
-      this.getUIContext().animateTo({ duration: 600, curve: this.pulseCurve }, () => {
-        this.pulseScale = 1.15
-      })
-      setTimeout(() => {
-        this.getUIContext().animateTo({ duration: 600, curve: this.pulseCurve }, () => {
-          this.pulseScale = 1
-        })
-      }, 600)
+      const frames: KeyframeState[] = [
+        {
+          duration: 600,
+          curve: BEZIER_0202_CURVE,
+          event: (): void => {
+            this.pulseScale = 1.15
+          }
+        },
+        {
+          duration: 600,
+          curve: BEZIER_0202_CURVE,
+          event: (): void => {
+            this.pulseScale = 1
+          }
+        }
+      ]
+      this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, frames)
       if (this.readerHintTimer >= 0) {
         clearTimeout(this.readerHintTimer)
       }
@@ -405,12 +416,17 @@ export struct AddressBar {
         .textAlign(TextAlign.Start)
         .layoutWeight(1)
         // 原版 z5.a 弹窗：k6.h 标题长按 → 复制/粘贴/粘贴并前往 横排 pill 弹窗
+        // 动画依据：z5/a.java:142 b() → new Dialog(context, v.f14256c)，
+        //   x7.v.f14256c = 0x7f11000f = style "n"，其 windowAnimationStyle=@style/k →
+        //   enter=@anim/a、exit=@anim/b（240ms：alpha 线性、translateY +10% 与 scale
+        //   0.9→1 用 bounce，pivot 50%/100%）。故转场必须用 dialogTransition()。
         .bindPopup(this.showTitleMenu, {
           builder: this.TitleMenu(),
           placement: Placement.Bottom,
           popupColor: Color.Transparent,
           enableArrow: false,
           autoCancel: true,
+          transition: dialogTransition(),
           onStateChange: (e: PopupStateChangeParam) => {
             if (!e.isVisible) {
               this.showTitleMenu = false
@@ -423,7 +439,10 @@ export struct AddressBar {
         }))
 
       // 原版 n0.m()：资源嗅探图标 f9707j 位于标题与右图标之间；t() 渐隐渐显
-      // （mark/via/common/widget/n0.java:296-306：150ms + x8.h.b() 曲线，rz=资源嗅探）
+      // （mark/via/common/widget/n0.java:292-311 t(boolean,boolean)：
+      //   隐藏 → translationX 0→图标宽、alpha 1→0、150ms、e(x8.h.b())；
+      //   显示 → translationX 图标宽→0、alpha 0→1、150ms、e(x8.h.b())；
+      //   图标宽 = LinearLayout.LayoutParams(g6.f.d(ctx, x7.n.E))，E=0x7f070052=dimen bi=48dp）
       if (this.tab.sniffedMedia.length > 0) {
         Stack() {
           ViaIcon({ icon: $r('app.media.via_ic_resource'), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
@@ -432,7 +451,9 @@ export struct AddressBar {
         .height('100%')
         .alignContent(Alignment.Center)
         .accessibilityText($r('app.string.res_sniffer'))
-        .transition(TransitionEffect.OPACITY.animation({ duration: 150, curve: this.pulseCurve }))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 150, curve: BEZIER_0202_CURVE })
+          .combine(TransitionEffect.translate({ x: ICON_SLOT })
+            .animation({ duration: 150, curve: BEZIER_0202_CURVE })))
         .onClick(() => {
           // 原版 k6.f：f9703w 点击 → u1() 打开资源嗅探面板
           this.onOpenMedia(this.tab.sniffedMedia)

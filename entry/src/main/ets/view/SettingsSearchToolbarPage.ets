@@ -3,6 +3,7 @@ import { AppSettings } from '../common/Settings'
 import { SEARCH_ENGINES, SearchEngineDef, getBuiltinEngines } from '../common/SearchEngines'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { SettingCheckRow } from '../components/SettingRows'
+import { buildNavSlide } from './PageTransitions'
 
 interface EngineRow {
   // 原版引擎 int id（内置负数、自定义记录主键 ≥1）
@@ -22,6 +23,8 @@ interface EngineRow {
 export struct SettingsSearchToolbarPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local rows: EngineRow[] = []
 
   private bindAppBar(): void {
@@ -189,6 +192,15 @@ export struct SettingsSearchToolbarPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

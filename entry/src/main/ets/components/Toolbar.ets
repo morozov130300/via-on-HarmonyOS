@@ -2,8 +2,8 @@ import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import { AddressBar } from './AddressBar'
-import { curves } from '@kit.ArkUI'
 import { ViaIcon } from './ViaIcon'
+import { BEZIER_0202_CURVE } from '../common/Transitions'
 
 const BAR_HEIGHT: number = 48
 // 原版 dimens a=13dp 内边距 → 88px(@4x)=22dp 图标本体
@@ -90,8 +90,6 @@ export struct Toolbar {
   private swipeDistance: number = 84
   @Local barWidth: number = 0
   @Local bounceY: number = 0
-  // 原版共用插值器 x8/h.b()：cubic-bezier(0.2,0.2,0.8,0.8)
-  private bounceCurve = curves.cubicBezier(0.2, 0.2, 0.8, 0.8)
 
   private toolbarBg(): ResourceColor {
     return toolbarBackgroundColor(this.tab, this.settings)
@@ -372,16 +370,30 @@ export struct Toolbar {
         .height('100%')
         .alignContent(Alignment.Center)
         .opacity(this.tab.incognito || this.swipePreviewCur >= 0 ? 0.15 : 1)
+        // 原版 mark/via/common/widget/g0.java:181-185 g0.j()：
+        //   ObjectAnimator.ofFloat(标签栈 f9648m, "translationY", 0f, -0.3f*height, 0f)
+        //   .setDuration(280L) + setInterpolator(x8.h.b()) 即 PathInterpolator(0.2,0.2,0.8,0.8)。
+        // 单条 280ms 三关键帧动画（关键帧 0 / 0.5 / 1），作用对象只是标签栈本身，不是整条工具栏。
+        // 鸿蒙用 keyframeAnimateTo 一条时间轴承载两段 140ms，替代分段 animateTo + setTimeout 拼接。
+        .translate({ y: this.bounceY })
         .onClick(() => {
-          // 原版 g0.j()：点击整体 translationY 0→-0.3h→0，280ms bezier（分两段各 140ms）
-          this.getUIContext().animateTo({ duration: 140, curve: this.bounceCurve }, () => {
-            this.bounceY = -BAR_HEIGHT * 0.3
-          })
-          setTimeout(() => {
-            this.getUIContext().animateTo({ duration: 140, curve: this.bounceCurve }, () => {
-              this.bounceY = 0
-            })
-          }, 140)
+          const frames: KeyframeState[] = [
+            {
+              duration: 140,
+              curve: BEZIER_0202_CURVE,
+              event: (): void => {
+                this.bounceY = -BAR_HEIGHT * 0.3
+              }
+            },
+            {
+              duration: 140,
+              curve: BEZIER_0202_CURVE,
+              event: (): void => {
+                this.bounceY = 0
+              }
+            }
+          ]
+          this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, frames)
           this.onTabs()
         })
         .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
@@ -398,7 +410,6 @@ export struct Toolbar {
     .height(BAR_HEIGHT)
     .backgroundColor(this.toolbarBg())
     .alignItems(VerticalAlign.Center)
-    .translate({ y: this.bounceY })
     .onAreaChange((_old: Area, newArea: Area) => {
       this.barWidth = Number(newArea.width)
     })

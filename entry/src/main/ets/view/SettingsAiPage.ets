@@ -2,6 +2,7 @@ import { CopilotStore } from '../common/CopilotStore'
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 
 // 原版 a9/o：AI 设置页（两行：AI 服务提供商 / AI 提示词）
 // j3()：行1 = ai_provider + 当前服务商名（空则「无」）；行2 = ai_prompts（无值）
@@ -10,6 +11,8 @@ export struct SettingsAiPage {
   private settings: AppSettings = AppSettings.getInstance()
   private store: CopilotStore = CopilotStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local providerName: string = ''
 
   // k3()：刷新当前服务商名（l3(j3(backend))）
@@ -58,6 +61,15 @@ export struct SettingsAiPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

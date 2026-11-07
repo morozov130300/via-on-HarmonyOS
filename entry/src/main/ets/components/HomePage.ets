@@ -1,4 +1,4 @@
-import { display } from '@kit.ArkUI'
+import { curves, display } from '@kit.ArkUI'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
 import { HomeFavRec } from '../common/Types'
@@ -16,6 +16,19 @@ import {
 } from '../common/HomeStyle'
 import { HomeFavEditor } from './HomeFavEditor'
 
+// 原版主页注入的 CSS（i6/o.java:374）：
+//   writer.a("#content { top: 25%; transition: 0.14s; }")
+// `transition: 0.14s` 是简写，等价 `transition: all 0.14s ease 0s` —— 即 **所有**可动画属性
+// （transform、opacity、top）的变化都被 140ms、CSS 默认 ease（cubic-bezier(.25,.1,.25,1)）过渡。
+// 这对两条脚本路径都成立（脚本里 `el.style.x = ...` 同样触发 CSS transition）：
+//   ① initGesture 的 touchmove 每帧写 transform/opacity → 被 140ms ease 平滑（跟手带滞后）；
+//   ② triggerSearchBar 的 transform/opacity 下沉与回位 → 同一条 140ms ease。
+// 该 transition 仅在此分支（搜索区「展示」）注入；搜索区「隐藏」时 o.java:372 只写
+//   "#content { top: 18px; } .search_part { display: none; }" —— 不含 transition，
+// 即隐藏态下变化是瞬时跳变，必须区别对待。
+const CSS_EASE_CURVE: ICurve = curves.cubicBezierCurve(0.25, 0.1, 0.25, 1.0)
+const HOME_TRANSITION_MS: number = 140
+
 @ComponentV2
 export struct HomePage {
   private tabStore: TabStore = TabStore.getInstance()
@@ -29,7 +42,8 @@ export struct HomePage {
   @Local favs: HomeFavRec[] = []
   @Local favColors: Record<string, string> = {}
   @Local searchShift: number = 0
-  @Local searchFade: number = 1
+  // 原版 #content 唯一的不透明度载体（两条脚本路径轮流写，见 build 内注释）
+  @Local contentFade: number = 1
   @Local pullShift: number = 0
   @Local atTop: boolean = true
   @Local scrollY: number = 0
@@ -42,6 +56,22 @@ export struct HomePage {
   // 即「屏幕 - 状态栏 - 地址栏 - 操作栏」，不等于物理屏幕高（i6/o.java:357-379）
   @Local vpW: number = 0
   @Local vpH: number = 0
+  // 原版 #content 的 transition 只在搜索区「展示」分支注入（i6/o.java:374），
+  // 隐藏分支（o.java:372）无 transition → 用这条 public 标志决定 animateTo 是否带参数。
+  private contentTransitionEnabled(): boolean {
+    return HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示'
+  }
+
+  // 原版 #content 的 CSS transition 作用于 transform / opacity 变化（0.14s ease）。
+  // 鸿蒙侧凡改动 searchShift / contentFade / pullShift 的赋值都要经这里包一层，
+  // 才等价于原版 CSS transition；搜索区「隐藏」时原版无 transition，直接落值。
+  private contentAnimate(duration: number, curve: ICurve, event: () => void): void {
+    if (!this.contentTransitionEnabled()) {
+      event()
+      return
+    }
+    this.getUIContext().animateTo({ duration: duration, curve: curve }, event)
+  }
 
   aboutToAppear(): void {
     try {
@@ -250,7 +280,11 @@ export struct HomePage {
 
       }
       .translate({ y: this.searchShift + this.pullShift })
-      .opacity(Math.min(this.searchFade, 1 - this.pullShift / 98 * 0.9))
+      // 原版 #content 的 style.opacity 由两条脚本路径写入，二者互斥（同一时刻只有一个在写）：
+      //   ① initGesture touchmove：max(.1, 1 - 位移/98)
+      //   ② triggerSearchBar：0.1（下沉）→ 恢复原值（回位）
+      // 故这里只读一个状态 contentFade，由两条路径各自维护，不做叠加。
+      .opacity(this.contentFade)
       .width('100%')
       // 原版 #content 是 absolute 定位、高度随内容自适应；此处用 minHeight 撑满视口，
       // 内容超出时随 Scroll 滚动（固定 height:100% 会压缩收藏行、且无法滚到超出部分）
@@ -303,23 +337,48 @@ export struct HomePage {
         if (!this.atTop || this.searchOpen) {
           return
         }
-        this.pullShift = Math.max(0, Math.min(98, event.offsetY))
+        this.applyPull(event.offsetY)
       })
       .onActionUpdate((event: GestureEvent) => {
         if (!this.atTop || this.searchOpen) {
           return
         }
-        this.pullShift = Math.max(0, Math.min(98, event.offsetY))
+        this.applyPull(event.offsetY)
       })
       .onActionEnd(() => {
         const shift = this.pullShift
-        this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
+        // 原版 i6/o.java:45 initGesture 的 touchend 分支：
+        //   if(0!==a){ if(88.2<a) callNativeSearch();
+        //              c.style.transform="translateY(0px)"; fadeIn(c) }
+        // 即①唤起门限 88.2px；②transform 写回 0、opacity 交给 fadeIn(c) 恢复。
+        // 两者都受 #content 的 "transition: 0.14s"（CSS 默认 ease）作用 ——
+        // fadeIn 每 6ms 写一次 style.opacity，每次写入都重新触发一次 140ms ease，
+        // 净效果是「指数逼近 + 每步都被 140ms ease 平滑」，比纯 150ms/EaseOut 更缓。
+        // 本端以同一条 CSS ease 曲线承载这段回位，时长为 fadeIn 的总步进时长。
+        const fromFade: number = this.contentFade
+        // 原版 fadeIn：b 每 6ms ×1.1 直至 >=1，步数 = ln(1/b)/ln(1.1)
+        const ticks: number = Math.max(1, Math.log(1 / Math.max(0.05, fromFade)) / Math.log(1.1))
+        const restoreMs: number = Math.max(HOME_TRANSITION_MS, Math.round(ticks * 6))
+        this.contentAnimate(restoreMs, CSS_EASE_CURVE, () => {
           this.pullShift = 0
+          this.contentFade = 1
         })
         if (shift > 88.2) {
           this.onSearchTap()
         }
       }))
+  }
+
+  // 原版 i6/o.java:45 initGesture 的 touchmove 分支：
+  //   g=b; b=e.touches[0].screenY-h; a=Math.min(98,Math.max(0,a+b-g));
+  //   c.style.transform="translateY("+a+"px)"; c.style.opacity=Math.max(.1,1-a/98)
+  // 位移与不透明度都是逐帧写 style，且 #content 带 "transition: 0.14s"，故每次写入
+  // 都被 140ms ease 平滑（跟手会带一点滞后），这里用同一条 ease 包一层等价。
+  private applyPull(offsetY: number): void {
+    this.contentAnimate(HOME_TRANSITION_MS, CSS_EASE_CURVE, () => {
+      this.pullShift = Math.max(0, Math.min(98, offsetY))
+      this.contentFade = Math.max(0.1, 1 - this.pullShift / 98)
+    })
   }
 
   @Builder
@@ -331,17 +390,34 @@ export struct HomePage {
     })
   }
 
-  // 原版 triggerSearchBar：内容 translateY(72px) 渐隐 120ms 后唤起原生搜索
+  // 原版 i6/o.java:45 triggerSearchBar()：
+  //   var t=c.style.transform,o=c.style.opacity;
+  //   requestAnimationFrame(function(){
+  //     c.style.transform="translateY(72px)"; c.style.opacity="0.1";
+  //     setTimeout(function(){
+  //       callNativeSearch();
+  //       c.style.transform=t; c.style.opacity=o;      // ← 同一次 CSS transition 动画回位
+  //       setTimeout(function(){ a.removeAttribute("aria-disabled") },160)
+  //     },120) } )
+  // 关键点：下沉/回位都是改 style，走 #content 的 "transition: 0.14s"（CSS 默认 ease）；
+  // 120ms 只是「调起原生搜索」的延时（此时回位会打断 140ms 的进场，属原版行为），
+  // 160ms 只是 aria-disabled 复位延时，与动画无关。
+  // 旧实现的 120ms/EaseOut + 瞬时回位（无 animateTo）两处都与原版不符。
   private animateToSearch(): void {
-    this.getUIContext().animateTo({ duration: 120, curve: Curve.EaseOut }, () => {
+    // 原版 var o=c.style.opacity 记下的是「当前实际不透明度」，回位时写回该值
+    const savedFade: number = this.contentFade
+    this.contentAnimate(HOME_TRANSITION_MS, CSS_EASE_CURVE, () => {
       this.searchShift = 72
-      this.searchFade = 0.1
+      this.contentFade = 0.1
     })
     setTimeout(() => {
       this.onSearchTap()
-      this.searchShift = 0
-      this.searchFade = 1
-    }, 160)
+      // 原版此处同样是一只 CSS transition（0.14s ease），不是瞬跳
+      this.contentAnimate(HOME_TRANSITION_MS, CSS_EASE_CURVE, () => {
+        this.searchShift = 0
+        this.contentFade = savedFade
+      })
+    }, 120)
   }
 
   private homeBackground(): ResourceColor {

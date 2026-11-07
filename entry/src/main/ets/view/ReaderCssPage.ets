@@ -2,6 +2,7 @@ import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
+import { buildNavSlide } from './PageTransitions'
 
 // 原版 hb/i1（由 hb/o5.l3 打开）：全屏 EditText 编辑页
 // 标题 = N2「自定义阅读模式 CSS」，hint 同 N2，等宽字体 14sp，内容预填当前值；
@@ -12,6 +13,8 @@ import { dialogTransition } from '../common/Transitions'
 export struct ReaderCssPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local cssText: string = ''
   @Local savedCss: string = ''
   private unsavedDialogId: number = -1
@@ -151,6 +154,15 @@ export struct ReaderCssPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.savedCss = this.settings.readerCustomCss

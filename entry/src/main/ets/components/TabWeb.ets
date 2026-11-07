@@ -23,6 +23,7 @@ import { TranslateState } from './TranslatePanel'
 import { MARK_AD_INJECT_JS } from './MenuSheet'
 import { AppIcon } from './AppIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
+import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 
 // 1x1 GIF 占位（原版 u4/a.f12819d base64 1:1 解码）
 const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
@@ -700,8 +701,14 @@ export struct TabWeb {
     this.swipeNavAlpha = 1
   }
 
-  // 松手（GestureTouchEvent.h/e）：过 80% 宽度 → 300ms 淡出并触发导航
-  // （右滑后退/左滑前进），否则 300ms 比例时长回弹
+  // 松手（GestureTouchEvent.h → e()）：mark/via/common/widget/GestureTouchEvent.java:239-255
+  //   int iAbs = |f9564s|（已滑位移）；int i10 = f9563r（阈值 = 宽度*4/5）
+  //   未过阈值：fAbs = |位移| / 阈值，TRANSLATION_X 回到 f9565t（复位基准）
+  //   过阈值：  ALPHA 1→0，fAbs = 1.0f；★同一语句块内立即调 h(位移<=0 ? 2 : 1) 触发导航
+  //             （导航与淡出同时发生，不是动画结束后才导航）
+  //   setDuration((long)(fAbs * 300.0f))，**全程未 setInterpolator**
+  // → ObjectAnimator 默认插值器 = AccelerateDecelerateInterpolator（framework
+  //   ValueAnimator.sDefaultInterpolator），不是 Linear；此处必须用 ACCELERATE_DECELERATE_CURVE。
   private swipeNavFinish(): void {
     if (!this.swipeNavActive) {
       this.swipeNavReset()
@@ -711,26 +718,37 @@ export struct TabWeb {
     const passed = max > 0 && Math.abs(this.swipeNavOffset) >= max
     if (passed) {
       const goBack = this.swipeNavOffset > 0
-      this.getUIContext().animateTo({ duration: 300, curve: Curve.Linear }, () => {
+      // 原版在同一处先发起导航（h()），再让 alpha 淡出；旧实现把导航塞进 300ms 的
+      // setTimeout，导致淡出结束后才换页，与原版时序不符。
+      try {
+        const tab = this.tabStore.current()
+        if (goBack) {
+          tab.controller.backward()
+        } else {
+          tab.controller.forward()
+        }
+      } catch (error) {
+        console.error('swipe navigate failed')
+      }
+      // fAbs = 1.0f → duration = 300ms
+      // 复位时机：原版在下次 touchstart 的 j() 里才把 alpha 复位 1（期间靠新页面重建视图），
+      // 本端 Web 是同一持久节点、不会重建，若一直保持 alpha=0 页面会永久不可见，
+      // 故把复位挂到动画 onFinish（等价于旧实现里那个 300ms 定时器，但改用原生回调，
+      // 不再依赖 setTimeout 与动画时长的巧合对齐）。
+      this.getUIContext().animateTo({
+        duration: 300,
+        curve: ACCELERATE_DECELERATE_CURVE,
+        onFinish: (): void => {
+          this.swipeNavReset()
+        }
+      }, () => {
         this.swipeNavAlpha = 0
       })
-      setTimeout(() => {
-        try {
-          const tab = this.tabStore.current()
-          if (goBack) {
-            tab.controller.backward()
-          } else {
-            tab.controller.forward()
-          }
-        } catch (error) {
-          console.error('swipe navigate failed')
-        }
-        this.swipeNavReset()
-      }, 300)
     } else {
+      // fAbs = |位移| / 阈值 → duration = fAbs * 300ms
       const ratio = max > 0 ? Math.abs(this.swipeNavOffset) / max : 0
       const duration = Math.max(1, Math.round(ratio * 300))
-      this.getUIContext().animateTo({ duration: duration, curve: Curve.Linear }, () => {
+      this.getUIContext().animateTo({ duration: duration, curve: ACCELERATE_DECELERATE_CURVE }, () => {
         this.swipeNavOffset = 0
       })
     }

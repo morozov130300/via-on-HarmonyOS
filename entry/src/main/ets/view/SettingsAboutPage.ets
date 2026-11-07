@@ -4,6 +4,7 @@ import { i18n } from '@kit.LocalizationKit'
 import { TabStore } from '../common/TabStore'
 import { UpdateChecker, UpdateConfig } from '../common/UpdateChecker'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 
 const CONTACT_QQ_GROUP_URL: string = 'http://viayoo.com/contact/qqgroup/'
 const CONTACT_WECHAT_URL: string = 'http://viayoo.com/contact/wechat/'
@@ -19,6 +20,8 @@ const HELP_TRANSLATE_URL: string = 'https://github.com/tuyafeng/Via'
 export struct SettingsAboutPage {
   private tabStore: TabStore = TabStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
 
   private bindAppBar(): void {
     AppBar.show({
@@ -132,6 +135,15 @@ export struct SettingsAboutPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

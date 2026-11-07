@@ -74,8 +74,9 @@ export struct SettingRadioRow {
   }
 }
 
-// 隐私页视频同款行：右侧圆形单选点（选中填充带辉光）+ 按下整行高亮
-// 注意：不得插入带 .position() 的大尺寸波纹圆——该子组件会参与 Stack 布局，
+// 隐私页视频同款行：右侧圆形单选点 + 按下整行高亮
+// 原版为 drawable 状态选择器（pressed 背景、CheckBox 的 buttonDrawable），均为状态直切、无过渡动画；
+// 不得插入带 .position() 的大尺寸波纹圆——该子组件会参与 Stack 布局，
 // 插入/移除时行高被撑大再缩回，导致整段列表「弹开」跳动（见 20261031 录屏问题）
 @ComponentV2
 export struct SettingCheckRow {
@@ -86,12 +87,9 @@ export struct SettingCheckRow {
   @Local pressed: boolean = false
 
   private setPressed(on: boolean): void {
-    if (this.pressed === on) {
-      return
-    }
-    this.getUIContext().animateTo({ duration: on ? 90 : 260, curve: on ? Curve.EaseOut : Curve.EaseIn }, () => {
-      this.pressed = on
-    })
+    // 原版 a6/o.java 的行是高亮由 drawable 状态选择器（android:background 的 state_pressed）
+    // 直接切换，无过渡时长、无插值器；故这里同步赋值，不引入补间动画。
+    this.pressed = on
   }
 
   build() {
@@ -114,12 +112,13 @@ export struct SettingCheckRow {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
+      // 原版 a6/o.java 110 行：CheckBox 用 setButtonDrawable(x8.h.d(context))，
+      // 即 drawable/k 状态选择器（未选中描边 / 选中实心），勾选是状态切换，
+      // 没有动画也没有辉光，故此处不加 .shadow 与 .animation。
       Circle({ width: 20, height: 20 })
         .fill(this.isChecked ? $r('app.color.accent') : Color.Transparent)
         .stroke(this.isChecked ? $r('app.color.accent') : $r('app.color.fg_secondary'))
         .strokeWidth(1.5)
-        .shadow(this.isChecked ? { radius: 10, color: 'rgba(76,111,255,0.45)', offsetY: 0 } : { radius: 0, color: Color.Transparent, offsetY: 0 })
-        .animation({ duration: 200, curve: Curve.EaseOut })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)

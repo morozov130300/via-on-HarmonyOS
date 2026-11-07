@@ -3,6 +3,7 @@ import { ViaIcon } from '../components/ViaIcon'
 import { AppIcon } from '../components/AppIcon'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { UiInsets } from '../common/Immersive'
+import { buildNavSlide } from './PageTransitions'
 
 // 原版 hb/e7.java 1:1 移植（关闭的标签页 →「更多」nu →「标签页设置」Pd vs）：
 // - 行 1（a6.q）「启动时恢复未关闭标签」(s3 nb)：值 = 当前模式（w9.l u1），点击弹三选一
@@ -16,6 +17,8 @@ export struct ClosedTabsMorePage {
   private settings: AppSettings = AppSettings.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   // 弹层（原版 w5.k 三选一锚定行 1）
   @Local modeMenuOpen: boolean = false
 
@@ -79,6 +82,15 @@ export struct ClosedTabsMorePage {
     .hideTitleBar(true)
     .padding({ top: this.insets.top })
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
     })

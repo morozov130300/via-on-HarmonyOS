@@ -1,4 +1,5 @@
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 
 // 原版 ra/i.java：键盘快捷键静态列表页（14 项，无交互）
 // 行布局 r/f/a3.xml：横向居中、padH 16dp、padV 12dp、ripple 背景；
@@ -16,6 +17,8 @@ class ShortcutItem {
 @ComponentV2
 export struct KeyboardShortcutsPage {
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   // 原版 ra/i.X1 列表顺序与文案（x7.u.O/F9/E9/A9/B9/z9/p3/j/H/F/D9/M9/e0/c）
   private items: ShortcutItem[] = [
     new ShortcutItem('Ctrl + t', '新建标签'),
@@ -79,6 +82,15 @@ export struct KeyboardShortcutsPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

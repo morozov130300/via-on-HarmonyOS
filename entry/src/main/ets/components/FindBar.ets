@@ -1,6 +1,18 @@
 import { TabItem } from '../common/Types'
 import { AppIcon } from './AppIcon'
 import { AppSettings } from '../common/Settings'
+import { curves } from '@kit.ArkUI'
+
+// 原版 f8/h（查找条）继承 f8/c，f8/c.A1(...) 覆写 Fragment 转场动画：
+//   ObjectAnimator alpha 0→1（进场）/ 1→0（退场）
+//   + ObjectAnimator translationY：z11 = (f5968o0 & 80) == 80
+//       进场 fromY = z11 ? 120 : -120 → 0；退场 0 → z11 ? 120 : -120
+//   AnimatorSet.play(alpha).with(translationY).setDuration(160L).setInterpolator(new AccelerateInterpolator())
+// 注意插值器设在整个 AnimatorSet 上，alpha 段也是 Accelerate。
+// 打开方 k6.ob（c8/k6.java:7887）：gravity = ((W0 == 1 || W0 == 4) ? 48 : 80) | 8388613
+//   → 布局 1/4 时含 48 → 从上方 -120 落下；其余含 80 → 从下方 +120 升起。
+// 查找条渲染在 insets.top 贴顶（Index.ets），对应含 48 分支。
+const FIND_ACCELERATE_CURVE: ICurve = curves.customCurve((t: number): number => t * t)
 
 @ComponentV2
 export struct FindBar {
@@ -69,6 +81,15 @@ export struct FindBar {
     .height(48)
     .padding({ left: 12, right: 12 })
     .backgroundColor($r('app.color.page_bg'))
+    // 原版 f8/c.A1：160ms Accelerate 的 alpha + translationY(-120→0) 组合转场。
+    // alpha 与 translate 共用 AccelerateInterpolator（插值器在 AnimatorSet 上）。
+    .transition(TransitionEffect.asymmetric(
+      TransitionEffect.OPACITY.animation({ duration: 160, curve: FIND_ACCELERATE_CURVE })
+        .combine(TransitionEffect.translate({ y: -120 })
+          .animation({ duration: 160, curve: FIND_ACCELERATE_CURVE })),
+      TransitionEffect.OPACITY.animation({ duration: 160, curve: FIND_ACCELERATE_CURVE })
+        .combine(TransitionEffect.translate({ y: -120 })
+          .animation({ duration: 160, curve: FIND_ACCELERATE_CURVE }))))
   }
 
   private search(text: string): void {

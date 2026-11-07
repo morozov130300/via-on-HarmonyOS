@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { buildNavSlide } from './PageTransitions'
 import { SiteSetting, SITE_MODE_DEFAULT, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
 import { dialogTransition } from '../common/Transitions'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
@@ -30,6 +31,8 @@ function normalizeHostInput(input: string): string {
 export struct SiteAllPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   // w6.n3：新建输入弹窗
   @Local addDialogId: number = -1
   @Local addHostInput: string = ''
@@ -97,6 +100,15 @@ export struct SiteAllPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
@@ -327,6 +339,8 @@ export struct SiteAllPage {
 export struct FontSizePage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   // ib.x 拖动实时值（z.a 实时改 % 值与预览字号），抬手提交（z.a onStopTrackingTouch → l5.s）
   @Local pageZoom: number = 100
   // r3() 添加例外输入弹窗
@@ -468,6 +482,15 @@ export struct FontSizePage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
@@ -698,6 +721,8 @@ const PERM_SHAPE_SINGLE: number = 3
 export struct PermissionPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local pageKind: string = 'clipboard'
   // e0.o3/f3.o3/j2.o3/t.o3/u2.o3/q3.o3/c1.o3：添加例外弹窗
   @Local addDialogId: number = -1
@@ -783,6 +808,15 @@ export struct PermissionPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.readParams(ctx)
@@ -1534,6 +1568,8 @@ export struct PermissionPage {
 export struct CookiesSettingPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
 
   private bindAppBar(): void {
     AppBar.show({
@@ -1573,6 +1609,15 @@ export struct CookiesSettingPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
@@ -1628,6 +1673,8 @@ export struct CookiesSettingPage {
 export struct PopupSettingPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
 
   private bindAppBar(): void {
     AppBar.show({
@@ -1683,6 +1730,15 @@ export struct PopupSettingPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
@@ -1706,6 +1762,8 @@ export struct PopupSettingPage {
 export struct AdBlockExceptionPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local addDialogId: number = -1
   @Local addHostInput: string = ''
   @Local siteDialogId: number = -1
@@ -1813,6 +1871,15 @@ export struct AdBlockExceptionPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

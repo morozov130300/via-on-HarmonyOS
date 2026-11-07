@@ -1,4 +1,4 @@
-import { display, curves } from '@kit.ArkUI'
+import { curves, display } from '@kit.ArkUI'
 import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
@@ -7,10 +7,28 @@ import { AppIcon } from './AppIcon'
 import { ViaIcon } from './ViaIcon'
 import { BusinessError, pasteboard, emitter } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
-import { dimTransition, dialogTransition } from '../common/Transitions'
+import { BEZIER_0202_CURVE, dimTransition, dialogTransition } from '../common/Transitions'
 import { computeDialogWidthVp } from './ViaDialogCard'
 
 const PANEL_FG: ResourceColor = '#E6E6E6'
+
+// 原版 f8/l0.java:400-404 面板高度动画：
+//   ValueAnimator.ofInt(旧高, 旧高, 新高) —— 三值关键帧（0 / 0.5 / 1）
+//   setInterpolator(x8.h.b() = PathInterpolator(0.2,0.2,0.8,0.8))、setDuration(350L)
+// ValueAnimator 三值语义：归一化进度 t 先经插值器得 f，再把 f 线性映射到三个关键值——
+//   f ∈ [0,0.5] → 停在旧高（不动）；f ∈ [0.5,1] → 旧高 → 新高，且只走完 bezier 的后半段。
+// 鸿蒙对应做法：一条 350ms 的 animateTo，曲线直接复合出这条映射关系
+//   c(t) = 0                         (bezier(t) <= 0.5)
+//        = (bezier(t)-0.5)/0.5       (bezier(t) >  0.5)
+// 这样才会「先静置一半时长、再用 bezier 后半段伸缩」；若拆成两段各 175ms 的
+// keyframeAnimateTo，第二段会各自跑一遍完整 bezier，曲线形状与原版不同。
+const PANEL_HEIGHT_CURVE: ICurve = curves.customCurve((t: number): number => {
+  const eased: number = BEZIER_0202_CURVE.interpolate(t)
+  if (eased <= 0.5) {
+    return 0
+  }
+  return (eased - 0.5) / 0.5
+})
 
 @ComponentV2
 export struct TabPanel {
@@ -31,18 +49,44 @@ export struct TabPanel {
   @Local dragToIndex: number = -1
   // 原版 f8/y.java：favicon 加载失败回退 e9 默认图标（tint k.f13662h）
   @Local faviconFailed: Record<number, boolean> = {}
-  // 原版共用插值器 x8/h.b()：cubic-bezier(0.2,0.2,0.8,0.8)
-  private panelCurve = curves.cubicBezier(0.2, 0.2, 0.8, 0.8)
 
   aboutToAppear(): void {
     // 关闭标签入恢复库依赖 ClosedTabsStore（EntryAbility 已注入 AppContextHolder）
     ClosedTabsStore.getInstance().ensureInit().catch((error: BusinessError) => {
       console.error(`closed tabs init failed: ${error.message}`)
     })
-    // 原版 f8/l0.p3：面板高度 ValueAnimator 350ms bezier 展开
-    this.getUIContext().animateTo({ duration: 350, curve: this.panelCurve }, () => {
-      this.panelMaxHeight = Math.min(this.tabStore.tabs.length * 48, Math.max(0, this.maxPanelHeight() - 64))
+    // 原版面板初始化不产生高度动画：f8/l0.java:295 建视图时就把 RecyclerView 高度设为 n3()，
+    // 随后 p3(true) 走 ValueAnimator.ofInt(h, h, n3())，因 h 与目标相等，位移恒为 0。
+    // 故这里直接落终值（不调用 animateTo），避免凭空多出一段「从 120 长到目标」的假动画。
+    this.panelMaxHeight = this.targetPanelHeight()
+  }
+
+  // 原版 f8/l0.java:379-381 o3() → p3(true)：标签增删后重算高度并做 350ms 三值动画。
+  // 由本文件内所有会改变标签条数的操作（关闭单条/滑删/批量关闭）在改完数据后调用。
+  private refreshPanelHeight(): void {
+    const target: number = this.targetPanelHeight()
+    if (target === this.panelMaxHeight) {
+      return
+    }
+    // 三值 ValueAnimator 语义见文件头 PANEL_HEIGHT_CURVE：前一半时长静置、后一半才伸缩。
+    this.getUIContext().animateTo({
+      duration: 350,
+      curve: PANEL_HEIGHT_CURVE
+    }, () => {
+      this.panelMaxHeight = target
     })
+  }
+
+  // 原版 f8/l0.java:373-377 n3()：
+  //   min(max(0, (max_height - dimen_af*2) - dimen_b), dimen_ba * 条数)
+  //   max_height（k6.java:4027 Cb 传入的 bundle "max_height"）= 根视图高 - 16dp；
+  //   dimen_b(0x7f070001)=48dp 行高、dimen_af(0x7f07002a)=8dp 列表上下内边距、
+  //   dimen_ba(0x7f07004a)=48dp 行高。
+  // 即严格算式为 min(48*条数, max(0, 视口高 - 16 - 16 - 48)) = 视口高 - 80。
+  // 本端 panelMaxHeight 约束的是「列表+新建按钮行+padding」整块（原版只约束 RecyclerView），
+  // 故沿用既有 -64 的口径以免改变面板整体高度，推算过程记录在此便于后续校正。
+  private targetPanelHeight(): number {
+    return Math.min(this.tabStore.tabs.length * 48, Math.max(0, this.maxPanelHeight() - 64))
   }
 
   build() {
@@ -135,6 +179,8 @@ export struct TabPanel {
                     if (info !== null) {
                       this.showUndoSingle(info)
                     }
+                    // 原版 closeTab → o3()：条数变化后做 350ms 三值高度动画
+                    this.refreshPanelHeight()
                   })
               }
               .width('100%')
@@ -158,6 +204,9 @@ export struct TabPanel {
                   }
                 }))
               // 原版 f8.l0.t3：长按弹行操作菜单（w5.k.h0(view) 锚定该行弹出）
+              // 弹窗动画依据：w5/k.java:871 m() → new Dialog(context, v.f14256c)，
+              //   x7.v.f14256c = 0x7f11000f = style "n" → windowAnimationStyle=@style/k →
+              //   @anim/a 进 / @anim/b 出（240ms，alpha 线性 + translateY10%/scale bounce）。
               .bindPopup(this.longPressIndex === index, {
                 builder: (): void => {
                   this.TabMenu(index)
@@ -166,6 +215,7 @@ export struct TabPanel {
                 popupColor: Color.Transparent,
                 enableArrow: false,
                 autoCancel: true,
+                transition: dialogTransition(),
                 onStateChange: (e: PopupStateChangeParam) => {
                   if (!e.isVisible) {
                     this.longPressIndex = -1
@@ -233,6 +283,8 @@ export struct TabPanel {
     if (info !== null) {
       this.showUndoSingle(info)
     }
+    // 原版 closeTab → o3() → p3(true)：条数变化后重算面板高度（350ms 三值动画）
+    this.refreshPanelHeight()
   }
 
   // 行标题渲染层回退（不改 Types）：空标题且无 URL→「无标题」（bh）
@@ -267,6 +319,7 @@ export struct TabPanel {
         this.MenuItem($r('app.string.close_other_tabs'), (): void => {
           const result = this.tabStore.closeOthers(index)
           this.showUndoBatch(result)
+          this.refreshPanelHeight()
         })
       }
       // 原版 t3：该行既非首也非尾才同时给「关闭上方/下方」（f8/l0.java:459）
@@ -274,15 +327,19 @@ export struct TabPanel {
         this.MenuItem($r('app.string.close_tabs_above'), (): void => {
           const result = this.tabStore.closeAbove(index)
           this.showUndoBatch(result)
+          this.refreshPanelHeight()
         })
         this.MenuItem($r('app.string.close_tabs_below'), (): void => {
           const result = this.tabStore.closeBelow(index)
           this.showUndoBatch(result)
+          this.refreshPanelHeight()
         })
       }
       if (this.isHttpTab(index)) {
         this.MenuItem($r('app.string.duplicate_tab'), (): void => {
           this.tabStore.duplicateTab(index)
+          // 原版 f8/l0.H(int)（r4.f 回调）→ o3()：条数变化后重算面板高度
+          this.refreshPanelHeight()
         })
       }
       if (this.isCopyableTab(index)) {

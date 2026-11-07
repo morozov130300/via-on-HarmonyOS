@@ -1,5 +1,7 @@
 import { pdfService, pdfViewManager, PdfView } from '@kit.PDFKit'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
+import { buildNavSlide } from './PageTransitions'
 
 // 原版 za/g + mark/via/common/widget/PdfViewer 的鸿蒙等价实现：
 // PDF Kit PdfView 组件承担 PdfRenderer 自绘渲染（分页/缩放/翻页），
@@ -62,15 +64,24 @@ export struct PdfViewerView {
     }, this)
   }
 
-  // 原版 za/g.f3 + i3 + h3：页码变化刷新「n / total」并渐入，2000ms 后渐隐
+  // 原版 za/g.i3()/g3()：页码变化刷新「n / total」并渐入，2000ms 后渐隐
+  //  - za/g.java:286  this.f14804r0.animate().alpha(1.0f).setDuration(120L).start()
+  //  - za/g.java:258  this.f14804r0.animate().alpha(0.0f).setDuration(220L)...start()
+  //  两处均未 setInterpolator → ViewPropertyAnimator 沿用 ValueAnimator 默认
+  //  = AccelerateDecelerateInterpolator（AOSP ValueAnimator.sDefaultInterpolator），
+  //  必须显式给曲线，不能省（ArkUI .animation()/animateTo 默认是 Curve.EaseInOut）。
   private onPageChanged(index: number): void {
     this.pageIndex = index
     this.cancelHideTimer()
-    this.getUIContext().animateTo({ duration: 120 }, (): void => {
+    this.getUIContext().animateTo({
+      duration: 120, curve: ACCELERATE_DECELERATE_CURVE
+    }, (): void => {
       this.indicatorOpacity = 1
     })
     this.hideTimer = setTimeout((): void => {
-      this.getUIContext().animateTo({ duration: 220 }, (): void => {
+      this.getUIContext().animateTo({
+        duration: 220, curve: ACCELERATE_DECELERATE_CURVE
+      }, (): void => {
         this.indicatorOpacity = 0
       })
       this.hideTimer = -1
@@ -144,6 +155,8 @@ function pdfBaseName(path: string): string {
 @ComponentV2
 export struct PdfViewerPage {
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local pdfPath: string = ''
   @Local pdfTitle: string = ''
 
@@ -169,6 +182,15 @@ export struct PdfViewerPage {
     }
     .hideTitleBar(true)
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— PDF 页同样经 g6.i.h(this, za.g.class, ...) 打开
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       const param: Object | undefined = ctx.pathInfo.param === undefined ? undefined : ctx.pathInfo.param as Object
