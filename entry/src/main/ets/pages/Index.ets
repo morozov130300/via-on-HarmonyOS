@@ -1465,7 +1465,8 @@ struct Index {
           ? FlexAlign.End : FlexAlign.Start)
         .padding(this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM || this.effectiveLayout() === LAYOUT_DOUBLE
           ? { bottom: this.insets.bottom } : { top: this.insets.top })
-        .hitTestBehavior(HitTestMode.Transparent)
+        // 空白区域点击穿透到下方压暗层（关闭）；面板自身 Default 拦截，避免点输入框时误关
+        .hitTestBehavior(HitTestMode.None)
         .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
       }
       if (this.showTabPanel) {
