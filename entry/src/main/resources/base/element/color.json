@@ -105,6 +105,14 @@
       "value": "#9F9F9F"
     },
     {
+      "name": "menu_hint",
+      "value": "#8A000000"
+    },
+    {
+      "name": "dialog_text",
+      "value": "#DE000000"
+    },
+    {
       "name": "menu_text",
       "value": "#C2C2C2"
     },

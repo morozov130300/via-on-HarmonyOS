@@ -6,7 +6,7 @@
     },
     {
       "name": "page_bg",
-      "value": "#121212"
+      "value": "#000000"
     },
     {
       "name": "surface",
@@ -118,7 +118,15 @@
     },
     {
       "name": "menu_icon",
-      "value": "#C2C2C2"
+      "value": "#9F9F9F"
+    },
+    {
+      "name": "menu_hint",
+      "value": "#99FFFFFF"
+    },
+    {
+      "name": "dialog_text",
+      "value": "#BEFFFFFF"
     },
     {
       "name": "menu_text",

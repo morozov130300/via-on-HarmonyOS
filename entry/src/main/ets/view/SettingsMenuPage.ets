@@ -1,22 +1,30 @@
-// 定制菜单页：视频同款宫格定制（Via 7.4 原版「定制菜单」）
-// - 上层「当前菜单」宫格：按住拖拽即可重新排列条目；
-// - 下层「可添加条目」宫格：按住并拖动或点击来添加（反向拖回即可移除）；
-// - 右上角「重置」恢复默认；
-// 实现走单个可滚动 Grid（多个 Grid 间拖拽互抢手势，官方 FAQ faqs-arkui-1401），
-// 分隔提示行用 GridLayoutOptions.irregularIndexes 占一整行（API 参考示例3），
-// 整体拖拽排序用 API 26 的 ForEach.onMove（支持跨不规则节点的宫格拖拽）。
+// 定制菜单页：1:1 复刻原版 Via 7.4.0 i8/s（定制菜单 Fragment）
+// 结构（原版 i8/s.X1）：单个 5 列 Grid，扁平列表 =
+//   [提示行「按住并拖动即可重新排列条目」(i8/x)] + 当前菜单条目 + [提示行「按住并拖动或点击来添加条目」] + 可添加条目
+// 拖拽（i8/s.b/ItemTouchHelper）：仅菜单条目(m)可拖；落位 x3()；点击（i8/s.g3）：菜单区点击=移到池区首位，
+// 池区点击=加入菜单末尾（A3()：池区取走插到当前菜单尾部），设置(id10)双向均不可移出（p3/x3）。
+// 保存（i8/s.z3→O2/H2）：displayedmenus / hiddenmenus 逗号数字串。
+// 单元格（i8/o.d+l）：背景 drawable/o（圆角 18dp、按压 #30808080）、padding 15dp(上下) 5dp(左右)、
+//   图标上文字下、图标 tint attr a9（日 #232323/夜 #9f9f9f）、文字 11sp（dimen ab）、图标-文字 2dp、双行省略。
+// 提示行（i8/y.d）：上下 margin 16dp、左右 padding 16dp、14sp（dimen a_）、色 attr ad（日 #8a000000/夜 #99ffffff）。
+// 页面底色：主题 windowBackground（日 #ffffff / 夜 #000000）。
+// 重置确认弹窗（i8/s.a3 → w5/k）：标题「重置为默认设置」16sp 粗体、正文「你确定继续吗？」14sp、
+//   左下「取消」右下「重置」14sp #6f8de1 minWidth 56dp padding 16dp，
+//   弹窗背景圆角 18dp 描边 1dp #30808080 底色 #ffffff/#1c1b1d、dim 0.4。
 import { AppSettings } from '../common/Settings'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
 import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 
 const KIND_ACTIVE: string = 'active'
-const KIND_SEPARATOR: string = 'sep'
+const KIND_SEPARATOR_TOP: string = 'sep_top'
+const KIND_SEPARATOR_BOTTOM: string = 'sep_bottom'
 const KIND_POOL: string = 'pool'
 
-const CELL_HEIGHT: number = 72
-const SEPARATOR_HEIGHT: number = 34
+// 提示行高度：14sp 文字 + 上下 margin16/padding16 ≈ 16+16+22 ≈ 54vp
+const SEP_HEIGHT: number = 54
+// 单元格高度：15dp padding + 图标(24) + 2dp + 文字(2×15) + 15dp ≈ 76dp（i8/o.d 数值）
+const CELL_HEIGHT: number = 76
 
 class FlatMenuItem {
   kind: string
@@ -32,15 +40,14 @@ class FlatMenuItem {
 export struct SettingsMenuPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
-  // 单一扁平数组承载两个区：KIND_SEPARATOR 之前是当前菜单，之后是可添加条目。
-  // 落序/跨区拖拽都是同一条数组的 splice，语义与框架 onMove 完全一致
+  // 单一扁平数组：sep_top → active… → sep_bottom → pool…（与 i8/s.y3 同构）
   @Local items: FlatMenuItem[] = []
-  // 全宽分隔提示行依赖 irregularIndexes；activeCount 变化时分隔行索引要跟着刷新
+  // 两条全宽提示行都依赖 irregularIndexes
   @Local layoutOptions: GridLayoutOptions = {
     regularSize: [1, 1],
     irregularIndexes: [0]
   }
-  // 拖拽过程中 onMove 会连续落位（跨多格触发多次），持久化做防抖
+  // 拖拽过程中 onMove 连续落位，持久化做防抖（原版在 onPause/onSave 一次性 z3()）
   private persistTimer: number = -1
 
   aboutToAppear(): void {
@@ -55,44 +62,45 @@ export struct SettingsMenuPage {
     }
   }
 
+  // 对应 i8/s.w3()：displayedmenus(t0) 顺序构建当前菜单区；hiddenmenus(F2) 构建池区；
+  // c() 集合里未出现在两表中的 id（新版新增条目）按升序补进池区尾部。
   private loadFromSettings(): void {
-    // 以设置里的 menuOrder 为主序，缺漏的条目按默认顺序补齐（防止旧数据/新增条目丢失）
-    const activeOrder: string[] = []
+    const active: string[] = []
+    const pool: string[] = []
+    const seen: Set<string> = new Set<string>()
+    // t0(): menuOrder 中的 id 进当前菜单区
     for (let i = 0; i < this.settings.menuOrder.length; i++) {
       const id = this.settings.menuOrder[i]
-      if (isMenuId(id) && activeOrder.indexOf(id) < 0) {
-        activeOrder.push(id)
+      if (isMenuId(id) && !seen.has(id)) {
+        seen.add(id)
+        active.push(id)
       }
     }
-    for (let i = 0; i < MENU_DEFAULT_ORDER.length; i++) {
-      const id = MENU_DEFAULT_ORDER[i]
-      if (activeOrder.indexOf(id) < 0 && this.settings.menuHidden.indexOf(id) < 0) {
-        activeOrder.push(id)
-      }
-    }
-    // 原版 i8/s.p3：设置（id 10）不可移出，始终保留在当前菜单
-    if (activeOrder.indexOf('settings') < 0) {
-      activeOrder.push('settings')
-    }
-    // 可添加区：menuHidden 里的条目保持用户排过的序，再补齐其余缺漏
-    const pool: string[] = []
+    // F2(): menuHidden 中的 id 进池区（保持用户排序）
     for (let i = 0; i < this.settings.menuHidden.length; i++) {
       const id = this.settings.menuHidden[i]
-      if (id !== 'settings' && isMenuId(id) && activeOrder.indexOf(id) < 0 && pool.indexOf(id) < 0) {
+      if (isMenuId(id) && !seen.has(id)) {
+        seen.add(id)
         pool.push(id)
       }
     }
+    // c() 集合剩余（从未写入 order/hidden 的新条目）：排序后补进池区（i8/s.w3 else 分支）
     for (let i = 0; i < MENU_DEFAULT_ORDER.length; i++) {
       const id = MENU_DEFAULT_ORDER[i]
-      if (activeOrder.indexOf(id) < 0 && pool.indexOf(id) < 0) {
+      if (!seen.has(id)) {
+        seen.add(id)
         pool.push(id)
       }
     }
-    const flat: FlatMenuItem[] = []
-    for (let i = 0; i < activeOrder.length; i++) {
-      flat.push(new FlatMenuItem(KIND_ACTIVE, activeOrder[i]))
+    // i8/s.p3：设置(id10)必须留在当前菜单区
+    if (active.indexOf('settings') < 0) {
+      active.push('settings')
     }
-    flat.push(new FlatMenuItem(KIND_SEPARATOR, ''))
+    const flat: FlatMenuItem[] = [new FlatMenuItem(KIND_SEPARATOR_TOP, '')]
+    for (let i = 0; i < active.length; i++) {
+      flat.push(new FlatMenuItem(KIND_ACTIVE, active[i]))
+    }
+    flat.push(new FlatMenuItem(KIND_SEPARATOR_BOTTOM, ''))
     for (let i = 0; i < pool.length; i++) {
       flat.push(new FlatMenuItem(KIND_POOL, pool[i]))
     }
@@ -100,58 +108,64 @@ export struct SettingsMenuPage {
     this.refreshSeparatorIndex()
   }
 
-  private separatorIndex(): number {
+  private separatorIndexes(): number[] {
+    const out: number[] = []
     for (let i = 0; i < this.items.length; i++) {
-      if (this.items[i].kind === KIND_SEPARATOR) {
-        return i
+      if (this.items[i].kind === KIND_SEPARATOR_TOP || this.items[i].kind === KIND_SEPARATOR_BOTTOM) {
+        out.push(i)
       }
     }
-    return 0
+    return out
   }
 
   private refreshSeparatorIndex(): void {
-    // Grid 的 constructor 参数在状态整体替换时重新生效（官方示例整对象替换模式）
     this.layoutOptions = {
       regularSize: [1, 1],
-      irregularIndexes: [this.separatorIndex()]
+      irregularIndexes: this.separatorIndexes()
     }
   }
 
-  // 拖拽落位：纯数组 splice，与 onMove 的 from/to 语义一致（先移除再插入）。
-  // 落在分隔行提示上或跨过分隔行时同样成立：此前（菜单区）= 上移归位，此后（池区）= 移出/加入，
-  // 条目归属完全由「相对分隔行的位置」决定，无需额外判断
-  private onFlatMove(from: number, to: number): void {
-    if (from === to || from < 0 || to < 0 || from >= this.items.length) {
-      return
-    }
-    if (this.items[from].kind === KIND_SEPARATOR) {
-      return
-    }
-    const item = this.items[from]
-    // 原版 i8/s.x3：设置（id 10）不允许拖到可添加区
-    if (item.id === 'settings') {
-      const sepIndexAfterRemove = this.separatorIndex() - (from < this.separatorIndex() ? 1 : 0)
-      if (to > sepIndexAfterRemove) {
-        return
+  // 第一条提示行之后、第二条提示行之前 = 当前菜单区（u3/v3 语义）
+  private activeRange(): number[] {
+    let start = -1
+    let end = -1
+    for (let i = 0; i < this.items.length; i++) {
+      if (this.items[i].kind === KIND_SEPARATOR_TOP) {
+        start = i
+      } else if (this.items[i].kind === KIND_SEPARATOR_BOTTOM) {
+        end = i
+        break
       }
     }
-    this.items.splice(from, 1)
-    this.items.splice(to, 0, item)
-    this.refreshSeparatorIndex()
-    this.schedulePersist()
+    const range: number[] = [start, end]
+    return range
   }
 
-  // 点击可添加区条目 = 加入当前菜单末尾（文案「按住并拖动或点击来添加条目」）
-  private onPoolCellClick(item: FlatMenuItem): void {
+  // 对应 i8/s.A3()：菜单区条目点击 → d(false) 移到池区首位；池区条目点击 → d(true) 加到菜单区末尾。
+  // 设置(id10)不可移出菜单区（g3 里 b()==10 直接 return）
+  private onCellClick(item: FlatMenuItem): void {
+    if (item.id === 'settings') {
+      return
+    }
     const index = this.indexOfItem(item)
     if (index < 0) {
       return
     }
-    const sepIndex = this.separatorIndex()
-    this.getUIContext()?.animateTo({ duration: 220, curve: Curve.EaseOut }, () => {
-      const tmp = this.items.splice(index, 1)[0]
-      this.items.splice(sepIndex, 0, tmp)
-    })
+    const range = this.activeRange()
+    const end = range[1]
+    if (item.kind === KIND_ACTIVE) {
+      // 移除后插到 sep_bottom 之后 = 池区首位（i8/s.A3: f7087v0.add(0, m)）
+      this.getUIContext()?.animateTo({ duration: 220, curve: Curve.EaseOut }, () => {
+        const tmp = this.items.splice(index, 1)[0]
+        this.items.splice(end, 0, tmp)
+      })
+    } else {
+      // 移除后插到 sep_bottom 之前 = 菜单区末尾（i8/s.A3: f7086u0.add(m)）
+      this.getUIContext()?.animateTo({ duration: 220, curve: Curve.EaseOut }, () => {
+        const tmp = this.items.splice(index, 1)[0]
+        this.items.splice(end, 0, tmp)
+      })
+    }
     this.refreshSeparatorIndex()
     this.persistNow()
   }
@@ -165,6 +179,38 @@ export struct SettingsMenuPage {
     return -1
   }
 
+  // 对应 i8/s.x3()：拖拽落位。纯数组 splice，归属由相对两条提示行的位置决定。
+  private onFlatMove(from: number, to: number): void {
+    if (from === to || from < 0 || to < 0 || from >= this.items.length || to >= this.items.length) {
+      return
+    }
+    const moving = this.items[from]
+    if (moving.kind !== KIND_ACTIVE && moving.kind !== KIND_POOL) {
+      return
+    }
+    const target = this.items[to]
+    // 提示行不是合法落点：吸附到相邻区（原版 ItemTouchHelper 不会把条目落在 x 提示行上）
+    if (target.kind !== KIND_ACTIVE && target.kind !== KIND_POOL) {
+      return
+    }
+    // 设置(id10)：不可移出菜单区（x3 中 b()==10 && i10>=s3() → -1）
+    if (moving.id === 'settings' && moving.kind === KIND_ACTIVE) {
+      const range = this.activeRange()
+      const start = range[0]
+      const end = range[1]
+      if (to > end) {
+        return
+      }
+      if (start < 0 || end < 0) {
+        return
+      }
+    }
+    this.items.splice(from, 1)
+    this.items.splice(to, 0, moving)
+    this.refreshSeparatorIndex()
+    this.schedulePersist()
+  }
+
   private schedulePersist(): void {
     if (this.persistTimer >= 0) {
       clearTimeout(this.persistTimer)
@@ -175,6 +221,7 @@ export struct SettingsMenuPage {
     }, 300)
   }
 
+  // 对应 i8/s.z3()：保存 displayedmenus / hiddenmenus（settings.p3 保证设置在菜单区）
   private persistNow(): void {
     const order: string[] = []
     const hidden: string[] = []
@@ -186,7 +233,6 @@ export struct SettingsMenuPage {
         hidden.push(item.id)
       }
     }
-    // 原版 i8/s.z3→p3：保存前确保设置仍在当前菜单
     if (order.indexOf('settings') < 0) {
       order.push('settings')
     }
@@ -200,8 +246,9 @@ export struct SettingsMenuPage {
     this.loadFromSettings()
   }
 
-  // 原版 i8/s.a3：重置 AppBar 按钮（ao 重置）→ 确认弹窗
-  // w5.k.l().d0(rw 重置为默认设置).I(g8 你确定继续吗？).V(Y=ao 重置).N(R.string.cancel).f0()
+  // i8/s.a3：右上「重置」→ w5/k 确认弹窗（标题 rw「重置为默认设置」/ 正文 g8「你确定继续吗？」/
+  // 确认 ao「重置」/ 取消 R.string.cancel）。布局 u：标题16sp粗体、正文14sp、按钮14sp #6f8de1。
+  // 弹窗背景 drawable t/u：圆角 18dp、描边 1dp #30808080、底色 日#ffffff/夜#1c1b1d、dim 0.4。
   private confirmReset(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
       builder: (): void => {
@@ -230,23 +277,35 @@ export struct SettingsMenuPage {
 
   @Builder
   ResetConfirmDialog() {
+    // w5/k.m + layout u：垂直排列，顶部 Space12 → 标题 → 正文 → 底部 Space12 → 按钮行（gravity end）
     Column() {
-      Text('重置为默认设置')
+      // 顶部 Space 12dp
+      Column()
+        .height(12)
+        .width('100%')
+      // 标题 style a7→a0：16sp 粗体 attr ac，padding 上下8 左右16，margin 底 6
+      Text($r('app.string.reset_default_title'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
+        .fontColor($r('app.color.dialog_text'))
         .maxLines(1)
-        .width('100%')
-        .padding({ top: 8, bottom: 8 })
-        .margin({ left: 16, right: 16, bottom: 6 })
-      Text('你确定继续吗？')
-        .fontSize(14)
-        .fontColor($r('app.color.fg'))
-        .lineHeight(21)
+        .textAlign(TextAlign.Start)
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+        .margin({ bottom: 6 })
+      // 正文 style a6：14sp attr ac，行距 4dp，padding 上下8 左右16
+      Text($r('app.string.reset_default_msg'))
+        .fontSize(14)
+        .fontColor($r('app.color.dialog_text'))
+        .lineHeight(22)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      // 底部 Space 12dp
+      Column()
+        .height(12)
+        .width('100%')
+      // 按钮行：gravity end，取消在左，重置在右（style y：14sp @color/p、minWidth 56、padding16）
       Row() {
-        Blank()
         Text($r('app.string.cancel'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
@@ -256,7 +315,7 @@ export struct SettingsMenuPage {
           .onClick(() => {
             this.closeResetDialog()
           })
-        Text('重置')
+        Text($r('app.string.reset_action'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)
@@ -268,11 +327,10 @@ export struct SettingsMenuPage {
           })
       }
       .width('100%')
-      .margin({ left: 16, right: 16, top: 12 })
+      .justifyContent(FlexAlign.End)
     }
-    .width(computeDialogWidthVp())
+    .width('90%')
     .constraintSize({ maxWidth: 300 })
-    .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
     .border({ width: 1, color: $r('app.color.dialog_border') })
@@ -280,8 +338,8 @@ export struct SettingsMenuPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '定制菜单',
-      rightText: '重置',
+      title: $r('app.string.customize_menu'),
+      rightText: $r('app.string.reset'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -295,56 +353,79 @@ export struct SettingsMenuPage {
     NavDestination() {
       Column() {
         AppBarSpacer()
-        Text('按住并拖动即可重新排列条目')
-          .fontSize(13)
-          .fontColor($r('app.color.fg_secondary'))
-          .width('100%')
-          .textAlign(TextAlign.Center)
-          .padding({ top: 6, bottom: 10 })
         Grid(undefined, this.layoutOptions) {
           ForEach(this.items, (item: FlatMenuItem) => {
             GridItem() {
-              if (item.kind === KIND_SEPARATOR) {
-                Text('按住并拖动或点击来添加条目')
-                  .fontSize(13)
-                  .fontColor($r('app.color.fg_secondary'))
+              if (item.kind === KIND_SEPARATOR_TOP) {
+                // i8/y.d：上下 margin16、左右 padding16、14sp、色 attr ad
+                Text($r('app.string.drag_to_reorder_hint'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.menu_hint'))
                   .width('100%')
                   .textAlign(TextAlign.Center)
                   .height('100%')
+                  .padding({ left: 16, right: 16 })
+                  .margin({ top: 16, bottom: 16 })
+              } else if (item.kind === KIND_SEPARATOR_BOTTOM) {
+                Text($r('app.string.drag_to_add_hint'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.menu_hint'))
+                  .width('100%')
+                  .textAlign(TextAlign.Center)
+                  .height('100%')
+                  .padding({ left: 16, right: 16 })
+                  .margin({ top: 16, bottom: 16 })
               } else {
-                Column({ space: 6 }) {
-                  ViaIcon({ icon: menuIcon(item.id), iconSize: 24, iconColor: $r('app.color.fg'), imageDraggable: false, iconName: menuSkinIconName(item.id) })
+                // i8/o.d + l：Column 上下 padding15 左右5、图标上文字下 2dp 间距、11sp 双行
+                Column({ space: 2 }) {
+                  ViaIcon({
+                    icon: menuIcon(item.id),
+                    iconSize: 24,
+                    iconColor: $r('app.color.menu_icon'),
+                    imageDraggable: false,
+                    iconName: menuSkinIconName(item.id)
+                  })
                   Text(menuLabel(item.id))
                     .fontSize(11)
-                    .fontColor($r('app.color.fg_secondary'))
-                    .maxLines(1)
+                    .fontColor($r('app.color.fg'))
+                    .maxLines(2)
+                    .lineHeight(15)
+                    .textAlign(TextAlign.Center)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                 }
                 .width('100%')
                 .height('100%')
+                .padding({ top: 15, bottom: 15, left: 5, right: 5 })
                 .justifyContent(FlexAlign.Center)
                 .alignItems(HorizontalAlign.Center)
-                .onClick(() => {
-                  if (item.kind === KIND_POOL) {
-                    this.onPoolCellClick(item)
+                .borderRadius(18)
+                .stateStyles({
+                  pressed: {
+                    .backgroundColor('rgba(128,128,128,0.19)')
+                  },
+                  normal: {
+                    .backgroundColor(Color.Transparent)
                   }
+                })
+                .onClick(() => {
+                  this.onCellClick(item)
                 })
               }
             }
-            .height(item.kind === KIND_SEPARATOR ? SEPARATOR_HEIGHT : CELL_HEIGHT)
+            .height(item.kind === KIND_ACTIVE || item.kind === KIND_POOL ? CELL_HEIGHT : SEP_HEIGHT)
           }, (item: FlatMenuItem) => `${item.kind}_${item.id}`)
-            // 拖拽排序走 ForEach.onMove（API 26）：支持跨不规则分隔行的宫格拖拽与边缘自动滚动；
-            // 落位回调逐次触发，统一进 onFlatMove 做纯数组 splice
+            // 拖拽排序走 ForEach.onMove（API 26）：支持跨不规则提示行的宫格拖拽与边缘自动滚动；
+            // 落位回调逐次触发，统一进 onFlatMove 做纯数组 splice（i8/s.x3 语义）
             .onMove((from: number, to: number) => {
               this.onFlatMove(from, to)
             })
         }
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .columnsGap(6)
-        .rowsGap(10)
+        .columnsGap(0)
+        .rowsGap(0)
         .scrollBar(BarState.Off)
         .layoutWeight(1)
-        .padding({ left: 12, right: 12 })
+        .padding({ left: 0, right: 0 })
       }
       .width('100%')
       .height('100%')
@@ -365,6 +446,16 @@ export struct SettingsMenuPage {
     })
   }
 }
+
+@ComponentV2
+struct SettingsMenuPagePlaceholder {
+  build() {
+    Column()
+  }
+}
+
+// 占位导出（原 AppBarSpacer 兼容），避免外部引用断裂
+export { SettingsMenuPagePlaceholder as SettingsMenuPageLegacy }
 
 @Builder
 export function SettingsMenuPageBuilder() {
