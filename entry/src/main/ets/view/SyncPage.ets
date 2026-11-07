@@ -6,6 +6,7 @@ import { dialogTransition } from '../common/Transitions'
 import { WebDavClient } from '../common/WebDav'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 const CLOUD_SPACE_LINK: string = 'hicloud://cloudDrive/getInfo?path=MainActivity'
 
@@ -220,7 +221,7 @@ export struct SyncPage {
       }
       .width('100%')
     }
-    .width('86%')
+    .width(computeDialogWidthVp())
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

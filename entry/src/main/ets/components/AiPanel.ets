@@ -28,6 +28,7 @@ import { CopilotStore, AiThread, AiMsg, AiBackend, AiAttachment, AiSuggestion,
   userMsg, assistantMsg, systemMsg, ROLE_SYSTEM, ROLE_USER,
   defaultSystemPrompt, webpageSystemPrompt } from '../common/CopilotStore'
 import { ViaIcon } from './ViaIcon'
+import { computeDialogWidthVp } from './ViaDialogCard'
 
 // ----- 展示模型 -----
 
@@ -1444,7 +1445,7 @@ export struct AiPanel {
             })
           }, (model: string) => model)
         }
-        .width('80%')
+        .width(computeDialogWidthVp())
         .padding(16)
         .borderRadius(18)
         .backgroundColor($r('app.color.dialog_bg'))

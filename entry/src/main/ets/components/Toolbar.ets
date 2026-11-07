@@ -97,6 +97,37 @@ export struct Toolbar {
     return toolbarBackgroundColor(this.tab, this.settings)
   }
 
+  // 原版 k6.Z7（change color）三分支：工具栏图标/标签数着色
+  //   夜间(zD) → color u = #9F9F9F
+  //   非夜间且工具栏背景偏亮（y.C 亮度>=192）→ color t = #232323
+  //   其余（非夜间暗背景）→ 白色
+  private toolbarIconColor(): ResourceColor {
+    if (this.settings.isNightActive()) {
+      return '#9F9F9F'
+    }
+    const bg = this.toolbarBg()
+    let hex = ''
+    if (typeof bg === 'string') {
+      hex = bg
+    } else if (typeof bg === 'object' && (bg as Resource).id !== undefined) {
+      // Resource 色（home_bg）：夜间分支已拦截，此处非夜间 home_bg=#FFFFFF 亮
+      hex = '#FFFFFF'
+    }
+    hex = hex.replace('#', '')
+    if (hex.length === 8) {
+      hex = hex.substring(2)
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.substring(0, 2), 16)
+      const g = parseInt(hex.substring(2, 4), 16)
+      const b = parseInt(hex.substring(4, 6), 16)
+      if (r * 0.299 + g * 0.587 + b * 0.114 >= 192) {
+        return '#232323'
+      }
+    }
+    return '#FFFFFF'
+  }
+
   // 原版 g0.m()：按宽度决定返回/前进是否显示及地址槽权重
   private wideBar(): boolean {
     if (!this.embedAddress) {
@@ -328,12 +359,13 @@ export struct Toolbar {
       }
       if (!this.hidden('tabs')) {
         // 原版 g0.h()：栈叠图标 + 加粗标签数叠加（>99 显示 :)）；隐身时 g0.l 置 alpha 0.15
+        // 图标与数字色 = setAccentColor 三分支（k6.Z7）：夜间 #9F9F9F / 亮背景 #232323 / 其余白
         Stack() {
-          ViaIcon({ icon: $r('app.media.via_ic_tabs'), iconSize: ICON_SIZE, iconColor: $r('app.color.accent') })
+          ViaIcon({ icon: $r('app.media.via_ic_tabs'), iconSize: ICON_SIZE, iconColor: this.toolbarIconColor() })
           Text(this.swipePreviewText())
             .fontSize(11)
             .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.accent'))
+            .fontColor(this.toolbarIconColor())
             .maxLines(1)
         }
         .layoutWeight(1)
@@ -402,11 +434,11 @@ export struct Toolbar {
   @Builder
   ToolButton(id: string, icon: Resource, enabled: boolean, action: () => void, rotate: number = 0) {
     Column() {
-      // 原版 g0.setAccentColor：五个工具栏图标全部着 accent 色
+      // 原版 g0.setAccentColor（k6.Z7 三分支）：工具栏图标着色随背景明暗
       ViaIcon({
         icon: icon,
         iconSize: ICON_SIZE,
-        iconColor: $r('app.color.accent'),
+        iconColor: this.toolbarIconColor(),
         rotateDeg: rotate
       })
     }
@@ -421,13 +453,6 @@ export struct Toolbar {
     .onClick(() => {
       if (enabled) {
         action()
-      }
-    })
-    // 原版按钮背景 drawable q.xml：oval ripple，颜色 @color/l = #30808080
-    // （ArkUI 无 oval ripple，用同色整块按压近似）
-    .stateStyles({
-      pressed: {
-        .backgroundColor('#30808080')
       }
     })
   }

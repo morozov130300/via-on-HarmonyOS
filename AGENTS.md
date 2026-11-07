@@ -289,3 +289,17 @@
 4. **搜索工具栏**（原版搜索设置第三项、地址栏下方搜索引擎快捷栏）：完整移植——功能+设置子页一起做。
 
 其余差异（搜索建议浮动卡片、通用设置紧凑弹窗、AI设置行、阅读模式副标题/预览卡、夜间滤镜弹窗、主页定制卡片化、网站设定顺序、菜单动画参数等）一律按原工程 1:1 移植，不得以"做不到"为由跳过。
+
+---
+
+# 📌 当前状态清单（每完成一项实时更新，禁止留成「待定」）
+
+**当前任务：搜索面板（tb/k0 UrlInputFragment）位置与结构对齐原版 + 调试**
+
+- [x] 逆向确认：`k6.oa()` → `tb/k0.C3()` uiflags bit0 → 布局0/1 顶栏贴屏幕顶部、布局2/3 贴底部；`Y2()` 对顶栏应用窗口 insets padding
+- [x] 修复 [Index.ets](entry/src/main/ets/pages/Index.ets) showSearch 块：整屏 `Column` + `justifyContent(Start/End)` 承载 SearchOverlay，替代旧的 `Row().padding(top: insets.top+48)`（旧写法被根 Stack 默认垂直居中，输入框落到屏幕中部 y≈1202）
+- [x] 补水平 `justifyContent(FlexAlign.Center)` + 贴顶/贴底 insets padding
+- [x] ArkTS 0 error → 编译 → 覆盖安装 → 启动 Smoke PASS
+- [x] 本轮其它已完成：工具栏图标/标签数三分支着色（`k6.Z7` 夜间 #9F9F9F / 亮背景 #232323 / 其余白）、删除菜单按钮方形 `stateStyles` 按压底色、设置行高度对齐 `a6/o.java`、定制页通查（Logo 参数条/收藏范围/背景三态/夜间图标着色/输入框圆角）、搜索面板顶栏与建议行 1:1 复刻 `tb/k0`、ViaIcon 矩阵回滚（用户否决）
+- [ ] **待用户真机确认**：搜索面板是否贴在屏幕顶部（传统布局）、菜单月亮图标夜间着色、三条横线无背景块
+- ⚠️ 全局规则（已写入 `~/.dsh/AGENTS.md`）：严禁未经当次指示主动操作设备（aa start/点击/滑动）；编辑文件必须用 edit/write 工具，禁止 PowerShell 写文件（GBK 乱码）

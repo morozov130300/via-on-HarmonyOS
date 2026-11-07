@@ -4,6 +4,7 @@ import { TabStore } from '../common/TabStore'
 import { AppIcon } from '../components/AppIcon'
 import { ViaIcon } from '../components/ViaIcon'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { UiInsets } from '../common/Immersive'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { systemShare } from '@kit.ShareKit'
@@ -50,6 +51,7 @@ export struct HistoryPage {
   private db: BrowserDb = BrowserDb.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  private insets: UiInsets = UiInsets.getInstance()
   @Local items: HistoryRec[] = []
   // 原版历史页搜索框（sz 搜索历史同款交互）
   @Local query: string = ''
@@ -360,6 +362,8 @@ export struct HistoryPage {
       })
     }
     .width('100%')
+    // 底部组件避让导航条：组件 padding 推入安全区，背景仍由 NavDestination 铺满不缺肉
+    .padding({ bottom: this.insets.bottom })
     .backgroundColor($r('app.color.surface'))
   }
 

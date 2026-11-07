@@ -3,6 +3,7 @@ import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { BusinessError } from '@kit.BasicServicesKit'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 // 原版 hb/h5.java：Proxy 设置页（原版该页文案无中文翻译，英文 1:1 保留）
 // Enable proxy 开关 / Proxy url 行（点击弹输入） / Reverse bypass rules 开关（d() 为 false 时禁用）
@@ -314,7 +315,7 @@ export struct SettingsProxyPage {
       }
       .width('100%')
     }
-    .width('80%')
+    .width(computeDialogWidthVp())
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -362,7 +363,7 @@ export struct SettingsProxyPage {
       }
       .width('100%')
     }
-    .width('80%')
+    .width(computeDialogWidthVp())
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -425,7 +426,7 @@ export struct SettingsProxyPage {
       }
       .width('100%')
     }
-    .width('80%')
+    .width(computeDialogWidthVp())
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

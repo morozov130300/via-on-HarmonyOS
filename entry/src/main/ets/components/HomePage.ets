@@ -95,74 +95,85 @@ export struct HomePage {
         .height(this.contentTopOffset())
 
       if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示') {
-        // 原版 .search_part 内：a.logo 后紧跟 .search_bar_wrapper（margin:15px auto 0），
-        // 间距只有 15px —— 由 pill 自身 margin.top 15 提供，此处不得再加 Column space
+        // 原版 i6/o.java:23-36,294-298：#content（max-width:600 居中）内
+        //   .search_part { display:table; width:90%; max-width:600px; margin:0 auto 20px }
+        //     ├ <a class="logo">（inline，body text-align:center 继承居中）
+        //     └ .search_bar_wrapper { width:100%; margin:15px auto 0 }
+        //         └ .search_bar { width:100%; margin:0; height:46px }
+        // logo 与搜索栏同属此 90% 容器：搜索栏 width:100% 相对的是 .search_part，
+        // 绝非相对 #content 全屏宽。故二者必须包进同一个 90% Column，
+        // 否则搜索栏 .width('100%') 会撑满整屏（原版为 90% 居中窄栏）。
         Column() {
-          if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
-            Text(this.settings.homeLogoText)
-              .fontSize(this.settings.homeLogoSize)
-              .fontColor($r('app.color.home_text'))
-              .fontWeight(this.logoBold())
-              .fontStyle(this.logoItalic())
-              // 原版 .logo 为 white-space:normal + overflow:auto，无行数限制
-              .textAlign(TextAlign.Center)
-          } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '图片'
-            && this.settings.homeLogoImage !== '') {
-            Image(this.settings.homeLogoImage)
-              .width(this.logoWidth())
-              .height(this.logoHeight())
-              .borderRadius(this.logoRadius())
-              // 原版 i6/o.java:277-284：所有 logo 图（含自定义图）都走 img.smaller，object-fit:cover
-              .objectFit(ImageFit.Cover)
-          } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === 'HTML 代码'
-            && this.settings.homeLogoHtml !== '') {
-            RichText(this.settings.homeLogoHtml)
-              .width(this.logoWidth())
-              .height(this.logoHeight())
-          } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '默认') {
-            Image($rawfile('logo.svg'))
-              .width(this.logoWidth())
-              .height(this.logoHeight())
-              .borderRadius(this.logoRadius())
-              // 原版 i6/o.java:277 img.smaller 为 object-fit: cover
-              .objectFit(ImageFit.Cover)
+          // .search_part（父 Column 默认 HorizontalAlign.Center → margin:0 auto）
+          Column() {
+            if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
+              Text(this.settings.homeLogoText)
+                .fontSize(this.settings.homeLogoSize)
+                .fontColor($r('app.color.home_text'))
+                .fontWeight(this.logoBold())
+                .fontStyle(this.logoItalic())
+                // 原版 .logo 为 white-space:normal + overflow:auto，无行数限制
+                .textAlign(TextAlign.Center)
+            } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '图片'
+              && this.settings.homeLogoImage !== '') {
+              Image(this.settings.homeLogoImage)
+                .width(this.logoWidth())
+                .height(this.logoHeight())
+                .borderRadius(this.logoRadius())
+                // 原版 i6/o.java:277-284：所有 logo 图（含自定义图）都走 img.smaller，object-fit:cover
+                .objectFit(ImageFit.Cover)
+            } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === 'HTML 代码'
+              && this.settings.homeLogoHtml !== '') {
+              RichText(this.settings.homeLogoHtml)
+                .width(this.logoWidth())
+                .height(this.logoHeight())
+            } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '默认') {
+              Image($rawfile('logo.svg'))
+                .width(this.logoWidth())
+                .height(this.logoHeight())
+                .borderRadius(this.logoRadius())
+                // 原版 i6/o.java:277 img.smaller 为 object-fit: cover
+                .objectFit(ImageFit.Cover)
+            }
           }
-        }
-        // 原版 .search_part { display:table; width:90%; margin:0 auto 20px }：
-        // 90% 相对 body 宽（min(600, 视口宽)），内部 .search_bar 为 width:100%
-        .width('90%')
-        // 原版 logo 是 <a onclick="window.via.cmd(257)">：点击进入主页定制设置
-        .onClick(() => {
-          this.onLogoTap()
-        })
+          .width('100%')
+          // 原版 logo 是 <a onclick="window.via.cmd(257)">：点击进入主页定制设置
+          .onClick(() => {
+            this.onLogoTap()
+          })
 
-        // 原版 .search_bar 内 #search_submit 默认 display:none、#search_input value=""（i6/o.java:30-34,300）：
-        // 静态主页搜索框是纯描边空 pill，不含图标与占位文字
-        Row()
-        .height(HOME_PILL_HEIGHT)
-        .width('100%')
-        .backgroundColor(this.pillBackground())
-        // 原版 i6/o.java:229-235,315：`.search_bar { background: rgba(...,α); <str6> }`。
-        // str6 方向经 jadx fallback 指令级代码坐实（L1a8）：config.t()(usingBlur)==true 才写
-        // "backdrop-filter: blur(10px);"；Java 反编译产物把 if 方向印反了。
-        // 即毛玻璃只做「背后内容模糊」，底色一律由 rgba 的 α 决定。
-        // 不能用 backgroundBlurStyle(BlurStyle.*)：该材质自带背板色/蒙层，与 backgroundColor 的 α 无关，
-        // 表现为「不透明度 0 仍有一层蒙版」。改用 backdropBlur 对应原版 backdrop-filter。
-        .backdropBlur(this.settings.homeAdvEffect === 1 ? 10 : 0)
-        // 官方 ts-universal-attributes-border / faqs-arkui-1376：border 的适用范围大于 borderRadius，
-        // 两者都生效要求 border 配置在 borderRadius **之前**；否则 border 缺省的 radius=0 会覆盖圆角，
-        // 搜索框变方角并显出一整圈突兀描边（原版是 q() 圆角的下划线）。
-        .border(this.pillBorder())
-        .borderRadius(this.pillRadius())
-        // 原版 .search_bar 无任何按压态样式（全 CSS 只有 .opSug_wpr tr:hover 与
-        // #search_bar_trigger:focus-visible），故不加 stateStyles
-        // 原版 .search_bar_wrapper margin:15px auto 0 + .search_part margin:0 auto 20px
-        .margin({ top: 15, bottom: 20 })
-        .justifyContent(FlexAlign.Center)
-        .onClick(() => {
-          // 原版 triggerSearchBar：内容上滑 72px 渐隐后唤起搜索
-          this.animateToSearch()
-        })
+          // 原版 .search_bar 内 #search_submit 默认 display:none、#search_input value=""（i6/o.java:30-34,300）：
+          // 静态主页搜索框是纯描边空 pill，不含图标与占位文字
+          Row()
+          .height(HOME_PILL_HEIGHT)
+          .width('100%')
+          .backgroundColor(this.pillBackground())
+          // 原版 i6/o.java:229-235,315：`.search_bar { background: rgba(...,α); <str6> }`。
+          // str6 方向经 jadx fallback 指令级代码坐实（L1a8）：config.t()(usingBlur)==true 才写
+          // "backdrop-filter: blur(10px);"；Java 反编译产物把 if 方向印反了。
+          // 即毛玻璃只做「背后内容模糊」，底色一律由 rgba 的 α 决定。
+          // 不能用 backgroundBlurStyle(BlurStyle.*)：该材质自带背板色/蒙层，与 backgroundColor 的 α 无关，
+          // 表现为「不透明度 0 仍有一层蒙版」。改用 backdropBlur 对应原版 backdrop-filter。
+          .backdropBlur(this.settings.homeAdvEffect === 1 ? 10 : 0)
+          // 官方 ts-universal-attributes-border / faqs-arkui-1376：border 的适用范围大于 borderRadius，
+          // 两者都生效要求 border 配置在 borderRadius **之前**；否则 border 缺省的 radius=0 会覆盖圆角，
+          // 搜索框变方角并显出一整圈突兀描边（原版是 q() 圆角的下划线）。
+          .border(this.pillBorder())
+          .borderRadius(this.pillRadius())
+          // 原版 .search_bar 无任何按压态样式（全 CSS 只有 .opSug_wpr tr:hover 与
+          // #search_bar_trigger:focus-visible），故不加 stateStyles
+          // 原版 .search_bar_wrapper margin:15px auto 0（仅 top 15）；bottom 20 归 .search_part
+          .margin({ top: 15 })
+          .justifyContent(FlexAlign.Center)
+          .onClick(() => {
+            // 原版 triggerSearchBar：内容上滑 72px 渐隐后唤起搜索
+            this.animateToSearch()
+          })
+        }
+        // 原版 .search_part：width:90%; max-width:600px; margin:0 auto 20px
+        .width('90%')
+        .constraintSize({ maxWidth: 600 })
+        .margin({ bottom: 20 })
       }
 
       if (this.favs.length > 0) {
@@ -435,10 +446,14 @@ export struct HomePage {
   }
 
   // 原版 r8/d.java:147 mVar.I(bginfo.c() ? bginfo.d() : y.C(accentColor))：isLight。
-  // bginfo bit7/8 手动明暗开关（e9/i.java:141-143,169-170）鸿蒙端无对应设置项，恒 false，
-  // 故只移植 else 分支 y.C(urlbarcolor)：g6/y.java:290-299，R*.299+G*.587+B*.114 >= 192 → 亮。
-  // urlbarcolor 默认 -1=0xFFFFFFFF → 亮度 255 → 恒 isLight=true，与系统深浅无关。
+  // bginfo=i9.a：bit7(c())=手动明暗覆盖开、bit8(d())=亮。定制页背景图片模式下「主题色」
+  // 行（e9.i case3）写 bit7=1 + bit8=zH（暗色→亮/亮色→亮），无覆盖时按 y.C(urlbarcolor)：
+  // g6/y.java:290-299，R*.299+G*.587+B*.114 >= 192 → 亮。urlbarcolor 默认 -1 → 恒亮。
   private homeIsLight(): boolean {
+    if (this.settings.homeBgImage !== '' && this.settings.homeThemeColor !== '') {
+      // 手动明暗覆盖：暗色(dark)=非亮、亮色(light)=亮 —— 原版 bit8 存"亮"布尔
+      return this.settings.homeThemeColor === 'light'
+    }
     const argb = this.settings.urlbarcolor
     const r = (argb >> 16) & 255
     const g = (argb >> 8) & 255

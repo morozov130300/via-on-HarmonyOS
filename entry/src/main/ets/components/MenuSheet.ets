@@ -272,7 +272,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width('82%')
+      .width(computeDialogWidthVp())
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -730,7 +730,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -777,7 +777,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width('82%')
+      .width(computeDialogWidthVp())
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -861,7 +861,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -915,7 +915,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width('82%')
+      .width(computeDialogWidthVp())
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -1005,7 +1005,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -1061,7 +1061,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width('82%')
+      .width(computeDialogWidthVp())
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -1145,7 +1145,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
