@@ -1712,8 +1712,9 @@ struct Index {
           .backgroundColor(`#${this.windowFilterAlphaHex()}000000`)
           .hitTestBehavior(HitTestMode.None)
           // 原版 k6.Ib()（c8/k6.java 4516-4528）：ObjectAnimator.ofFloat(f2606z0, "alpha", 0.2f, 1.0f)
-          // setDuration(300L)、setInterpolator(new AccelerateInterpolator())（=t²，非 EaseIn 的三次近似）
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: ACCELERATE_CURVE }))
+          // setDuration(300L)、setInterpolator(new AccelerateInterpolator())（=t²，非 EaseIn 的三次近似）。
+          // 注意动画起点是 0.2f（不是 0），用 TransitionEffect.opacity(0.2) 精确复刻出场初值。
+          .transition(TransitionEffect.opacity(0.2).animation({ duration: 300, curve: ACCELERATE_CURVE }))
       }
     }
     .width('100%')

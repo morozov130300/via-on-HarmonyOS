@@ -1,9 +1,26 @@
 import { http } from '@kit.NetworkKit'
-import { display } from '@kit.ArkUI'
+import { display, curves, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { i18n } from '@kit.LocalizationKit'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets } from '../common/Immersive'
+import { DECELERATE_CURVE } from '../common/Transitions'
+
+// 原版 com.tuyafeng.support.widget.w 构造：
+//   ProgressBar 初始 max=100（y7/g.java:119 setMax(100)）→ w 内部 max = 100*10 = 1000，
+//   并 setMax(1000)，80% 阈值 f4375c = (1000/10)*8 = 800
+const PROG_MAX: number = 1000
+const PROG_THRESHOLD: number = 800
+
+// 原版 f8/c.A1（f8.w0 继承 f8.c）进出场：AnimatorSet 160ms + AccelerateInterpolator，
+// alpha 0→1 与 translationY ±120 同步
+const PROG_ACCELERATE_CURVE: ICurve = curves.customCurve((t: number): number => t * t)
+
+// 原版 w.e() 四条分支对应的 UpdateListener 内部类
+const PROG_KIND_RUSH: number = 0   // w$a（冲 80% 阈值 + 走到目标）
+const PROG_KIND_QUAD: number = 1   // w$b（二次方冲到阈值）
+const PROG_KIND_LINEAR: number = 2 // w$c（线性走到目标）
+const PROG_KIND_FADE: number = 3   // w$d（到 max 且 alpha 渐隐，结束隐藏归零）
 
 // 原版 f8.w0 划词翻译面板（1:1 移植）：
 // - 布局 r/f/t.xml：EditText 7/5/1 行 + 48dp 清除/退出图标 + 2dp 分割线/进度条
@@ -370,6 +387,16 @@ export struct TranslatePanel {
 
   aboutToDisappear(): void {
     this.state.progressAnimator = null
+    // 原版 w 生命周期随 f8/w0 Fragment 销毁：取消动画、进度与显示态归零
+    if (this.progAnimator !== null) {
+      this.progAnimator.cancel()
+      this.progAnimator = null
+    }
+    this.progValue = 0
+    this.progShown = 0
+    this.state.progressValue = 0
+    this.state.progressVisible = false
+    this.state.progressAlpha = 1.0
   }
 
   private isLandscape(): boolean {
@@ -381,28 +408,142 @@ export struct TranslatePanel {
     }
   }
 
-  // 原版 w.g/f：请求段显示 + 随机值（Decelerate 近似 EaseOut），完成段到 100 渐隐归零
+  // ── 原版 com.tuyafeng.support.widget.w 的 g()/f()/e() 逐行复刻 ──────────────────────
+  // 调用点（f8/w0.java）：
+  //   w0.java:391  请求开始 → g(G0.nextInt(35) + 10, true)   强制推进
+  //   w0.java:410  空输入   → f(100)  = g(100, false)
+  //   w0.java:175  请求完成 → f(100)  = g(100, false)
+  // 原版 g(int i10, boolean z10)：i11 = i10 * 10（ProgressBar max 已被 w 构造改成 1000）
+  //   if (f4377e == 0 && i11 < f4374b) { setAlpha(1); setVisibility(0); f4377e = 1; }
+  //   if (f4377e != 0) e(i11, progressBar.getProgress(), z10);
+  // 即：e 的第一个参数是「目标」，第二个是「当前」。
   private animateProgress(value: number, finished: boolean): void {
-    if (!finished) {
-      this.state.progressVisible = true
+    // 原版 f(100) 走 g(100, false)：force=false
+    this.wG(value * 10, !finished)
+  }
+
+  // 当前进度（原版 progressBar.getProgress()，0..1000 域）
+  private progValue: number = 0
+  // 原版 w.f4377e：0 = 未显示，1 = 显示中
+  private progShown: number = 0
+  private progAnimator: AnimatorResult | null = null
+
+  // 原版 w.g(int i10, boolean z10)
+  private wG(progress: number, force: boolean): void {
+    if (this.progShown === 0 && progress < PROG_MAX) {
       this.state.progressAlpha = 1.0
-      this.getUIContext().animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
-        this.state.progressValue = value
-      })
+      this.state.progressVisible = true
+      this.progShown = 1
+    }
+    if (this.progShown !== 0) {
+      this.wE(progress, this.progValue, force)
+    }
+  }
+
+  // 原版 w.e(int i10=目标, int i11=当前, boolean z10=强制)
+  // w.java:141 守卫：只有满足其一才启动新动画（否则保持现状、什么都不做）
+  private wE(target: number, current: number, force: boolean): void {
+    if (target < PROG_MAX && current !== 0 && Math.abs(target - current) < PROG_MAX / 8) {
       return
     }
-    this.getUIContext().animateTo({
-      duration: 200,
-      curve: Curve.EaseOut,
-      onFinish: () => {
-        // w0.e：动画结束隐藏、归零
-        this.state.progressVisible = false
-        this.state.progressValue = 0
+    // w.java:142-147：先取消上一个动画并把 alpha 复位成 1
+    if (this.progAnimator !== null) {
+      this.progAnimator.cancel()
+      this.progAnimator = null
+    }
+    this.state.progressAlpha = 1.0
+    // w.java:149 long jAbs = Math.abs(i11 - i10) → |当前 - 目标|
+    let duration = Math.abs(current - target)
+    const threshold = PROG_THRESHOLD
+    // w.java:150 int i12 = f4375c(800)；按「目标」判定分支
+    if (target < threshold) {
+      if (force || current < target) {
+        // 分支 a（w.java:153-155）：时长 = |800-目标|*30 + |当前-目标|
+        const rush = Math.abs(threshold - target) * 30 + duration
+        const ratio = duration === 0 ? 0 : rush / duration
+        this.startProgAnimator(target, current, rush, PROG_KIND_RUSH, threshold, ratio)
+        return
       }
-    }, () => {
-      this.state.progressValue = 100
-      this.state.progressAlpha = 0
-    })
+      // 分支 b（w.java:157-158）：时长 = |800-当前|*30，二次方插值
+      duration = Math.abs(threshold - current) * 30
+      this.startProgAnimator(target, current, duration, PROG_KIND_QUAD, threshold, 0)
+      return
+    }
+    if (target < PROG_MAX) {
+      // 分支 c（w.java:160-161）：时长 = |当前-目标|，线性插值
+      this.startProgAnimator(target, current, duration, PROG_KIND_LINEAR, threshold, 0)
+      return
+    }
+    // 分支 d（w.java:162-165）：目标已到 max，时长减半，进度冲到 max 且 alpha 1→0
+    this.startProgAnimator(target, current, duration / 2, PROG_KIND_FADE, threshold, 0)
+  }
+
+  // 原版 ValueAnimator.ofFloat(0,1) + DecelerateInterpolator + setDuration
+  private startProgAnimator(target: number, current: number, duration: number, kind: number,
+    threshold: number, ratio: number): void {
+    if (duration <= 0) {
+      this.applyProgFrame(target, current, 1, kind, threshold, ratio)
+      this.finishProgFrame(kind)
+      return
+    }
+    const options: AnimatorOptions = {
+      duration: duration,
+      easing: 'linear',
+      delay: 0,
+      fill: 'forwards',
+      direction: 'normal',
+      iterations: 1,
+      begin: 0,
+      end: 1
+    }
+    const animator = this.getUIContext().createAnimator(options)
+    this.progAnimator = animator
+    animator.onFrame = (progress: number): void => {
+      // 原版 ValueAnimator 的 DecelerateInterpolator 作用在 0→1 上：1-(1-t)²
+      const t = DECELERATE_CURVE.interpolate(progress)
+      this.applyProgFrame(target, current, t, kind, threshold, ratio)
+    }
+    animator.onFinish = (): void => {
+      this.progAnimator = null
+      this.finishProgFrame(kind)
+    }
+    animator.play()
+  }
+
+  // 各分支的 setProgress 公式（w.java 内部类 a/b/c/d 的 onAnimationUpdate 逐行复刻）
+  // 注意原版构造实参顺序：a(i11=当前, ratio, i10=目标)、b(i11=当前)、c(i11=当前, i10=目标)、d(i11=当前)
+  private applyProgFrame(target: number, current: number, f: number, kind: number,
+    threshold: number, ratio: number): void {
+    let next = 0
+    if (kind === PROG_KIND_RUSH) {
+      // a.java:49  current + min(ratio*f, 1)*(target-current) + f*|threshold-target|
+      next = current + Math.min(ratio * f, 1.0) * (target - current) + f * Math.abs(threshold - target)
+    } else if (kind === PROG_KIND_QUAD) {
+      // b.java:71  current + f²*|threshold-current|
+      next = current + f * f * Math.abs(threshold - current)
+    } else if (kind === PROG_KIND_LINEAR) {
+      // c.java:92  current + f*(target-current)
+      next = current + f * (target - current)
+    } else {
+      // d.java:109-110  current + (max-current)*f，同时 setAlpha(1-f)
+      next = current + (PROG_MAX - current) * f
+      this.state.progressAlpha = 1.0 - f
+    }
+    const clamped = Math.max(0, Math.min(PROG_MAX, Math.round(next)))
+    this.progValue = clamped
+    // Progress 组件域是 0..100
+    this.state.progressValue = clamped / 10
+  }
+
+  // e.java:121-123  onAnimationEnd → setVisibility(8) + setProgress(0) + progress = 0
+  private finishProgFrame(kind: number): void {
+    if (kind !== PROG_KIND_FADE) {
+      return
+    }
+    this.state.progressVisible = false
+    this.progValue = 0
+    this.state.progressValue = 0
+    this.progShown = 0
   }
 
   // w0.v3/w3/x3：语言选择（w5.d 单选列表，radio 左 + 文字 14sp，标题 16sp 加粗）
@@ -676,9 +817,20 @@ export struct TranslatePanel {
           bottomRight: this.isLandscape() ? 0 : 18
         })
         .clip(true)
-        .transition(TransitionEffect.OPACITY
-          .combine(TransitionEffect.translate({ y: this.isLandscape() ? 120 : -120 }))
-          .animation({ duration: 160, curve: Curve.EaseIn }))
+        // 原版 f8/c.A1（f8.w0 继承）：AnimatorSet.play(alpha).with(translationY)
+        //   .setDuration(160).setInterpolator(new AccelerateInterpolator())
+        // —— 插值器设在 AnimatorSet 上，对 alpha 和 translationY **两个子动画同时生效**，
+        //    所以 alpha 段也是 Accelerate（不是 Linear、不是 EaseIn）。
+        // 方向：animatorSet 里 z11 = (f5968o0 & 80) == 80（f8/c.java:60），
+        //   k6.Eb 传 gravity = (W0 == 1 ? 48 : 80) | 8388613 →
+        //   布局 1（顶栏）gravity=48 → translateY -120→0；其余 gravity=80 → +120→0。
+        .transition(TransitionEffect.asymmetric(
+          TransitionEffect.OPACITY.animation({ duration: 160, curve: PROG_ACCELERATE_CURVE })
+            .combine(TransitionEffect.translate({ y: this.isLandscape() ? 120 : -120 })
+              .animation({ duration: 160, curve: PROG_ACCELERATE_CURVE })),
+          TransitionEffect.OPACITY.animation({ duration: 160, curve: PROG_ACCELERATE_CURVE })
+            .combine(TransitionEffect.translate({ y: this.isLandscape() ? 120 : -120 })
+              .animation({ duration: 160, curve: PROG_ACCELERATE_CURVE }))))
       }
       .width('100%')
       .height('100%')

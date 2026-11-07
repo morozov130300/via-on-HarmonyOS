@@ -1,6 +1,7 @@
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 import { i18n } from '@kit.LocalizationKit'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
 
@@ -31,6 +32,8 @@ function dotColorOf(argb: number, isDark: boolean): string {
 export struct SettingsReaderPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
 
   private isDarkMode(): boolean {
     try {
@@ -99,7 +102,9 @@ export struct SettingsReaderPage {
                     color: this.settings.readerTheme === index
                       ? $r('app.color.accent') : $r('app.color.dialog_border')
                   })
-                  .animation({ duration: 150 })
+                  // 原版 g8/j.java 无任何动画：点击后 i() 只调 y.O(view, k(context, tag, true/false))
+                  // 直接换 GradientDrawable（描边色切换），没有 animate()/setDuration()/Interpolator。
+                  // 故此处不能加 .animation(...)——原先的 duration:150 属移植侧自造，已移除。
                   .onClick(() => {
                     this.settings.setReaderTheme(index)
                   })
@@ -167,6 +172,15 @@ export struct SettingsReaderPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

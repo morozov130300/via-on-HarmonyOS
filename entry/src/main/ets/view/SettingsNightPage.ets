@@ -4,6 +4,7 @@ import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { dialogTransition } from '../common/Transitions'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { buildNavSlide } from './PageTransitions'
 
 // 原版夜间模式设置页（hb/p4）：
 // 行1「网页蒙版滤镜」→ 弹窗（预览文案 + 0~154 滑杆，抬起时保存）
@@ -12,6 +13,8 @@ import { computeDialogWidthVp } from '../components/ViaDialogCard'
 export struct SettingsNightPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local filterDraft: number = 0
   private filterDialogId: number = -1
 
@@ -117,6 +120,15 @@ export struct SettingsNightPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

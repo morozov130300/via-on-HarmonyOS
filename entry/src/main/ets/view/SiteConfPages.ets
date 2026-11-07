@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { buildNavSlide } from './PageTransitions'
 import { SiteSetting, SITE_MODE_DEFAULT, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
 import { dialogTransition } from '../common/Transitions'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -48,6 +49,8 @@ function sortHosts(hosts: string[]): void {
 export struct SiteConfDetailPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local host: string = ''
   // 本地编辑副本（原版 ba.a w0），写穿到 siteSettings；空配置随删（u4.X3 → ba/b.r）
   @Local confEnabled: boolean = false
@@ -244,6 +247,15 @@ export struct SiteConfDetailPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.readParams(ctx)
@@ -930,6 +942,8 @@ export struct SiteConfDetailPage {
 export struct DesktopModePage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local addDialogId: number = -1
   @Local addHostInput: string = ''
   @Local siteDialogId: number = -1
@@ -996,6 +1010,15 @@ export struct DesktopModePage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
@@ -1312,6 +1335,8 @@ export struct DesktopModePage {
 export struct UaExceptionPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local addDialogId: number = -1
   @Local addHostInput: string = ''
   @Local pickDialogId: number = -1
@@ -1413,6 +1438,15 @@ export struct UaExceptionPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
@@ -1819,6 +1853,8 @@ export struct UaExceptionPage {
 export struct ImageSettingPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local addDialogId: number = -1
   @Local addHostInput: string = ''
   @Local siteDialogId: number = -1
@@ -1931,6 +1967,15 @@ export struct ImageSettingPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
@@ -2270,6 +2315,8 @@ export struct ImageSettingPage {
 export struct JavaScriptSettingPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local addDialogId: number = -1
   @Local addHostInput: string = ''
   @Local siteDialogId: number = -1
@@ -2385,6 +2432,15 @@ export struct JavaScriptSettingPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

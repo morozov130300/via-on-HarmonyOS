@@ -6,6 +6,7 @@ import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { buildNavSlide } from './PageTransitions'
 
 class SuggestItem {
   label: string = ''
@@ -23,6 +24,8 @@ class SuggestItem {
 export struct SettingsSearchPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
 
   // 原版 hb/b6.n3：多选项按序 [收藏, 书签, 标签页, 历史, 搜索引擎, 搜索历史]，位 = 1<<下标
   // 搜索建议源位表（la/a.a + ka/g.l）：收藏1/书签2/标签页4/历史8/搜索引擎16/搜索历史32
@@ -85,6 +88,15 @@ export struct SettingsSearchPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

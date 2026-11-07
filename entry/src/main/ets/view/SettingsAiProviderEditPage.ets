@@ -3,6 +3,7 @@ import { CopilotStore, AiBackend, presetBackend, getKeyLink } from '../common/Co
 import { AiEngine, AiChatResult, ChatMsgIn } from '../common/AiEngine'
 import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 import { ViaIcon } from '../components/ViaIcon'
 
 // 原版 a9/r0：AI 服务商编辑页
@@ -14,6 +15,8 @@ export struct SettingsAiProviderEditPage {
   private store: CopilotStore = CopilotStore.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local editing: AiBackend | null = null
   @Local nameDraft: string = ''
   @Local addrDraft: string = ''
@@ -391,6 +394,15 @@ export struct SettingsAiProviderEditPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       const param: Object | undefined = ctx.pathInfo.param === undefined ? undefined : ctx.pathInfo.param as Object

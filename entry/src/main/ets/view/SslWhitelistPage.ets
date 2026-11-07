@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit'
 import { SslWhitelistStore, SSL_BIT_UNTRUSTED, SSL_BIT_DATE_INVALID, SSL_BIT_EXPIRED, SSL_BIT_ID_MISMATCH,
   SSL_BIT_NOT_YET_VALID, SSL_BIT_INVALID } from '../common/SslWhitelist'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
@@ -43,6 +44,8 @@ export class SslRow {
 @ComponentV2
 export struct SslWhitelistPage {
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   private store: SslWhitelistStore = SslWhitelistStore.getInstance()
   // 帮助弹窗（w5.k.d0(yv).I(n_).V(ok).f0()）
   @Local helpDialogId: number = -1
@@ -108,6 +111,15 @@ export struct SslWhitelistPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

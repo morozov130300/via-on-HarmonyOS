@@ -10,6 +10,7 @@ import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { buildNavSlide } from './PageTransitions'
 
 // 原版 x7/j 数组 j + strings o4/i2/i1/i3/i0（sa/d1.java:315）
 const SCRIPT_UPDATE_DAYS: number[] = [0, 1, 3, 7, 15]
@@ -20,6 +21,8 @@ const SCRIPT_INTERVAL_LABELS: string[] = ['从不', '每天', '每 3 天', '每�
 export struct UserScriptsPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local updating: boolean = false
   @Local editing: UserScriptRec | null = null
   @Local adding: boolean = false
@@ -199,6 +202,15 @@ export struct UserScriptsPage {
         })
       }
     }
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

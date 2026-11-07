@@ -1,3 +1,5 @@
+import { buildNavSlide } from './PageTransitions'
+
 class LicenseEntry {
   name: string
   license: string
@@ -7,7 +9,6 @@ class LicenseEntry {
     this.license = license
   }
 }
-
 const LICENSES: LicenseEntry[] = [
   new LicenseEntry('Dagger', 'Apache License 2.0'),
   new LicenseEntry('OkHttp', 'Apache License 2.0'),
@@ -22,6 +23,9 @@ const LICENSES: LicenseEntry[] = [
 
 @ComponentV2
 export struct LicensePage {
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
+
   build() {
     NavDestination() {
       Scroll() {
@@ -50,6 +54,15 @@ export struct LicensePage {
       .align(Alignment.Top)
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .title('开源许可协议')
   }
 }

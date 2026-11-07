@@ -1,4 +1,5 @@
-import { display } from '@kit.ArkUI'
+import { display, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
+import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 
 // 原版 mark/via/common/widget/k1：朗读悬浮控件
 // 贴左边缘 accent 圆角胶囊 [0,18,18,0]，三图标 36dp，
@@ -9,6 +10,14 @@ let lastFloatY: number = -1
 const DRAG_BOUND_VP: number = 88
 const WIDGET_HEIGHT_VP: number = 48
 
+// k1.setPlaying（k1.java:191-219）：
+//   转为播放且 f9675n == null →
+//     ObjectAnimator.ofFloat(iv, "rotation", iv.getRotation(), iv.getRotation() + 360.0f)
+//     .setDuration(3000L) .setRepeatCount(-1) .setInterpolator(new LinearInterpolator()) .start()
+//   转为停止 → 若 isStarted() 则 cancel()，并把 f9675n 置 null
+// 即：线性、3000ms、无限循环、每次从当前角度再转 360°。
+const SPIN_DURATION: number = 3000
+
 @ComponentV2
 export struct ReadAloudFloat {
   @Param playing: boolean = false
@@ -18,7 +27,8 @@ export struct ReadAloudFloat {
   @Local posY: number = -1
   private screenH: number = 0
   private dragStartY: number = 0
-  private rotateRunning: boolean = false
+  // 原版 k1.f9675n
+  private spinAnimator: AnimatorResult | null = null
 
   aboutToAppear(): void {
     // 原版 xb：初次显示 translationY = 父高/2；记录值跨实例保留（v5.b "y"）
@@ -33,21 +43,64 @@ export struct ReadAloudFloat {
     } else {
       this.posY = this.screenH / 2
     }
+    this.syncSpin(this.playing)
+  }
+
+  aboutToDisappear(): void {
+    // 原版控件销毁：动画随 View detach，这里显式取消
+    this.stopSpin()
+  }
+
+  // 原版 k1.setPlaying(boolean)：状态变化时启停旋转动画
+  @Monitor('playing')
+  onPlayingChanged(): void {
+    this.syncSpin(this.playing)
+  }
+
+  private syncSpin(playing: boolean): void {
+    if (playing) {
+      this.startSpin()
+    } else {
+      this.stopSpin()
+    }
+  }
+
+  // 原版 setPlaying(true) 分支：f9675n == null 才新建
+  private startSpin(): void {
+    if (this.spinAnimator !== null) {
+      return
+    }
+    const from = this.spinAngle
+    const options: AnimatorOptions = {
+      duration: SPIN_DURATION,
+      easing: 'linear',
+      delay: 0,
+      fill: 'forwards',
+      direction: 'normal',
+      iterations: -1,
+      begin: from,
+      end: from + 360
+    }
+    const animator = this.getUIContext().createAnimator(options)
+    this.spinAnimator = animator
+    animator.onFrame = (progress: number): void => {
+      this.spinAngle = progress
+    }
+    animator.play()
+  }
+
+  // 原版 setPlaying(false) 分支：isStarted() 则 cancel()，置 null
+  private stopSpin(): void {
+    if (this.spinAnimator === null) {
+      return
+    }
+    this.spinAnimator.cancel()
+    this.spinAnimator = null
   }
 
   private clampY(y: number): number {
     const max = this.screenH - WIDGET_HEIGHT_VP - DRAG_BOUND_VP
     return Math.max(DRAG_BOUND_VP, Math.min(y, max))
-  }
-
-  // 原版 k1.setPlaying：播放中左图标 3000ms 线性无限旋转（暂停时角度回 0）
-  private ensureSpin(): void {
-    if (!this.rotateRunning) {
-      this.rotateRunning = true
-      this.getUIContext().animateTo({ duration: 3000, curve: Curve.Linear, iterations: -1 }, () => {
-        this.spinAngle = this.spinAngle + 360
-      })
-    }
   }
 
   build() {
@@ -60,7 +113,6 @@ export struct ReadAloudFloat {
         .objectFit(ImageFit.Contain)
         .rotate({ angle: this.playing ? this.spinAngle : 0 })
         .onClick(() => {
-          this.ensureSpin()
           this.onAction(4)
         })
       // 原版 f9671j：播放/暂停（setPlaying 切 cu/cw）
@@ -70,7 +122,6 @@ export struct ReadAloudFloat {
         .margin({ top: 7, bottom: 7 })
         .objectFit(ImageFit.Contain)
         .onClick(() => {
-          this.ensureSpin()
           this.onAction(this.playing ? 2 : 1)
         })
       // 原版 f9672k：停止（播放中隐藏，desc od=停止朗读）
@@ -99,6 +150,9 @@ export struct ReadAloudFloat {
           lastFloatY = this.posY
         })
     )
-    .transition(TransitionEffect.OPACITY.animation({ duration: 100 }))
+    // 原版 k6.xb（c8/k6.java:8900-8913）：
+    //   setAlpha(0.0f) → addView → translateY(父高/2 或缓存值) → x.r.c(k1).a(1.0f).d(100L).f()
+    //   x.r.c 未调 .e() → ViewPropertyAnimator 默认 AccelerateDecelerate，100ms
+    .transition(TransitionEffect.OPACITY.animation({ duration: 100, curve: ACCELERATE_DECELERATE_CURVE }))
   }
 }

@@ -4,6 +4,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { FontEntry, FontStore } from '../common/FontStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 import { SettingRadioRow } from '../components/SettingRows'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
@@ -17,6 +18,8 @@ export struct FontPage {
   private settings: AppSettings = AppSettings.getInstance()
   private store: FontStore = FontStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local entries: FontEntry[] = []
   @Local renaming: FontEntry | null = null
 
@@ -164,6 +167,15 @@ export struct FontPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

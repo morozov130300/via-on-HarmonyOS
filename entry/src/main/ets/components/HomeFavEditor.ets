@@ -5,6 +5,7 @@ import { BrowserDb } from '../common/Database'
 import { isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { AppSettings } from '../common/Settings'
 import { HOME_ADV_AREAS } from '../common/HomeStyle'
+import { BEZIER_0202_CURVE } from '../common/Transitions'
 
 // 原版 qa.e1 底部弹层：双页 ViewPager2「管理收藏 / 新建」，高度按屏高动态（qa/e1.java:178-198）
 @ComponentV2
@@ -22,6 +23,10 @@ export struct HomeFavEditor {
   @Local newIcon: string = ''
   @Local nameError: boolean = false
   @Local urlError: boolean = false
+  // 原版 g6.y.X(view) 抖动：translationX 0→24dp→0，280ms，repeatCount=2、repeatMode=REVERSE、
+  // 插值器 x8.h.b() = PathInterpolator(0.2,0.2,0.8,0.8)（g6/y.java 492-501 行）
+  @Local nameShake: number = 0
+  @Local urlShake: number = 0
   @Local editingId: number = -1
   private db: BrowserDb = BrowserDb.getInstance()
   private settings: AppSettings = AppSettings.getInstance()
@@ -207,6 +212,7 @@ export struct HomeFavEditor {
               width: 1,
               color: this.nameError ? $r('app.color.accent') : $r('app.color.divider')
             })
+            .translate({ x: this.nameShake })
             .onChange((value: string) => {
               this.newName = value
               this.nameError = false
@@ -218,6 +224,7 @@ export struct HomeFavEditor {
               width: 1,
               color: this.urlError ? $r('app.color.accent') : $r('app.color.divider')
             })
+            .translate({ x: this.urlShake })
             .onChange((value: string) => {
               this.newUrl = value
               this.urlError = false
@@ -310,16 +317,18 @@ export struct HomeFavEditor {
     this.deletedTitle = ''
   }
 
-  // 空值校验失败置 error（原版 g6.n.i 抖动提示）
+  // 空值校验失败置 error + 抖动（原版 qa.o：g6.y.X(输入框) + g6.n.i(输入框)）
   private save(): void {
     const name = this.newName.trim()
     const url = this.newUrl.trim()
     if (name === '') {
       this.nameError = true
+      this.shakeInput(true)
       return
     }
     if (!isUrlLike(url)) {
       this.urlError = true
+      this.shakeInput(false)
       return
     }
     const target = normalizeUrl(url)
@@ -345,6 +354,61 @@ export struct HomeFavEditor {
     this.newIcon = ''
     this.nameError = false
     this.urlError = false
+  }
+
+  // 原版 g6.y.X(view)：ObjectAnimator.ofFloat(view, "translationX", 0f, 24dp, 0f)
+  //   .setRepeatCount(2).setRepeatMode(1=REVERSE).setDuration(280L).setInterpolator(x8.h.b())
+  // 鸿蒙用 keyframeAnimateTo 平替，三关键帧（0→24dp 与 24dp→0 各 140ms），
+  // 关键帧不支持 repeatMode 反转，这里按原版 2 次循环展开为 4 段（正向-反向-正向-反向）。
+  private shakeInput(isName: boolean): void {
+    const dx = 24
+    const kf: KeyframeState[] = [
+      {
+        duration: 140,
+        curve: BEZIER_0202_CURVE,
+        event: () => {
+          if (isName) {
+            this.nameShake = dx
+          } else {
+            this.urlShake = dx
+          }
+        }
+      },
+      {
+        duration: 140,
+        curve: BEZIER_0202_CURVE,
+        event: () => {
+          if (isName) {
+            this.nameShake = 0
+          } else {
+            this.urlShake = 0
+          }
+        }
+      },
+      {
+        duration: 140,
+        curve: BEZIER_0202_CURVE,
+        event: () => {
+          if (isName) {
+            this.nameShake = dx
+          } else {
+            this.urlShake = dx
+          }
+        }
+      },
+      {
+        duration: 140,
+        curve: BEZIER_0202_CURVE,
+        event: () => {
+          if (isName) {
+            this.nameShake = 0
+          } else {
+            this.urlShake = 0
+          }
+        }
+      }
+    ]
+    this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, kf)
   }
 
   // 原版 x5.e：相册选图，URI 直接作为图标（与 SettingsCustomPage 同款）

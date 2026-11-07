@@ -4,6 +4,7 @@ import { AppSettings } from '../common/Settings'
 import { RuleSubManager } from '../common/RuleSubscriptions'
 import { AdBlocker } from '../common/AdBlock'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { buildNavSlide } from './PageTransitions'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
@@ -45,6 +46,8 @@ export function relativeUpdateTime(ts: number): string {
 export struct SettingsRuleSubPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   @Local updating: boolean = false
   @Local newUrl: string = 'https://'
   @Local editUrl: string = ''
@@ -153,6 +156,15 @@ export struct SettingsRuleSubPage {
     }
     .backgroundColor($r('app.color.page_bg'))
     .hideTitleBar(true)
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()

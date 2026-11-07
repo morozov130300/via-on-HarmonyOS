@@ -6,6 +6,7 @@ import {
 } from '../common/SearchEngines'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { i18n } from '@kit.LocalizationKit'
+import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 
 // 原版 mark/via/common/widget/m（k6.n9 构建传入 n9、k4 主题着色、k6.b 点击回调）：
 // 地址栏下方搜索工具栏，高 40dp 的横向列表；chips 与尾部「+」钮同列表滚动（m.h 把 footer
@@ -191,8 +192,10 @@ export struct SearchToolbar {
             if (event.type === TouchType.Down) {
               this.footerPressed = true
             } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              // 原版 ripple exitFadeDuration=300ms
-              this.getUIContext().animateTo({ duration: 300 }, (): void => {
+              // 原版 ripple r/m/o.xml：exitFadeDuration=300ms。
+              // framework RippleForeground 的退出淡出用 ObjectAnimator 未 setInterpolator
+              // → 默认 AccelerateDecelerateInterpolator，故显式补 curve。
+              this.getUIContext().animateTo({ duration: 300, curve: ACCELERATE_DECELERATE_CURVE }, (): void => {
                 this.footerPressed = false
               })
             }

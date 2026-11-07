@@ -16,6 +16,8 @@ import { computeDialogWidthVp, dialogTransition } from '../components/ViaDialogC
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
 import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
+import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
+import { buildNavSlide } from './PageTransitions'
 
 const KIND_ACTIVE: string = 'active'
 const KIND_SEPARATOR_TOP: string = 'sep_top'
@@ -26,6 +28,13 @@ const KIND_POOL: string = 'pool'
 const SEP_HEIGHT: number = 54
 // 单元格高度：15dp padding + 图标(24) + 2dp + 文字(2×15) + 15dp ≈ 76dp（i8/o.d 数值）
 const CELL_HEIGHT: number = 76
+// 原版 i8/s.A3() → adapter.p(...) → notifyItemMoved → DefaultItemAnimator.X()（move 分支）
+//   X() 用 setDuration(n())，n() 返回 RecyclerView.l.f1246e，初值 250（RecyclerView.java:1366）
+//   插值器：e.java:536-540 e0() 里 f1391s = new ValueAnimator().getInterpolator()
+//   = ValueAnimator.sDefaultInterpolator = AccelerateDecelerateInterpolator
+// （四个 getter 别再混：l()=120 add / m()=250 change / n()=250 move / o()=120 remove）
+// 故此处为 250ms + accelerate_decelerate，不是移植侧原先自造的 220ms + EaseOut。
+const MENU_MOVE_DURATION: number = 250
 
 class FlatMenuItem {
   kind: string
@@ -41,6 +50,8 @@ class FlatMenuItem {
 export struct SettingsMenuPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
+  @Local slideOffset: string = '0'
   // 单一扁平数组：sep_top → active… → sep_bottom → pool…（与 i8/s.y3 同构）
   @Local items: FlatMenuItem[] = []
   // 两条全宽提示行都依赖 irregularIndexes
@@ -156,13 +167,17 @@ export struct SettingsMenuPage {
     const end = range[1]
     if (item.kind === KIND_ACTIVE) {
       // 移除后插到 sep_bottom 之后 = 池区首位（i8/s.A3: f7087v0.add(0, m)）
-      this.getUIContext()?.animateTo({ duration: 220, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({
+        duration: MENU_MOVE_DURATION, curve: ACCELERATE_DECELERATE_CURVE
+      }, () => {
         const tmp = this.items.splice(index, 1)[0]
         this.items.splice(end, 0, tmp)
       })
     } else {
       // 移除后插到 sep_bottom 之前 = 菜单区末尾（i8/s.A3: f7086u0.add(m)）
-      this.getUIContext()?.animateTo({ duration: 220, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({
+        duration: MENU_MOVE_DURATION, curve: ACCELERATE_DECELERATE_CURVE
+      }, () => {
         const tmp = this.items.splice(index, 1)[0]
         this.items.splice(end, 0, tmp)
       })
@@ -429,6 +444,15 @@ export struct SettingsMenuPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .translate({ x: this.slideOffset })
+    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
+    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
+    .customTransition((operation: NavigationOperation, isEnter: boolean):
+      Array<NavDestinationTransition> | undefined => {
+      return buildNavSlide(operation, isEnter, (value: string): void => {
+        this.slideOffset = value
+      })
+    })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
       this.bindAppBar()
