@@ -1,16 +1,15 @@
-﻿import { BusinessError } from '@kit.BasicServicesKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo, picker } from '@kit.CoreFileKit'
 import { webview } from '@kit.ArkWeb'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { dialogTransition } from '../common/Transitions'
-import { display } from '@kit.ArkUI'
 import { common, Want } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
 import { BackupManager } from '../common/Backup'
 import { uaByKey } from '../common/UaTable'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { ViaDialogCard } from '../components/ViaDialogCard'
+import { ViaDialogCard, computeDialogWidthVp } from '../components/ViaDialogCard'
 
 @ComponentV2
 export struct SettingsGeneralPage {
@@ -561,25 +560,10 @@ export struct SettingsGeneralPage {
   private passwordInput: string = ''
   private passwordDialogId: number = -1
 
-  // 原版 w5.k.f0()：弹窗宽 = min(屏宽,屏高) − 72dp；大屏（g6.y.E）或横屏时上限 300dp
+  // 原版 w5.k.f0()：弹窗宽 = min(窗口宽,窗口高) − 72dp；大屏或横屏时上限 300dp
+  // （f13288c/f13289d=Activity content view 宽高=应用窗口，分屏时取窗口而非物理屏）
   private dialogWidthVp(): number {
-    try {
-      const d = display.getDefaultDisplaySync()
-      const density = d.densityPixels
-      if (density <= 0) {
-        return 288
-      }
-      const wVp = d.width / density
-      const hVp = d.height / density
-      let width = Math.min(wVp, hVp) - 72
-      const isLargeScreen = wVp >= 600
-      if ((isLargeScreen || wVp > hVp) && width > 300) {
-        width = 300
-      }
-      return width
-    } catch (error) {
-      return 288
-    }
+    return computeDialogWidthVp()
   }
 
   private exportData(): void {
