@@ -1435,31 +1435,29 @@ struct Index {
       }
 
       if (this.showSearch) {
-        // 原版 tb/k0（UrlInputFragment）：整屏压暗 + 搜索面板，顶栏贴屏幕顶部（布局0/1）
-        // 或贴屏幕底部（布局2/3，k6.oa/C3 的 uiflags bit0 控制 ALIGN_PARENT_TOP/BOTTOM）；
-        // Y2() 再对顶栏应用窗口 insets padding（贴顶避状态栏、贴底避导航栏）。
-        // 用整屏 Column 的 justifyContent 承载，避免根 Stack 默认垂直居中把面板放到屏幕中部。
+        // 原版 tb/k0（UrlInputFragment）：Fragment 根 RelativeLayout 本身就是压暗层
+        // （color a8 = #40808080，I3:783 g6.g().h(...).i(0x70808080)），点击空白处关闭。
+        // 输入行 f12383p0 用 ALIGN_PARENT_TOP/BOTTOM 贴顶/贴底（C3 uiflags bit1，k6.oa z10），
+        // 全宽 edge-to-edge；建议列表 f12391x0 是独立兄弟视图（BELOW/ABOVE），不是合并的卡片。
         Column()
           .width('100%')
           .height('100%')
-          // 原版压暗层 0x70808080（y7.java）
-          .backgroundColor('#70808080')
+          // 原版压暗层正常态 color a8 = #40808080（0x70808080 仅为 focused 态）
+          .backgroundColor('#40808080')
           .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
           .onClick(() => {
             this.showSearch = false
           })
         Column() {
-          Row() {
-            SearchOverlay({
-              initialText: this.searchInitialText,
-              onClose: () => {
-                this.showSearch = false
-              }
-            })
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-          .padding({ left: 8, right: 8 })
+          SearchOverlay({
+            initialText: this.searchInitialText,
+            // 布局 2/3 输入条贴底（k6.oa：z10 = (W0==2||W0==3)?false:true）
+            barAtTop: this.effectiveLayout() !== LAYOUT_TOOLBAR_BOTTOM
+              && this.effectiveLayout() !== LAYOUT_DOUBLE,
+            onClose: () => {
+              this.showSearch = false
+            }
+          })
         }
         .width('100%')
         .height('100%')
@@ -2249,12 +2247,12 @@ struct DownloadConfirmOverlay {
         }
         .width('100%')
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .backgroundColor('rgba(0,0,0,0.5)')
@@ -2366,12 +2364,12 @@ struct SavePageDialog {
         }
         .width('100%')
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .backgroundColor('rgba(0,0,0,0.5)')

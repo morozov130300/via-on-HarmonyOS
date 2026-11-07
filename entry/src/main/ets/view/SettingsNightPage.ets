@@ -37,10 +37,12 @@ export struct SettingsNightPage {
   private openFilterDialog(): void {
     this.filterDraft = this.settings.nightFilter
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.FilterDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center
     }).then((dialogId: number) => {
@@ -158,7 +160,7 @@ export struct SettingsNightPage {
           }
         })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .constraintSize({ maxHeight: 320 })
     .padding({ left: 24, right: 24, top: 16, bottom: 16 })
     .backgroundColor($r('app.color.menu_bg'))

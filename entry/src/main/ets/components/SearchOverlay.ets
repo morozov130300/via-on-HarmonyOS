@@ -15,9 +15,20 @@ import {
   isUrlLike,
   normalizeUrl
 } from '../common/SearchEngines'
-import { AppIcon } from './AppIcon'
 import { ViaIcon } from './ViaIcon'
 import { dialogTransition } from '../common/Transitions'
+
+// 原版 tb/k0.C1：输入行高 = 图标槽 = 建议行图标 = dimen bi(48dp)
+const URL_BAR_HEIGHT: number = 48
+// 原版 dimen bh(13dp)：ImageView paddingRelative(13,13,13,13)，实图 48-2*13 = 22dp
+const URL_ICON_PADDING: number = 13
+const URL_ICON_SIZE: number = 22
+// 原版 dimen ae(18dp)：输入条/建议列表外侧圆角
+const URL_PANEL_RADIUS: number = 18
+// 原版 k0.C1：RecyclerView 远离输入条一侧留 72dp（.r(1,0,zB?0:72,0,zB?72:0)）
+const URL_FAR_MARGIN: number = 72
+// 原版 a1.xml：paddingTop/Bottom 4dp + 图标 48dp = 56dp 恒定行高
+const URL_ROW_HEIGHT: number = 56
 
 // 原版固定 5 条（pa/c：ma.e.c(str,5,i10,i11)）
 const SUGGEST_LIMIT: number = 5
@@ -342,13 +353,17 @@ class LinkItem {
 export struct SearchOverlay {
   @Event onClose: () => void = () => {}
   @Param initialText: string = ''
+  // 原版 C3 uiflags bit1（k6.oa z10）：布局0/1 输入条贴顶、2/3 贴底
+  @Param barAtTop: boolean = true
   @Local inputText: string = ''
   @Local rows: SuggestRow[] = []
+  @Local showExpandEditor: boolean = false
+  @Local expandDraft: string = ''
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
-  private insets: UiInsets = UiInsets.getInstance()
   private textController: TextInputController = new TextInputController()
+  private engineDialogId: number = -1
   private timerId: number = -1
   private currentRequest: http.HttpRequest | null = null
   // 原版 ka/g：LRU 建议缓存，键 "source:query"
@@ -397,112 +412,193 @@ export struct SearchOverlay {
   }
 
   build() {
-    // 原版 bb/i（RecordContainerFragment）：搜索为地址栏下方吸附的浮动圆角卡（非全屏黑面板），
-    // 卡 = 输入行（引擎选择/输入/清空/扫码/提交）+ 建议列表，圆角 12、背景 menu_bg、宽度收窄
+    // 原版 tb/k0.C1（UrlInputFragment）：整屏 RelativeLayout 压暗，三个独立兄弟视图——
+    // f12390w0 输入条底色 / f12391x0 建议 RecyclerView / f12383p0 输入行，全宽 edge-to-edge，
+    // 贴顶（布局0/1）或贴底（布局2/3），绝不是包在一起的居中浮卡。
+    // 这里只渲染「输入行 + 建议列表」两个兄弟视图；压暗层与贴顶/底定位由 Index.ets 承载。
+    // 原版 k0.J3 → tb/w0：展开编辑器占满整个面板
+    if (this.showExpandEditor) {
+      this.ExpandEditor()
+    } else {
+      this.InputPanel()
+    }
+  }
+
+  @Builder
+  InputPanel() {
+    // 原版 k0.C1：贴顶（bit1=1）时输入条在上、建议列表 BELOW；
+    // 贴底时输入条在下、建议列表 ABOVE。两个视图各自独立底色，绝不合并成一张卡。
     Column() {
-      Row({ space: 10 }) {
-        // 原版顶栏第一个按钮：搜索引擎选择（弹引擎单选，O3）
-        Text(this.engineName())
-          .fontSize(14)
-          .fontColor($r('app.color.fg'))
-          .constraintSize({ maxWidth: 72 })
-          .maxLines(1)
-          .bindMenu((): void => {
-            this.EngineMenu()
+      if (this.barAtTop) {
+        this.InputBar()
+        this.SuggestionList()
+      } else {
+        this.SuggestionList()
+        this.InputBar()
+      }
+    }
+    .width('100%')
+    .transition(dialogTransition())
+  }
+
+  // 原版 f12391x0（RecyclerView）：全宽 wrap 高、远离输入条一侧留 72dp、
+  // 外侧两角 18dp 圆角、底色 ?attr/a2、滚动条 3dp/#80808080
+  @Builder
+  SuggestionList() {
+    Scroll() {
+      Column() {
+        ForEach(this.rows, (row: SuggestRow, index: number) => {
+          this.EntryRow(row, () => {
+            this.commitRow(row)
           })
-        TextInput({ text: this.inputText, placeholder: $r('app.string.search'), controller: this.textController })
-          .layoutWeight(1)
-          .height(40)
-          .fontSize(16)
-          .backgroundColor(Color.Transparent)
-          .fontColor($r('app.color.fg'))
-          .placeholderColor($r('app.color.fg_secondary'))
-          .caretColor($r('app.color.accent'))
-          .enterKeyType(EnterKeyType.Search)
-          .maxLength(Number.MAX_SAFE_INTEGER)
-          .defaultFocus(true)
-          .selectAll(true)
-          .id('search_overlay_input')
-          .onAppear(() => {
-            this.getUIContext().getFocusController().requestFocus('search_overlay_input')
-          })
-          .onChange((value: string) => {
-            this.inputText = value
-            this.fetchSuggestions(value)
-          })
-          .onSubmit((enterKey: EnterKeyType) => {
-            this.commit(this.inputText)
-          })
-        // 原版顶栏：清空（非空才显示）
-        if (this.inputText.trim() !== '') {
-          AppIcon({ icon: $r('sys.symbol.xmark'), iconSize: 20, iconColor: $r('app.color.fg_secondary') })
-            .onClick(() => {
-              this.inputText = ''
-              this.rows = []
-              this.fetchSuggestions('')
-            })
+        }, (row: SuggestRow, index: number) => `${row.type}_${row.text}_${index}`)
+        // 原版 la/b：空输入且 bit32 时用 type32 普通建议行展示搜索历史
+        if (this.inputText.length === 0 && (this.settings.searchSuggestion & 32) !== 0) {
+          ForEach(this.settings.searchHistory, (query: string, index: number) => {
+            if (index < SUGGEST_LIMIT) {
+              this.EntryRow(new SuggestRow(32, query), () => {
+                this.commit(query)
+              })
+            }
+          }, (query: string, index: number) => `hist_${query}_${index}`)
         }
-        // 原版顶栏：扫码（J3 打开扫码并回填）
-        ViaIcon({ icon: $r('app.media.via_ic_addr_scan'), iconSize: 22, iconColor: $r('app.color.fg_secondary') })
-          .onClick(() => {
-            this.startScan()
-          })
-        // 原版顶栏：搜索提交
-        AppIcon({ icon: $r('sys.symbol.magnifyingglass'), iconSize: 20, iconColor: $r('app.color.fg') })
-          .onClick(() => {
-            this.commit(this.inputText)
-          })
       }
       .width('100%')
-      .height(48)
-      .padding({ left: 16, right: 16 })
-      .alignItems(VerticalAlign.Center)
-
-      Scroll() {
-        Column() {
-          ForEach(this.rows, (row: SuggestRow, index: number) => {
-            this.EntryRow(row, () => {
-              this.commitRow(row)
-            })
-          }, (row: SuggestRow, index: number) => `${row.type}_${row.text}_${index}`)
-          // 原版 ka/g.l：搜索历史(bit32)仅在空输入且有历史时展示
-          if (this.inputText.trim() === '' && (this.settings.searchSuggestion & 32) !== 0
-            && this.settings.searchHistory.length > 0) {
-            Row() {
-              Text($r('app.string.search_history'))
-                .fontSize(13)
-                .fontColor($r('app.color.fg_secondary'))
-              Blank()
-              Text($r('app.string.clear_search_history'))
-                .fontSize(13)
-                .fontColor($r('app.color.fg_secondary'))
-                .onClick(() => {
-                  this.settings.clearSearchHistory()
-                })
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16, top: 14, bottom: 6 })
-
-            ForEach(this.settings.searchHistory, (query: string, index: number) => {
-              if (index < SUGGEST_LIMIT) {
-                this.EntryRow(new SuggestRow(0, query), () => {
-                  this.commit(query)
-                })
-              }
-            }, (query: string, index: number) => `${query}_${index}`)
-          }
-        }
-        .width('100%')
-      }
-      .constraintSize({ maxHeight: '55%' })
-      .align(Alignment.Top)
     }
-    .width('92%')
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(12)
+    .width('100%')
+    .scrollBar(BarState.On)
+    .scrollBarColor($r('app.color.url_input_scrollbar'))
+    .scrollBarWidth(3)
+    .align(Alignment.Top)
+    .backgroundColor($r('app.color.url_input_panel_bg'))
+    .borderRadius({ bottomLeft: this.barAtTop ? URL_PANEL_RADIUS : 0,
+      bottomRight: this.barAtTop ? URL_PANEL_RADIUS : 0,
+      topLeft: this.barAtTop ? 0 : URL_PANEL_RADIUS,
+      topRight: this.barAtTop ? 0 : URL_PANEL_RADIUS })
     .clip(true)
-    .shadow({ radius: 24, color: 'rgba(0,0,0,0.35)', offsetY: 4 })
-    .transition(dialogTransition())
+    .margin(this.barAtTop ? { bottom: URL_FAR_MARGIN } : { top: URL_FAR_MARGIN })
+    .visibility(this.rows.length > 0 || (this.inputText.length === 0
+      && (this.settings.searchSuggestion & 32) !== 0 && this.settings.searchHistory.length > 0)
+      ? Visibility.Visible : Visibility.None)
+  }
+
+  // 原版 f12383p0（输入行 LinearLayout）：全宽 48dp，无行级 padding，
+  // 子控件顺序 = 引擎(de) → 引擎名 chip → 输入框 → 清空(b8) → 展开(bl) → 前往(a3)
+  @Builder
+  InputBar() {
+    Row() {
+      // 1) 引擎选择（f12387t0）：drawable de / ic_search，点弹引擎单选
+      this.IconSlot($r('app.media.via_ic_url_engine'), $r('app.string.search_engine'), () => {
+        this.openEngineDialog()
+      })
+      // 2) 引擎名 chip（f12388u0）：仅非默认引擎显示，11sp + 1dp 描边 + 4dp 圆角
+      if (this.engineName() !== this.builtinEngines()[0].name) {
+        Text(this.engineName())
+          .fontSize(11)
+          .fontColor($r('app.color.fg'))
+          .maxLines(1)
+          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          .margin({ left: 4, right: 4 })
+          .border({ width: 1, color: $r('app.color.fg') })
+          .borderRadius(4)
+      }
+      // 3) 输入框：16sp、正文与 hint 同色 ?attr/ac、透明底、IME Go
+      TextInput({ text: this.inputText, placeholder: $r('app.string.search'), controller: this.textController })
+        .layoutWeight(1)
+        .height(URL_BAR_HEIGHT)
+        .fontSize(16)
+        .backgroundColor(Color.Transparent)
+        .fontColor($r('app.color.fg'))
+        .placeholderColor($r('app.color.fg'))
+        .enterKeyType(EnterKeyType.Go)
+        .maxLength(Number.MAX_SAFE_INTEGER)
+        .defaultFocus(true)
+        .selectAll(true)
+        .id('search_overlay_input')
+        .onAppear(() => {
+          this.getUIContext().getFocusController().requestFocus('search_overlay_input')
+        })
+        .onChange((value: string) => {
+          this.inputText = value
+          this.fetchSuggestions(value)
+        })
+        .onSubmit((enterKey: EnterKeyType) => {
+          this.commit(this.inputText)
+        })
+      // 4) 清空（f12385r0）：drawable b8 / ic_close，空文本 GONE
+      if (this.inputText.length > 0) {
+        this.IconSlot($r('app.media.via_ic_url_clear'), $r('app.string.url_input_clear_text'), () => {
+          this.inputText = ''
+          this.rows = []
+          this.fetchSuggestions('')
+        })
+      }
+      // 5) 展开文本（f12386s0）：drawable bl / ic_expand_text → tb/w0 全屏编辑器
+      this.IconSlot($r('app.media.via_ic_url_expand'), $r('app.string.url_input_expand_text'), () => {
+        this.expandDraft = this.inputText
+        this.showExpandEditor = true
+      })
+      // 6) 前往（f12389v0）：drawable a3 / ic_go（b2 旋转 180°）
+      this.IconSlot($r('app.media.via_ic_url_go'), $r('app.string.search'), () => {
+        this.commit(this.inputText)
+      })
+    }
+    .width('100%')
+    .height(URL_BAR_HEIGHT)
+    .backgroundColor($r('app.color.url_input_panel_bg'))
+    .borderRadius({ topLeft: this.barAtTop ? 0 : URL_PANEL_RADIUS,
+      topRight: this.barAtTop ? 0 : URL_PANEL_RADIUS,
+      bottomLeft: this.barAtTop ? URL_PANEL_RADIUS : 0,
+      bottomRight: this.barAtTop ? URL_PANEL_RADIUS : 0 })
+    .clip(true)
+  }
+
+  // 原版 C1：ImageView 48×48dp、padding 13dp（实图 22dp）、drawable q 圆形按压、tint ?attr/a9
+  @Builder
+  IconSlot(icon: Resource, desc: Resource, action: () => void) {
+    Stack() {
+      ViaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint') })
+    }
+    .width(URL_BAR_HEIGHT)
+    .height(URL_BAR_HEIGHT)
+    .padding(URL_ICON_PADDING)
+    .alignContent(Alignment.Center)
+    .accessibilityText(desc)
+    .borderRadius(URL_BAR_HEIGHT / 2)
+    .stateStyles({
+      pressed: { .backgroundColor($r('app.color.url_input_pressed')) },
+      normal: { .backgroundColor(Color.Transparent) }
+    })
+    .onClick(() => {
+      action()
+    })
+  }
+
+  // 原版 k0.O3：w5.k.l().d0(搜索引擎).b0(引擎名数组, 当前项, 回调).f0()
+  private openEngineDialog(): void {
+    this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
+      builder: (): void => {
+        this.EngineDialog()
+      },
+      isModal: true,
+      backgroundColor: Color.Transparent,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.engineDialogId = dialogId
+    }).catch((error: BusinessError) => {
+      console.error(`open engine dialog failed: ${error.message}`)
+    })
+  }
+
+  private closeEngineDialog(): void {
+    if (this.engineDialogId < 0) {
+      return
+    }
+    this.getUIContext().getPromptAction().closeCustomDialog(this.engineDialogId)
+    this.engineDialogId = -1
   }
 
   // 原版 v2.b：内置引擎按 locale 排序 + 自定义引擎
@@ -528,72 +624,169 @@ export struct SearchOverlay {
     return this.builtinEngines()[0].name
   }
 
-  // 原版 O3：引擎单选菜单
+  // 原版 k0.O3：w5.k.l().d0(搜索引擎).b0(names, checked, cb).f0() 单选弹窗（layout v.xml）
   @Builder
-  EngineMenu() {
+  EngineDialog() {
     Column() {
-      ForEach(this.builtinEngines(), (engine: SearchEngineDef) => {
-        Text(engine.name)
-          .fontSize(14)
-          .fontColor($r('app.color.fg'))
-          .padding({ left: 16, right: 24, top: 10, bottom: 10 })
-          .width('100%')
-          .onClick(() => {
-            this.settings.setEngineKey(engine.key)
-            this.fetchSuggestions(this.inputText)
-          })
-      }, (engine: SearchEngineDef) => engine.key)
-      ForEach(this.settings.customEngines, (rec: CustomEngineRec, index: number) => {
-        Text(rec.name)
-          .fontSize(14)
-          .fontColor($r('app.color.fg'))
-          .padding({ left: 16, right: 24, top: 10, bottom: 10 })
-          .width('100%')
-          .onClick(() => {
-            this.settings.setEngineKey(`custom:${rec.id}`)
-            this.fetchSuggestions(this.inputText)
-          })
-      }, (rec: CustomEngineRec, index: number) => `${rec.name}_${index}`)
+      Text($r('app.string.search_engine'))
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      Scroll() {
+        Column() {
+          ForEach(this.builtinEngines(), (engine: SearchEngineDef) => {
+            this.EngineOption(engine.name, engine.key)
+          }, (engine: SearchEngineDef) => engine.key)
+          ForEach(this.settings.customEngines, (rec: CustomEngineRec, index: number) => {
+            this.EngineOption(rec.name, `custom:${rec.id}`)
+          }, (rec: CustomEngineRec, index: number) => `custom_${rec.id}_${index}`)
+        }
+        .width('100%')
+      }
+      .constraintSize({ maxHeight: 384 })
     }
-    .width(140)
+    .width('80%')
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .transition(dialogTransition())
   }
 
   @Builder
+  EngineOption(name: string, key: string) {
+    Row({ space: 24 }) {
+      Circle({ width: 16, height: 16 })
+        .fill(this.settings.engineKey === key ? $r('app.color.accent') : Color.Transparent)
+        .stroke(this.settings.engineKey === key ? Color.Transparent : $r('app.color.dialog_border'))
+        .strokeWidth(2)
+      Text(name)
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .onClick(() => {
+      this.settings.setEngineKey(key)
+      this.closeEngineDialog()
+      this.fetchSuggestions(this.inputText)
+    })
+  }
+
+  // 原版 resources/r/f/a1.xml：水平行、48dp 图标槽(13dp padding)、双行 14sp/11sp、
+  // 右侧 48dp 箭头按钮(c1/ic_fill_url) 点击填入输入框；行按压底 #30808080
+  @Builder
   EntryRow(row: SuggestRow, action: () => void) {
-    Row({ space: 12 }) {
-      if (row.type === 1) {
-        AppIcon({ icon: $r('sys.symbol.link'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-      } else if (row.type === 2) {
-        AppIcon({ icon: $r('sys.symbol.plus'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-      } else if (row.type === 3) {
-        AppIcon({ icon: $r('sys.symbol.clock'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-      } else if (row.type === 4) {
-        AppIcon({ icon: $r('sys.symbol.doc_plaintext'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
-      } else {
-        AppIcon({ icon: $r('sys.symbol.magnifyingglass'), iconSize: 18, iconColor: $r('app.color.fg_secondary') })
+    Row() {
+      // 左图标：按 ka/a.d() 类型 —— 收藏1(bt)/书签2(b5)/标签页4(dw)/历史8,32(c_)/其它(de)
+      Stack() {
+        ViaIcon({ icon: this.suggestIcon(row.type), iconSize: URL_ICON_SIZE,
+          iconColor: $r('app.color.url_input_icon_tint') })
       }
-      Column({ space: 2 }) {
+      .width(URL_BAR_HEIGHT)
+      .height(URL_BAR_HEIGHT)
+      .padding(URL_ICON_PADDING)
+      .alignContent(Alignment.Center)
+      .accessibilityText($r('app.string.url_input_suggestion'))
+      Column() {
         Text(row.text)
-          .fontSize(15)
+          .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
         if (row.sub !== '') {
           Text(row.sub)
-            .fontSize(12)
-            .fontColor($r('app.color.fg_secondary'))
+            .fontSize(11)
+            .fontColor($r('app.color.url_input_sub_text'))
             .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
         }
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
+      // 右箭头：填入文本（a.q()），贴底布局时旋转 -90°
+      Stack() {
+        ViaIcon({ icon: $r('app.media.via_ic_sug_fill'), iconSize: URL_ICON_SIZE,
+          iconColor: $r('app.color.url_input_icon_tint') })
+          .rotate({ angle: this.barAtTop ? 0 : -90 })
+      }
+      .width(URL_BAR_HEIGHT)
+      .height(URL_BAR_HEIGHT)
+      .padding(URL_ICON_PADDING)
+      .alignContent(Alignment.Center)
+      .accessibilityText($r('app.string.url_input_fill_text'))
+      .borderRadius(URL_BAR_HEIGHT / 2)
+      .stateStyles({
+        pressed: { .backgroundColor($r('app.color.url_input_pressed')) },
+        normal: { .backgroundColor(Color.Transparent) }
+      })
+      .onClick(() => {
+        this.fillFromRow(row)
+      })
     }
     .width('100%')
-    .height(row.sub !== '' ? 56 : 46)
-    .padding({ left: 16, right: 16 })
+    .height(URL_ROW_HEIGHT)
+    .padding({ top: 4, bottom: 4 })
+    .stateStyles({
+      pressed: { .backgroundColor($r('app.color.url_input_pressed')) },
+      normal: { .backgroundColor(Color.Transparent) }
+    })
     .onClick(() => {
       action()
+    })
+    // 原版 k0.e3：长按 type32 搜索历史行 → 清除搜索历史确认弹窗
+    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+      if (row.type === 32) {
+        this.confirmClearHistory()
+      }
+    }))
+  }
+
+  private suggestIcon(type: number): Resource {
+    if (type === 1) {
+      return $r('app.media.via_ic_sug_bt')
+    }
+    if (type === 2) {
+      return $r('app.media.via_ic_sug_b5')
+    }
+    if (type === 4) {
+      return $r('app.media.via_ic_sug_dw')
+    }
+    if (type === 8 || type === 32) {
+      return $r('app.media.via_ic_sug_c_')
+    }
+    return $r('app.media.via_ic_sug_de')
+  }
+
+  // 原版 a.q()：把建议文本填入 EditText 并把光标移到末尾
+  private fillFromRow(row: SuggestRow): void {
+    const text = row.type === 2 ? row.text : (row.sub !== '' ? row.sub : row.text)
+    this.inputText = text
+    this.textController.caretPosition(text.length)
+    this.fetchSuggestions(text)
+  }
+
+  // 原版 k0.e3：w5.k 确认弹窗（dt/du）
+  private confirmClearHistory(): void {
+    AlertDialog.show({
+      title: $r('app.string.clear_search_history'),
+      message: $r('app.string.url_input_confirm_clear_history'),
+      primaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+          this.settings.clearSearchHistory()
+          this.fetchSuggestions('')
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {}
+      }
     })
   }
 
@@ -636,19 +829,53 @@ export struct SearchOverlay {
     this.onClose()
   }
 
-  private startScan(): void {
-    const context = this.getUIContext().getHostContext()
-    if (context === undefined) {
-      return
-    }
-    scanBarcode.startScanForResult(context).then((data: scanBarcode.ScanResult) => {
-      const scanned = data.originalValue.trim()
-      if (scanned !== '') {
-        this.commit(scanned)
+  // 原版 tb/w0.J3：全屏「展开文本」编辑器（多行 EditText + 收起/前往两个按钮）
+  @Builder
+  ExpandEditor() {
+    Column() {
+      Scroll() {
+        TextArea({ text: this.expandDraft, placeholder: $r('app.string.search') })
+          .width('100%')
+          .constraintSize({ minHeight: 160 })
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('app.color.fg'))
+          .placeholderColor($r('app.color.fg'))
+          .fontSize(16)
+          .padding(16)
+          .onChange((value: string) => {
+            this.expandDraft = value
+          })
       }
-    }).catch((error: BusinessError) => {
-      console.error(`scan failed: ${error.code}`)
-    })
+      .width('100%')
+      .layoutWeight(1)
+      Row() {
+        // 收起（w0.d3：drawable A/ic_collapse_text）
+        this.IconSlot($r('app.media.via_ic_url_collapse'), $r('app.string.url_input_collapse_text'), () => {
+          this.applyExpandDraft(false)
+        })
+        Blank()
+        // 前往（w0.c3：drawable j0/ic_go）
+        this.IconSlot($r('app.media.via_ic_url_go'), $r('app.string.search'), () => {
+          this.applyExpandDraft(true)
+        })
+      }
+      .width('100%')
+      .height(URL_BAR_HEIGHT)
+      .backgroundColor($r('app.color.url_input_panel_bg'))
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.url_input_panel_bg'))
+  }
+
+  private applyExpandDraft(go: boolean): void {
+    this.inputText = this.expandDraft
+    this.textController.caretPosition(this.expandDraft.length)
+    this.fetchSuggestions(this.expandDraft)
+    this.showExpandEditor = false
+    if (go) {
+      this.commit(this.expandDraft)
+    }
   }
 
   private cancelPending(): void {

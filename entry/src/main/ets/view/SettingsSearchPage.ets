@@ -164,10 +164,12 @@ export struct SettingsSearchPage {
       this.suggestChecks[i] = (this.settings.searchSuggestion & items[i].bit) !== 0
     }
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.SuggestDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center
     }).then((dialogId: number) => {
@@ -224,7 +226,7 @@ export struct SettingsSearchPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -259,10 +261,12 @@ export struct SettingsSearchPage {
     this.engineTemplateInput = ''
     this.engineNameInput = ''
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.CustomEngineDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center
     }).then((dialogId: number) => {
@@ -323,7 +327,7 @@ export struct SettingsSearchPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

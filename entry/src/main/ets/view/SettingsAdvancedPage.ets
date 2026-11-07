@@ -121,10 +121,12 @@ export struct SettingsAdvancedPage {
   private showSslWarningDialog(): void {
     this.sslAck = false
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.SslDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -204,7 +206,7 @@ export struct SettingsAdvancedPage {
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .constraintSize({ maxWidth: 300 })
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))

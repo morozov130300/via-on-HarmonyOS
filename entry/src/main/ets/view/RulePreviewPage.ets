@@ -90,10 +90,12 @@ export struct RulePreviewPage {
   private showLineDialog(line: string): void {
     this.dialogLine = line
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.LineDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -137,7 +139,7 @@ export struct RulePreviewPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

@@ -271,10 +271,12 @@ export struct SettingsToolbarPage {
     this.pickerTarget = target
     this.pickerValue = this.actionValueOf(target)
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.ActionPicker()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.2)'
@@ -446,10 +448,12 @@ export struct SettingsToolbarPage {
 
   private openDialog(dialogKind: number): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.OptionDialog(dialogKind)
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.2)'

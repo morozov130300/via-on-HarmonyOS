@@ -1492,7 +1492,7 @@ struct BookmarkEditOverlay {
         }
         .width('100%')
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
@@ -1587,7 +1587,7 @@ struct NewFolderOverlay {
         }
         .width('100%')
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
@@ -1717,7 +1717,7 @@ struct FolderPickerOverlay {
             this.onClose()
           })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
