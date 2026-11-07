@@ -1,11 +1,10 @@
 import { http } from '@kit.NetworkKit'
 import { util } from '@kit.ArkTS'
 import { i18n } from '@kit.LocalizationKit'
-import { scanBarcode } from '@kit.ScanKit'
+import { display } from '@kit.ArkUI'
 import { AppSettings, CustomEngineRec } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { BrowserDb } from '../common/Database'
-import { UiInsets } from '../common/Immersive'
 import {
   SearchEngineDef,
   getBuiltinEngines,
@@ -443,44 +442,71 @@ export struct SearchOverlay {
   }
 
   // 原版 f12391x0（RecyclerView）：全宽 wrap 高、远离输入条一侧留 72dp、
-  // 外侧两角 18dp 圆角、底色 ?attr/a2、滚动条 3dp/#80808080
+  // 外侧两角 18dp 圆角、底色 ?attr/a2、滚动条 3dp/#80808080。
+  // V2()：LinearLayoutManager reverseLayout/stackFromEnd = !zB —— 贴底时条目自下往上堆叠。
   @Builder
   SuggestionList() {
     Scroll() {
       Column() {
-        ForEach(this.rows, (row: SuggestRow, index: number) => {
+        ForEach(this.displayRows(), (row: SuggestRow, index: number) => {
           this.EntryRow(row, () => {
             this.commitRow(row)
           })
         }, (row: SuggestRow, index: number) => `${row.type}_${row.text}_${index}`)
-        // 原版 la/b：空输入且 bit32 时用 type32 普通建议行展示搜索历史
-        if (this.inputText.length === 0 && (this.settings.searchSuggestion & 32) !== 0) {
-          ForEach(this.settings.searchHistory, (query: string, index: number) => {
-            if (index < SUGGEST_LIMIT) {
-              this.EntryRow(new SuggestRow(32, query), () => {
-                this.commit(query)
-              })
-            }
-          }, (query: string, index: number) => `hist_${query}_${index}`)
-        }
       }
       .width('100%')
+      .backgroundColor($r('app.color.url_input_panel_bg'))
+      .borderRadius({ bottomLeft: this.barAtTop ? URL_PANEL_RADIUS : 0,
+        bottomRight: this.barAtTop ? URL_PANEL_RADIUS : 0,
+        topLeft: this.barAtTop ? 0 : URL_PANEL_RADIUS,
+        topRight: this.barAtTop ? 0 : URL_PANEL_RADIUS })
+      .clip(true)
     }
     .width('100%')
-    .scrollBar(BarState.On)
+    // 原版 RecyclerView 为 wrap_content（-2）；上限取屏高扣除输入条与 72dp 留白
+    .constraintSize({ maxHeight: this.maxListHeight() })
+    .scrollBar(BarState.Auto)
     .scrollBarColor($r('app.color.url_input_scrollbar'))
     .scrollBarWidth(3)
-    .align(Alignment.Top)
-    .backgroundColor($r('app.color.url_input_panel_bg'))
-    .borderRadius({ bottomLeft: this.barAtTop ? URL_PANEL_RADIUS : 0,
-      bottomRight: this.barAtTop ? URL_PANEL_RADIUS : 0,
-      topLeft: this.barAtTop ? 0 : URL_PANEL_RADIUS,
-      topRight: this.barAtTop ? 0 : URL_PANEL_RADIUS })
-    .clip(true)
+    .align(this.barAtTop ? Alignment.Top : Alignment.Bottom)
+    // 原版 .r(1,0,zB?0:72,0,zB?72:0)：远离输入条一侧 72dp 留白
     .margin(this.barAtTop ? { bottom: URL_FAR_MARGIN } : { top: URL_FAR_MARGIN })
-    .visibility(this.rows.length > 0 || (this.inputText.length === 0
-      && (this.settings.searchSuggestion & 32) !== 0 && this.settings.searchHistory.length > 0)
-      ? Visibility.Visible : Visibility.None)
+    .visibility(this.displayRows().length > 0 ? Visibility.Visible : Visibility.None)
+  }
+
+  // 原版 RecyclerView 无固定高度（wrap_content），但必须不越出屏幕：
+  // 上限 = 屏高 - 输入条 48dp - 远侧留白 72dp
+  private maxListHeight(): number {
+    try {
+      const d = display.getDefaultDisplaySync()
+      const screen = d.height / d.densityPixels
+      return screen - URL_BAR_HEIGHT - URL_FAR_MARGIN
+    } catch (error) {
+      return 600
+    }
+  }
+
+  // 原版 ka/g.j：候选行在前，搜索历史(type32) 在后；
+  // 贴底布局 reverseLayout 时整体倒序，保证贴近输入条的是第一条候选
+  private displayRows(): SuggestRow[] {
+    const list: SuggestRow[] = []
+    for (const row of this.rows) {
+      list.push(row)
+    }
+    if (this.inputText.length === 0 && (this.settings.searchSuggestion & 32) !== 0) {
+      const history = this.settings.searchHistory
+      for (let i = 0; i < history.length && i < SUGGEST_LIMIT; i++) {
+        list.push(new SuggestRow(32, history[i]))
+      }
+    }
+    if (this.barAtTop) {
+      return list
+    }
+    const reversed: SuggestRow[] = []
+    for (let i = list.length - 1; i >= 0; i--) {
+      reversed.push(list[i])
+    }
+    return reversed
   }
 
   // 原版 f12383p0（输入行 LinearLayout）：全宽 48dp，无行级 padding，
@@ -791,10 +817,12 @@ export struct SearchOverlay {
     })
   }
 
+  // 原版 k0.s3（481-496）：type4 切标签、type64 只回填输入、其余 N3(a.b()) 前往；
+  // a.b()（ka/a.java:45）优先取 url(sub)，为空则取标题(text)。
   private commitRow(row: SuggestRow): void {
-    if (row.type === 2) {
-      // 计算器结果：直接作为输入，不跳转
-      this.inputText = row.text
+    if (row.type === 64) {
+      // 计算器结果：只填回输入框，不跳转
+      this.fillFromRow(row)
       return
     }
     if (row.type === 4) {
@@ -805,13 +833,7 @@ export struct SearchOverlay {
       }
       return
     }
-    if (row.type === 3) {
-      // 书签/历史直达
-      this.tabStore.navigate(normalizeUrl(row.sub))
-      this.onClose()
-      return
-    }
-    this.commit(row.text)
+    this.commit(row.sub !== '' ? row.sub : row.text)
   }
 
   private commit(text: string): void {
@@ -932,19 +954,19 @@ export struct SearchOverlay {
   }
 
   private buildLocalRows(query: string): SuggestRow[] {
-    // 原版 k0/q3：计算器命中 → 单行结果（type 2），取代其他建议
+    // 原版 k0.q3：计算器命中 → 单行结果（type 64），取代其他建议
     const calc = Calculator.evaluate(query)
     if (calc !== null) {
-      return [new SuggestRow(2, calc, query)]
+      return [new SuggestRow(64, calc, query)]
     }
     const rows: SuggestRow[] = []
     const lower = query.toLowerCase()
-    // 原版 ka/g.k()：URL 候选行
+    // 原版 ka/g.k()：URL 候选行（type 0 → 走网络建议/直接前往）
     if (isUrlLike(query)) {
-      rows.push(new SuggestRow(1, query, normalizeUrl(query)))
+      rows.push(new SuggestRow(0, query, normalizeUrl(query)))
     }
-    // 原版 la/a.a：位表 收藏1/书签2/标签页4/历史8，行序 = 标签页(bit4)→收藏(bit1)→书签(bit2)→历史(bit8)，
-    // 各源 limit 5，按 url 去重；bit16 搜索引擎走网络建议；bit32 搜索历史仅在空输入时展示
+    // 原版 la/a.a：位表 收藏1/书签2/标签页4/历史8，行序 = 标签页(4)→收藏(1)→书签(2)→历史(8)，
+    // 各源 limit 5，按 url 去重；bit16 走网络建议；bit32 搜索历史仅在空输入时展示
     const flags = this.settings.searchSuggestion
     const seen = new Set<string>()
     const pushCandidate = (title: string, url: string, type: number): void => {
@@ -970,7 +992,7 @@ export struct SearchOverlay {
           break
         }
         if (item.title.toLowerCase().indexOf(lower) >= 0 || item.url.toLowerCase().indexOf(lower) >= 0) {
-          pushCandidate(item.title, item.url, 3)
+          pushCandidate(item.title, item.url, 1)
           count++
         }
       }
@@ -981,7 +1003,7 @@ export struct SearchOverlay {
           break
         }
         if (item.title.toLowerCase().indexOf(lower) >= 0 || item.url.toLowerCase().indexOf(lower) >= 0) {
-          pushCandidate(item.title, item.url, 3)
+          pushCandidate(item.title, item.url, 2)
           count++
         }
       }
@@ -992,7 +1014,7 @@ export struct SearchOverlay {
           break
         }
         if (item.title.toLowerCase().indexOf(lower) >= 0 || item.url.toLowerCase().indexOf(lower) >= 0) {
-          pushCandidate(item.title, item.url, 3)
+          pushCandidate(item.title, item.url, 8)
           count++
         }
       }
@@ -1022,7 +1044,7 @@ export struct SearchOverlay {
   private applyNetworkRows(query: string, words: string[]): void {
     const rows: SuggestRow[] = []
     for (let i = 0; i < words.length && i < SUGGEST_LIMIT; i++) {
-      rows.push(new SuggestRow(0, words[i]))
+      rows.push(new SuggestRow(16, words[i]))
     }
     this.networkRows = rows
     // 原版 k0/m3：网络建议到达后追加到候选之后（第二次发射）
