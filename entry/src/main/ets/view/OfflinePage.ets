@@ -1,4 +1,5 @@
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { AppIcon } from '../components/AppIcon'
 import { TabStore } from '../common/TabStore'
 import { ZipStoreWriter } from '../common/ZipWriter'
@@ -481,7 +482,7 @@ export struct OfflinePage {
       }
       .width('100%')
     }
-    .width('86%')
+    .width(computeDialogWidthVp())
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(16)
@@ -510,7 +511,7 @@ export struct OfflinePage {
           this.showExportDialog = false
         })
     }
-    .width('86%')
+    .width(computeDialogWidthVp())
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(16)

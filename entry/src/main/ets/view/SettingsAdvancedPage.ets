@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -203,7 +204,7 @@ export struct SettingsAdvancedPage {
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('90%')
+    .width(computeDialogWidthVp())
     .constraintSize({ maxWidth: 300 })
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))

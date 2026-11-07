@@ -1,4 +1,5 @@
 import { BookmarkRec, BookmarkFolderRec, HomeFavRec } from '../common/Types'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { dialogTransition, dimTransition } from '../common/Transitions'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
@@ -1491,7 +1492,7 @@ struct BookmarkEditOverlay {
         }
         .width('100%')
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
@@ -1586,7 +1587,7 @@ struct NewFolderOverlay {
         }
         .width('100%')
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
@@ -1716,7 +1717,7 @@ struct FolderPickerOverlay {
             this.onClose()
           })
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))

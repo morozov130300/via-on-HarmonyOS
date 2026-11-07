@@ -2249,7 +2249,7 @@ struct DownloadConfirmOverlay {
         }
         .width('100%')
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
@@ -2366,7 +2366,7 @@ struct SavePageDialog {
         }
         .width('100%')
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))

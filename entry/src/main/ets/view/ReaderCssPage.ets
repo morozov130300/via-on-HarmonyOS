@@ -1,5 +1,6 @@
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 
 // 原版 hb/i1（由 hb/o5.l3 打开）：全屏 EditText 编辑页
@@ -114,7 +115,7 @@ export struct ReaderCssPage {
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
     }
-    .width('90%')
+    .width(computeDialogWidthVp())
     .constraintSize({ maxWidth: 300 })
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
