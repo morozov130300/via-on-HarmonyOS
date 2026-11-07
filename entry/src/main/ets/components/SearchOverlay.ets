@@ -647,10 +647,11 @@ export struct SearchOverlay {
         this.expandDraft = this.inputText
         this.showExpandEditor = true
       })
-      // 6) 前往（f12389v0）：drawable a3 / ic_go（b2 旋转 180°）
-      this.IconSlot($r('app.media.via_ic_url_go'), $r('app.string.search'), () => {
+      // 6) 前往（f12389v0）：原版 k0.t3 → drawable j0 = a3（b2 旋转 180°，箭头朝右），
+      // 与工具栏前进按钮同一画法：via_ic_back + rotateDeg 180（k6 前进分支同款）
+      this.IconSlot($r('app.media.via_ic_back'), $r('app.string.search'), (): void => {
         this.commit(this.inputText)
-      })
+      }, 180)
     }
     .width('100%')
     .height(URL_BAR_HEIGHT)
@@ -661,9 +662,10 @@ export struct SearchOverlay {
 
   // 原版 C1：ImageView 48×48dp、padding 13dp（实图 22dp）、drawable q 圆形按压、tint ?attr/a9
   @Builder
-  IconSlot(icon: Resource, desc: Resource, action: () => void) {
+  IconSlot(icon: Resource, desc: Resource, action: () => void, rotateDeg: number = 0) {
     Stack() {
-      ViaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint') })
+      ViaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint'),
+        rotateDeg: rotateDeg })
     }
     .width(URL_BAR_HEIGHT)
     .height(URL_BAR_HEIGHT)
@@ -956,10 +958,10 @@ export struct SearchOverlay {
           this.applyExpandDraft(false)
         })
         Blank()
-        // 前往（w0.c3：drawable j0/ic_go）
-        this.IconSlot($r('app.media.via_ic_url_go'), $r('app.string.search'), () => {
+        // 前往（w0.c3：drawable j0 = a3，b2 旋转 180°，箭头朝右；同工具栏前进画法）
+        this.IconSlot($r('app.media.via_ic_back'), $r('app.string.search'), (): void => {
           this.applyExpandDraft(true)
-        })
+        }, 180)
       }
       .width('100%')
       .height(URL_BAR_HEIGHT)
