@@ -127,26 +127,6 @@ export struct SettingsMenuPage {
   }
 
   // 第一条提示行之后、第二条提示行之前 = 当前菜单区（u3/v3 语义）
-  private activeCount(): number {
-    let n = 0
-    for (let i = 0; i < this.items.length; i++) {
-      if (this.items[i].kind === KIND_ACTIVE) {
-        n++
-      }
-    }
-    return n
-  }
-
-  private poolCount(): number {
-    let n = 0
-    for (let i = 0; i < this.items.length; i++) {
-      if (this.items[i].kind === KIND_POOL) {
-        n++
-      }
-    }
-    return n
-  }
-
   private activeRange(): number[] {
     let start = -1
     let end = -1
@@ -382,29 +362,22 @@ export struct SettingsMenuPage {
             GridItem() {
               if (item.kind === KIND_SEPARATOR_TOP) {
                 // i8/y.d：上下 margin16、左右 padding16、14sp、色 attr ad
-                // 活动区为空时不渲染顶提示行（GridItem 内容空 → 不占行高）
-                if (this.activeCount() > 0) {
-                  Text($r('app.string.drag_to_reorder_hint'))
-                    .fontSize(14)
-                    .fontColor($r('app.color.menu_hint'))
-                    .width('100%')
-                    .textAlign(TextAlign.Center)
-                    .height('100%')
-                    .padding({ left: 16, right: 16 })
-                    .margin({ top: 16, bottom: 16 })
-                }
+                // 原版 i8/s.y3() 无条件添加两条提示行——区空也显示，与原版一致
+                Text($r('app.string.drag_to_reorder_hint'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.menu_hint'))
+                  .width('100%')
+                  .textAlign(TextAlign.Center)
+                  .height('100%')
+                  .padding({ left: 16, right: 16, top: 16, bottom: 16 })
               } else if (item.kind === KIND_SEPARATOR_BOTTOM) {
-                // 池区为空时不渲染底提示行
-                if (this.poolCount() > 0) {
-                  Text($r('app.string.drag_to_add_hint'))
-                    .fontSize(14)
-                    .fontColor($r('app.color.menu_hint'))
-                    .width('100%')
-                    .textAlign(TextAlign.Center)
-                    .height('100%')
-                    .padding({ left: 16, right: 16 })
-                    .margin({ top: 16, bottom: 16 })
-                }
+                Text($r('app.string.drag_to_add_hint'))
+                  .fontSize(14)
+                  .fontColor($r('app.color.menu_hint'))
+                  .width('100%')
+                  .textAlign(TextAlign.Center)
+                  .height('100%')
+                  .padding({ left: 16, right: 16, top: 16, bottom: 16 })
               } else {
                 // i8/o.d + l：Column 上下 padding15 左右5、图标上文字下 2dp 间距、11sp 双行
                 Column({ space: 2 }) {
