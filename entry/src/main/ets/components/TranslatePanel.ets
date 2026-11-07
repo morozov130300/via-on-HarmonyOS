@@ -488,6 +488,11 @@ export struct TranslatePanel {
     }
     const options: AnimatorOptions = {
       duration: duration,
+      // ArkUI 原生 animator 的 easing 是字符串曲线，无法直接传 ICurve。
+      // 这里显式设 'linear' 让 onFrame 的 progress 为 [begin,end] 的线性原始值，
+      // 再在回调里手动叠加一次 DECELERATE_CURVE（1-(1-t)²），
+      // 等价复刻原版 w.java:167 的 `setInterpolator(new DecelerateInterpolator())`。
+      // 若此处省略手动插值或把 easing 设成 'ease'，都会与原版曲线不符。
       easing: 'linear',
       delay: 0,
       fill: 'forwards',
@@ -821,9 +826,14 @@ export struct TranslatePanel {
         //   .setDuration(160).setInterpolator(new AccelerateInterpolator())
         // —— 插值器设在 AnimatorSet 上，对 alpha 和 translationY **两个子动画同时生效**，
         //    所以 alpha 段也是 Accelerate（不是 Linear、不是 EaseIn）。
-        // 方向：animatorSet 里 z11 = (f5968o0 & 80) == 80（f8/c.java:60），
-        //   k6.Eb 传 gravity = (W0 == 1 ? 48 : 80) | 8388613 →
-        //   布局 1（顶栏）gravity=48 → translateY -120→0；其余 gravity=80 → +120→0。
+        // 方向（f8/c.java:60,63 z11=(gravity&80)==80）：
+        //   进场 translationY (z11 ? +120 : -120) → 0；退场 0 → (z11 ? +120 : -120)。
+        //   即贴底(gravity 含 80)从 +120 升起，贴顶(gravity 含 48)从 -120 落下。
+        // 原版 k6.Eb 的 gravity = (W0==1 ? 48 : 80) | 8388613，W0 是安卓布局号；
+        // 本端无 W0 直接对应，沿用既有布局判定 isLandscape()（竖屏贴顶 TopEnd / 横屏贴底 BottomEnd，
+        // 见本文件 L668），方向随之取竖屏 -120 / 横屏 +120，与"贴哪边就从哪边来"一致。
+        // ⚠️ 判据与原版 W0/gravity 不完全同源，属已知的布局层差异，待按 effectiveLayout() 统一时一并校正；
+        //    动画时长/曲线/幅度（160ms Accelerate、±120px）则与原版 1:1。
         .transition(TransitionEffect.asymmetric(
           TransitionEffect.OPACITY.animation({ duration: 160, curve: PROG_ACCELERATE_CURVE })
             .combine(TransitionEffect.translate({ y: this.isLandscape() ? 120 : -120 })

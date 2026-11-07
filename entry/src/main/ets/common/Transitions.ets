@@ -46,6 +46,10 @@ export const ACCELERATE_DECELERATE_CURVE: ICurve =
 // 原版代码统一曲线 x8.h.b()：PathInterpolator(0.2, 0.2, 0.8, 0.8)
 // 注意：@ohos.curves 里 cubicBezier() 返回 string，cubicBezierCurve() 才返回 ICurve，
 // 这里要当 ICurve 复用，必须用 cubicBezierCurve。
+// 数学性质：两个控制点 (0.2,0.2) 与 (0.8,0.8) 均落在 y=x 对角线上，
+// 故 x(s)≡y(s)，该 PathInterpolator 的 getInterpolation(t) 恒等于 t（**线性插值**）。
+// 这解释了为何原版把 280ms 三关键帧拆成 2×140ms 各自跑完整 bezier 仍等价，
+// 也解释了 TabPanel 复合曲线里 BEZIER_0202_CURVE.interpolate(t) 可直接视作 t。
 export const BEZIER_0202_CURVE: ICurve = curves.cubicBezierCurve(0.2, 0.2, 0.8, 0.8)
 
 // 原版窗口动画里 translate 的 ±120px（px 单位，运行时换算 vp）

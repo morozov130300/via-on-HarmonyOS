@@ -358,15 +358,17 @@ export struct HomeFavEditor {
 
   // 原版 g6.y.X(view)：ObjectAnimator.ofFloat(view, "translationX", 0f, 24dp, 0f)
   //   .setRepeatCount(2).setRepeatMode(1=REVERSE).setDuration(280L).setInterpolator(x8.h.b())
-  // 鸿蒙用 keyframeAnimateTo 平替，三关键帧（0→24dp 与 24dp→0 各 140ms），
-  // 关键帧不支持 repeatMode 反转，这里按原版 2 次循环展开为 4 段（正向-反向-正向-反向）。
+  // repeatCount=2 即共播放 3 次（初始 + 2 次重复），每次 280ms 内走 0→24→0 两个 140ms 关键帧；
+  // 因 0→24→0 序列本身对称，REVERSE 反放后仍是 0→24→0，视觉上等价于「3 次完整的来回」，
+  // 总时长 280×3 = 840ms。鸿蒙用 keyframeAnimateTo 的 iterations:3 直接承载，
+  // 比手工展开 6 段更贴近原版 repeatCount 语义（也少写 4 个重复闭包）。
   private shakeInput(isName: boolean): void {
     const dx = 24
     const kf: KeyframeState[] = [
       {
         duration: 140,
         curve: BEZIER_0202_CURVE,
-        event: () => {
+        event: (): void => {
           if (isName) {
             this.nameShake = dx
           } else {
@@ -377,29 +379,7 @@ export struct HomeFavEditor {
       {
         duration: 140,
         curve: BEZIER_0202_CURVE,
-        event: () => {
-          if (isName) {
-            this.nameShake = 0
-          } else {
-            this.urlShake = 0
-          }
-        }
-      },
-      {
-        duration: 140,
-        curve: BEZIER_0202_CURVE,
-        event: () => {
-          if (isName) {
-            this.nameShake = dx
-          } else {
-            this.urlShake = dx
-          }
-        }
-      },
-      {
-        duration: 140,
-        curve: BEZIER_0202_CURVE,
-        event: () => {
+        event: (): void => {
           if (isName) {
             this.nameShake = 0
           } else {
@@ -408,7 +388,7 @@ export struct HomeFavEditor {
         }
       }
     ]
-    this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, kf)
+    this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 3 }, kf)
   }
 
   // 原版 x5.e：相册选图，URI 直接作为图标（与 SettingsCustomPage 同款）
