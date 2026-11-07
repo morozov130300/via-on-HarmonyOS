@@ -1140,10 +1140,23 @@ struct Index {
     return typeof bg === 'string' ? bg : ''
   }
 
-  // 原版 Ya()：横屏时布局 0→1、3→2
+  // 原版 k6.C1 = getConfiguration().orientation：设备物理方向。
+  // display.Orientation: PORTRAIT=0 / LANDSCAPE=1 / PORTRAIT_INVERTED=2 / LANDSCAPE_INVERTED=3
+  // 仅 LANDSCAPE(1) 与 LANDSCAPE_INVERTED(3) 为横屏；PC/平板未旋转时是 PORTRAIT，不触发映射。
+  private refreshPhysicalOrientation(): void {
+    try {
+      const o = display.getDefaultDisplaySync().orientation
+      this.physicalLandscape = o === display.Orientation.LANDSCAPE
+        || o === display.Orientation.LANDSCAPE_INVERTED
+    } catch (error) {
+      this.physicalLandscape = false
+    }
+  }
+
+  // 原版 Ya()：横屏时布局 0→1、3→2（k6.java:6414-6418，判据为设备物理方向 C1==2）
   private effectiveLayout(): number {
     const layout = this.settings.appLayout
-    if (!this.isLandscape) {
+    if (!this.physicalLandscape) {
       return layout
     }
     if (layout === LAYOUT_TRADITIONAL) {
