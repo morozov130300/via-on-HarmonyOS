@@ -150,6 +150,14 @@ struct Index {
   private insets: UiInsets = UiInsets.getInstance()
   @Local isLandscape: boolean = false
   private landscapeListener: mediaquery.MediaQueryListener | null = null
+  // 原版 k6.C1 = getConfiguration().orientation（设备物理方向），仅用于 Ya() 的布局映射：
+  //   C1==2(横屏) 时布局 0→1、3→2。原版取系统方向，不取窗口宽高比；
+  //   鸿蒙 PC/平板宽窗口的 mediaquery (orientation:landscape) 恒为真，会误把「传统」改成布局1。
+  // 故单独用 display.Display.orientation 物理枚举判定（display.d.ts:929-966）。
+  @Local physicalLandscape: boolean = false
+  private displayChangeCallback: (id: number) => void = (id: number): void => {
+    this.refreshPhysicalOrientation()
+  }
   // 音量键翻页（原版操作设定）：开启时消费音量上/下键滚动网页
   private volumeKeyConsumed: boolean = false
   private volumeUpFunc: (event: InputKeyEvent) => void = () => {
@@ -220,6 +228,13 @@ struct Index {
       this.isLandscape = result.matches
     })
     this.isLandscape = this.landscapeListener.matches
+    // 原版 C1：设备物理方向初值 + 旋转订阅（display.on('change') 在方向变化时回调）
+    this.refreshPhysicalOrientation()
+    try {
+      display.on('change', this.displayChangeCallback)
+    } catch (error) {
+      console.error(`display.on change failed: ${error}`)
+    }
     emitter.on({ eventId: SHORTCUT_URL_EVENT_ID }, (event: emitter.EventData) => {
       const data = event.data as Record<string, Object>
       const viaUrl = data['viaUrl']
@@ -289,6 +304,11 @@ struct Index {
     if (this.landscapeListener !== null) {
       this.landscapeListener.off('change')
       this.landscapeListener = null
+    }
+    try {
+      display.off('change', this.displayChangeCallback)
+    } catch (error) {
+      console.error(`display.off change failed: ${error}`)
     }
     this.readAloudController.removeListener(this.readAloudListener)
     ReadAloudEngine.getInstance().shutdown()
@@ -1464,6 +1484,8 @@ struct Index {
           //   enter=anim/c（alpha 0→1，240ms 线性）、exit=anim/j（alpha 1→1，240ms，即无过渡）、
           //   popEnter=anim/j（无过渡）、popExit=anim/d（alpha 1→0，240ms 线性）。
           // 即：进场淡入 240 线性、关闭时淡出 240 线性，底层内容全程不动（与原版 exit=anim/j 一致）。
+          // ArkUI 的 .transition(effect) 未用 asymmetric 时，同一 effect 同时作用于出现/消失，
+          // 且 fadeInTransition 的 OPACITY 在消失时自动反向为 1→0（等价于 anim/d），故无需另写 asymmetric。
           .transition(fadeInTransition())
           .onClick(() => {
             this.showSearch = false

@@ -10,7 +10,10 @@ import { curves } from '@kit.ArkUI'
 //   AnimatorSet.play(alpha).with(translationY).setDuration(160L).setInterpolator(new AccelerateInterpolator())
 // 注意插值器设在整个 AnimatorSet 上，alpha 段也是 Accelerate。
 // 打开方 k6.ob（c8/k6.java:7887）：gravity = ((W0 == 1 || W0 == 4) ? 48 : 80) | 8388613
-//   → 布局 1/4 时含 48 → 从上方 -120 落下；其余含 80 → 从下方 +120 升起。
+//   → 安卓布局 1/4 时贴顶（gravity 48，从 -120 落下）；其余贴底（gravity 80，从 +120 升起）。
+// 本端 Index.ets 把 FindBar 恒定位在 insets.top 贴顶（.position({x:0,y:insets.top})），
+//   无贴底分支，故 enter/exit 统一取 -120（贴顶落下/收回），与"贴哪边从哪边来"一致。
+//   ⚠️ 与原版 W0/gravity 判据不同源，属布局层差异；动画时长/曲线/幅度（160ms Accelerate、±120）1:1。
 // 查找条渲染在 insets.top 贴顶（Index.ets），对应含 48 分支。
 const FIND_ACCELERATE_CURVE: ICurve = curves.customCurve((t: number): number => t * t)
 
