@@ -8,6 +8,7 @@ import { ViaIcon } from './ViaIcon'
 import { BusinessError, pasteboard, emitter } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
 import { dimTransition, dialogTransition } from '../common/Transitions'
+import { computeDialogWidthVp } from './ViaDialogCard'
 
 const PANEL_FG: ResourceColor = '#E6E6E6'
 

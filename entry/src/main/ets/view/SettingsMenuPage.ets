@@ -12,6 +12,7 @@
 //   左下「取消」右下「重置」14sp #6f8de1 minWidth 56dp padding 16dp，
 //   弹窗背景圆角 18dp 描边 1dp #30808080 底色 #ffffff/#1c1b1d、dim 0.4。
 import { AppSettings } from '../common/Settings'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
 import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
