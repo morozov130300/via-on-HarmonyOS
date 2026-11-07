@@ -41,6 +41,7 @@ import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID } from '../common/DeepLi
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, fadeOutTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
 
 const EXIT_INTERVAL: number = 1500
 // 原版进度条渐变（x8/h.x）：#59C2E5 → #A687E0
@@ -1109,6 +1110,16 @@ struct Index {
     return $r('app.color.home_bg')
   }
 
+  // 原版 k6.oa U0（工具栏当前背景色）：仅 theme-color 适配生效（背景为 hex 自定义色）时
+  // 返回该色，否则空串（对应 U0==0）。夜间强制默认色（z11 的 n0.d() 拦截，bit2=false）。
+  private toolbarCustomBg(): string {
+    if (this.settings.isNightActive()) {
+      return ''
+    }
+    const bg = toolbarBackgroundColor(this.tabStore.current(), this.settings)
+    return typeof bg === 'string' ? bg : ''
+  }
+
   // 原版 Ya()：横屏时布局 0→1、3→2
   private effectiveLayout(): number {
     const layout = this.settings.appLayout
@@ -1401,7 +1412,10 @@ struct Index {
           }
           .scrollable(false)
           .barHeight(0)
-          .animationDuration(150)
+          // 原版标签切换是 Fragment 直接切换（f8/k 系列 show/hide），
+          // 全仓库无 ViewPager2.setCurrentItem / PageTransformer 用法，无滑动补间，
+          // 故将 Tabs 内置切换动画时长置 0，避免引入原版没有的过渡。
+          .animationDuration(0)
           .layoutWeight(1)
           .onChange((index: number) => {
             this.tabStore.switchTo(index)
@@ -1425,10 +1439,11 @@ struct Index {
 
       if (this.tabStore.current().loading) {
         // 原版进度条：#59C2E5 → #A687E0 渐变，高 2dp（x8/h.x）
+        // 进度条显隐由 com.tuyafeng.support.widget.w 控制：f4373a.setVisibility(0)/8 直接切换，
+        // 无窗口动画、无淡入淡出（w.java 131、181、121 行），故此处不加 transition。
         Progress({ value: this.tabStore.current().progress, total: 100, type: ProgressType.Linear })
           .width('100%')
           .height(2)
-          .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
           .color(PROGRESS_GRADIENT)
           .backgroundColor(Color.Transparent)
           .position({ x: 0, y: this.insets.top })
@@ -1444,7 +1459,12 @@ struct Index {
           .height('100%')
           // 原版压暗层正常态 color a8 = #40808080（0x70808080 仅为 focused 态）
           .backgroundColor('#40808080')
-          .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
+          // 原版搜索面板 k6.oa（c8/k6.java 7874）与 tb/k0（tb/k0.java 801）：
+          //   .v(f13636a, f13642g, f13642g, f13637b) = .v(anim/c, anim/j, anim/j, anim/d)
+          //   enter=anim/c（alpha 0→1，240ms 线性）、exit=anim/j（alpha 1→1，240ms，即无过渡）、
+          //   popEnter=anim/j（无过渡）、popExit=anim/d（alpha 1→0，240ms 线性）。
+          // 即：进场淡入 240 线性、关闭时淡出 240 线性，底层内容全程不动（与原版 exit=anim/j 一致）。
+          .transition(fadeInTransition())
           .onClick(() => {
             this.showSearch = false
           })
@@ -1454,6 +1474,9 @@ struct Index {
             // 布局 2/3 输入条贴底（k6.oa：z10 = (W0==2||W0==3)?false:true）
             barAtTop: this.effectiveLayout() !== LAYOUT_TOOLBAR_BOTTOM
               && this.effectiveLayout() !== LAYOUT_DOUBLE,
+            // 原版 k6.oa U0：工具栏当前背景色（theme-color 适配）；等于默认色时传空串
+            // （bit2 zB2 = U0!=0 && 非夜间强制），面板据此反色并复用背景色
+            toolbarBg: this.toolbarCustomBg(),
             onClose: () => {
               this.showSearch = false
             }
@@ -1467,7 +1490,8 @@ struct Index {
           ? { bottom: this.insets.bottom } : { top: this.insets.top })
         // 空白区域点击穿透到下方压暗层（关闭）；面板自身 Default 拦截，避免点输入框时误关
         .hitTestBehavior(HitTestMode.None)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
+        // 同上：整块搜索面板随 FragmentTransaction 走 anim/c 进场（alpha 240ms 线性）
+        .transition(fadeInTransition())
       }
       if (this.showTabPanel) {
         TabPanel({
@@ -1515,12 +1539,14 @@ struct Index {
           .position({ x: 0, y: this.insets.top })
       }
       if (this.showAi) {
-        // 原版 b9/g Dialog：dimAmount 0.2，点击面板外关闭
+        // 原版 b9/g Dialog：b9/g.java 232-233 行 —— attributes.dimAmount = 0.2f，
+        // windowAnimations = (gravity & 48) == 48 ? style q(anim/m,l) : style r(anim/k,n)。
+        // 竖屏贴底 → style r（anim/k 160ms accelerate 上滑）；横屏居中 → style q（anim/m 下落）。
         Column()
           .width('100%')
           .height('100%')
           .backgroundColor('#33000000')
-          .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
+          .transition(dimTransition(160))
           .onClick(() => {
             this.showAi = false
           })
@@ -1549,7 +1575,8 @@ struct Index {
         .height(this.isLandscape ? '100%' : this.aiPanelHeightVp)
         .justifyContent(this.isLandscape ? FlexAlign.Center : FlexAlign.End)
         .alignItems(this.isLandscape ? HorizontalAlign.Center : HorizontalAlign.Start)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
+        // 同 b9/g 窗口动画：竖屏底部 → style r(anim/k 进)；横屏居中 → style q(anim/m 进)
+        .transition(this.isLandscape ? menuTransitionTop() : menuTransition())
         .onClick(() => {
           this.showAi = false
         })
@@ -1661,7 +1688,11 @@ struct Index {
           .backgroundColor('#F0322F2F')
           .borderRadius(4)
           .margin({ left: 12, right: 12, bottom: 56 })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 150 }))
+          // 原版 f6.i.c(view)：Snackbar 进场 alpha 0→1 与 translationY 20→0 同播，
+          // setDuration(180L)、setInterpolator(new DecelerateInterpolator())（f6/i.java 123-131 行）
+          .transition(TransitionEffect.OPACITY.animation({ duration: 180, curve: DECELERATE_CURVE })
+            .combine(TransitionEffect.translate({ y: 20 })
+              .animation({ duration: 180, curve: DECELERATE_CURVE })))
         }
         .width('100%')
         .height('100%')
@@ -1680,8 +1711,9 @@ struct Index {
           .height('100%')
           .backgroundColor(`#${this.windowFilterAlphaHex()}000000`)
           .hitTestBehavior(HitTestMode.None)
-          // 原版 k6.Ib：夜间切换 alpha 0.2→1、300ms Accelerate（近似 EaseIn）
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseIn }))
+          // 原版 k6.Ib()（c8/k6.java 4516-4528）：ObjectAnimator.ofFloat(f2606z0, "alpha", 0.2f, 1.0f)
+          // setDuration(300L)、setInterpolator(new AccelerateInterpolator())（=t²，非 EaseIn 的三次近似）
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: ACCELERATE_CURVE }))
       }
     }
     .width('100%')

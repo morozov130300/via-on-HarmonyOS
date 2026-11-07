@@ -349,12 +349,24 @@ class LinkItem {
   }
 }
 
+// borderRadius 四角对象（arkts 要求显式类型）
+class PanelCorners {
+  topLeft: number = 0
+  topRight: number = 0
+  bottomLeft: number = 0
+  bottomRight: number = 0
+}
+
 @ComponentV2
 export struct SearchOverlay {
   @Event onClose: () => void = () => {}
   @Param initialText: string = ''
   // 原版 C3 uiflags bit1（k6.oa z10）：布局0/1 输入条贴顶、2/3 贴底
   @Param barAtTop: boolean = true
+  // 原版 k6.oa U0：工具栏当前背景色（theme-color 适配）；0/'' = 默认色。
+  // 对应 C3 uiflags bit2（zB2 = U0!=0）：非默认时图标/文字按背景亮度反色，
+  // 输入条底色直接用该背景色（I3:762-776）。
+  @Param toolbarBg: string = ''
   @Local inputText: string = ''
   @Local rows: SuggestRow[] = []
   @Local showExpandEditor: boolean = false
@@ -374,6 +386,74 @@ export struct SearchOverlay {
   private favorites: LinkItem[] = []
   private networkRows: SuggestRow[] = []
   private activeQuery: string = ''
+
+  // 原版 g6.y.C（亮度 0.299R+0.587G+0.114B >= 192 判亮）
+  private static isLightColor(hex: string): boolean {
+    const value = hex.replace('#', '')
+    if (value.length < 6) {
+      return false
+    }
+    const r = Number.parseInt(value.substring(value.length - 6, value.length - 4), 16)
+    const g = Number.parseInt(value.substring(value.length - 4, value.length - 2), 16)
+    const b = Number.parseInt(value.substring(value.length - 2), 16)
+    return (r * 0.299 + g * 0.587 + b * 0.114) >= 192.0
+  }
+
+  // 原版 I3:762-776：bit2 自定义背景色时的前景色 —— 背景亮用 color t(#232323)，否则白
+  private fgOnCustomBg(): string {
+    if (this.toolbarBg !== '' && SearchOverlay.isLightColor(this.toolbarBg)) {
+      return '#232323'
+    }
+    return '#FFFFFF'
+  }
+
+  // 原版 x8.h.c(I())：正常面板底色 —— 亮白/暗黑（z8.l.d() 走 a2 实色，否则 a3 半透）。
+  // bit2 自定义背景色时输入条底色直接用该背景色（I3:776）。
+  private panelBg(): ResourceColor {
+    if (this.toolbarBg !== '') {
+      return this.toolbarBg
+    }
+    return $r('app.color.url_input_panel_bg')
+  }
+
+  // 原版 k0.C1 bit2（zB2）：uiflags 由 k6.oa z11 = (U0!=0 && !n0.d()) 计算；
+  // bit4（z12 = z10 && !z11 && b9()）：圆角卡模式 —— 非自定义色且窗口背景开启时生效
+  private hasCustomBg(): boolean {
+    return this.toolbarBg !== ''
+  }
+
+  // 原版 S3()（bit4 圆角卡）：输入条底色 View 圆角 —— g6.g.e(左上,右上,右下,左下)；
+  // 上侧圆角 = (贴顶 || 列表空) ? 18 : 0；下侧圆角 = (贴顶 && 列表非空) ? 0 : 18
+  private barRadius(): PanelCorners {
+    const radius = URL_PANEL_RADIUS
+    const listEmpty = this.displayRows().length === 0
+    const top = (this.barAtTop || listEmpty) ? radius : 0
+    const bottom = (this.barAtTop && !listEmpty) ? 0 : radius
+    const corners = new PanelCorners()
+    corners.topLeft = top
+    corners.topRight = top
+    corners.bottomLeft = bottom
+    corners.bottomRight = bottom
+    return corners
+  }
+
+  // 原版 I3:781：建议列表圆角恒为远侧两角 18dp（贴顶圆下侧、贴底圆上侧）
+  private listRadius(): PanelCorners {
+    const radius = URL_PANEL_RADIUS
+    const corners = new PanelCorners()
+    if (this.barAtTop) {
+      corners.topLeft = 0
+      corners.topRight = 0
+      corners.bottomLeft = radius
+      corners.bottomRight = radius
+    } else {
+      corners.topLeft = radius
+      corners.topRight = radius
+      corners.bottomLeft = 0
+      corners.bottomRight = 0
+    }
+    return corners
+  }
 
   aboutToAppear(): void {
     this.inputText = this.initialText
@@ -428,6 +508,12 @@ export struct SearchOverlay {
   InputPanel() {
     // 原版 k0.C1：贴顶（bit1=1）时输入条在上、建议列表 BELOW；
     // 贴底时输入条在下、建议列表 ABOVE。两个视图各自独立底色，绝不合并成一张卡。
+    // 动画：tb/k0 内部**没有任何** alpha/translate/scale 动效（全文件仅 setRotation(-90)、
+    // x.r.d0 窗口 insets），整个搜索面板的进出场由 k6.oa 的
+    // .v(anim_c, anim_j, anim_j, anim_d) 承担 = 进场 anim/c（alpha 0→1，integer/a=240ms 线性），
+    // 退场 anim/j（fromAlpha=toAlpha=1，即**无视觉变化**）。
+    // 故此处不再挂 dialogTransition（原版无 translate/scale/bounce），
+    // alpha 淡入由 Index.ets 外层容器的 fadeInTransition()（240ms Linear）实现。
     Column() {
       if (this.barAtTop) {
         this.InputBar()
@@ -438,7 +524,6 @@ export struct SearchOverlay {
       }
     }
     .width('100%')
-    .transition(dialogTransition())
   }
 
   // 原版 f12391x0（RecyclerView）：全宽 wrap 高、远离输入条一侧留 72dp、
@@ -456,10 +541,7 @@ export struct SearchOverlay {
       }
       .width('100%')
       .backgroundColor($r('app.color.url_input_panel_bg'))
-      .borderRadius({ bottomLeft: this.barAtTop ? URL_PANEL_RADIUS : 0,
-        bottomRight: this.barAtTop ? URL_PANEL_RADIUS : 0,
-        topLeft: this.barAtTop ? 0 : URL_PANEL_RADIUS,
-        topRight: this.barAtTop ? 0 : URL_PANEL_RADIUS })
+      .borderRadius(this.listRadius())
       .clip(true)
     }
     .width('100%')
@@ -572,11 +654,8 @@ export struct SearchOverlay {
     }
     .width('100%')
     .height(URL_BAR_HEIGHT)
-    .backgroundColor($r('app.color.url_input_panel_bg'))
-    .borderRadius({ topLeft: this.barAtTop ? 0 : URL_PANEL_RADIUS,
-      topRight: this.barAtTop ? 0 : URL_PANEL_RADIUS,
-      bottomLeft: this.barAtTop ? URL_PANEL_RADIUS : 0,
-      bottomRight: this.barAtTop ? URL_PANEL_RADIUS : 0 })
+    .backgroundColor(this.panelBg())
+    .borderRadius(this.barRadius())
     .clip(true)
   }
 
