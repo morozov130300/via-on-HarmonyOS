@@ -929,6 +929,30 @@
       "value": "已重置"
     },
     {
+      "name": "reset",
+      "value": "重置"
+    },
+    {
+      "name": "reset_default_title",
+      "value": "重置为默认设置"
+    },
+    {
+      "name": "reset_default_msg",
+      "value": "你确定继续吗？"
+    },
+    {
+      "name": "drag_to_reorder_hint",
+      "value": "按住并拖动即可重新排列条目"
+    },
+    {
+      "name": "drag_to_add_hint",
+      "value": "按住并拖动或点击来添加条目"
+    },
+    {
+      "name": "reset_action",
+      "value": "重置"
+    },
+    {
       "name": "latest_version",
       "value": "已是最新版本"
     },
