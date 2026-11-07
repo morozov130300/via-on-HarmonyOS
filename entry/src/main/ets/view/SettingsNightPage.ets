@@ -120,6 +120,7 @@ export struct SettingsNightPage {
       .height('100%')
     }
     .backgroundColor($r('app.color.page_bg'))
+    .hideTitleBar(true)
     .translate({ x: this.slideOffset })
     // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
     // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
