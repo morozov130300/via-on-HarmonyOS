@@ -12,7 +12,7 @@
 //   左下「取消」右下「重置」14sp #6f8de1 minWidth 56dp padding 16dp，
 //   弹窗背景圆角 18dp 描边 1dp #30808080 底色 #ffffff/#1c1b1d、dim 0.4。
 import { AppSettings } from '../common/Settings'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp, dialogTransition } from '../components/ViaDialogCard'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ViaIcon } from '../components/ViaIcon'
 import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
@@ -250,6 +250,8 @@ export struct SettingsMenuPage {
   // i8/s.a3：右上「重置」→ w5/k 确认弹窗（标题 rw「重置为默认设置」/ 正文 g8「你确定继续吗？」/
   // 确认 ao「重置」/ 取消 R.string.cancel）。布局 u：标题16sp粗体、正文14sp、按钮14sp #6f8de1。
   // 弹窗背景 drawable t/u：圆角 18dp、描边 1dp #30808080、底色 日#ffffff/夜#1c1b1d、dim 0.4。
+  // 圆角/底色/描边都落在内容根节点自身（openCustomDialog backgroundColor 透明，
+  // 避免 openCustomDialog 默认底板再套一层圆角）。
   private confirmReset(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
       width: computeDialogWidthVp(),
@@ -280,12 +282,9 @@ export struct SettingsMenuPage {
 
   @Builder
   ResetConfirmDialog() {
-    // w5/k.m + layout u：垂直排列，顶部 Space12 → 标题 → 正文 → 底部 Space12 → 按钮行（gravity end）
+    // w5/k.m + layout u + drawable t/u：根节点自身就是弹窗卡（圆角18dp+描边+底色），
+    // 圆角画在最外层内容节点上，openCustomDialog 底板透明，不再多套一层壳
     Column() {
-      // 顶部 Space 12dp
-      Column()
-        .height(12)
-        .width('100%')
       // 标题 style a7→a0：16sp 粗体 attr ac，padding 上下8 左右16，margin 底 6
       Text($r('app.string.reset_default_title'))
         .fontSize(16)
@@ -294,7 +293,7 @@ export struct SettingsMenuPage {
         .maxLines(1)
         .textAlign(TextAlign.Start)
         .width('100%')
-        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+        .padding({ left: 16, right: 16, top: 20, bottom: 8 })
         .margin({ bottom: 6 })
       // 正文 style a6：14sp attr ac，行距 4dp，padding 上下8 左右16
       Text($r('app.string.reset_default_msg'))
@@ -303,10 +302,6 @@ export struct SettingsMenuPage {
         .lineHeight(22)
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-      // 底部 Space 12dp
-      Column()
-        .height(12)
-        .width('100%')
       // 按钮行：gravity end，取消在左，重置在右（style y：14sp @color/p、minWidth 56、padding16）
       Row() {
         Text($r('app.string.cancel'))
@@ -332,8 +327,7 @@ export struct SettingsMenuPage {
       .width('100%')
       .justifyContent(FlexAlign.End)
     }
-    .width('90%')
-    .constraintSize({ maxWidth: 300 })
+    .width('100%')
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
     .border({ width: 1, color: $r('app.color.dialog_border') })
