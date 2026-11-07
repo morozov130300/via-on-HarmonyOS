@@ -279,7 +279,12 @@ export struct SettingsToolbarPage {
     }))
   }
 
-  // 原版 hb/l6.i3()：动作选择列表（无操作 + 四分组，顺序与分组归属逐项照搬）
+  // 原版 hb/l6.i3()：动作选择列表（无操作 + 四分组，顺序与分组归属逐项照搬）。
+  // 原版结构 = 全屏子页 hb/l6（o8.g），非弹窗：标题「选择行为」，右侧动作「保存」(u.ap)；
+  // 点击行仅切换选中（l6.m3），「保存」写入并返回（l3→k3）；disposable=true 时无「保存」，
+  // 点击行立即写入返回（u4.h3 / n7 通过 f6647t0 区分）。
+  // 本页沿用原版的数据结构，但落地为原版 w5.k 中心弹窗样式（与 OptionDialog 同壳），
+  // 避免为一个选择器新开 NavDestination 页面栈。
   private openActionPicker(target: string): void {
     this.pickerTarget = target
     this.pickerValue = this.actionValueOf(target)
@@ -346,23 +351,30 @@ export struct SettingsToolbarPage {
 
   @Builder
   ActionPicker() {
+    // 原版 w5.k 弹窗卡（layout u + drawable t/u）：18dp 圆角 + 1dp 描边 + dialog_bg，
+    // 标题 16sp 粗体（u.f13983fc 选择行为），分组标题 a6/m（14sp bold，attr a7 强调色），
+    // 选项行 a6/i（14sp，attr ac，上下 20dp/左右 16dp padding，按压底 drawable p #30808080）
     Column() {
-      Text(this.pickerTitle())
-        .fontSize(17)
+      Text($r('app.string.toolbar_action_title'))
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
+        .fontColor($r('app.color.dialog_text'))
+        .maxLines(1)
         .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
 
       Scroll() {
         Column() {
           this.ActionRow(0)
           ForEach(ACTION_GROUPS, (group: ActionGroup) => {
+            // a6/m 分组标题：14sp bold attr a7，margin 左16 右16 上12 下4
             Text(group.title)
-              .fontSize(13)
-              .fontColor($r('app.color.fg_secondary'))
+              .fontSize(14)
+              .fontWeight(FontWeight.Bold)
+              .fontColor($r('app.color.dialog_action'))
               .width('100%')
-              .height(34)
-              .textAlign(TextAlign.Start)
+              .padding({ left: 16, right: 16, top: 12, bottom: 4 })
             ForEach(group.items, (action: number) => {
               this.ActionRow(action)
             }, (action: number) => `act-${action}`)
@@ -374,62 +386,63 @@ export struct SettingsToolbarPage {
       .constraintSize({ maxHeight: 400 })
       .scrollBar(BarState.Auto)
 
+      // 底部按钮行：gravity end（保存）+ 左侧取消（w5/k layout u 顺序）
       Row() {
-        Blank()
-        Text('取消')
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+        Text($r('app.string.cancel'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.closeActionPicker()
           })
-        Text('保存')
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+        Text($r('app.string.reset'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
           .onClick(() => {
             this.saveActionPicker()
           })
       }
       .width('100%')
-      .margin({ top: 8 })
+      .justifyContent(FlexAlign.End)
     }
-    .width('78%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .width('100%')
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
   @Builder
   ActionRow(action: number) {
+    // a6/i 行：上下 20dp / 左右 16dp，14sp attr ac；选中 accent，未选中 fg；
+    // 按压底 drawable p（#30808080），无圆角（原版全宽行）
     Row() {
       Text(ACTION_NAMES[action])
-        .fontSize(15)
-        .fontColor(this.pickerValue === action ? $r('app.color.accent') : $r('app.color.fg'))
-        .fontWeight(this.pickerValue === action ? FontWeight.Medium : FontWeight.Normal)
+        .fontSize(14)
+        .fontColor(this.pickerValue === action ? $r('app.color.accent') : $r('app.color.dialog_text'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
     }
     .width('100%')
-    .height(42)
+    .padding({ left: 16, right: 16, top: 13, bottom: 13 })
+    .stateStyles({
+      pressed: {
+        .backgroundColor('rgba(128,128,128,0.19)')
+      },
+      normal: {
+        .backgroundColor(Color.Transparent)
+      }
+    })
     .onClick(() => {
       this.pickerValue = action
     })
-  }
-
-  private pickerTitle(): string {
-    const titles: Record<string, string> = {
-      'back': '返回',
-      'forward': '前进',
-      'home': '主页',
-      'tab': '标签',
-      'menu': '菜单',
-      'swipe0': '向左滑动',
-      'swipe1': '向右滑动'
-    }
-    const title = titles[this.pickerTarget]
-    return title !== undefined ? title : ''
   }
 
   private layoutLabel(): string {
@@ -580,27 +593,30 @@ export struct SettingsToolbarPage {
   // 文案 jt/ju/jv；选中高亮 accent，未选中 icon 色；点击保存并关闭（m3）
   @Builder
   AutoHidePicker() {
+    // 原版 hb/n7.r3：图形选择器弹窗 = w5.k 中心弹窗卡（drawable t/u 壳）+
+    // com.tuyafeng.support.widget.c：三个手机示意图 a8/a9/a_（50×90dp 圆角6dp 1dp描边），
+    // 选中 accent、未选中 icon 色；点击立即保存关闭（n7.m3）
     Column() {
       Text($r('app.string.auto_hide_toolbar'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
+        .fontColor($r('app.color.dialog_text'))
+        .maxLines(1)
         .width('100%')
-        .margin({ bottom: 8 })
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
 
       Row() {
         ForEach(AUTO_HIDE_OPTIONS, (option: OptionItem) => {
           Column() {
             this.PhoneSchematic(option.value)
             Text(this.autoHideOptionText(option.value))
-              .fontSize(16)
+              .fontSize(14)
               .fontColor(this.settings.toolbarAutoHide === option.value ?
-                $r('app.color.accent') : $r('app.color.fg'))
-              .fontWeight(this.settings.toolbarAutoHide === option.value ?
-                FontWeight.Bold : FontWeight.Normal)
+                $r('app.color.accent') : $r('app.color.dialog_text'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .margin({ top: 6 })
+              .margin({ top: 8 })
           }
           .layoutWeight(1)
           .margin(4)
@@ -611,10 +627,11 @@ export struct SettingsToolbarPage {
       }
       .width('100%')
     }
-    .width('72%')
-    .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .width('100%')
+    .padding({ top: 12, bottom: 16 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -668,47 +685,65 @@ export struct SettingsToolbarPage {
     return labels[value]
   }
 
-  // 原版 w5.k 单选对话框：标题 + 选项列表，无任何预览缩略图
+  // 原版 w5.k 单选对话框（layout u + w5.d 列表）：标题 16sp 粗体 + 选项行 14sp，
+  // 16dp 圆形单选钮（drawable p checked=q #6f8de1 / unchecked=2dp 描边 #30808080）、
+  // 行 padV 12 padH 16、图标-文字间距 24dp（dimen a4），点击选中关闭
   @Builder
   OptionDialog(kind: number) {
     if (kind === 1) {
       this.AutoHidePicker()
     } else {
-      Column({ space: 8 }) {
+      Column() {
         Text(this.dialogTitle(kind))
-          .fontSize(17)
+          .fontSize(16)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.fg'))
+          .fontColor($r('app.color.dialog_text'))
+          .maxLines(1)
           .width('100%')
+          .padding({ top: 8, bottom: 8 })
+          .margin({ left: 16, right: 16, bottom: 6 })
 
         if (kind === 3) {
           Text($r('app.string.tab_bar_need_layout'))
-            .fontSize(13)
-            .fontColor($r('app.color.fg_secondary'))
+            .fontSize(14)
+            .fontColor($r('app.color.dialog_text'))
             .width('100%')
+            .padding({ left: 16, right: 16, top: 4, bottom: 4 })
         }
 
         ForEach(this.dialogOptions(kind), (option: OptionItem) => {
-          Row({ space: 14 }) {
-            Circle({ width: 20, height: 20 })
+          Row({ space: 24 }) {
+            Circle({ width: 16, height: 16 })
               .fill(this.dialogCurrentValue(kind) === option.value ? $r('app.color.accent') : Color.Transparent)
-              .stroke(this.dialogCurrentValue(kind) === option.value ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-              .strokeWidth(1.5)
+              .stroke(this.dialogCurrentValue(kind) === option.value ? Color.Transparent : $r('app.color.dialog_border'))
+              .strokeWidth(2)
             Text(this.optionText(option))
-              .fontSize(15)
-              .fontColor($r('app.color.fg'))
+              .fontSize(14)
+              .fontColor($r('app.color.dialog_text'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
           }
           .width('100%')
-          .height(42)
+          .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+          .stateStyles({
+            pressed: {
+              .backgroundColor('rgba(128,128,128,0.19)')
+            },
+            normal: {
+              .backgroundColor(Color.Transparent)
+            }
+          })
           .onClick(() => {
             this.applyOption(kind, option.value)
           })
         }, (option: OptionItem) => `${kind}-${option.value}`)
       }
-      .width('72%')
-      .padding(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .borderRadius(16)
+      .width('100%')
+      .padding({ top: 12, bottom: 12 })
+      .backgroundColor($r('app.color.dialog_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
   }

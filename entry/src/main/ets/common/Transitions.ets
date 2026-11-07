@@ -111,32 +111,16 @@ export function dimTransition(duration: number): TransitionEffect {
 //   i: translate fromXDelta=0 → +100%   （退出页向右移出）
 // 调用点 g6/i.java:67 = .v(f13638c, f13639d, f13640e, f13641f)
 //   = .v(anim/f, anim/g, anim/h, anim/i) —— enter, exit, popEnter, popExit
-// 注意 ArkUI translate({x}) 是相对自身最终位置的偏移量，故进场必须传正值 +100%。
-export function slidePageInFromStart(): TransitionEffect {
-  return TransitionEffect.translate({ x: '100%' })
-    .animation({ duration: 220, curve: ACCELERATE_DECELERATE_CURVE })
-}
-
-export function slidePageOutToStart(): TransitionEffect {
-  return TransitionEffect.translate({ x: '-30%' })
-    .animation({ duration: 220, curve: ACCELERATE_DECELERATE_CURVE })
-}
-
-export function slidePageInFromEnd(): TransitionEffect {
-  return TransitionEffect.translate({ x: '-30%' })
-    .animation({ duration: 220, curve: ACCELERATE_DECELERATE_CURVE })
-}
-
-export function slidePageOutToEnd(): TransitionEffect {
-  return TransitionEffect.translate({ x: '100%' })
-    .animation({ duration: 220, curve: ACCELERATE_DECELERATE_CURVE })
-}
+// 落地方式：页面推入转场由 view/PageTransitions.ets 的 buildNavSlide() 通过
+//   NavDestination.customTransition 驱动（58 个子页已全部接入），此处不再提供
+//   TransitionEffect 版本的 slidePage* —— 旧实现无调用点，已删除以免误用。
 
 // anim/c 淡入 / anim/d 淡出：均为 integer/a=240，xml 无 interpolator → 线性 alpha
 export function fadeInTransition(): TransitionEffect {
   return TransitionEffect.OPACITY.animation({ duration: 240, curve: Curve.Linear })
 }
 
+// anim/d（alpha 1→0，240ms 线性）：供需要显式淡出的调用方使用
 export function fadeOutTransition(): TransitionEffect {
   return TransitionEffect.OPACITY.animation({ duration: 240, curve: Curve.Linear })
 }

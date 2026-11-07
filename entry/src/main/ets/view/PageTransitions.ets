@@ -31,8 +31,9 @@
 // 分场景单列（原生侧无对应默认值，必须显式给曲线）：
 //   · 窗口动画 XML（anim/a、k、m 的 alpha 段）无 interpolator → Animation 体系默认 LinearInterpolator
 //     → ArkUI 用 Curve.Linear（已在 common/Transitions.ets 落地）
-//   · x.r.c(view) 即 ViewPropertyAnimator 未显式 .e(...) → 默认 DecelerateInterpolator
-//     → 对应 ArkUI 用 curves.customCurve 复刻 1-(1-t)^2，或 DECELERATE_CURVE
+//   · x.r.c(view) 即 ViewPropertyAnimator 未显式 .e(...) → 内部沿用 ValueAnimator 默认，
+//     即 AccelerateDecelerateInterpolator（不是 Decelerate；AOSP ViewPropertyAnimator.getInterpolator
+//     在 mInterpolatorSet=false 时返回 mTempValueAnimator.getInterpolator()）
 //   · ValueAnimator/ObjectAnimator.ofFloat 未 setInterpolator → 默认 AccelerateDecelerateInterpolator
 //   · ArkUI 的 .animation()/animateTo 默认是 Curve.EaseInOut，与以上三者都不同 → 一律禁止省略 curve
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
@@ -97,6 +98,3 @@ export function buildNavSlide(
   }
   return [slide]
 }
-
-// 供"没有 AppBar 过渡需求"但需要精确曲线的调用方复用
-export const NAV_SLIDE_CURVE: ICurve = ACCELERATE_DECELERATE_CURVE

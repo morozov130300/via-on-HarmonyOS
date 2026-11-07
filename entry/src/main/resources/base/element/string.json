@@ -977,6 +977,10 @@
       "value": "重置"
     },
     {
+      "name": "toolbar_action_title",
+      "value": "选择行为"
+    },
+    {
       "name": "latest_version",
       "value": "已是最新版本"
     },

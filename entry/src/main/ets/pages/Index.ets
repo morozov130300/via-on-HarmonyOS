@@ -41,7 +41,7 @@ import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID } from '../common/DeepLi
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
-import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, fadeOutTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
+import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE } from '../common/Transitions'
 
 const EXIT_INTERVAL: number = 1500
 // 原版进度条渐变（x8/h.x）：#59C2E5 → #A687E0
