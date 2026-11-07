@@ -1862,6 +1862,7 @@ export class AppSettings {
     this.setHomeLogoType(0)
     this.setHomeLogoSize(28)
     this.setHomeLogoStyle(1)
+    // 原版 d9.t.q() 位域解码：i9.d 默认 193766400 = 宽 50、高 0、圆角 72、字体 28、粗体
     this.setHomeLogoWidth(0)
     this.setHomeLogoHeight(72)
     this.setHomeLogoCorner(50)

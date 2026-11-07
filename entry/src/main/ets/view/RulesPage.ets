@@ -4,6 +4,7 @@ import { AdBlocker, isValidRuleLine } from '../common/AdBlock'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 @ComponentV2
 export struct RulesPage {
@@ -244,7 +245,7 @@ export struct RulesPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width('80%')
+    .width(computeDialogWidthVp())
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -277,7 +278,7 @@ export struct RulesPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width('80%')
+    .width(computeDialogWidthVp())
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -326,7 +327,7 @@ export struct RulesPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width('80%')
+    .width(computeDialogWidthVp())
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

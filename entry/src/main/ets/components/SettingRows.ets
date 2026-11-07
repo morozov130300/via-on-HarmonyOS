@@ -10,14 +10,16 @@ export struct SettingNavRow {
   @Event onTapRow: () => void = () => {}
 
   build() {
+    // 原版 a6/o.java：padding 左右 16 / 上下 20dp；标题 14sp（dimen a_）单行；
+    // value 12sp（dimen aa）单行省略；desc 12sp 最多 3 行（o.java b() setMaxLines(3)）
     Column() {
       Text(this.rowLabel)
-        .fontSize(15)
+        .fontSize(14)
         .fontColor($r('app.color.fg'))
         .maxLines(1)
       if (hasText(this.rowValue)) {
         Text(this.rowValue)
-          .fontSize(13)
+          .fontSize(12)
           .fontColor($r('app.color.fg_secondary'))
           .maxLines(1)
           .margin({ top: 2 })
@@ -26,12 +28,12 @@ export struct SettingNavRow {
         Text(this.rowDesc)
           .fontSize(12)
           .fontColor($r('app.color.fg_secondary'))
-          .maxLines(2)
+          .maxLines(3)
           .margin({ top: 2 })
       }
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 13, bottom: 13 })
+    .padding({ left: 16, right: 16, top: 20, bottom: 20 })
     .alignItems(HorizontalAlign.Start)
     .onClick(() => {
       this.onTapRow()
@@ -47,20 +49,21 @@ export struct SettingRadioRow {
   @Event onLongPressRow: () => void = () => {}
 
   build() {
-    Row({ space: 12 }) {
-      Circle({ width: 18, height: 18 })
+    // 原版 v.xml + w5.d：16dp 圆形复选框 + drawablePadding 24 + 文字 14sp（dimen a_）；
+    // CheckBox padding 上下 12dp（a3）→ 行高自适应约 40dp，非固定高
+    Row({ space: 24 }) {
+      Circle({ width: 16, height: 16 })
         .fill(this.isSelected ? $r('app.color.accent') : Color.Transparent)
         .stroke(this.isSelected ? $r('app.color.accent') : $r('app.color.fg_secondary'))
         .strokeWidth(1.5)
       Text(this.rowLabel)
-        .fontSize(15)
+        .fontSize(14)
         .fontColor($r('app.color.fg'))
         .layoutWeight(1)
         .maxLines(1)
     }
     .width('100%')
-    .height(52)
-    .padding({ left: 16, right: 16 })
+    .padding({ left: 28, right: 16, top: 12, bottom: 12 })
     .onClick(() => {
       this.onTapRow()
     })
@@ -92,17 +95,19 @@ export struct SettingCheckRow {
   }
 
   build() {
+    // 原版 a6/o.java：padding 左右 16 / 上下 20dp；标题 14sp；desc 12sp 最多 3 行；
+    // CheckBox 20dp（o.java:110 y.h(context, 20.0f)）
     Row() {
       Column() {
         Text(this.rowLabel)
-          .fontSize(15)
+          .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
         if (hasText(this.rowDesc)) {
           Text(this.rowDesc)
             .fontSize(12)
             .fontColor($r('app.color.fg_secondary'))
-            .maxLines(2)
+            .maxLines(3)
             .margin({ top: 2 })
         }
       }

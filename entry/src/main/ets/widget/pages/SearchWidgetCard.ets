@@ -1,9 +1,7 @@
-// 原版桌面搜索小部件（普通）：resources/r/xml h.xml（appwidget-provider）→ 布局 r/f/a5.xml
-// （FrameLayout 48dp 高搜索条，圆角 18dp，底色 color ag（日/夜 #ffffff/#1c1b1d），
-// 搜索图标 drawable de 24dp、左 16dp、tint style a_ → color a1 #de000000）；
-// 整条点击（RemoteViews.setOnClickPendingIntent(id bf)）→ mark.via.SEARCH 进搜索。
-// 鸿蒙落地：静态卡片，FormLink(router) → EntryAbility，parameters viaCmd = via://search
-// （原版 SEARCH 语义等价命令，走 DeepLink.parseViaDeepLink → Index ViaCmdKind.SEARCH）
+// 白底黑字：纯白底 #FFFFFF + 纯黑放大镜 #000000，48dp 圆角 18dp，点击 → via://search。
+// 颜色字面量硬编码，固定不跟随日夜。
+// de.png 为黑色 alpha 蒙版 PNG；官方 Image 文档：fillColor 仅对 SVG 生效，
+// PNG 必须 colorFilter 4x5 纯色替换矩阵（归一化 0~1，卡片能力 API 9）。
 @Entry
 @ComponentV2
 struct SearchWidgetCard {
@@ -19,12 +17,17 @@ struct SearchWidgetCard {
             .width(24)
             .height(24)
             .margin({ left: 16, right: 16 })
-            .fillColor($r('app.color.widget_icon_tint'))
+            .colorFilter([
+              0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0,
+              0, 0, 0, 1, 0
+            ])
         }
         .width('100%')
         .height(48)
         .borderRadius(18)
-        .backgroundColor($r('app.color.widget_bar_bg'))
+        .backgroundColor('#FFFFFF')
         .alignItems(VerticalAlign.Center)
       }
       .width('100%')

@@ -9,6 +9,7 @@ import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 // 原版 x7/j 数组 j + strings o4/i2/i1/i3/i0（sa/d1.java:315）
 const SCRIPT_UPDATE_DAYS: number[] = [0, 1, 3, 7, 15]
@@ -609,7 +610,7 @@ struct ScriptDownloadOverlay {
         }
         .width('100%')
       }
-      .width('90%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .backgroundColor($r('app.color.page_bg'))
       .borderRadius(16)
@@ -796,7 +797,7 @@ export struct ScriptEditOverlay {
         }
         .width('100%')
       }
-      .width('90%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .backgroundColor($r('app.color.page_bg'))
       .borderRadius(16)

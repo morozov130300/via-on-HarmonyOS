@@ -3,6 +3,7 @@ import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { dialogTransition } from '../common/Transitions'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 // 原版夜间模式设置页（hb/p4）：
 // 行1「网页蒙版滤镜」→ 弹窗（预览文案 + 0~154 滑杆，抬起时保存）
@@ -157,7 +158,7 @@ export struct SettingsNightPage {
           }
         })
     }
-    .width('90%')
+    .width(computeDialogWidthVp())
     .constraintSize({ maxHeight: 320 })
     .padding({ left: 24, right: 24, top: 16, bottom: 16 })
     .backgroundColor($r('app.color.menu_bg'))

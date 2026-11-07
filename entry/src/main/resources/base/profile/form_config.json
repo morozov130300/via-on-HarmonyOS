@@ -2,8 +2,8 @@
   "forms": [
     {
       "name": "searchWidget",
-      "displayName": "$string:search_widget_name",
-      "description": "$string:search_widget_desc",
+      "displayName": "$string:widget_white_solid_name",
+      "description": "$string:widget_white_solid_desc",
       "src": "./ets/widget/pages/SearchWidgetCard.ets",
       "uiSyntax": "arkts",
       "window": {
@@ -15,14 +15,15 @@
       "isDefault": true,
       "updateEnabled": false,
       "defaultDimension": "1*2",
+      "transparencyEnabled": true,
       "supportDimensions": [
         "1*2"
       ]
     },
     {
       "name": "transparentSearchWidget",
-      "displayName": "$string:transparent_search_widget_name",
-      "description": "$string:transparent_search_widget_desc",
+      "displayName": "$string:widget_white_transparent_name",
+      "description": "$string:widget_white_transparent_desc",
       "src": "./ets/widget/pages/TransparentSearchWidgetCard.ets",
       "uiSyntax": "arkts",
       "window": {
@@ -34,6 +35,47 @@
       "isDefault": false,
       "updateEnabled": false,
       "defaultDimension": "1*2",
+      "transparencyEnabled": true,
+      "supportDimensions": [
+        "1*2"
+      ]
+    },
+    {
+      "name": "darkSearchWidget",
+      "displayName": "$string:widget_black_solid_name",
+      "description": "$string:widget_black_solid_desc",
+      "src": "./ets/widget/pages/DarkSearchWidgetCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "isDynamic": false,
+      "colorMode": "auto",
+      "isDefault": false,
+      "updateEnabled": false,
+      "defaultDimension": "1*2",
+      "transparencyEnabled": true,
+      "supportDimensions": [
+        "1*2"
+      ]
+    },
+    {
+      "name": "darkTransparentSearchWidget",
+      "displayName": "$string:widget_black_transparent_name",
+      "description": "$string:widget_black_transparent_desc",
+      "src": "./ets/widget/pages/DarkTransparentSearchWidgetCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "isDynamic": false,
+      "colorMode": "auto",
+      "isDefault": false,
+      "updateEnabled": false,
+      "defaultDimension": "1*2",
+      "transparencyEnabled": true,
       "supportDimensions": [
         "1*2"
       ]

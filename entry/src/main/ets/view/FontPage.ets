@@ -5,6 +5,7 @@ import { AppSettings } from '../common/Settings'
 import { FontEntry, FontStore } from '../common/FontStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { SettingRadioRow } from '../components/SettingRows'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 // 原版 hb/j2.java：「字体」页
 // 列表 = s9.d 字体库（首项默认 fd「默认」，其余文件名字母排序），单击选中（B3 → w9.l.o 写 uifont）；
@@ -232,7 +233,7 @@ struct FontRenameOverlay {
         }
         .width('100%')
       }
-      .width('90%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .backgroundColor($r('app.color.page_bg'))
       .borderRadius(16)

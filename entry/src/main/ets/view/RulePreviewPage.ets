@@ -2,6 +2,7 @@ import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { RuleSubManager } from '../common/RuleSubscriptions'
 import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 // 原版 z7/v0：规则订阅预览页——标题=订阅名（空回退 am「预览」），
 // 规则行列表，点击行弹单行「预览」对话框（g6.n.l(W, line)）
@@ -136,7 +137,7 @@ export struct RulePreviewPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width('80%')
+    .width(computeDialogWidthVp())
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

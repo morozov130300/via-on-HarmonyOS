@@ -5,6 +5,7 @@ import { SEARCH_ENGINES, SearchEngineDef, getBuiltinEngines } from '../common/Se
 import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 class SuggestItem {
   label: string = ''
@@ -223,7 +224,7 @@ export struct SettingsSearchPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width('86%')
+    .width(computeDialogWidthVp())
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -322,7 +323,7 @@ export struct SettingsSearchPage {
       }
       .width('100%')
     }
-    .width('86%')
+    .width(computeDialogWidthVp())
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

@@ -22,9 +22,12 @@ export const HOME_LOGO_TYPES: string[] = ['默认', '图片', '文字', 'HTML �
 export const HOME_LOGO_STYLES: string[] = ['常规', '粗体', '斜体', '粗体 斜体']
 
 // Logo 文字色（原版 CSS .logo：浅色 #afafaf / 深色 #fafafa，走 app.color.home_text）
-// Logo 尺寸滑杆范围（px），0 表示自适应
+// Logo 尺寸滑杆范围（px），0 表示自适应（原版 e9.u d(10,127)）
 export const HOME_DIM_MIN: number = 10
 export const HOME_DIM_MAX: number = 127
+// 收藏图标宽/高滑杆范围（原版 e9.l d(24,80)），0 表示自适应
+export const HOME_FAV_DIM_MIN: number = 24
+export const HOME_FAV_DIM_MAX: number = 80
 export const HOME_LOGO_FONT_MIN: number = 10
 export const HOME_LOGO_FONT_MAX: number = 63
 
@@ -37,8 +40,9 @@ export const HOME_STROKE_MAX: number = 7
 export const HOME_PCT_MIN: number = 0
 export const HOME_PCT_MAX: number = 100
 
-// 收藏图标：阴影风格（原版 i9.c：多彩=按网址派生底色，透明=无底色灰字）
+// 收藏图标：图标样式（原版 e9.l case4：bit21 0=图标优先 1=文字）
 export const HOME_FAV_ICON_STYLES: string[] = ['图标优先', '文字']
+// 图标色彩（原版 e9.l case5：bit22 0=多彩 1=透明）
 export const HOME_FAV_SHADOWS: string[] = ['多彩', '透明']
 
 

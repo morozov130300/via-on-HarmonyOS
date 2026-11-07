@@ -40,6 +40,7 @@ import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/Searc
 import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 
 const EXIT_INTERVAL: number = 1500
 // 原版进度条渐变（x8/h.x）：#59C2E5 → #A687E0
@@ -1434,7 +1435,10 @@ struct Index {
       }
 
       if (this.showSearch) {
-        // 原版 bb/i：搜索建议为地址栏下吸附的浮动卡片（非全屏黑面板），页面仅压暗
+        // 原版 tb/k0（UrlInputFragment）：整屏压暗 + 搜索面板，顶栏贴屏幕顶部（布局0/1）
+        // 或贴屏幕底部（布局2/3，k6.oa/C3 的 uiflags bit0 控制 ALIGN_PARENT_TOP/BOTTOM）；
+        // Y2() 再对顶栏应用窗口 insets padding（贴顶避状态栏、贴底避导航栏）。
+        // 用整屏 Column 的 justifyContent 承载，避免根 Stack 默认垂直居中把面板放到屏幕中部。
         Column()
           .width('100%')
           .height('100%')
@@ -1444,21 +1448,27 @@ struct Index {
           .onClick(() => {
             this.showSearch = false
           })
-        // 卡片贴在顶栏（地址栏 48）之下，左右 8 边距（原版 .opSug_wpr 宽度收窄）
-        Row() {
-          SearchOverlay({
-            initialText: this.searchInitialText,
-            onClose: () => {
-              this.showSearch = false
-            }
-          })
+        Column() {
+          Row() {
+            SearchOverlay({
+              initialText: this.searchInitialText,
+              onClose: () => {
+                this.showSearch = false
+              }
+            })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+          .padding({ left: 8, right: 8 })
         }
         .width('100%')
-        .padding({ left: 8, right: 8, top: this.insets.top + 48 })
+        .height('100%')
+        .justifyContent(this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM || this.effectiveLayout() === LAYOUT_DOUBLE
+          ? FlexAlign.End : FlexAlign.Start)
+        .padding(this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM || this.effectiveLayout() === LAYOUT_DOUBLE
+          ? { bottom: this.insets.bottom } : { top: this.insets.top })
+        .hitTestBehavior(HitTestMode.Transparent)
         .transition(TransitionEffect.OPACITY.animation({ duration: 160 }))
-        .onClick(() => {
-          this.showSearch = false
-        })
       }
       if (this.showTabPanel) {
         TabPanel({
@@ -2244,7 +2254,7 @@ struct DownloadConfirmOverlay {
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
     }
-    .width('100%')
+    .width(computeDialogWidthVp())
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .backgroundColor('rgba(0,0,0,0.5)')
@@ -2361,7 +2371,7 @@ struct SavePageDialog {
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
     }
-    .width('100%')
+    .width(computeDialogWidthVp())
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .backgroundColor('rgba(0,0,0,0.5)')
