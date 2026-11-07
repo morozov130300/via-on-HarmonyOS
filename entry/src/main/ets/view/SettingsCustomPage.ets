@@ -70,7 +70,9 @@ export struct SettingsCustomPage {
   @Local logoDialogShow: boolean = false
   @Local confirmKind: string = ''
   @Local textDraft: string = ''
-  private textKind: string = ''
+  // 与同组弹窗状态一致必须是 @Local：V2 下普通 private 赋值不触发重渲染，
+  // 否则选「文字」/「HTML 代码」后 TextInputDialog 永远不出现（点不动）。
+  @Local textKind: string = ''
 
   private tabs: string[] = ['Logo', '搜索框', '背景', '收藏', '高级']
 
@@ -85,41 +87,49 @@ export struct SettingsCustomPage {
 
   build() {
     NavDestination() {
-      Column() {
-        AppBarSpacer()
+      // 全屏弹窗必须显式层叠在主内容之上。NavDestination 只声明「子组件个数：多个」，
+      // 并非 Stack 层叠语义；主内容 Column 已 height('100%') 占满，内联的全屏弹窗会被
+      // 排到视口之外 → 点「Logo」参数项状态已变但弹窗看不见、点不到（即「点不动」）。
+      // 与 OfflinePage 一致：外层 Stack 包裹，后入栈的弹窗覆盖主内容并优先接收点击。
+      Stack() {
         Column() {
-          // 原版预览为带边距圆角描边卡片（非全宽贴合）
-          HomePage({ onSearchTap: () => {
-          } })
+          AppBarSpacer()
+          Column() {
+            // 原版预览为带边距圆角描边卡片（非全宽贴合）
+            HomePage({ onSearchTap: () => {
+            } })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .padding({ left: 12, right: 12, top: 12 })
+          .borderRadius(18)
+          .border({ width: 1, color: $r('app.color.appbar_divider') })
+          .backgroundColor($r('app.color.page_bg'))
+          .clip(true)
+
+          this.SliderRail()
+          if (this.paletteKey !== '') {
+            this.PaletteRow()
+          } else {
+            this.ParamStrip()
+          }
+          this.TabBar()
         }
         .width('100%')
-        .layoutWeight(1)
-        .padding({ left: 12, right: 12, top: 12 })
-        .borderRadius(18)
-        .border({ width: 1, color: $r('app.color.appbar_divider') })
-        .backgroundColor($r('app.color.page_bg'))
-        .clip(true)
+        .height('100%')
 
-        this.SliderRail()
-        if (this.paletteKey !== '') {
-          this.PaletteRow()
-        } else {
-          this.ParamStrip()
+        if (this.logoDialogShow) {
+          this.LogoTypeDialog()
         }
-        this.TabBar()
+        if (this.confirmKind !== '') {
+          this.ConfirmDialog()
+        }
+        if (this.textKind !== '') {
+          this.TextInputDialog()
+        }
       }
       .width('100%')
       .height('100%')
-
-      if (this.logoDialogShow) {
-        this.LogoTypeDialog()
-      }
-      if (this.confirmKind !== '') {
-        this.ConfirmDialog()
-      }
-      if (this.textKind !== '') {
-        this.TextInputDialog()
-      }
     }
     .backgroundColor($r('app.color.page_bg'))
     .translate({ x: this.slideOffset })

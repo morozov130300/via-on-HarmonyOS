@@ -167,7 +167,9 @@ export struct HomePage {
             }
           }
           .width('100%')
-          // 原版 logo 是 <a onclick="window.via.cmd(257)">：点击进入主页定制设置
+          // 原版 i6/o.java:24：logo 是 <a onclick="window.via.cmd(257)">；
+          // c8/k6.java:1409 → ja(true) → aa(null) → g6.i.i(..., bb.i.n3(true,1))，
+          // 即打开书签管理页（RecordContainerFragment 标签 1），并非进入主页定制设置。
           .onClick(() => {
             this.onLogoTap()
           })
