@@ -181,10 +181,12 @@ export struct SettingsProxyPage {
   private openUrlDialog(): void {
     this.urlInput = this.proxyUrl
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.UrlDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -207,10 +209,12 @@ export struct SettingsProxyPage {
   private openAddDialog(): void {
     this.addInput = ''
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.AddRuleDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -234,10 +238,12 @@ export struct SettingsProxyPage {
     this.editRuleKey = rule
     this.editInput = rule
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.EditRuleDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -315,7 +321,7 @@ export struct SettingsProxyPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -363,7 +369,7 @@ export struct SettingsProxyPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -426,7 +432,7 @@ export struct SettingsProxyPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

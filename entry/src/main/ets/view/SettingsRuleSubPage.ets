@@ -389,10 +389,12 @@ export struct SettingsRuleSubPage {
   private openAddDialog(): void {
     this.newUrl = 'https://'
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.AddSubDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -438,10 +440,12 @@ export struct SettingsRuleSubPage {
     this.editKey = sub.key
     this.editUrl = sub.url
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.EditSubDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -500,7 +504,7 @@ export struct SettingsRuleSubPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -565,7 +569,7 @@ export struct SettingsRuleSubPage {
       }
       .width('100%')
     }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(24)
       .backgroundColor($r('app.color.menu_bg'))
       .borderRadius(16)

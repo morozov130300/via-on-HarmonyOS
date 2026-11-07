@@ -1445,7 +1445,7 @@ export struct AiPanel {
             })
           }, (model: string) => model)
         }
-        .width(computeDialogWidthVp())
+        .width('100%')
         .padding(16)
         .borderRadius(18)
         .backgroundColor($r('app.color.dialog_bg'))

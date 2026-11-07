@@ -123,10 +123,12 @@ export struct RulesPage {
 
   private showHelp(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.HelpDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -161,10 +163,12 @@ export struct RulesPage {
   // 原版 z7.v.v3：未保存退出确认弹窗
   private showUnsaved(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.UnsavedDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: false,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -186,10 +190,12 @@ export struct RulesPage {
   // 原版 z7.v.i3：非法行警告弹窗（确定后退出）
   private showInvalid(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.InvalidDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: false,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.5)'
@@ -245,7 +251,7 @@ export struct RulesPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -278,7 +284,7 @@ export struct RulesPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
@@ -327,7 +333,7 @@ export struct RulesPage {
       .width('100%')
       .margin({ top: 4 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(24)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)

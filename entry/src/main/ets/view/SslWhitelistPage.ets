@@ -126,10 +126,12 @@ export struct SslWhitelistPage {
   // a3()：工具栏 k9 帮助 → d0(yv).I(n_).V(ok).f0()
   private openHelpDialog(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.HelpDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -174,7 +176,7 @@ export struct SslWhitelistPage {
       .width('100%')
       .margin({ left: 16, right: 16 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)

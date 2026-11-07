@@ -346,10 +346,12 @@ export struct AddressBar {
   // 原版 k6.h：左图标长按 → w5.k.l(I()).d0(sp=搜索引擎).b0(引擎名数组, 当前项, 选中回调).f0()
   private openEngineDialog(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.EngineDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -522,7 +524,7 @@ export struct AddressBar {
       }
       .constraintSize({ maxHeight: 384 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)

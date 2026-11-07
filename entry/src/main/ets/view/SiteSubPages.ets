@@ -143,10 +143,12 @@ export struct SiteAllPage {
   private openAddDialog(): void {
     this.addHostInput = ''
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.AddHostDialog('新建')
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -162,10 +164,12 @@ export struct SiteAllPage {
     this.renameFrom = host
     this.renameInput = host
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.RenameHostDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -251,7 +255,7 @@ export struct SiteAllPage {
         this.openSite(host)
       })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
@@ -299,7 +303,7 @@ export struct SiteAllPage {
         }
       })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
@@ -484,10 +488,12 @@ export struct FontSizePage {
   private openAddHostDialog(): void {
     this.addHostInput = ''
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.AddHostDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -559,7 +565,7 @@ export struct FontSizePage {
       .width('100%')
       .margin({ left: 16, right: 16 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
@@ -582,10 +588,12 @@ export struct FontSizePage {
     const initial = zoom !== undefined ? zoom : this.settings.getSiteFontZoom(host)
     this.siteDialogZoom = initial > 0 ? initial : this.settings.textZoom
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.SiteZoomDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -659,7 +667,7 @@ export struct FontSizePage {
       .width('100%')
       .margin({ left: 16, right: 16 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
@@ -1213,10 +1221,12 @@ export struct PermissionPage {
     this.addHostInput = ''
     this.addAskCheck = false
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.AddExceptionDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -1369,7 +1379,7 @@ export struct PermissionPage {
       .width('100%')
       .margin({ left: 16, right: 16 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
@@ -1407,10 +1417,12 @@ export struct PermissionPage {
     this.pickDialogOnPick = onPick
     this.pickDialogOnNegative = onNegative
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.PickDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -1500,7 +1512,7 @@ export struct PermissionPage {
         .margin({ left: 16, right: 16 })
       }
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
@@ -1859,10 +1871,12 @@ export struct AdBlockExceptionPage {
     this.siteDialogHost = host
     this.pickDialogChecked = mode
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.SiteDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -1981,7 +1995,7 @@ export struct AdBlockExceptionPage {
       .width('100%')
       .margin({ left: 16, right: 16 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
@@ -2001,10 +2015,12 @@ export struct AdBlockExceptionPage {
   private openAddDialog(): void {
     this.addHostInput = ''
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.AddExceptionDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -2080,7 +2096,7 @@ export struct AdBlockExceptionPage {
       .width('100%')
       .margin({ left: 16, right: 16 })
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)

@@ -240,10 +240,12 @@ export struct SettingsGeneralPage {
     this.listDialogPlain = plain
     this.listDialogOnSelect = onSelect
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.ListDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -342,10 +344,12 @@ export struct SettingsGeneralPage {
       this.clearOnExitChecks[i] = (mask & CLEAR_ON_EXIT_BITS[i]) !== 0
     }
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.ClearOnExitDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -570,10 +574,12 @@ export struct SettingsGeneralPage {
     // 原版 c4 case22：先弹导出范围多选弹窗，确定后按位打包 ZIP
     this.exportSelection = [true, true, true, true, true, false]
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.ExportDataDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -609,10 +615,12 @@ export struct SettingsGeneralPage {
       this.pendingExportFlags = flags
       this.passwordInput = ''
       this.getUIContext().getPromptAction().openCustomDialog({
+        width: computeDialogWidthVp(),
         builder: (): void => {
           this.PasswordDialog()
         },
         isModal: true,
+        backgroundColor: Color.Transparent,
         autoCancel: true,
         alignment: DialogAlignment.Center,
         maskColor: 'rgba(0,0,0,0.4)'
@@ -875,10 +883,12 @@ export struct SettingsGeneralPage {
 
   private showDefaultBrowserGuide(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.DefaultBrowserGuideDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -937,10 +947,12 @@ export struct SettingsGeneralPage {
 
   private showPasswordVaultGuide(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.PasswordVaultGuideDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -1066,10 +1078,12 @@ export struct SettingsGeneralPage {
   // .V(er 重启应用, z8.f.k).N(cancel).f0()
   private confirmRestart(): void {
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.RestartConfirmDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -1154,10 +1168,12 @@ export struct SettingsGeneralPage {
   private inputHomeUrl(): void {
     this.homeUrlInput = this.settings.homeUrl
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.HomeUrlDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -1269,10 +1285,12 @@ export struct SettingsGeneralPage {
       this.clearDataSelection[i] = (mask & SettingsGeneralPage.CLEAR_DATA_BITS[i]) !== 0
     }
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.ClearDataDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'

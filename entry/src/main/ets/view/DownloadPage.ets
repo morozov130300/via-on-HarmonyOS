@@ -683,7 +683,7 @@ export struct DownloadPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(16)
@@ -725,7 +725,7 @@ export struct DownloadPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(16)
@@ -778,7 +778,7 @@ export struct DownloadPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(16)
@@ -832,7 +832,7 @@ export struct DownloadPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(16)

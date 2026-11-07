@@ -233,7 +233,7 @@ struct FontRenameOverlay {
         }
         .width('100%')
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(20)
       .backgroundColor($r('app.color.page_bg'))
       .borderRadius(16)

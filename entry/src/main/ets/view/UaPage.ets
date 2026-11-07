@@ -167,10 +167,12 @@ export struct UaPage {
     this.desktopOptions = options
     this.desktopChecked = checked
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.DesktopUaDialog()
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
       maskColor: 'rgba(0,0,0,0.4)'
@@ -223,7 +225,7 @@ export struct UaPage {
         })
       }, (label: string) => label)
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding({ top: 12, bottom: 12 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)

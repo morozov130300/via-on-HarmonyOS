@@ -345,6 +345,30 @@
       "value": "清除搜索历史"
     },
     {
+      "name": "url_input_clear_text",
+      "value": "清除文本"
+    },
+    {
+      "name": "url_input_expand_text",
+      "value": "展开文本"
+    },
+    {
+      "name": "url_input_collapse_text",
+      "value": "折叠文本"
+    },
+    {
+      "name": "url_input_fill_text",
+      "value": "填入文本"
+    },
+    {
+      "name": "url_input_suggestion",
+      "value": "建议"
+    },
+    {
+      "name": "url_input_confirm_clear_history",
+      "value": "你确认清除搜索历史吗？"
+    },
+    {
       "name": "restore_tabs",
       "value": "恢复标签页"
     },

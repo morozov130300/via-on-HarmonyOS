@@ -65,6 +65,30 @@
       "value": "#F5F5F5"
     },
     {
+      "name": "url_input_panel_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "url_input_panel_bg_translucent",
+      "value": "#EBFFFFFF"
+    },
+    {
+      "name": "url_input_sub_text",
+      "value": "#8A000000"
+    },
+    {
+      "name": "url_input_icon_tint",
+      "value": "#232323"
+    },
+    {
+      "name": "url_input_pressed",
+      "value": "#30808080"
+    },
+    {
+      "name": "url_input_scrollbar",
+      "value": "#80808080"
+    },
+    {
       "name": "chip_bg",
       "value": "#2A292B"
     },

@@ -272,7 +272,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -666,7 +666,7 @@ export struct MenuSheet {
             .margin({ top: 2, bottom: 8 })
         }
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding({ top: 12, bottom: 12 })
       .backgroundColor($r('app.color.dialog_bg'))
       .borderRadius(18)
@@ -730,7 +730,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -777,7 +777,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -861,7 +861,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -915,7 +915,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -1005,7 +1005,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -1061,7 +1061,7 @@ export struct MenuSheet {
         .width('100%')
         .padding({ bottom: 12 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .constraintSize({ maxHeight: '70%' })
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))
@@ -1145,7 +1145,7 @@ export struct MenuSheet {
         .width('100%')
         .margin({ top: 6 })
       }
-      .width(computeDialogWidthVp())
+      .width('100%')
       .padding(24)
       .borderRadius(20)
       .backgroundColor($r('app.color.menu_bg'))

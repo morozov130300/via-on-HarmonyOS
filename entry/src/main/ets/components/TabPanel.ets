@@ -383,10 +383,12 @@ export struct TabPanel {
   private openUndoDialog(message: string): void {
     this.undoMessage = message
     this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.UndoDialog()
       },
       isModal: false,
+      backgroundColor: Color.Transparent,
       autoCancel: false,
       alignment: DialogAlignment.Bottom
     }).then((dialogId: number) => {

@@ -174,10 +174,12 @@ export struct SyncPage {
     }
     const promptAction = this.getUIContext().getPromptAction()
     promptAction.openCustomDialog({
+      width: computeDialogWidthVp(),
       builder: (): void => {
         this.FieldDialog(fieldKey)
       },
       isModal: true,
+      backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center
     }).then((dialogId: number) => {
@@ -221,7 +223,7 @@ export struct SyncPage {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
+    .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.menu_bg'))
     .borderRadius(16)
