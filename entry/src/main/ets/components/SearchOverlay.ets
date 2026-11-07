@@ -8,11 +8,14 @@ import { BrowserDb } from '../common/Database'
 import {
   SearchEngineDef,
   getBuiltinEngines,
+  applyTemplate,
   buildSearchUrl,
   buildSuggestUrl,
+  findEngine,
   findSuggestSource,
   isUrlLike,
-  normalizeUrl
+  normalizeUrl,
+  engineKeyFromId
 } from '../common/SearchEngines'
 import { ViaIcon } from './ViaIcon'
 import { computeDialogWidthVp } from './ViaDialogCard'
@@ -349,6 +352,17 @@ class LinkItem {
   }
 }
 
+// 原版 c.a()：默认引擎快捷词表条目（负 id 内置，≥1 自定义主键）
+class ShortcutPair {
+  id: number = 0
+  word: string = ''
+
+  constructor(id: number, word: string) {
+    this.id = id
+    this.word = word
+  }
+}
+
 // borderRadius 四角对象（arkts 要求显式类型）
 class PanelCorners {
   topLeft: number = 0
@@ -371,6 +385,8 @@ export struct SearchOverlay {
   @Local rows: SuggestRow[] = []
   @Local showExpandEditor: boolean = false
   @Local expandDraft: string = ''
+  // 原版 k0.K0：命中引擎快捷词的暂存引擎 id（0=无）；仅 K0≠0 时 chip 显示且 commit 走该引擎
+  @Local qualifiedEngineId: number = 0
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
@@ -456,10 +472,10 @@ export struct SearchOverlay {
   }
 
   aboutToAppear(): void {
+    // 原版每次打开面板 K0 复位 0、chip GONE（k0.E3）；初始文本同样走 z3 资格判定
+    this.qualifiedEngineId = 0
     this.inputText = this.initialText
-    if (this.inputText.trim() !== '') {
-      this.fetchSuggestions(this.inputText)
-    }
+    this.applyShortcutQualification(this.inputText)
     this.db.listBookmarks().then((items) => {
       const list: LinkItem[] = []
       for (const item of items) {
@@ -600,10 +616,11 @@ export struct SearchOverlay {
       this.IconSlot($r('app.media.via_ic_url_engine'), $r('app.string.search_engine'), () => {
         this.openEngineDialog()
       })
-      // 2) 引擎名 chip（f12388u0）：仅非默认引擎显示，11sp + 1dp 描边 + 4dp 圆角
-      if (this.engineName() !== this.builtinEngines()[0].name) {
-        Text(this.engineName())
-          .fontSize(11)
+      // 2) 引擎名 chip（f12388u0 / k0.u0）：仅命中引擎快捷词（K0≠0）时显示；
+      // 原版 u0：16sp + 1dp 描边 + 4dp 圆角（k0.C1:575），空输入恒 GONE（k0.E3）
+      if (this.qualifiedEngineId !== 0) {
+        Text(this.engineNameById(this.qualifiedEngineId))
+          .fontSize(16)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
@@ -629,14 +646,16 @@ export struct SearchOverlay {
         })
         .onChange((value: string) => {
           this.inputText = value
-          this.fetchSuggestions(value)
+          // 原版 p3 → z3：每次变更先做快捷词资格判定（命中则剥离前缀并重取建议）
+          this.applyShortcutQualification(value)
         })
         .onSubmit((enterKey: EnterKeyType) => {
           this.commit(this.inputText)
         })
-      // 4) 清空（f12385r0）：drawable b8 / ic_close，空文本 GONE
+      // 4) 清空（f12385r0）：drawable b8 / ic_close，空文本 GONE；清空即复位 K0（k0.E3）
       if (this.inputText.length > 0) {
         this.IconSlot($r('app.media.via_ic_url_clear'), $r('app.string.url_input_clear_text'), () => {
+          this.qualifiedEngineId = 0
           this.inputText = ''
           this.rows = []
           this.fetchSuggestions('')
@@ -717,21 +736,6 @@ export struct SearchOverlay {
     return getBuiltinEngines(isZh, isRu)
   }
 
-  private engineName(): string {
-    if (this.settings.engineKey.startsWith('custom')) {
-      const rec = this.settings.resolveCustomEngineKey(this.settings.engineKey)
-      if (rec !== null) {
-        return rec.name
-      }
-    }
-    for (const engine of this.builtinEngines()) {
-      if (engine.key === this.settings.engineKey) {
-        return engine.name
-      }
-    }
-    return this.builtinEngines()[0].name
-  }
-
   // 原版 k0.O3：w5.k.l().d0(搜索引擎).b0(names, checked, cb).f0() 单选弹窗（layout v.xml）
   @Builder
   EngineDialog() {
@@ -781,6 +785,8 @@ export struct SearchOverlay {
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })
     .onClick(() => {
       this.settings.setEngineKey(key)
+      // 原版 w3：外部默认引擎变更 → K0≠0 时 E3()（复位 chip）
+      this.qualifiedEngineId = 0
       this.closeEngineDialog()
       this.fetchSuggestions(this.inputText)
     })
@@ -917,6 +923,102 @@ export struct SearchOverlay {
     this.commit(row.sub !== '' ? row.sub : row.text)
   }
 
+  // 原版 c.a()：默认引擎快捷词表（id→词），locale 无关
+  private static readonly DEFAULT_SHORTCUTS: ShortcutPair[] = [
+    new ShortcutPair(-1, 'gg'), new ShortcutPair(-2, 'bd'), new ShortcutPair(-3, 'bn'),
+    new ShortcutPair(-4, 'sm'), new ShortcutPair(-5, 'qh'), new ShortcutPair(-6, 'sg'),
+    new ShortcutPair(-7, 'yd'), new ShortcutPair(-8, 'yh'), new ShortcutPair(-9, 'sp'),
+    new ShortcutPair(-10, 'dd'), new ShortcutPair(-11, 'tt'), new ShortcutPair(-12, 'mt')
+  ]
+
+  // 原版 c.f()：默认表叠加用户 searchshortcuts JSON（{"<引擎id>":"<词>"}）
+  private shortcutWordToEngine(): Map<string, number> {
+    const map: Map<string, number> = new Map()
+    for (const pair of SearchOverlay.DEFAULT_SHORTCUTS) {
+      map.set(pair.word, pair.id)
+    }
+    const raw = this.settings.searchshortcuts
+    if (raw !== '') {
+      try {
+        const obj = JSON.parse(raw) as Record<string, string>
+        for (const key of Object.keys(obj)) {
+          const id = Number(key)
+          const word = String(obj[key]).trim().toLowerCase()
+          if (!Number.isNaN(id) && word !== '') {
+            map.set(word, id)
+          }
+        }
+      } catch (error) {
+      }
+    }
+    return map
+  }
+
+  // 原版 k0.y3：引擎名（g6.p.j(str,16) 截 16）
+  private engineNameById(id: number): string {
+    const key = engineKeyFromId(id)
+    if (key === null) {
+      return ''
+    }
+    let name: string
+    if (id >= 1) {
+      const rec = this.settings.resolveCustomEngineKey(key)
+      name = rec !== null ? rec.name : ''
+    } else {
+      name = findEngine(key).name
+    }
+    return name.length > 16 ? name.substring(0, 16) : name
+  }
+
+  // 原版 k0.F3：K0≠0 且非空 → d.b(str,K0) 按命中引擎搜索
+  private buildSearchUrlForEngine(id: number, query: string): string {
+    const key = engineKeyFromId(id)
+    if (key === null) {
+      return buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), query)
+    }
+    if (id >= 1) {
+      const rec = this.settings.resolveCustomEngineKey(key)
+      if (rec !== null) {
+        return applyTemplate(rec.template, query)
+      }
+      return buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), query)
+    }
+    return applyTemplate(findEngine(key).template, query)
+  }
+
+  // 原版 k0.z3/p3（beforeTextChanged）：首词命中快捷词表 → K0=id、chip 显示、
+  // 剥离快捷词前缀（g6.p.e 首空格位之后 trim）并重取建议；已命中(K0≠0)不重复判定；
+  // 空文本复位 K0（等价 l3 回删至空 → E3；ArkTS TextInput 无法区分回删与清空钮，
+  // 清空钮路径同走空文本复位，与原版 U2 的「不清 K0」存在此单点差异）
+  private applyShortcutQualification(value: string): void {
+    if (value === '') {
+      this.qualifiedEngineId = 0
+      this.fetchSuggestions('')
+      return
+    }
+    if (this.qualifiedEngineId !== 0) {
+      this.fetchSuggestions(value)
+      return
+    }
+    const iE = value.search(/\s/)
+    if (iE <= 0) {
+      this.fetchSuggestions(value)
+      return
+    }
+    const token = value.substring(0, iE).trim().toLowerCase()
+    const id = this.shortcutWordToEngine().get(token)
+    if (id === undefined) {
+      this.fetchSuggestions(value)
+      return
+    }
+    const remaining = value.substring(iE).trim()
+    this.qualifiedEngineId = id
+    // 原版 q0.setText(strTrim)：数据绑定改写输入框（等价程序化 setText），K0 已置位 → 后续 z3 早退
+    this.inputText = remaining
+    this.textController.caretPosition(remaining.length)
+    this.fetchSuggestions(remaining)
+  }
+
   private commit(text: string): void {
     const input = text.trim()
     if (input === '') {
@@ -927,7 +1029,11 @@ export struct SearchOverlay {
       target = normalizeUrl(input)
     } else {
       this.settings.addSearchHistory(input)
-      target = buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), input)
+      if (this.qualifiedEngineId !== 0) {
+        target = this.buildSearchUrlForEngine(this.qualifiedEngineId, input)
+      } else {
+        target = buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), input)
+      }
     }
     this.tabStore.navigate(target)
     this.onClose()
