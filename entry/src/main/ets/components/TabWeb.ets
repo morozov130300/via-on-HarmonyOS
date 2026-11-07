@@ -1,12 +1,15 @@
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
+import { abilityAccessCtrl, Permissions, PermissionRequestResult } from '@kit.AbilityKit'
 import { webview, WebNetErrorList } from '@kit.ArkWeb'
 import { http } from '@kit.NetworkKit'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { detectBarcode, scanBarcode } from '@kit.ScanKit'
 import { fileIo } from '@kit.CoreFileKit'
-import { TabItem, globMatches, parseJsonArray } from '../common/Types'
+import { TabItem, globMatches, parseJsonArray, SiteSetting, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
+import { computeDialogWidthVp } from './ViaDialogCard'
+import { dialogTransition } from '../common/Transitions'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker, buildBlockedPageHtml, TYPE_ALL_MASK, TYPE_DOCUMENT } from '../common/AdBlock'
 import { BrowserDb } from '../common/Database'
@@ -123,6 +126,8 @@ export struct TabWeb {
   private gmBridge: GmBridge = new GmBridge()
   // 原版 Shell.dispatchKeyEvent → k6.n8：Web 获焦时按键先经宿主分发再进网页（onInterceptKeyEvent 等价层）
   @Param onPcKey: (event: KeyEvent) => boolean = (_event: KeyEvent): boolean => false
+  // 原版 k6.b0（r4.f 页面回调）→ d9() → pb()：仅模式2 且已隐藏时确保 FAB 显示
+  @Param onPageSettle: () => void = (): void => {}
   // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
@@ -133,6 +138,22 @@ export struct TabWeb {
   private swipeNavActive: boolean = false
   private swipeNavLocked: boolean = false
   private swipeNavWidth: number = 0
+  // —— 原版权限询问弹窗（k6.Ca + e8/y0 1:1）——
+  @Local permDialogTitle: string = ''
+  @Local permDialogLines: string[] = []
+  @Local permRemember: boolean = false
+  private permPendingGrant: Array<string> = []
+  private permPendingHost: string = ''
+  private permDialogId: number = -1
+  // 原版 z0.a 回调语义：granted 全集 + remember；询问结果回调
+  private permAskCallback: ((granted: string[], remember: boolean) => void) | null = null
+  // —— 原版定位询问弹窗（e8/y0.h + w5.k 1:1）——
+  @Local geoDialogMessage: string = ''
+  @Local geoDialogHost: string = ''
+  private geoDialogId: number = -1
+  private geoInvoke: ((origin: string, allow: boolean, retain: boolean) => void) | null = null
+  private geoPendingOrigin: string = ''
+  private geoPageOrigin: string = ''
 
   aboutToAppear(): void {
     this.viaBridge.handler = (msg: string): void => {
@@ -370,6 +391,8 @@ export struct TabWeb {
           this.applyAdvancedSettings()
           this.applyUa(event.url)
           this.updateNavState()
+          // 原版 k6.b0 → d9() → pb()：确保模式2 隐藏态下 FAB 在场
+          this.onPageSettle()
         })
         .onPageEnd((event: OnPageEndEvent) => {
           this.tab.url = event.url
@@ -391,6 +414,8 @@ export struct TabWeb {
         })
         .onTitleReceive((event: OnTitleReceiveEvent) => {
           this.tab.title = event.title
+          // 原版 k6.b0 → d9() → pb()：标题落定同样确保 FAB 在场
+          this.onPageSettle()
         })
         // 原版 C9「标记广告」回传通道：注入的选择器经 console 回传广告域名，
         // 命中后加入自定义拦截规则并刷新页面
@@ -419,25 +444,67 @@ export struct TabWeb {
           }
         })
         .onPermissionRequest((event: OnPermissionRequestEvent) => {
-          // 原版走权限询问弹窗流程（p4/a.java:86-88 → k6 询问用户）
-          const granted: string[] = event.request.getAccessibleResource()
-          this.getUIContext().showAlertDialog({
-            title: $r('app.string.permission_request'),
-            message: granted.join(', '),
-            primaryButton: {
-              value: $r('app.string.cancel'),
-              action: () => {
+          // 原版 e8/y0.p(PermissionRequest) 1:1：
+          // 仅认 PROTECTED_MEDIA_ID / AUDIO_CAPTURE / VIDEO_CAPTURE，
+          // 其它资源（TYPE_SENSOR 等）全部丢弃 → 两桶皆空时静默 deny，不弹窗
+          const resources: string[] = event.request.getAccessibleResource()
+          if (resources.length === 0) {
+            event.request.deny()
+            return
+          }
+          const origin = event.request.getOrigin()
+          // 原版 host 提取（y0.p:222-230）：getOrigin host，有端口则 host:port，空则 ""
+          const host = this.permRequestHost(origin)
+          const autoGrant: string[] = []
+          const askRes: string[] = []
+          for (const res of resources) {
+            if (res === 'android.webkit.resource.PROTECTED_MEDIA_ID') {
+              autoGrant.push(res)
+            } else if (res === 'android.webkit.resource.AUDIO_CAPTURE') {
+              const mode = this.sitePermModeFor(host, this.settings.micAskFirst, (_s: SiteSetting): number => _s.micMode)
+              if (mode === SITE_MODE_ON) {
+                autoGrant.push(res)
+              } else if (mode === SITE_PERM_ASK) {
+                askRes.push(res)
+              }
+            } else if (res === 'android.webkit.resource.VIDEO_CAPTURE') {
+              const mode = this.sitePermModeFor(host, this.settings.cameraAskFirst, (_s: SiteSetting): number => _s.cameraMode)
+              if (mode === SITE_MODE_ON) {
+                autoGrant.push(res)
+              } else if (mode === SITE_PERM_ASK) {
+                askRes.push(res)
+              }
+            }
+            // 未知资源：不进任何桶（y0.p 丢弃语义）
+          }
+          if (autoGrant.length === 0 && askRes.length === 0) {
+            event.request.deny()
+            return
+          }
+          if (askRes.length === 0) {
+            // 原版 R()：无需用户询问 → 直接走系统权限申请
+            this.grantWithSystemPermission(event.request, autoGrant)
+            return
+          }
+          // 询问桶非空 → k6.Ca 弹窗；勾选「不再询问」后 ba/d 记忆（y0.L），下次命中分支
+          this.showPermissionDialog(host, askRes, (granted: string[], remember: boolean): void => {
+            if (granted.length > 0) {
+              if (remember) {
+                this.rememberPermChoice(host, askRes, SITE_MODE_ON)
+              }
+              // 原版 L→R：询问桶 grant 结果与自动桶合并后统一走系统权限
+              const merged = autoGrant.concat(granted)
+              this.grantWithSystemPermission(event.request, merged)
+            } else {
+              if (remember) {
+                this.rememberPermChoice(host, askRes, SITE_MODE_OFF)
+              }
+              // 原版 R：自动桶仍有内容时（如 PROTECTED_MEDIA_ID）不 deny 而是 grant 余下
+              if (autoGrant.length === 0) {
                 event.request.deny()
+              } else {
+                this.grantWithSystemPermission(event.request, autoGrant)
               }
-            },
-            secondaryButton: {
-              value: $r('app.string.done'),
-              action: () => {
-                event.request.grant(granted)
-              }
-            },
-            cancel: () => {
-              event.request.deny()
             }
           })
         })
@@ -447,6 +514,55 @@ export struct TabWeb {
           } else {
             event.handler.handleCancel()
           }
+        })
+        // 原版 e8/y0.h(GeolocationPermissions.Callback) 1:1：
+        // 站点 geoMode / 全局 geoAskFirst 分流：禁止→立即拒绝；允许→直接放行+系统定位权限；
+        // 其余→弹「允许网站访问地理位置」询问框，勾选「不再询问」写入网站设定
+        .onGeolocationShow((event: OnGeolocationShowEvent) => {
+          const pageUrl = this.tab.url
+          // 原版 i6/i0.e(str)：取 scheme:// 后到首个 '/' 的 host:port
+          const host = this.permRequestHost(pageUrl)
+          const mode = this.sitePermModeFor(host, this.settings.geoAskFirst, (_s: SiteSetting): number => _s.geoMode)
+          if (mode === SITE_MODE_OFF) {
+            event.geolocation.invoke(event.origin, false, false)
+            return
+          }
+          if (mode === SITE_MODE_ON) {
+            event.geolocation.invoke(event.origin, true, true)
+            this.requestGeoSystemPermission(host)
+            return
+          }
+          // 询问分支（y0.h:179-194）：d0(mg 允许网站访问地理位置).J(u9 %1$s 想要使用你的位置信息。)
+          //   .w(rh 不再询问,false).V(f 允许).P(z 拒绝)
+          this.geoPendingOrigin = event.origin
+          this.geoPageOrigin = host
+          this.geoInvoke = (origin: string, allow: boolean, retain: boolean): void => {
+            event.geolocation.invoke(origin, allow, retain)
+          }
+          this.geoDialogHost = host
+          const rm = (this.getUIContext().getHostContext() as common.UIAbilityContext).resourceManager
+          this.geoDialogMessage = rm.getStringByNameSync('geo_request_message',
+            host === '' ? rm.getStringByNameSync('perm_unknown_site') : host)
+          this.getUIContext().getPromptAction().openCustomDialog({
+            width: computeDialogWidthVp(),
+            builder: (): void => {
+              this.GeoAskDialog()
+            },
+            isModal: true,
+            backgroundColor: Color.Transparent,
+            autoCancel: true,
+            onWillDismiss: (action: DismissDialogAction) => {
+              // 原版 T(OnCancelListener)：点遮罩/返回键 = invoke(false,false)
+              action.dismiss()
+              this.finishGeoDialog(false, false)
+            },
+            alignment: DialogAlignment.Center,
+            maskColor: 'rgba(0,0,0,0.4)'
+          }).then((dialogId: number) => {
+            this.geoDialogId = dialogId
+          }).catch((_error: BusinessError) => {
+            console.error('open geo dialog failed')
+          })
         })
         .onSearchResultReceive((event: OnSearchResultReceiveEvent) => {
           if (event.isDoneCounting) {
@@ -665,6 +781,384 @@ export struct TabWeb {
           console.error('swipe nav failed')
         }
       }))
+  }
+
+  // ==================== 权限询问（原版 e8/y0 + k6.Ca 1:1） ====================
+
+  // 原版 y0.p:222-230 host 提取：非 http(s) 的 origin 直接取整串；i6/i0.e 取 scheme:// 后段。
+  // ArkWeb getOrigin() 返回 "http://host:port/" 形式，截 scheme:// 与尾部 '/'。
+  private permRequestHost(origin: string): string {
+    if (origin === '') {
+      return ''
+    }
+    if (!origin.startsWith('http')) {
+      return origin
+    }
+    const schemeIndex = origin.indexOf('://')
+    if (schemeIndex < 0) {
+      return ''
+    }
+    let rest = origin.substring(schemeIndex + 3)
+    const slashIndex = rest.indexOf('/')
+    if (slashIndex >= 0) {
+      rest = rest.substring(0, slashIndex)
+    }
+    return rest.toLowerCase()
+  }
+
+  // 原版 y0.O/M/N：host 空 / 无站点配置 / 未启用(s) / 该位为 0 → 全局默认（u/v/i → 询问?3:拒绝2）；否则站点值
+  private sitePermModeFor(host: string, globalAskFirst: boolean, pick: (_s: SiteSetting) => number): number {
+    const fallback = globalAskFirst ? SITE_PERM_ASK : SITE_MODE_OFF
+    const site = host === '' ? null : this.settings.getSiteSetting(host)
+    if (site === null || !site.enabled) {
+      return fallback
+    }
+    const mode = pick(site)
+    return mode === 0 ? fallback : mode
+  }
+
+  // 原版 y0.L：勾选「不再询问」→ ba/d 写站点配置；允许=1 / 拒绝=2，仅写询问中出现的资源位
+  private rememberPermChoice(host: string, askedRes: string[], mode: number): void {
+    if (host === '') {
+      return
+    }
+    const site = this.settings.obtainSiteSetting(host)
+    site.enabled = true
+    for (const res of askedRes) {
+      if (res === 'android.webkit.resource.AUDIO_CAPTURE') {
+        site.micMode = mode
+      } else if (res === 'android.webkit.resource.VIDEO_CAPTURE') {
+        site.cameraMode = mode
+      }
+    }
+    this.settings.upsertSiteSetting(site)
+  }
+
+  // 原版 y0.R / k6.Ba：grant 前系统权限申请（RECORD_AUDIO→MICROPHONE、CAMERA→CAMERA）。
+  // 用户已授权则直接 grant；系统拒绝则从集合剔除后 grant 余下（y0.G），全空则 deny
+  private grantWithSystemPermission(request: PermissionRequest, wanted: string[]): void {
+    const sysPerms: Permissions[] = []
+    if (wanted.includes('android.webkit.resource.AUDIO_CAPTURE')) {
+      sysPerms.push('ohos.permission.MICROPHONE' as Permissions)
+    }
+    if (wanted.includes('android.webkit.resource.VIDEO_CAPTURE')) {
+      sysPerms.push('ohos.permission.CAMERA' as Permissions)
+    }
+    if (sysPerms.length === 0) {
+      try {
+        request.grant(wanted)
+      } catch (error) {
+        console.error('grant permission failed')
+      }
+      return
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    abilityAccessCtrl.createAtManager().requestPermissionsFromUser(context, sysPerms)
+      .then((result: PermissionRequestResult) => {
+        const granted: string[] = []
+        const micOk = !wanted.includes('android.webkit.resource.AUDIO_CAPTURE') || this.sysPermGranted(result, 'ohos.permission.MICROPHONE')
+        const camOk = !wanted.includes('android.webkit.resource.VIDEO_CAPTURE') || this.sysPermGranted(result, 'ohos.permission.CAMERA')
+        for (const res of wanted) {
+          if (res === 'android.webkit.resource.AUDIO_CAPTURE' && !micOk) {
+            continue
+          }
+          if (res === 'android.webkit.resource.VIDEO_CAPTURE' && !camOk) {
+            continue
+          }
+          granted.push(res)
+        }
+        if (granted.length === 0) {
+          request.deny()
+        } else {
+          try {
+            request.grant(granted)
+          } catch (error) {
+            console.error('grant permission failed')
+          }
+        }
+      })
+      .catch(() => {
+        request.deny()
+      })
+  }
+
+  private sysPermGranted(result: PermissionRequestResult, perm: string): boolean {
+    const index = result.permissions.indexOf(perm)
+    if (index < 0) {
+      return false
+    }
+    return result.authResults[index] === 0
+  }
+
+  // 原版 k6.B9：资源 key → 「标签：说明」；未知 key 原样返回
+  private permResourceLine(res: string): string {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const rm = context.resourceManager
+    if (res === 'android.webkit.resource.AUDIO_CAPTURE') {
+      return rm.getStringByNameSync('perm_res_item', rm.getStringByNameSync('perm_mic_label'),
+        rm.getStringByNameSync('perm_mic_desc'))
+    }
+    if (res === 'android.webkit.resource.VIDEO_CAPTURE') {
+      return rm.getStringByNameSync('perm_res_item', rm.getStringByNameSync('perm_camera_label'),
+        rm.getStringByNameSync('perm_camera_desc'))
+    }
+    return res
+  }
+
+  // 原版 k6.Ca(str, resources, callback)：
+  // 标题 nd「%1$s 请求使用」（host 空补 Vg 未知网站），
+  // 正文逐行 C7「- %1$s」（B9 资源描述，\n 分隔），按钮 V(f 允许)/P(z 拒绝)
+  private showPermissionDialog(host: string, askRes: string[],
+    callback: (granted: string[], remember: boolean) => void): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const rm = context.resourceManager
+    this.permPendingHost = host
+    this.permPendingGrant = askRes
+    this.permAskCallback = callback
+    this.permRemember = false
+    this.permDialogTitle = rm.getStringByNameSync('perm_request_use',
+      host === '' ? rm.getStringByNameSync('perm_unknown_site') : host)
+    const lines: string[] = []
+    for (const res of askRes) {
+      lines.push(rm.getStringByNameSync('perm_line_prefix', this.permResourceLine(res)))
+    }
+    this.permDialogLines = lines
+    // 原版 w5.k.f0()：模态、可取消（cancel → deny）
+    this.getUIContext().getPromptAction().openCustomDialog({
+      width: computeDialogWidthVp(),
+      builder: (): void => {
+        this.PermissionAskDialog()
+      },
+      isModal: true,
+      backgroundColor: Color.Transparent,
+      autoCancel: true,
+      onWillDismiss: (action: DismissDialogAction) => {
+        // 原版 T(OnCancelListener)：点遮罩/返回键 = deny
+        action.dismiss()
+        this.finishPermDialog([], this.permRemember)
+      },
+      alignment: DialogAlignment.Center,
+      maskColor: 'rgba(0,0,0,0.4)'
+    }).then((dialogId: number) => {
+      this.permDialogId = dialogId
+    }).catch((_error: BusinessError) => {
+      console.error('open permission dialog failed')
+    })
+  }
+
+  private finishPermDialog(granted: string[], remember: boolean): void {
+    this.permDialogVisibleOff()
+    const callback = this.permAskCallback
+    this.permAskCallback = null
+    if (callback !== null) {
+      callback(granted, remember)
+    }
+  }
+
+  private permDialogVisibleOff(): void {
+    if (this.permDialogId >= 0) {
+      this.getUIContext().getPromptAction().closeCustomDialog(this.permDialogId)
+      this.permDialogId = -1
+    }
+  }
+
+  @Builder
+  PermissionAskDialog() {
+    Column() {
+      Text(this.permDialogTitle)
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      // 原版正文 J(sb)：多行 \n 连接
+      Column() {
+        ForEach(this.permDialogLines, (line: string) => {
+          Text(line)
+            .fontSize(14)
+            .fontColor($r('app.color.fg'))
+            .width('100%')
+        })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      // 原版 w(Ta rh 不再询问, false)：复选框默认不勾
+      Row({ space: 10 }) {
+        Checkbox()
+          .select(this.permRemember)
+          .selectedColor($r('app.color.accent'))
+          .onChange((value: boolean) => {
+            this.permRemember = value
+          })
+        Text($r('app.string.perm_remember_choice'))
+          .fontSize(14)
+          .fontColor($r('app.color.fg'))
+          .layoutWeight(1)
+          .onClick(() => {
+            this.permRemember = !this.permRemember
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      // 原版按钮行 gravity=end：拒绝(eo)在左、允许(eq)在右
+      Row() {
+        Blank()
+        Text($r('app.string.perm_refuse'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            const remember = this.permRemember
+            this.finishPermDialog([], remember)
+          })
+        Text($r('app.string.perm_allow'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            const granted = this.permPendingGrant
+            const remember = this.permRemember
+            this.finishPermDialog(granted, remember)
+          })
+      }
+      .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
+    }
+    .width(computeDialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
+    .transition(dialogTransition())
+  }
+
+  // 原版 y0.h 允许分支后续：callback.invoke(true) 后 Q(str) 申请系统定位权限（ACCESS_FINE_LOCATION）
+  private requestGeoSystemPermission(_host: string): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const perms: Permissions[] = ['ohos.permission.APPROXIMATELY_LOCATION' as Permissions]
+    abilityAccessCtrl.createAtManager().requestPermissionsFromUser(context, perms)
+      .then((_result: PermissionRequestResult) => {
+      })
+      .catch(() => {
+      })
+  }
+
+  private closeGeoDialog(): void {
+    if (this.geoDialogId >= 0) {
+      this.getUIContext().getPromptAction().closeCustomDialog(this.geoDialogId)
+      this.geoDialogId = -1
+    }
+  }
+
+  private finishGeoDialog(allow: boolean, remember: boolean): void {
+    this.closeGeoDialog()
+    const invoke = this.geoInvoke
+    this.geoInvoke = null
+    if (invoke === null) {
+      return
+    }
+    const origin = this.geoPendingOrigin
+    if (allow) {
+      // 原版 y0.I：invoke(origin,true,retain) + Q(str) 系统定位权限
+      invoke(origin, true, remember)
+      if (remember && this.geoPageOrigin !== '') {
+        // 原版 y0.I→S：允许记忆 = f=1
+        const site = this.settings.obtainSiteSetting(this.geoPageOrigin)
+        site.enabled = true
+        site.geoMode = SITE_MODE_ON
+        this.settings.upsertSiteSetting(site)
+      }
+      this.requestGeoSystemPermission(this.geoPageOrigin)
+    } else {
+      // 原版 y0.H：invoke(origin,false,false)——retain 恒 false
+      invoke(origin, false, false)
+      if (remember && this.geoPageOrigin !== '') {
+        // 原版 y0.S：拒绝记忆 = f=2
+        const site = this.settings.obtainSiteSetting(this.geoPageOrigin)
+        site.enabled = true
+        site.geoMode = SITE_MODE_OFF
+        this.settings.upsertSiteSetting(site)
+      }
+    }
+  }
+
+  @Builder
+  GeoAskDialog() {
+    Column() {
+      Text($r('app.string.geo_allow_title'))
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .width('100%')
+        .padding({ top: 8, bottom: 8 })
+        .margin({ left: 16, right: 16, bottom: 6 })
+      // 原版 J(Nc u9「%1$s 想要使用你的位置信息。」)
+      Text(this.geoDialogMessage)
+        .fontSize(14)
+        .fontColor($r('app.color.fg'))
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      // 原版 w(Ta rh 不再询问, false)
+      Row({ space: 10 }) {
+        Checkbox()
+          .select(this.permRemember)
+          .selectedColor($r('app.color.accent'))
+          .onChange((value: boolean) => {
+            this.permRemember = value
+          })
+        Text($r('app.string.perm_remember_choice'))
+          .fontSize(14)
+          .fontColor($r('app.color.fg'))
+          .layoutWeight(1)
+          .onClick(() => {
+            this.permRemember = !this.permRemember
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      // 原版 P(z 拒绝) 在左、V(f 允许) 在右
+      Row() {
+        Blank()
+        Text($r('app.string.perm_refuse'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            const remember = this.permRemember
+            this.finishGeoDialog(false, remember)
+          })
+        Text($r('app.string.perm_allow'))
+          .fontSize(14)
+          .fontColor($r('app.color.dialog_action'))
+          .textAlign(TextAlign.Center)
+          .constraintSize({ minWidth: 56 })
+          .padding(16)
+          .onClick(() => {
+            const remember = this.permRemember
+            this.finishGeoDialog(true, remember)
+          })
+      }
+      .width('100%')
+      .margin({ left: 16, right: 16, top: 12 })
+    }
+    .width(computeDialogWidthVp())
+    .padding({ top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
+    .transition(dialogTransition())
   }
 
   // 检测段（GestureTouchEvent.c）：4dp 检测阈值、横向优势、速度 0.5px/ms；
