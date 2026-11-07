@@ -1,4 +1,5 @@
 import { ClosedTabEntry, ClosedTabsStore } from '../common/ClosedTabsStore'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { TabStore } from '../common/TabStore'
 import { ViaIcon } from '../components/ViaIcon'
 import { AppIcon } from '../components/AppIcon'
@@ -310,7 +311,7 @@ export struct ClosedTabsPage {
         }
         .width('100%')
       }
-      .width('80%')
+      .width(computeDialogWidthVp())
       .padding(20)
       .borderRadius(16)
       .backgroundColor($r('app.color.page_bg'))
