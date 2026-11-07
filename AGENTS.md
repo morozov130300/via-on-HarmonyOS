@@ -294,12 +294,19 @@
 
 # 📌 当前状态清单（每完成一项实时更新，禁止留成「待定」）
 
-**当前任务：搜索面板（tb/k0 UrlInputFragment）位置与结构对齐原版 + 调试**
+**当前任务：动画全量对齐原版 Via 7.4.0（已完成，待真机确认）**
 
 - [x] 逆向确认：`k6.oa()` → `tb/k0.C3()` uiflags bit0 → 布局0/1 顶栏贴屏幕顶部、布局2/3 贴底部；`Y2()` 对顶栏应用窗口 insets padding
 - [x] 修复 [Index.ets](entry/src/main/ets/pages/Index.ets) showSearch 块：整屏 `Column` + `justifyContent(Start/End)` 承载 SearchOverlay，替代旧的 `Row().padding(top: insets.top+48)`（旧写法被根 Stack 默认垂直居中，输入框落到屏幕中部 y≈1202）
 - [x] 补水平 `justifyContent(FlexAlign.Center)` + 贴顶/贴底 insets padding
 - [x] ArkTS 0 error → 编译 → 覆盖安装 → 启动 Smoke PASS
 - [x] 本轮其它已完成：工具栏图标/标签数三分支着色（`k6.Z7` 夜间 #9F9F9F / 亮背景 #232323 / 其余白）、删除菜单按钮方形 `stateStyles` 按压底色、设置行高度对齐 `a6/o.java`、定制页通查（Logo 参数条/收藏范围/背景三态/夜间图标着色/输入框圆角）、搜索面板顶栏与建议行 1:1 复刻 `tb/k0`、ViaIcon 矩阵回滚（用户否决）
-- [ ] **待用户真机确认**：搜索面板是否贴在屏幕顶部（传统布局）、菜单月亮图标夜间着色、三条横线无背景块
+- [x] **动画全量对齐（commit 6786ed4，65 文件）**：
+  - 解码原版 `res/anim a~n.xml`（在 `via_v7.4.0待移植安卓版解包内容禁止修改\r\a\`）+ styles/integers/fractions，重写 `common/Transitions.ets`：弹窗 anim/a|b 240ms（alpha 线性+translate/scale bounce）、菜单 anim/k|n|m|l 160ms（alpha 线性+accelerate）、页面 anim/f~i 220ms accelerate_decelerate（进场 +100%→0、让位 -30%）
+  - 关键纠错：k6.oa/tb.k0 的 Fragment 事务实为 `.v(anim_c, anim_j, anim_j, anim_d)`（j=alpha 1→1 无动画，d=240 线性淡出）；anim/b 只属于 style k 弹窗退场
+  - 曲线判据（AOSP 源码核实）：ObjectAnimator/ViewPropertyAnimator 未设插值器均默认 **AccelerateDecelerate**（ViewPropertyAnimator 内部沿用 ValueAnimator 默认，不是 Decelerate）；窗口动画 XML 无 interpolator 属性为 **Linear**；ArkUI animation() 默认 EaseInOut，全部显式指定
+  - 组件逐点：Toolbar 抖动 g0.j() 280ms bezier 三关键帧(keyframeAnimateTo、作用对象=标签栈)、AddressBar 脉冲 n0.q() 1200ms 1↔1.15↔1(keyframeAnimateTo)+资源图标 translationX、TabPanel 高度 f8/l0.p3() 350ms 三值 ValueAnimator(customCurve 复合)且初始化无动画、TabWeb 侧滑 AccelerateDecelerate+同步导航、HomePage 对齐 i6/o.java 注入 CSS(140ms ease、opacity 1-a/98、隐藏分支无过渡)、HomeFavEditor 补 g6.y.X 抖动(24dp/280ms/×2 反转)、Snackbar f6.i.c() 180ms Decelerate、SettingsMenuPage 宫格 DefaultItemAnimator move 250ms、Index 进度条去过渡(w 直接 setVisibility)、AI 面板接菜单窗口动画、夜间滤镜 opacity 0.2→1 300ms accelerate、Tabs 切换 animationDuration 0、SettingRows 去自造补间(状态选择器直切)
+  - 新增 `view/PageTransitions.ets`（buildNavSlide）接入全部 58 个 NavDestination 左右推入转场
+- [ ] **待用户真机确认**：搜索面板是否贴在屏幕顶部（传统布局）、菜单月亮图标夜间着色、三条横线无背景块、以及本轮全部动画观感
+- [ ] **已知 API 限制（勿重复尝试）**：`NavDestinationTransition.curve` 仅收 `Curve` 枚举（nav_destination.d.ts:565），ICurve 传不进 → 58 个子页 220ms 转场用 Curve.EaseInOut 近似 accelerate_decelerate（时长/位移精确，曲线轻微偏差）
 - ⚠️ 全局规则（已写入 `~/.dsh/AGENTS.md`）：严禁未经当次指示主动操作设备（aa start/点击/滑动）；编辑文件必须用 edit/write 工具，禁止 PowerShell 写文件（GBK 乱码）
