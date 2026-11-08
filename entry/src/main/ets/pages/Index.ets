@@ -1504,15 +1504,20 @@ struct Index {
   private fabAxisLock: number = 0
 
   private handleFabTouch(action: number, x: number, y: number): void {
-    // action 0=down 1=up 2=move 3=cancel；x/y 为相对 FAB 自身的局部偏移
+    // action 0=down 1=up 2=move 3=cancel；x/y 为窗口坐标（windowX/windowY，vp），
+    // 不随 FAB 自身 translate 漂移，保证拖动增量稳定。
     if (action === 0) {
       this.fabTouchDownTime = Date.now()
       this.fabTouchStartX = x
       this.fabTouchStartY = y
+      this.fabLastTouchX = x
+      this.fabLastTouchY = y
       this.fabAxisLock = 0
       this.fabDragBaseX = 0
       this.fabDragBaseY = 0
       this.fabDirFlag = 0
+      this.fabFreeDrag = false
+      this.fabAlpha = 1
       // 原版 f9771a：300ms 后进入自由拖动
       this.fabLongPressTimer = setTimeout(() => {
         this.fabFreeDrag = true
@@ -1627,6 +1632,36 @@ struct Index {
     this.initFabPosition()
     this.fabOffsetX = 0
     this.fabOffsetY = 0
+  }
+
+  // 原版 Jb()：X0==0 时网页容器用 BELOW/ABOVE 规则夹在两栏之间。
+  // 布局 2/3（工具栏在下/双行）原版 Ya 令顶栏 height=0，故顶侧不让位；
+  // 游戏模式/全屏视频时双栏 GONE（P1），两值均归零。
+  private webTopPadding(): number {
+    if (this.settings.toolbarAutoHide !== 0
+      || this.settings.gameMode || this.videoOverlay.active) {
+      return 0
+    }
+    const layout = this.effectiveLayout()
+    return (layout === LAYOUT_TRADITIONAL || layout === LAYOUT_TOOLBAR_TOP)
+      ? this.topBarHeightVp : 0
+  }
+
+  private webBottomPadding(): number {
+    if (this.settings.toolbarAutoHide !== 0
+      || this.settings.gameMode || this.videoOverlay.active) {
+      return 0
+    }
+    return this.bottomBarHeightVp
+  }
+
+  // 原版 db()：f2586p0.setTranslationY(height*(1-f2591r1))，仅 X0==1 生效。
+  private webViewportTranslate(): number {
+    if (this.settings.toolbarAutoHide === 0
+      || this.settings.gameMode || this.videoOverlay.active) {
+      return 0
+    }
+    return this.topBarHeightVp * (1 - this.toolbarHideProgress)
   }
 
   private fabParentW(): number {
@@ -2034,18 +2069,16 @@ struct Index {
           .animationDuration(0)
           .width('100%')
           .height('100%')
-          // 原版 k6.Ya()（6469-6495）+ db()（6969-6974）：网页容器视口不能与顶栏重叠，
-          // 否则网页内 position:fixed 的常驻头部会被浏览器地址栏盖住。
-          //  · X0==0（未开自动隐藏）：f2586p0 用 RelativeLayout BELOW 顶栏 / ABOVE 底栏
-          //    规则布局，视口夹在两栏之间 → 用 padding 等价实现。
-          //  · X0==1（开自动隐藏）：f2586p0 全屏 -1,-1，db(p) 令
-          //    translationY = 顶栏高 × (1 - p)：显示态让出顶栏、隐藏态铺满全屏。
-          .padding(this.settings.toolbarAutoHide === 0
-            ? { top: this.topBarHeightVp, bottom: this.bottomBarHeightVp }
-            : { top: 0, bottom: 0 })
-          .translate({ y: this.settings.toolbarAutoHide === 0
-            ? 0
-            : this.topBarHeightVp * (1 - this.toolbarHideProgress) })
+          // 原版 k6.Jb()（4643-4657）+ Ya()（6469-6495）+ db()（6969-6974）：
+          // 网页容器视口不能与顶栏重叠，否则网页内 position:fixed 的常驻头部会被
+          // 浏览器地址栏盖住。
+          //  · X0==0（未开自动隐藏）：f2586p0 用 addRule(3,顶栏)=BELOW、
+          //    addRule(2,底栏)=ABOVE 夹在两栏之间 → padding 等价。
+          //  · X0==1（开自动隐藏）：LayoutParams(-1,-1) 全屏，db(p) 令
+          //    translationY=顶栏高×(1-p)：显示态让出顶栏、隐藏态铺满。
+          // 游戏模式 / 全屏视频（原版 P1 隐藏双栏）时无栏可让位，内缩归零。
+          .padding({ top: this.webTopPadding(), bottom: this.webBottomPadding() })
+          .translate({ y: this.webViewportTranslate() })
 
           // 原版 y7：顶栏 f2604y0（RelativeLayout alignParentTop）与底栏 f2600w0
           // （alignParentBottom）是各自锚定边的兄弟视图——用全屏包裹容器分别贴顶/
@@ -2137,6 +2170,11 @@ struct Index {
               y: this.fabAlignTop ? this.fabMargin : undefined
             })
           .onTouch((event: TouchEvent) => {
+            // 用窗口坐标（windowX/windowY，vp）而非组件局部 x/y：组件 translate 后
+            // 局部坐标会随组件漂移，导致拖动粘滞/跳变；窗口坐标恒定不随位移变化。
+            const t = event.touches[0]
+            const px = t.windowX
+            const py = t.windowY
             if (event.type === TouchType.Down) {
               // 记录自由拖动基准（锚定点转为绝对坐标）
               if (this.fabAlignRight) {
@@ -2149,13 +2187,13 @@ struct Index {
               } else {
                 this.fabAbsBaseY = this.fabMargin
               }
-              this.handleFabTouch(0, event.touches[0].x, event.touches[0].y)
+              this.handleFabTouch(0, px, py)
             } else if (event.type === TouchType.Move) {
-              this.handleFabTouch(2, event.touches[0].x, event.touches[0].y)
+              this.handleFabTouch(2, px, py)
             } else if (event.type === TouchType.Up) {
-              this.handleFabTouch(1, 0, 0)
+              this.handleFabTouch(1, px, py)
             } else if (event.type === TouchType.Cancel) {
-              this.handleFabTouch(3, 0, 0)
+              this.handleFabTouch(3, px, py)
             }
           })
         }
