@@ -233,7 +233,8 @@ struct FontRenameOverlay {
             .onClick(() => {
               this.onClose()
             })
-          Button($r('app.string.done'))
+          // 原版 j2.A3（hb/j2.java:222）重命名弹窗确认钮 = R.string.ok「确定」，非 done「完成」
+          Button($r('app.string.confirm'))
             .fontSize(14)
             .height(36)
             .layoutWeight(1)
