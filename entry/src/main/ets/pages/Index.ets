@@ -374,6 +374,50 @@ struct Index {
     this.showBookmarkPicker = true
   }
 
+  // 原版 k6.d9()（6945-6953）：点击地址栏左图标前，若当前有面板/内部页面栈非空，
+  // 先弹栈关面板（pb() + h9()）并 return true 拦截本次点击。
+  // 调用点：k6.java:676-690（f.a() 里 id==n0.f9702v 分支先 `if (k6.this.d9()) return;`）。
+  // 弹层优先级直接复用现有 onBackPress 的处理顺序。
+  private closeTopPanelsForLeftIcon(): boolean {
+    if (this.showMenu) {
+      this.showMenu = false
+      return true
+    }
+    if (this.showTabPanel) {
+      this.showTabPanel = false
+      return true
+    }
+    if (this.showSearch) {
+      this.showSearch = false
+      return true
+    }
+    if (this.showAi) {
+      if (this.aiBackHandler !== null) {
+        this.aiBackHandler()
+      } else {
+        this.showAi = false
+      }
+      return true
+    }
+    if (this.showMediaList) {
+      this.showMediaList = false
+      return true
+    }
+    if (this.showBookmarkPicker) {
+      this.showBookmarkPicker = false
+      return true
+    }
+    if (this.showFindBar) {
+      this.showFindBar = false
+      try {
+        this.tabStore.current().controller.clearMatches()
+      } catch (error) {
+      }
+      return true
+    }
+    return false
+  }
+
   private handleInternalCmd(): void {
     const raw = AppStorage.get<string>('via_internal_cmd') ?? ''
     if (raw === '') {
@@ -1843,7 +1887,9 @@ struct Index {
           onScan: () => {
             this.searchInitialText = ''
             this.showSearch = true
-          }
+          },
+          // 原版 k6.d9()：面板打开时点左图标先关面板并拦截本次点击
+          onTryClosePanels: (): boolean => this.closeTopPanelsForLeftIcon()
         })
       }
       .padding({ top: this.effectiveInsetTop() })
@@ -1956,7 +2002,9 @@ struct Index {
           onScan: () => {
             this.searchInitialText = ''
             this.showSearch = true
-          }
+          },
+          // 原版 k6.d9()：面板打开时点左图标先关面板并拦截本次点击
+          onTryClosePanels: (): boolean => this.closeTopPanelsForLeftIcon()
         })
         this.ChromeToolbar(false)
       }

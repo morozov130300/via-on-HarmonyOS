@@ -1,32 +1,41 @@
+import { BusinessError } from '@kit.BasicServicesKit'
 import { BookmarkRec, BookmarkFolderRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { ViaIcon } from './ViaIcon'
 
-// 原版 a8/k.java：书签快捷选择对话框（k8.a DialogFragment）——
-//   · 标题 = 当前文件夹名（空则根目录，fv「书签」/ 空标题回退 bh「无标题」）
-//   · 列表 = 文件夹优先 + 书签（cb.a），点文件夹进下一层（含「..」上级项）
-//   · 点书签 → 回传给调用方在新标签打开（原版 k.l3 → k6 W9 的回调）
-//   · 弹窗尺寸 = min(屏宽*4/5, 450dp) × min(屏高*4/5, 600dp)（a8/k.T1）
-//   · 每次打开记住上次所在文件夹与滚动位置（BOOKMARK_DIALOG_CACHE，180 天）
-// 本工程用 @ComponentV2 + openCustomDialog 复刻；缓存位置仅保留「文件夹」一级。
+// 原版 a8/k.java（extends k8/a.java DialogFragment）：书签快捷选择对话框。
+// 入口：k6.W9()（k6.java:6224-6227，P9 case2 长按「书签」）
+//   与 k6.ra case30（k6.java:8357-8359，工具栏动作 30），
+//   动作文案 hb/v4.java:127-128 = x7.u.H9 = pn「打开书签对话框」。
+//
+// 原版结构（a8/k.java）：
+//   · X1()：F0 = 标题 TextView（x7.p.H1，Typeface.DEFAULT_BOLD）；E0 = 空态 TextView（r3.e 写入
+//     "¯\\_(ツ)_/¯"）；D0 = RecyclerView 名单；R = 右上角 ImageView，点击 q3() 进书签管理
+//   · k3(folderId)：非根目录先插「..」上级（标题字面量 ".."，跳 parentFolderId），
+//     再文件夹（o9.a）、再书签（o9.b）；无搜索框
+//   · j3()：标题 = 根目录 j「书签」，否则文件夹名，空标题回退 bh=a0i「无标题」
+//   · l3()：点文件夹 → n3(该 id) 下钻；点书签 → l8.a(url,0) 并 X2() 关闭，
+//     onDismiss 回传 result → k6.K3 → k6.Ra(url) → Ta/Ua 在当前标签打开
+//   · T1()：窗口 = min(屏宽*4/5, 450dp) × min(屏高*4/5, 600dp)
+//   · 排序 cb/b.c：先「..」再文件夹再书签
 
-// 对话框条目：文件夹或书签二选一
+// 对话框条目：文件夹 / 「..」上级 / 书签
 export class PickerEntry {
   isFolder: boolean = false
   isParent: boolean = false
   title: string = ''
   url: string = ''
-  folderId: number = 0
-  count: number = 0
+  // 文件夹 id 或书签 id（用于稳定 key）
+  id: number = 0
 }
 
 @ComponentV2
 export struct BookmarkPickerDialog {
-  // 初始文件夹（原版 p3(bundle.folder)）
+  // 初始文件夹（原版 p3(bundle.folder)；W9() 走 o3() 无参 → 根目录）
   @Param initialFolderId: number = 0
-  // 选中书签后回调（原版 l3 → 调用方新开标签）
+  // 选中书签后回调（原版 l3 → onDismiss result → k6.K3 → k6.Ra）
   @Event onPickUrl: (url: string) => void = (url: string): void => {
   }
   @Event onDismiss: () => void = (): void => {
@@ -34,22 +43,51 @@ export struct BookmarkPickerDialog {
 
   private db: BrowserDb = BrowserDb.getInstance()
   @Local currentFolderId: number = 0
-  // 当前路径栈（用于「..」上级与标题显示）
-  @Local folderStack: BookmarkFolderRec[] = []
+  // 从根到当前文件夹的路径（用于「..」上级与标题）
+  @Local folderChain: BookmarkFolderRec[] = []
   @Local entries: PickerEntry[] = []
-  @Local folderTitle: string = ''
 
   aboutToAppear(): void {
     this.currentFolderId = this.initialFolderId
-    this.reload()
+    this.openFolder(this.initialFolderId)
   }
 
-  private reload(): void {
+  // 原版 n3(folderId)：切到指定文件夹并按 parentId 重建路径后重载条目
+  private openFolder(folderId: number): void {
+    this.currentFolderId = folderId
+    this.buildChain(folderId).then((chain: BookmarkFolderRec[]) => {
+      this.folderChain = chain
+      this.reloadEntries()
+    }).catch((error: BusinessError) => {
+      console.error(`walk bookmark folders failed: ${error.message}`)
+      this.folderChain = []
+      this.reloadEntries()
+    })
+  }
+
+  // 原版 o9.a.d()（parentFolderId）逐级上溯到根（根 id = 0）
+  private async buildChain(folderId: number): Promise<BookmarkFolderRec[]> {
+    const chain: BookmarkFolderRec[] = []
+    let cursor: number = folderId
+    let guard: number = 0
+    while (cursor !== 0 && guard < 32) {
+      const rec: BookmarkFolderRec | null = await this.db.getBookmarkFolder(cursor)
+      if (rec === null) {
+        break
+      }
+      chain.unshift(rec)
+      cursor = rec.parentId
+      guard = guard + 1
+    }
+    return chain
+  }
+
+  // 原版 k3：组装当前文件夹条目（「..」上级 + 文件夹 + 书签）
+  private reloadEntries(): void {
     const folderId: number = this.currentFolderId
     this.db.listBookmarkFolders(folderId).then((folders: BookmarkFolderRec[]) => {
       this.db.listBookmarks(folderId).then((marks: BookmarkRec[]) => {
         const list: PickerEntry[] = []
-        // 原版 k3：非根目录时列表首项为「..」上级
         if (folderId !== 0) {
           const parent: PickerEntry = new PickerEntry()
           parent.isFolder = true
@@ -62,7 +100,7 @@ export struct BookmarkPickerDialog {
           const e: PickerEntry = new PickerEntry()
           e.isFolder = true
           e.title = f.title
-          e.folderId = f.id
+          e.id = f.id
           list.push(e)
         }
         for (let i = 0; i < marks.length; i++) {
@@ -71,68 +109,63 @@ export struct BookmarkPickerDialog {
           e.isFolder = false
           e.title = m.title
           e.url = m.url
+          e.id = m.id
           list.push(e)
         }
         this.entries = list
-        this.updateTitle()
+      }).catch((error: BusinessError) => {
+        console.error(`load bookmarks failed: ${error.message}`)
+        this.entries = []
       })
+    }).catch((error: BusinessError) => {
+      console.error(`load bookmark folders failed: ${error.message}`)
+      this.entries = []
     })
   }
 
-  // 标题 = 当前文件夹名；根目录显示「书签」；空标题回退「无标题」
-  private updateTitle(): void {
-    if (this.folderStack.length === 0) {
-      this.folderTitle = '书签'
+  // 原版 j3：根目录标题 = j「书签」；文件夹标题为空回退 a0i「无标题」
+  private dialogTitle(): string {
+    if (this.folderChain.length === 0) {
+      return '书签'
+    }
+    const cur: BookmarkFolderRec = this.folderChain[this.folderChain.length - 1]
+    return cur.title.trim() === '' ? '无标题' : cur.title
+  }
+
+  // 原版 l3：文件夹（含「..」）→ 下钻/回上级；书签 → 回调关闭
+  private onEntryTap(entry: PickerEntry): void {
+    if (entry.isFolder) {
+      if (entry.isParent) {
+        if (this.folderChain.length <= 1) {
+          this.openFolder(0)
+          return
+        }
+        this.openFolder(this.folderChain[this.folderChain.length - 2].id)
+        return
+      }
+      this.openFolder(entry.id)
       return
     }
-    const cur: BookmarkFolderRec = this.folderStack[this.folderStack.length - 1]
-    this.folderTitle = cur.title.trim() === '' ? '无标题' : cur.title
-  }
-
-  private openFolder(folderId: number): void {
-    this.db.listAllBookmarkFolders().then((all: BookmarkFolderRec[]) => {
-      const found: BookmarkFolderRec | undefined = all.find((f: BookmarkFolderRec): boolean => f.id === folderId)
-      if (found !== undefined) {
-        const stack: BookmarkFolderRec[] = this.folderStack.slice()
-        stack.push(found)
-        this.folderStack = stack
-      }
-      this.currentFolderId = folderId
-      this.reload()
-    })
-  }
-
-  private goParent(): void {
-    const stack: BookmarkFolderRec[] = this.folderStack.slice()
-    stack.pop()
-    this.folderStack = stack
-    this.currentFolderId = stack.length === 0 ? 0 : stack[stack.length - 1].id
-    this.reload()
+    if (entry.url !== '') {
+      this.onPickUrl(entry.url)
+    }
   }
 
   build() {
     Column() {
-      // 标题栏：文件夹名 + 关闭
-      Row() {
-        Text(this.folderTitle)
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.fg'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .layoutWeight(1)
-        Text('关闭')
-          .fontSize(15)
-          .fontColor($r('app.color.accent'))
-          .onClick(() => {
-            this.onDismiss()
-          })
-      }
-      .width('100%')
-      .padding({ left: 20, right: 20, top: 18, bottom: 8 })
+      // 标题（原版 F0 / x7.p.H1：16sp 加粗单行）
+      Text(this.dialogTitle())
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 12, bottom: 8 })
 
       if (this.entries.length === 0) {
-        Text('暂无书签')
+        // 原版 r3.e：空态文案 "¯\\_(ツ)_/¯"
+        Text('¯\\_(ツ)_/¯')
           .fontSize(14)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -143,15 +176,11 @@ export struct BookmarkPickerDialog {
           ForEach(this.entries, (entry: PickerEntry) => {
             ListItem() {
               Row({ space: 12 }) {
-                // 文件夹用工程既有语义图标，书签用 AppIcon（原版 favicon）
+                // 原版 cb/a 行：文件夹用文件夹图标（x7.o.f13721e0），书签用站点 favicon
                 if (entry.isFolder) {
-                  // 文件夹图标：原版 a8/k.java 用 lb.b.a(x7.o.f13721e0=文件夹) / x7.o.f13774w（书签）
-                  // 工程内未提取文件夹专用图标，改用既有书签语义图标 via_ic_bookmark 表示文件夹
                   ViaIcon({ icon: $r('app.media.via_ic_bookmark'), iconSize: 22, iconColor: $r('app.color.fg') })
-                    .width(28)
                 } else {
-                  ViaIcon({ icon: $r('app.media.via_ic_bookmark'), iconSize: 22, iconColor: $r('app.color.fg') })
-                    .width(28)
+                  ViaIcon({ icon: $r('app.media.via_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
                 }
                 Column({ space: 2 }) {
                   Text(entry.title.trim() === '' ? '无标题' : entry.title)
@@ -160,7 +189,8 @@ export struct BookmarkPickerDialog {
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .width('100%')
-                  if (!entry.isFolder) {
+                    .textAlign(TextAlign.Start)
+                  if (!entry.isFolder && entry.url !== '') {
                     Text(entry.url)
                       .fontSize(12)
                       .fontColor($r('app.color.fg_secondary'))
@@ -173,28 +203,33 @@ export struct BookmarkPickerDialog {
                 .alignItems(HorizontalAlign.Start)
               }
               .width('100%')
-              .padding({ left: 20, right: 20, top: 10, bottom: 10 })
+              .padding({ left: 16, right: 16, top: 10, bottom: 10 })
               .onClick(() => {
-                if (entry.isFolder) {
-                  if (entry.isParent) {
-                    this.goParent()
-                  } else {
-                    this.openFolder(entry.folderId)
-                  }
-                } else if (entry.url !== '') {
-                  this.onPickUrl(entry.url)
-                }
+                this.onEntryTap(entry)
               })
             }
-          }, (entry: PickerEntry) => `${entry.folderId}_${entry.url}_${entry.title}`)
+          }, (entry: PickerEntry) => `${entry.isFolder ? 'f' : 'b'}${entry.id}_${entry.isParent ? 'up' : ''}`)
         }
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
       }
+
+      // 原版无按钮，靠外点/返回键取消；此处给出显式取消入口
+      Row() {
+        Blank()
+        Text('关闭')
+          .fontSize(15)
+          .fontColor($r('app.color.accent'))
+          .padding({ left: 16, right: 16, top: 10, bottom: 12 })
+          .onClick(() => {
+            this.onDismiss()
+          })
+      }
+      .width('100%')
     }
     .width(computeDialogWidthVp())
-    .constraintSize({ maxWidth: 450 })
+    .constraintSize({ maxWidth: 450, maxHeight: 600 })
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
     .border({ width: 1, color: $r('app.color.dialog_border') })

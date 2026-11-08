@@ -393,7 +393,7 @@ export struct SearchOverlay {
   private textController: TextInputController = new TextInputController()
   // 原版 tb/k0.U2()（207-213）清空按钮只 setText("")+D3()、不清 K0；
   // ArkTS 的 onChange 无法区分「清空按钮」与「回删到空」，用该一次性旗标标记清空动作来源：
-  // 置位后第一个空值 onChange 视为清空按钮路径（不复发 K0），随后立即复位
+  // 置位后第一个空值 onChange 视为清空按钮路径（不复位 K0），随后立即失效
   private clearButtonArmed: boolean = false
   private engineDialogId: number = -1
   private timerId: number = -1
@@ -663,11 +663,16 @@ export struct SearchOverlay {
       // 注意：不能走 applyShortcutQualification('')——那条路会清 K0。
       if (this.inputText.length > 0) {
         this.IconSlot($r('app.media.via_ic_url_clear'), $r('app.string.url_input_clear_text'), () => {
-          // 标记「本次置空来自清空按钮」，供 applyShortcutQualification 判定不清 K0
+          // 标记「本次置空来自清空按钮」，供 applyShortcutQualification 判定不清 K0。
+          // 若 TextInput 的程序化置空不触发 onChange，旗标会在 300ms 后自动失效，
+          // 不会污染之后的「回删到空」判定。
           this.clearButtonArmed = true
           this.inputText = ''
           this.rows = []
           this.fetchSuggestions('')
+          setTimeout(() => {
+            this.clearButtonArmed = false
+          }, 300)
         })
       }
       // 5) 展开文本（f12386s0）：drawable bl / ic_expand_text → tb/w0 全屏编辑器
