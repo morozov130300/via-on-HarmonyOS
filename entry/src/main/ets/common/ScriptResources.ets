@@ -414,8 +414,7 @@ class ScriptResourceCache {
   //   p5/b.java:91 if (file.exists() && file.length() > 0 && file.lastModified()
   //                  < System.currentTimeMillis() - 1296000000) { return true; }
   // 原版这一行把 lastModified **早于** now-15天 判定为「命中缓存直接返回」，
-  // 逻辑上是反的（刚下载的新文件反而会走重新下载分支）。早期本工程按「新=有效」
-  // 实现，属**刻意偏离原版 bug**，已由用户拍板保留（见《移植缺失功能说明.md》）。
+  // 逻辑上是反的（刚下载的新文件反而会走重新下载分支）。用户拍板：按原版字面语义保留。
   // 此处按原版字面语义 1:1 落地：返回 true 表示「原版会直接复用该文件」。
   private isFresh(url: string): boolean {
     try {
