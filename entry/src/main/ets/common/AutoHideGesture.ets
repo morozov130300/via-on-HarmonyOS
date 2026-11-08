@@ -114,9 +114,13 @@ export class AutoHideGesture {
         this.beginDrag(y)
         this.drag(x, y)
       } else {
-        // 原版 p(rawX, rawY)：未达反向条件时仅推进锚点
-        this.pendingAnchorX = x
-        this.pendingAnchorY = y
+        // 原版 p(rawX, rawY)（421-431）：仅当朝可解锁方向移动时推进锚点——
+        // 进度>=1 时只跟下滑（f11<f9559n 才更新）、进度<1 时只跟上滑
+        const p = this.progress()
+        if (p >= 1 ? y < this.pendingAnchorY : y > this.pendingAnchorY) {
+          this.pendingAnchorX = x
+          this.pendingAnchorY = y
+        }
       }
     } else if (this.state === AutoHideGesture.ST_VERTICAL_DRAGGING) {
       this.drag(x, y)
