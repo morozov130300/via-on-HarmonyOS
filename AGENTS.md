@@ -290,6 +290,18 @@
 
 其余差异（搜索建议浮动卡片、通用设置紧凑弹窗、AI设置行、阅读模式副标题/预览卡、夜间滤镜弹窗、主页定制卡片化、网站设定顺序、菜单动画参数等）一律按原工程 1:1 移植，不得以"做不到"为由跳过。
 
+## ⚠️ 刻意偏离原版的豁免项（用户拍板，永久生效，禁止「改回原版」）
+
+以下项目是**用户明确要求偏离原版 Via 7.4.0** 的，逆向确认过原版行为，但按用户决定不做 1:1；后续智能体发现「与原版不一致」时**禁止擅自改回**：
+
+1. **两栏收起联动隐藏系统状态栏/导航栏**（2026-11-08 用户拍板）：
+   - 原版事实：`c8/k6.java db()`（6969-6993）只位移 `f2586p0/f2604y0/f2600w0/f2588q0` 四个视图，全仓库 `z8/l3.n(window, true)` 仅由菜单「全屏」项 `ab(fullscreen)`（6742-6750）触发；**原版上滑隐藏操作栏不隐藏系统状态栏**。
+   - 用户决定：只要顶栏+底栏两栏收起（自动隐藏落定），就同步隐藏系统状态栏与导航栏；两栏恢复显示时还原（仍尊重 `showStatusBar=false`/`fullScreen=true` 设置）。理由：鸿蒙端系统状态栏常显会与铺满的网页内容形成「网页在下、状态栏在上」的重叠。
+   - 实现：`Index.ets` 的 `syncSystemBarsForToolbar()` 在 `finishToolbarsState()` 联动；`systemBarsVisible` (@Local) 驱动 `effectiveInsetTop/Bottom` 归零；`@Monitor('settings.showStatusBar','settings.fullScreen')` 处理设置变更。
+2. **云备份**：功能不要求与原版一致（唯一例外，见上文「一切操作必须先逆向原版」）。
+3. **密码管理器/导出密码位/备份 settings.txt 映射/搜索工具栏**：见上节 1–4 项，均为用户已选方案，非 1:1。
+4. **NavDestination 转场曲线**（API 限制，非用户拍板但属已知豁免）：`NavDestinationTransition.curve` 仅收 `Curve` 枚举（nav_destination.d.ts:565），ICurve 传不进 → 58 个子页 220ms 转场用 `Curve.EaseInOut` 近似 AOSP accelerate_decelerate（时长/位移精确，曲线轻微偏差）。
+
 ---
 
 # 📌 当前状态清单（每完成一项实时更新，禁止留成「待定」）

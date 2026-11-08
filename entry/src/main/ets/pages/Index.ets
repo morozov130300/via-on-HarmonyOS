@@ -101,6 +101,12 @@ const LAYOUT_DOUBLE: number = 3
 @ComponentV2
 struct Index {
   private settings: AppSettings = AppSettings.getInstance()
+  // 用户拍板（2026-11-08）：两栏收起时同步隐藏系统状态栏/导航栏，
+  // 避免「网页在下、状态栏在上」的重叠。这是刻意偏离原版的移植决策，
+  // 原版 c8/k6.db() 只位移四个视图、不碰 l3.n(window,true)（仅菜单「全屏」触发）。
+  // 反映系统栏当前是否可见：@Local 让 effectiveInset* 与布局随联动自动刷新。
+  @Local systemBarsVisible: boolean = true
+  private systemBarsHiddenByToolbar: boolean = false
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
   private downloads: DownloadCoordinator = DownloadCoordinator.getInstance()
@@ -202,6 +208,13 @@ struct Index {
   @Monitor('settings.volumePageFlip')
   onVolumePageFlipChange(): void {
     this.syncVolumeKeyConsumers()
+  }
+
+  // 设置变更（显示状态栏 / 全屏开关）时按当前两栏状态重算系统栏显隐
+  @Monitor('settings.showStatusBar', 'settings.fullScreen')
+  onSystemBarSettingChange(): void {
+    const baseVisible = this.settings.showStatusBar && !this.settings.fullScreen
+    this.applySystemBarsVisible(baseVisible && !this.systemBarsHiddenByToolbar)
   }
 
   private syncVolumeKeyConsumers(): void {
@@ -580,7 +593,9 @@ struct Index {
     if (win === undefined) {
       return
     }
-    applyStatusBarVisible(win, this.settings.showStatusBar && !this.settings.fullScreen)
+    // 基础值由设置决定；若此刻两栏已收起，则按拍板联动一并隐藏
+    const baseVisible = this.settings.showStatusBar && !this.settings.fullScreen
+    this.applySystemBarsVisible(baseVisible && !this.systemBarsHiddenByToolbar)
     this.insets.refresh(win)
     try {
       win.on('avoidAreaChange', () => {
@@ -589,6 +604,28 @@ struct Index {
     } catch (error) {
       console.error('watch avoidAreaChange failed')
     }
+  }
+
+  // 系统栏显隐统一入口（原版 z8/l3.n(window,true) 的 hide(systemBars()) 等价：
+  // 状态栏+导航栏整体切换）。仅当期望值变化时才调用窗口接口。
+  private applySystemBarsVisible(visible: boolean): void {
+    if (visible === this.systemBarsVisible) {
+      return
+    }
+    this.systemBarsVisible = visible
+    const win = AppStorage.get<window.Window>('mainWindow')
+    if (win === undefined) {
+      return
+    }
+    applyStatusBarVisible(win, visible)
+  }
+
+  // 用户拍板联动：两栏收起（隐藏落定）→ 隐藏系统栏；两栏恢复显示 → 还原。
+  // 还原时尊重设置：showStatusBar=false 或 fullScreen=true 时本就不显示。
+  private syncSystemBarsForToolbar(hidden: boolean): void {
+    this.systemBarsHiddenByToolbar = hidden
+    const baseVisible = this.settings.showStatusBar && !this.settings.fullScreen
+    this.applySystemBarsVisible(baseVisible && !hidden)
   }
 
   onBackPress(): boolean {
@@ -1316,6 +1353,9 @@ struct Index {
   private finishToolbarsState(show: boolean): void {
     this.toolbarHideProgress = show ? 0 : 1
     this.toolbarShown = show
+    // 用户拍板联动（刻意偏离原版）：两栏收起→隐藏系统栏，恢复→还原，
+    // 避免网页铺满后与常显状态栏重叠。
+    this.syncSystemBarsForToolbar(!show)
     if (show) {
       this.hideFab()
     } else {
@@ -1685,15 +1725,15 @@ struct Index {
     return d.height / d.densityPixels
   }
 
-  // 原版 z8/l3.n(window, true) 隐藏 systemBars 后，decor 不再为状态栏留白，
-  // 顶栏自然贴屏幕顶端。本端全屏（fullScreen 设置）时同样把顶部避让归零，
-  // 否则状态栏已隐藏却仍留一段空白（用户报「隐藏标题栏时状态栏还在」的观感来源）。
+  // 系统栏隐藏后 decor 不再为状态栏留白，顶栏自然贴屏幕顶端。
+  // 两种隐藏来源：菜单「全屏」设置，或用户拍板的「两栏收起联动」。
+  // 若系统栏已隐藏却仍按 insets 留白，就会出现顶部空白与网页重叠的观感。
   private effectiveInsetTop(): number {
-    return this.settings.fullScreen ? 0 : this.insets.top
+    return (this.settings.fullScreen || !this.systemBarsVisible) ? 0 : this.insets.top
   }
 
   private effectiveInsetBottom(): number {
-    return this.settings.fullScreen ? 0 : this.insets.bottom
+    return (this.settings.fullScreen || !this.systemBarsVisible) ? 0 : this.insets.bottom
   }
 
   // 原版 f2594t0 悬浮钮本体（42dp、内边距 10dp、白圆、图标 u0.a 五态）。
