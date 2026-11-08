@@ -1503,13 +1503,6 @@ struct Index {
 
   private fabAxisLock: number = 0
 
-  // 原版 t0.i → c.e()（k6.java:624-668）：松手吸附九宫。返回目标 fab(int) 重力位
-  private fabSnapGravity(lastX: number, lastY: number): number {
-    // lastX/lastY = 松手时 FAB 中心在父容器中的位置（vp）。原版用 raw 坐标三分：
-    // x < w/3 → 左3；x > 2w/3 → 右5；y 下 1/4 区 → 底80；中带 → 中16
-    return lastX
-  }
-
   private handleFabTouch(action: number, x: number, y: number): void {
     // action 0=down 1=up 2=move 3=cancel；x/y 为相对 FAB 自身的局部偏移
     if (action === 0) {
@@ -1734,6 +1727,16 @@ struct Index {
     // 原版 k6.n9/Rb：搜索工具栏 B0 是 RelativeLayout 独立子视图，rule=ABOVE(底栏)，
     // 悬浮在网页之上、底栏正上方 —— 所有布局都在底部区域，不随顶栏收放。
     if (this.effectiveLayout() === LAYOUT_TOOLBAR_TOP) {
+      Column() {
+        // 原版布局1：底栏 f2600w0 高 0，B0 ABOVE(底栏) → 贴屏幕最底（工程在下方垫
+        // 导航条避让条，B0 随之贴垫条顶）
+        SearchToolbar({
+          tab: this.tabStore.current(),
+          onOpenSettings: () => {
+            this.openPage('settingsSearch')
+          }
+        })
+      }
       Column()
         .height(6 + this.insets.bottom)
         .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
@@ -2089,56 +2092,64 @@ struct Index {
       // 尺寸 42dp（dimen v）、内边距 10dp、白圆底（drawable N1=cr.xml）、阴影 elevation 12dp。
       // 触摸三段（t0 1:1）：短按<300ms=显示工具栏；快拖出方向=五方向动作键；
       // 长按 300ms（alpha 0.5）=自由拖动，松手吸附九宫并持久化 fab(int)。
+      // 摆放 = 原版 RelativeLayout gravity（Ga）：全屏包裹容器按 Gravity 对齐，
+      // FAB 在容器内做 margin 12dp 偏移；自由拖动时切绝对 position。
       if (this.fabVisible) {
         Stack() {
-          Image($r('app.media.via_ic_menu'))
-            .width(22)
-            .height(22)
-            .fillColor('#61000000')
-        }
-        .width(this.fabSize)
-        .height(this.fabSize)
-        .padding(10)
-        .borderRadius(this.fabSize / 2)
-        .backgroundColor('#FFFFFF')
-        .shadow({ radius: 12, color: 'rgba(0,0,0,0.26)', offsetY: 2 })
-        .opacity(this.fabAlpha)
-        .translate({ x: this.fabFreeDrag ? 0 : this.fabOffsetX, y: this.fabFreeDrag ? 0 : this.fabOffsetY })
-        .position(this.fabFreeDrag
-          ? {
-            x: this.fabAbsBaseX + this.fabOffsetX,
-            y: this.fabAbsBaseY + this.fabOffsetY
+          Stack() {
+            Image($r('app.media.via_ic_menu'))
+              .width(22)
+              .height(22)
+              .fillColor('#61000000')
           }
-          : {
-            x: this.fabAlignLeft ? this.fabMargin : undefined,
-            y: this.fabAlignTop ? this.fabMargin : undefined
+          .width(this.fabSize)
+          .height(this.fabSize)
+          .padding(10)
+          .borderRadius(this.fabSize / 2)
+          .backgroundColor('#FFFFFF')
+          .shadow({ radius: 12, color: 'rgba(0,0,0,0.26)', offsetY: 2 })
+          .opacity(this.fabAlpha)
+          .translate({ x: this.fabFreeDrag ? 0 : this.fabOffsetX, y: this.fabFreeDrag ? 0 : this.fabOffsetY })
+          .position(this.fabFreeDrag
+            ? {
+              x: this.fabAbsBaseX + this.fabOffsetX,
+              y: this.fabAbsBaseY + this.fabOffsetY
+            }
+            : {
+              x: this.fabAlignLeft ? this.fabMargin : undefined,
+              y: this.fabAlignTop ? this.fabMargin : undefined
+            })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              // 记录自由拖动基准（锚定点转为绝对坐标）
+              if (this.fabAlignRight) {
+                this.fabAbsBaseX = this.fabParentW() - this.fabMargin - this.fabSize
+              } else {
+                this.fabAbsBaseX = this.fabMargin
+              }
+              if (this.fabAlignBottom) {
+                this.fabAbsBaseY = this.fabParentH() - this.fabMargin - this.fabSize
+              } else {
+                this.fabAbsBaseY = this.fabMargin
+              }
+              this.handleFabTouch(0, event.touches[0].x, event.touches[0].y)
+            } else if (event.type === TouchType.Move) {
+              this.handleFabTouch(2, event.touches[0].x, event.touches[0].y)
+            } else if (event.type === TouchType.Up) {
+              this.handleFabTouch(1, 0, 0)
+            } else if (event.type === TouchType.Cancel) {
+              this.handleFabTouch(3, 0, 0)
+            }
           })
-        .markAnchor(this.fabFreeDrag ? { x: 0, y: 0 } : { x: 0, y: 0 })
-        .align(this.fabFreeDrag ? Alignment.TopStart : (this.fabAlignRight
+        }
+        .width('100%')
+        .height('100%')
+        // 包裹容器按 Gravity 对齐（原版 RelativeLayout addRule：3=LEFT、11=RIGHT、
+        // 10/15=TOP/BOTTOM 中心、12=BOTTOM），FAB 自身仅 margin 偏移
+        .align(this.fabAlignRight
           ? (this.fabAlignBottom ? Alignment.BottomEnd : Alignment.TopEnd)
-          : (this.fabAlignBottom ? Alignment.BottomStart : Alignment.TopStart)))
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            // 记录自由拖动基准（锚定点转为绝对坐标）
-            if (this.fabAlignRight) {
-              this.fabAbsBaseX = this.fabParentW() - this.fabMargin - this.fabSize
-            } else {
-              this.fabAbsBaseX = this.fabMargin
-            }
-            if (this.fabAlignBottom) {
-              this.fabAbsBaseY = this.fabParentH() - this.fabMargin - this.fabSize
-            } else {
-              this.fabAbsBaseY = this.fabMargin
-            }
-            this.handleFabTouch(0, event.touches[0].x, event.touches[0].y)
-          } else if (event.type === TouchType.Move) {
-            this.handleFabTouch(2, event.touches[0].x, event.touches[0].y)
-          } else if (event.type === TouchType.Up) {
-            this.handleFabTouch(1, 0, 0)
-          } else if (event.type === TouchType.Cancel) {
-            this.handleFabTouch(3, 0, 0)
-          }
-        })
+          : (this.fabAlignBottom ? Alignment.BottomStart : Alignment.TopStart))
+        .hitTestBehavior(this.fabFreeDrag ? HitTestMode.Default : HitTestMode.None)
       }
 
       if (this.showSearch) {
