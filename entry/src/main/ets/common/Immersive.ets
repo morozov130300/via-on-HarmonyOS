@@ -57,12 +57,24 @@ export function applyImmersiveWindow(win: window.Window, showStatusBar: boolean)
   applyStatusBarVisible(win, showStatusBar)
 }
 
+// 原版 z8/l3.java:266 n(window, z10)：
+//   z10=true  → insetsController.hide(WindowInsets.Type.systemBars())
+//               （状态栏 + 导航栏 **一起**隐藏，setSystemBarsBehavior(2) 滑动唤出）
+//   z10=false → show(systemBars())（i10>=31 用 behavior 1）
+// 本端等价：setSpecificSystemBarEnabled('status') + ('navigation')，两者必须同时切换，
+// 只隐藏状态栏会留下导航栏、且与原版「系统栏整体沉浸」不符。
 export function applyStatusBarVisible(win: window.Window, visible: boolean): void {
   try {
     win.setSpecificSystemBarEnabled('status', visible).catch(() => {
       // PC/2in1 自由多窗模式下该接口禁用，忽略即可
     })
   } catch (error) {
-    console.error('setSpecificSystemBarEnabled failed')
+    console.error('setSpecificSystemBarEnabled status failed')
+  }
+  try {
+    win.setSpecificSystemBarEnabled('navigation', visible).catch(() => {
+    })
+  } catch (error) {
+    console.error('setSpecificSystemBarEnabled navigation failed')
   }
 }

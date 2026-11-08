@@ -176,7 +176,10 @@ struct Index {
   @Local fabAlignRight: boolean = true
   @Local fabAlignTop: boolean = false
   @Local fabAlignBottom: boolean = true
-  @Local fabMargin: number = 12
+  // 原版 Ga()：既非 LEFT 也非 RIGHT → 水平居中；非 BOTTOM → 垂直居中
+  @Local fabCenterH: boolean = false
+  @Local fabCenterV: boolean = false
+  @Local fabMargin: number = 36
   @Local fabSize: number = 42
   private fabShown: boolean = false
   private fabDragBaseX: number = 0
@@ -1682,6 +1685,87 @@ struct Index {
     return d.height / d.densityPixels
   }
 
+  // 原版 z8/l3.n(window, true) 隐藏 systemBars 后，decor 不再为状态栏留白，
+  // 顶栏自然贴屏幕顶端。本端全屏（fullScreen 设置）时同样把顶部避让归零，
+  // 否则状态栏已隐藏却仍留一段空白（用户报「隐藏标题栏时状态栏还在」的观感来源）。
+  private effectiveInsetTop(): number {
+    return this.settings.fullScreen ? 0 : this.insets.top
+  }
+
+  private effectiveInsetBottom(): number {
+    return this.settings.fullScreen ? 0 : this.insets.bottom
+  }
+
+  // 原版 f2594t0 悬浮钮本体（42dp、内边距 10dp、白圆、图标 u0.a 五态）。
+  // 摆放由外层全屏容器 align 决定（Ga gravity）；本体内只做两件事：
+  //  默认态挂 36dp margin（f13688g），拖动态用 translate 跟手位移。
+  @Builder
+  FabButton() {
+    Stack() {
+      Image(this.fabDirFlag === 0 ? $r('app.media.via_ic_menu') : $r('app.media.via_fab_arrow_back'))
+        .width(22)
+        .height(22)
+        .fillColor('#61000000')
+        .rotate({
+          angle: this.fabDirFlag === 2 ? 180 : (this.fabDirFlag === 4 ? 90 : (this.fabDirFlag === 8 ? -90 : 0))
+        })
+    }
+    .width(this.fabSize)
+    .height(this.fabSize)
+    .padding(10)
+    .borderRadius(this.fabSize / 2)
+    .backgroundColor('#FFFFFF')
+    .shadow({ radius: 12, color: 'rgba(0,0,0,0.26)', offsetY: 2 })
+    .opacity(this.fabAlpha)
+    .margin({
+      left: this.fabFreeDrag ? 0 : (this.fabAlignLeft ? this.fabMargin : 0),
+      right: this.fabFreeDrag ? 0 : (this.fabAlignRight ? this.fabMargin : 0),
+      top: this.fabFreeDrag ? 0 : (this.fabAlignTop ? this.fabMargin : 0),
+      bottom: this.fabFreeDrag ? 0 : (this.fabAlignBottom ? this.fabMargin : 0)
+    })
+    // 拖动位移：相对原 gravity 位置的增量（窗口坐标算出的 offset）
+    .translate({ x: this.fabFreeDrag ? this.fabOffsetX : 0, y: this.fabFreeDrag ? this.fabOffsetY : 0 })
+    .onTouch((event: TouchEvent) => {
+      this.onFabTouchEvent(event)
+    })
+  }
+
+  private onFabTouchEvent(event: TouchEvent): void {
+    // 用窗口坐标（windowX/windowY，vp）：组件 translate/position 后局部 x/y
+    // 会随组件漂移形成反馈误差，窗口坐标恒定。
+    const t = event.touches[0]
+    const px = t.windowX
+    const py = t.windowY
+    if (event.type === TouchType.Down) {
+      // 由当前 gravity 摆放换算为绝对坐标（Ga 的 margin 36dp）
+      const w = this.fabParentW()
+      const h = this.fabParentH()
+      const size = this.fabSize
+      const m = this.fabMargin
+      if (this.fabCenterH) {
+        this.fabAbsBaseX = (w - size) / 2
+      } else if (this.fabAlignLeft) {
+        this.fabAbsBaseX = m
+      } else {
+        this.fabAbsBaseX = w - m - size
+      }
+      if (this.fabCenterV) {
+        this.fabAbsBaseY = (h - size) / 2
+      } else if (this.fabAlignTop) {
+        this.fabAbsBaseY = m
+      } else {
+        this.fabAbsBaseY = h - m - size
+      }
+      this.handleFabTouch(0, px, py)
+    } else if (event.type === TouchType.Move) {
+      this.handleFabTouch(2, px, py)
+    } else if (event.type === TouchType.Up) {
+      this.handleFabTouch(1, px, py)
+    } else if (event.type === TouchType.Cancel) {
+      this.handleFabTouch(3, px, py)
+    }
+  }
+
   @Builder
   TopBarArea() {
     // 原版 db(f)：顶栏 translationY = -p * height（p=1 全隐藏）
@@ -1708,7 +1792,7 @@ struct Index {
           }
         })
       }
-      .padding({ top: this.insets.top })
+      .padding({ top: this.effectiveInsetTop() })
       .backgroundColor(this.bottomBg())
       .translate({ y: -this.topBarTranslate() })
       .onAreaChange((_old: Area, newArea: Area) => {
@@ -1718,7 +1802,7 @@ struct Index {
       Column() {
         this.ChromeToolbar(true)
       }
-      .padding({ top: this.insets.top })
+      .padding({ top: this.effectiveInsetTop() })
       // 背景延伸进状态栏避让区（只有组件需要避让，背景不需要）
       .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
       // 原版 db(f)：f2604y0.setTranslationY(-p * height)
@@ -1734,7 +1818,7 @@ struct Index {
     if (this.toolbarHideProgress <= 0) {
       return 0
     }
-    const h = this.topBarHeightVp > 0 ? this.topBarHeightVp : (48 + this.insets.top)
+    const h = this.topBarHeightVp > 0 ? this.topBarHeightVp : (48 + this.effectiveInsetTop())
     return h * this.toolbarHideProgress
   }
 
@@ -1750,7 +1834,7 @@ struct Index {
   // 竖滑宿主 barExtentPx()：vp 转 px 供手势状态机使用
   private autoHideExtentVp(): number {
     return Math.max(
-      this.topBarHeightVp > 0 ? this.topBarHeightVp : 48 + this.insets.top,
+      this.topBarHeightVp > 0 ? this.topBarHeightVp : 48 + this.effectiveInsetTop(),
       this.bottomBarHeightVp > 0 ? this.bottomBarHeightVp : 48)
   }
 
@@ -1773,7 +1857,7 @@ struct Index {
         })
       }
       Column()
-        .height(6 + this.insets.bottom)
+        .height(6 + this.effectiveInsetBottom())
         .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
     } else if (this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM) {
       Column() {
@@ -1785,7 +1869,7 @@ struct Index {
         })
         this.ChromeToolbar(true)
       }
-      .padding({ bottom: this.insets.bottom })
+      .padding({ bottom: this.effectiveInsetBottom() })
       .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
       // 原版 db(f)：f2600w0.setTranslationY(+p * height)
       .translate({ y: this.bottomBarTranslate() })
@@ -1822,7 +1906,7 @@ struct Index {
         })
         this.ChromeToolbar(false)
       }
-      .padding({ bottom: this.insets.bottom })
+      .padding({ bottom: this.effectiveInsetBottom() })
       .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
       // 原版 Ya 布局3：f2600w0 = 地址栏+工具栏整块，db(p) ty=+p*h
       .translate({ y: this.bottomBarTranslate() })
@@ -1839,7 +1923,7 @@ struct Index {
         })
         this.ChromeToolbar(false)
       }
-      .padding({ bottom: this.insets.bottom })
+      .padding({ bottom: this.effectiveInsetBottom() })
       .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
       // 原版 Ya 布局0（传统）：工具栏在底栏容器 f2600w0（高 = tabbar 36dp + 工具栏
       // 48dp，6477-6484），db(p) ty=+p*h —— 与顶栏地址栏同步收放
@@ -1917,24 +2001,28 @@ struct Index {
     })
   }
 
-  // 原版 k6.fab(int)（w9/k.java:1249 q3("fab", 80)）默认 80 = 右下（RIGHT|BOTTOM）。
-  // k9→Ga()（4332-4360）：FAB 初始摆放 = 对应角 + margin（f13688g=u=36dp），
-  // FAB 尺寸 f13689h=v=42dp。这里用 Stack 边缘锚定 + 反向 margin 实现。
+  // 原版 k6.Ga()（4332-4360）1:1：FAB 是 RelativeLayout 子节点，位置 **只** 由
+  // gravity 规则 + 四边 margin 决定，从不使用绝对坐标。
+  //   f13689h = dimen v = 42dp（FAB 尺寸）
+  //   f13688g = dimen u = 36dp（四边 margin，不是 12dp）
+  //   (iS&3)==3 → addRule(9)=LEFT；(iS&5)==5 → addRule(11)=RIGHT；
+  //   否则 addRule(14)+addRule(12)（居中）+ 四边 margin
+  //   (iS&80)==80 → addRule(12)=BOTTOM；否则 addRule(15)=CENTER_VERTICAL
+  // 设置默认 fab=80 → RIGHT|BOTTOM（右下角）。
   private initFabPosition(): void {
     const gravity = this.settings.fab
-    const margin = 12
-    const fabSize = 42
-    // 水平：3(LEFT)|5(RIGHT)；垂直：16(TOP)|80(BOTTOM)；原版 x 优先 3/5、否则 1(CENTER)
-    const alignLeft = (gravity & 3) === 3
-    const alignRight = (gravity & 5) === 5
-    const alignTop = (gravity & 16) === 16
-    const alignBottom = (gravity & 80) === 80
-    this.fabAlignLeft = alignLeft
-    this.fabAlignRight = !alignLeft && !alignRight ? true : alignRight
-    this.fabAlignTop = alignTop
-    this.fabAlignBottom = !alignTop && !alignBottom ? true : alignBottom
-    this.fabMargin = margin
-    this.fabSize = fabSize
+    this.fabMargin = 36
+    this.fabSize = 42
+    const left = (gravity & 3) === 3
+    const right = (gravity & 5) === 5
+    const bottom = (gravity & 80) === 80
+    // 原版：非 LEFT 且非 RIGHT 时是水平居中；非 BOTTOM 时垂直居中
+    this.fabAlignLeft = left
+    this.fabAlignRight = right
+    this.fabAlignTop = !bottom
+    this.fabAlignBottom = bottom
+    this.fabCenterH = !left && !right
+    this.fabCenterV = !bottom
   }
 
   private handleToolbarCommand(cmd: string): void {
@@ -2129,81 +2217,34 @@ struct Index {
           .height(2)
           .color(PROGRESS_GRADIENT)
           .backgroundColor(Color.Transparent)
-          .position({ x: 0, y: this.insets.top })
+          .position({ x: 0, y: this.effectiveInsetTop() })
           .translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP ? -this.topBarTranslate() : 0 })
       }
 
       // 原版 k6.f2594t0：模式2（点击隐藏）隐藏后的悬浮钮——
-      // 尺寸 42dp（dimen v）、内边距 10dp、白圆底（drawable N1=cr.xml）、阴影 elevation 12dp。
+      // 尺寸 42dp（dimen v）、内边距 10dp、白圆底（drawable N1=cr.xml）、阴影 12dp。
       // 触摸三段（t0 1:1）：短按<300ms=显示工具栏；快拖出方向=五方向动作键；
       // 长按 300ms（alpha 0.5）=自由拖动，松手吸附九宫并持久化 fab(int)。
-      // 摆放 = 原版 RelativeLayout gravity（Ga）：全屏包裹容器按 Gravity 对齐，
-      // FAB 在容器内做 margin 12dp 偏移；自由拖动时切绝对 position。
-      // 图标 = u0.a 五态（方向位 c(dir) 换图）：左=b2 0°、右=b2 180°（drawable a3）、
-      // 上=b2 90°（ab）、下=b2 -90°（aa）、默认=cm 菜单（原 fab 拖出方向 c()）。
+      // 摆放（Ga 1:1）：默认态 **只用** align + 四边 margin 36dp，绝不用 position
+      // （position 传 undefined 会被当 0 → 飞到左上角，这就是之前「点不到」的原因）；
+      // 仅自由拖动态才切 position 绝对定位。
+      // 图标（u0.a 五态）：默认 cm 菜单，拖出方向换 b2 箭头并旋转
+      // （左 0° / 右 180° / 上 90° / 下 -90°）。
       if (this.fabVisible) {
+        // 定位完全由这个包裹容器承担（原版 RelativeLayout + gravity/margin）：
+        // 拖动态容器全屏 + position 绝对；默认态容器全屏 + align 四象限，
+        // 内部 FAB 只挂 36dp margin（Ga 的 f13688g）。@Builder 返回 void
+        // 无法链式挂属性，故属性一律写在容器上。
         Stack() {
-          Stack() {
-            Image(this.fabDirFlag === 0 ? $r('app.media.via_ic_menu') : $r('app.media.via_fab_arrow_back'))
-              .width(22)
-              .height(22)
-              .fillColor('#61000000')
-              .rotate({
-                angle: this.fabDirFlag === 2 ? 180 : (this.fabDirFlag === 4 ? 90 : (this.fabDirFlag === 8 ? -90 : 0))
-              })
-          }
-          .width(this.fabSize)
-          .height(this.fabSize)
-          .padding(10)
-          .borderRadius(this.fabSize / 2)
-          .backgroundColor('#FFFFFF')
-          .shadow({ radius: 12, color: 'rgba(0,0,0,0.26)', offsetY: 2 })
-          .opacity(this.fabAlpha)
-          .translate({ x: this.fabFreeDrag ? 0 : this.fabOffsetX, y: this.fabFreeDrag ? 0 : this.fabOffsetY })
-          .position(this.fabFreeDrag
-            ? {
-              x: this.fabAbsBaseX + this.fabOffsetX,
-              y: this.fabAbsBaseY + this.fabOffsetY
-            }
-            : {
-              x: this.fabAlignLeft ? this.fabMargin : undefined,
-              y: this.fabAlignTop ? this.fabMargin : undefined
-            })
-          .onTouch((event: TouchEvent) => {
-            // 用窗口坐标（windowX/windowY，vp）而非组件局部 x/y：组件 translate 后
-            // 局部坐标会随组件漂移，导致拖动粘滞/跳变；窗口坐标恒定不随位移变化。
-            const t = event.touches[0]
-            const px = t.windowX
-            const py = t.windowY
-            if (event.type === TouchType.Down) {
-              // 记录自由拖动基准（锚定点转为绝对坐标）
-              if (this.fabAlignRight) {
-                this.fabAbsBaseX = this.fabParentW() - this.fabMargin - this.fabSize
-              } else {
-                this.fabAbsBaseX = this.fabMargin
-              }
-              if (this.fabAlignBottom) {
-                this.fabAbsBaseY = this.fabParentH() - this.fabMargin - this.fabSize
-              } else {
-                this.fabAbsBaseY = this.fabMargin
-              }
-              this.handleFabTouch(0, px, py)
-            } else if (event.type === TouchType.Move) {
-              this.handleFabTouch(2, px, py)
-            } else if (event.type === TouchType.Up) {
-              this.handleFabTouch(1, px, py)
-            } else if (event.type === TouchType.Cancel) {
-              this.handleFabTouch(3, px, py)
-            }
-          })
+          this.FabButton()
         }
         .width('100%')
         .height('100%')
-        // 包裹容器按 Gravity 对齐（原版 RelativeLayout addRule：3=LEFT、11=RIGHT、
-        // 10/15=TOP/BOTTOM 中心、12=BOTTOM），FAB 自身仅 margin 偏移
-        .align(this.fabAlignRight
-          ? (this.fabAlignBottom ? Alignment.BottomEnd : Alignment.TopEnd)
-          : (this.fabAlignBottom ? Alignment.BottomStart : Alignment.TopStart))
+        .align(this.fabCenterH
+          ? (this.fabAlignBottom ? Alignment.Bottom : Alignment.Top)
+          : (this.fabAlignRight
+            ? (this.fabAlignBottom ? Alignment.BottomEnd : Alignment.TopEnd)
+            : (this.fabAlignBottom ? Alignment.BottomStart : Alignment.TopStart)))
         .hitTestBehavior(this.fabFreeDrag ? HitTestMode.Default : HitTestMode.None)
       }
 
@@ -2247,7 +2288,7 @@ struct Index {
         .justifyContent(this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM || this.effectiveLayout() === LAYOUT_DOUBLE
           ? FlexAlign.End : FlexAlign.Start)
         .padding(this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM || this.effectiveLayout() === LAYOUT_DOUBLE
-          ? { bottom: this.insets.bottom } : { top: this.insets.top })
+          ? { bottom: this.effectiveInsetBottom() } : { top: this.effectiveInsetTop() })
         // 空白区域点击穿透到下方压暗层（关闭）；面板自身 Default 拦截，避免点输入框时误关
         .hitTestBehavior(HitTestMode.None)
         // 同上：整块搜索面板随 FragmentTransaction 走 anim/c 进场（alpha 240ms 线性）
@@ -2296,7 +2337,7 @@ struct Index {
             this.showFindBar = false
           }
         })
-          .position({ x: 0, y: this.insets.top })
+          .position({ x: 0, y: this.effectiveInsetTop() })
       }
       if (this.showAi) {
         // 原版 b9/g Dialog：b9/g.java 232-233 行 —— attributes.dimAmount = 0.2f，
@@ -2329,7 +2370,7 @@ struct Index {
             .width('100%')
             .height('100%')
             .backgroundColor($r('app.color.page_bg'))
-            .padding(this.isLandscape ? { top: this.insets.top } : { bottom: this.insets.bottom })
+            .padding(this.isLandscape ? { top: this.effectiveInsetTop() } : { bottom: this.effectiveInsetBottom() })
         }
         .width(this.isLandscape ? this.aiPanelWidthVp : '100%')
         .height(this.isLandscape ? '100%' : this.aiPanelHeightVp)
