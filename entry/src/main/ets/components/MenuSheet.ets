@@ -17,8 +17,6 @@ import { scriptPatternMatches } from '../common/ScriptMatch'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
-// 原版 a8/k.java：书签快捷选择对话框（W9() / P9 case2）
-import { BookmarkPickerDialog } from './BookmarkPickerDialog'
 import { ZoomSlider } from './ZoomSlider'
 import { TranslateState } from './TranslatePanel'
 import { computeDialogWidthVp } from './ViaDialogCard'
@@ -96,6 +94,8 @@ export struct MenuSheet {
   // → Ta/Ua（k6.java:5994-6023）：当前标签存在时**在当前标签打开**，故 MenuSheet 内
   // 直接用 tabStore.navigate(url)，此回调不再参与该链路。
   @Event onOpenUrlInNewTab: (url: string) => void = (url: string) => {}
+  // 原版 W9()：请求上层打开书签快捷选择对话框（承载在 Index，避免 MenuSheet 自建一份）
+  @Event onOpenBookmarkDialog: () => void = () => {}
   @Event onFindInPage: () => void = () => {}
   @Event onShare: () => void = () => {}
   @Event onSavePage: () => void = () => {}
@@ -113,8 +113,7 @@ export struct MenuSheet {
   @Local showImageModeDialog: boolean = false
   // 原版 k6.P9 case4 → A0()：下载管理选择弹窗
   @Local showDlManagerDialog: boolean = false
-  // 原版 k6.P9 case2 → W9() → a8.k：书签快捷选择对话框
-  @Local showBookmarkPicker: boolean = false
+  // 原版 k6.P9 case2 → W9() → a8.k：书签快捷选择对话框（承载在 Index，此处只发事件）
   @Local showReportDialog: boolean = false
   @Local showOrientationDialog: boolean = false
   @Local showAddHomeFavDialog: boolean = false
@@ -206,9 +205,8 @@ export struct MenuSheet {
       if (this.showDlManagerDialog) {
         this.DlManagerDialog()
       }
-      if (this.showBookmarkPicker) {
-        this.BookmarkPickerOverlay()
-      }
+      // 原版 a8.k 书签快捷选择对话框的承载统一收敛到 Index.ets（showBookmarkPicker），
+      // 此处不再自建一份：菜单长按经 onOpenBookmarkDialog 交回 Index，避免双份入口。
       if (this.showReportDialog) {
         this.ReportDialog()
       }
@@ -505,7 +503,8 @@ export struct MenuSheet {
       // （标题 hb/v4.java:127-128 H9=pn「打开书签对话框」，从当前页快速挑一个书签打开）。
       // 不是书签管理页；早期实现退化为跳 bookmarks，已改回对话框。
       case 'bookmarks':
-        this.showBookmarkPicker = true
+        this.onClose()
+        this.onOpenBookmarkDialog()
         break
       // 原版 k6.P9 case3 → na.s1(3)：历史内部页
       case 'history':
@@ -793,32 +792,7 @@ export struct MenuSheet {
     return 0
   }
 
-  // 原版 a8.k 书签快捷选择对话框的承载层（点击遮罩关闭）
-  @Builder
-  BookmarkPickerOverlay() {
-    Stack({ alignContent: Alignment.Center }) {
-      BookmarkPickerDialog({
-        onPickUrl: (url: string): void => {
-          // 原版链路：a8/k.onDismiss → result → k6.K3（k6.java:1846-1863）→ k6.Ra(url)
-          //   → Ta/Ua（k6.java:5994-6023）：当前标签存在时 aVarD.v(str) = **在当前标签打开**，
-          //   仅无标签时才 i1(str,true) 新开；随后 d9() 收起菜单。
-          this.showBookmarkPicker = false
-          this.onClose()
-          this.tabStore.navigate(url)
-        },
-        onDismiss: (): void => {
-          this.showBookmarkPicker = false
-        }
-      })
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
-    .transition(dimTransition(240))
-    .onClick(() => {
-      this.showBookmarkPicker = false
-    })
-  }
+
   // 原版 k6.P9 case4（k6.java:5467-5487）→ A0()：
   //   strArrD = download/j1.e().d(ctx)（[0]=下载器键, [1]=显示名；首项 "" + d5「内建下载器」）；
   //   当前项 = w9 K2()「dlmanager」在 [0] 中的下标；
