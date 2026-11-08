@@ -128,6 +128,12 @@ export struct TabWeb {
   @Param onPcKey: (event: KeyEvent) => boolean = (_event: KeyEvent): boolean => false
   // 原版 k6.b0（r4.f 页面回调）→ d9() → pb()：仅模式2 且已隐藏时确保 FAB 显示
   @Param onPageSettle: () => void = (): void => {}
+  // —— 原版 GestureTouchEvent 竖滑隐藏操作栏：WebView OnTouchListener（e8/i.java:124）
+  // → k6.E → GestureTouchEvent.g() 全量转发。ArkWeb 原生层吃事件、父容器手势收不到，
+  // 故在 Web 组件上并行挂 PanGesture（All 方向，与横滑前进/后退共存），把
+  // down/move/up/cancel 喂给 Index 注入的状态机。
+  @Param onAutoHideTouch: (action: number, x: number, y: number) => void =
+    (_action: number, _x: number, _y: number): void => {}
   // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
@@ -682,17 +688,26 @@ export struct TabWeb {
         .onAreaChange((_old: Area, newArea: Area) => {
           this.swipeNavWidth = Number(newArea.width)
         })
-        .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 4 })
-          .onActionStart(() => {
+        // 原版 e8/i.java:124 WebView.setOnTouchListener → k6.E → GestureTouchEvent.g()：
+        // 触摸事件全量喂给竖滑隐藏状态机（与横滑并存，状态机内部 |dx|>=|dy| 让位横滑）。
+        // ArkWeb 原生层吃事件，须把 PanGesture 直接挂 Web 组件且方向 All 才收得到竖滑。
+        .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 1 })
+          .onActionStart((event: GestureEvent) => {
+            // down 坐标（原版 l() 记录 rawX/rawY）
+            this.onAutoHideTouch(0, event.offsetX, event.offsetY)
             this.swipeNavReset()
           })
           .onActionUpdate((event: GestureEvent) => {
+            // move：offset 是相对手势起点的累计位移，换算为屏幕坐标喂状态机
+            this.onAutoHideTouch(2, event.offsetX, event.offsetY)
             this.swipeNavUpdate(event)
           })
           .onActionEnd(() => {
+            this.onAutoHideTouch(1, 0, 0)
             this.swipeNavFinish()
           })
           .onActionCancel(() => {
+            this.onAutoHideTouch(3, 0, 0)
             this.swipeNavReset()
           }))
       // 原版 k6 f2570c1：网页容器前景黑色蒙版，夜间生效时 alpha=nightfilter（默认 77）

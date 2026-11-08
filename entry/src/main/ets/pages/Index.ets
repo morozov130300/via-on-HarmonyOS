@@ -160,10 +160,11 @@ struct Index {
     this.refreshPhysicalOrientation()
   }
   // ============ 自动隐藏操作栏（原版 fullscreenmode 三态 + GestureTouchEvent 竖滑） ============
-  // 原版 k6.f2591r1：工具栏可见进度，1=显示 0=隐藏；db() 只在布局 1/2（X0==1）时生效
-  @Local toolbarProgress: number = 1
-  // 原版 k6.f2589q1（S7/G8 → w9.k.f13377q）：操作栏是否处于隐藏态
-  private toolbarHidden: boolean = false
+  // 原版 k6.f2591r1：隐藏进度，0=显示 1=隐藏（初始 0.0，k6.java:284）；
+  // db(p)（6969-6993）：顶栏 ty=-p*h、底栏 ty=+p*h、网页容器 ty=h*(1-p)（工具栏在上时）
+  @Local toolbarHideProgress: number = 0
+  // 原版 k6.f2589q1：显示态（初始 true，k6.java:281）
+  private toolbarShown: boolean = true
   // 原版 k6.f2593s1：S7 动画期间防重入（X7 取消用）
   private toolbarAnimRunning: boolean = false
   // 原版 k6.f2596u0：点击隐藏（模式2）的 FAB（f2594t0，帧动画 160ms 淡入）
@@ -643,8 +644,8 @@ struct Index {
         this.gameModeBackTime = 0
         this.settings.setGameMode(false)
         this.getUIContext().getPromptAction().showToast({ message: $r('app.string.game_mode_toast_off'), duration: 1500 })
-        // 原版 bb(false)（6822-6844）→ else 分支 → g9()：退出游戏模式恢复操作栏
-        this.showToolbarsForPage()
+        // 原版 bb(false)（6822-6844）→ else 分支 → g9()：退出游戏模式隐藏操作栏（模式2）
+        this.hideToolbarsForPage()
       } else {
         this.gameModeBackTime = now
         this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit_game_mode'), duration: 1500 })
@@ -1211,21 +1212,18 @@ struct Index {
   // 原版总开关：fullscreenmode（w9/k.java:1340 d3，默认 0）
   //   0=总是显示、1=滑动隐藏/显示、2=点击隐藏/显示（arrays d = jt/ju/jv）
   // X0（k6.Jb:4637-4659）：仅布局 1/2（工具栏上/下）支持自动隐藏；传统(0)/双行(3)恒显。
-  // 原版布尔参数语义（关键，勿再弄反）：
-  //   G8(z10)/S7(z10)/j(z10)/e(z10) 的 z10 均为「显示」——G8(true)=db(0)+VISIBLE，
-  //   G8(false)=db(1)+GONE；f2589q1 = !z10（隐藏态）。
-  //   g9()（7200-7207）：模式2 且（隐藏或进度<1）→ S7(false→true) 显示；
-  //   ub()（8718-8725）：非隐藏或进度>0 → S7(true→false) 隐藏。
+  // 原版语义（k6.java 逐行核对）：
+  //   f2591r1 = 隐藏进度：0=显示 1=隐藏（初始 0.0）；db(p)：顶栏 ty=-p*h、底栏 ty=+p*h、
+  //   网页容器 ty=h*(1-p)（工具栏在上时贴顶，4296-4310/G8）。
+  //   f2589q1 = 显示态（初始 true）。G8(show)/S7(show)/j(show)/e(show) 的参数=显示。
+  //   ub() = S7(true) 显示（FAB 点击/回主页/退出游戏模式）；g9() = S7(false) 隐藏（模式2）。
 
-  // 原版 k6.a.k(view)（415-418）：r2==1 || (r2==2 && 进度<1)，且 X0==1、
-  // 非全屏视频（f2590r0）、非游戏模式（f2578k1）、非自定义视图
+  // 原版 k6.a.k(view)（415-418）：r2==1 || (r2==2 && 进度<1)，且 X0==1（Jb 默认布局
+  // 非0时 X0=1，传统/双行也成立——原版所有布局都能隐藏，db() 内部对非 X0==1 布局
+  // 强制进度 0）、非全屏视频（f2590r0）、非游戏模式（f2578k1）、非自定义视图
   private canAutoHideGesture(): boolean {
     const mode = this.settings.toolbarAutoHide
-    if (mode !== 1 && !(mode === 2 && this.toolbarProgress < 1)) {
-      return false
-    }
-    const layout = this.effectiveLayout()
-    if (layout !== LAYOUT_TOOLBAR_TOP && layout !== LAYOUT_TOOLBAR_BOTTOM) {
+    if (mode !== 1 && !(mode === 2 && this.toolbarHideProgress < 1)) {
       return false
     }
     if (this.settings.gameMode || this.videoOverlay.active) {
@@ -1245,7 +1243,8 @@ struct Index {
 
   // —— IndexAutoHideHost 桥接（类在文件底部，需要跨 struct 访问）——
   autoHideIsHidden(): boolean {
-    return this.toolbarHidden
+    // 原版 a() 返回 f2589q1 = 显示态；宿主接口 isHidden 语义 = !f2589q1
+    return !this.toolbarShown
   }
 
   autoHideOnDragStart(): void {
@@ -1273,50 +1272,46 @@ struct Index {
   }
 
   autoHideProgress(): number {
-    return this.toolbarProgress
+    return this.toolbarHideProgress
   }
 
   autoHideSwipeModeOnly(): boolean {
     return this.settings.toolbarAutoHide === 1
   }
 
-  // 原版 k6.db(f)（6969-6993）：进度 → 顶栏上移 -p*h、底栏下移 +p*h、
-  // 网页容器（f2586p0）贴齐 hidden 边、进度条与 FAB 同步平移
+  // 原版 k6.db(f)（6969-6993）：隐藏进度钳制到 [0,1]（X0==1 时，Jb 对一切
+  // 非传统特例布局都置 X0=1）；顶栏 ty=-p*h、底栏 ty=+p*h
   private applyToolbarProgress(f: number): void {
-    const layout = this.effectiveLayout()
-    const clamped = layout === LAYOUT_TOOLBAR_TOP || layout === LAYOUT_TOOLBAR_BOTTOM
-      ? Math.max(0, Math.min(1, f)) : 1
-    this.toolbarProgress = clamped
+    this.toolbarHideProgress = Math.max(0, Math.min(1, f))
   }
 
-  // 原版 k6.S7(show)（5759-5778）：ValueAnimator 当前进度→1/0，
+  // 原版 k6.S7(show)（5759-5778）：ValueAnimator 当前进度→db(show?0:1) 目标，
   //   时长 = |目标-当前| * 180ms，插值器 x8.h.b() = PathInterpolator(0.2,0.2,0.8,0.8)，
   //   结束 G8(show) 落定可见性
   private setToolbarsShownAnimated(show: boolean): void {
-    const target = show ? 1 : 0
-    if (Math.abs(this.toolbarProgress - target) < 0.001) {
+    const target = show ? 0 : 1
+    if (Math.abs(this.toolbarHideProgress - target) < 0.001) {
       this.finishToolbarsState(show)
       return
     }
     this.toolbarAnimRunning = true
     this.getUIContext().animateTo({
-      duration: Math.max(1, Math.round(Math.abs(target - this.toolbarProgress) * 180)),
+      duration: Math.max(1, Math.round(Math.abs(target - this.toolbarHideProgress) * 180)),
       curve: BEZIER_0202_CURVE,
       onFinish: (): void => {
         this.toolbarAnimRunning = false
         this.finishToolbarsState(show)
       }
     }, () => {
-      this.toolbarProgress = target
+      this.toolbarHideProgress = target
     })
   }
 
   // 原版 k6.G8(show)（4293-4318）：db(show?0:1) 落定位移；显示恢复 VISIBLE，
-  //   隐藏后置 GONE；f2589q1=!show 状态落定。FAB 联动（pb/f9）挂在原版
-  //   ub→S7→G8(false) 与 Jb/G8(true) 各链路：隐藏落定→pb()，显示落定→f9(true)
+  //   隐藏后置 GONE；f2589q1=show 状态落定。FAB 联动：显示→f9(true)，隐藏→pb()
   private finishToolbarsState(show: boolean): void {
-    this.toolbarProgress = show ? 1 : 0
-    this.toolbarHidden = !show
+    this.toolbarHideProgress = show ? 0 : 1
+    this.toolbarShown = show
     if (show) {
       this.hideFab()
     } else {
@@ -1330,41 +1325,36 @@ struct Index {
     this.finishToolbarsState(show)
   }
 
-  // 原版 k6.ub()（8718-8725）：X0!=0 且（非隐藏或进度>0）→ S7(false) 隐藏。
-  //   调用点：网页开始加载（k6.b0 → d9() 前段）、主页动作（ra case4 → ub()）
-  hideToolbarsForPage(): void {
-    if (this.effectiveLayout() !== LAYOUT_TOOLBAR_TOP && this.effectiveLayout() !== LAYOUT_TOOLBAR_BOTTOM) {
-      return
-    }
+  // 原版 k6.ub()（8718-8725）：X0!=0 且（!f2589q1 或 进度>0）→ S7(true) 显示。
+  //   调用点：FAB 点击（t0.j→c.d）、主页动作（ra case4）、退出游戏模式（bb(false)）
+  showToolbarsForPage(): void {
     if (this.settings.toolbarAutoHide === 0) {
       return
     }
-    if (!this.toolbarHidden || this.toolbarProgress > 0) {
-      this.setToolbarsShownAnimated(false)
-    }
-  }
-
-  // 原版 k6.g9()（7200-7207）：页面标题落定（k6.b0 → d9() 尾）→ 模式2 时 S7(true) 显示。
-  //   bb(false)（退出游戏模式 6834）同样走 g9()
-  showToolbarsForPage(): void {
-    if (this.effectiveLayout() !== LAYOUT_TOOLBAR_TOP && this.effectiveLayout() !== LAYOUT_TOOLBAR_BOTTOM) {
-      return
-    }
-    if (this.settings.toolbarAutoHide !== 2) {
-      return
-    }
-    if (this.toolbarHidden || this.toolbarProgress < 1) {
+    if (!this.toolbarShown || this.toolbarHideProgress > 0) {
       this.setToolbarsShownAnimated(true)
     }
   }
 
+  // 原版 k6.g9()（7200-7207）：X0!=0 且（f2589q1 或 进度<1）→ S7(false) 隐藏。
+  //   调用点：游戏模式开启（bb(true)→g9）。原版页面加载/标题落定（d9）不触发
+  //   隐藏——只做 pb() FAB 保活。
+  hideToolbarsForPage(): void {
+    if (this.settings.toolbarAutoHide === 0) {
+      return
+    }
+    if (this.toolbarShown || this.toolbarHideProgress < 1) {
+      this.setToolbarsShownAnimated(false)
+    }
+  }
+
   // 原版 k6.pb()（8051-8065）：G8(false) 隐藏落定后浮现 FAB——
-  //   f2578k1(游戏模式)/f2597u1(已显)/!Y0(非点击模式)/f2589q1(已显示) 直接返回；
+  //   闸：f2578k1(游戏模式)/f2597u1(已显)/!Y0(非点击模式)/f2589q1(已显示) 直接返回；
   //   k9() 首次创建（尺寸 42dp=dimen v、内边距 10dp、背景 cr=N1 白圆），随后
   //   alpha 0→1 / translation 32dp→0，160ms（ViewPropertyAnimator 默认插值器）
   private maybeShowFab(): void {
     if (this.settings.toolbarAutoHide !== 2 || this.settings.gameMode
-      || this.fabShown || !this.toolbarHidden) {
+      || this.fabShown || this.toolbarShown) {
       return
     }
     this.fabShown = true
@@ -1396,10 +1386,9 @@ struct Index {
     })
   }
 
-  // 原版 t0.j()（226-228）：FAB 点击（未拖动、<300ms）→ c.d() 回调 → k6.ub() 隐藏
+  // 原版 t0.j()（226-228）：FAB 点击（未拖动、<300ms）→ c.d() 回调 → k6.ub() 显示
   private onFabTap(): void {
-    this.hideFab()
-    this.hideToolbarsForPage()
+    this.showToolbarsForPage()
   }
 
   // 原版 t0.i()（176-206）→ c.b(dir)（k6.a.b:584-603）：FAB 拖动松手按方向执行
@@ -1521,22 +1510,22 @@ struct Index {
     }
   }
 
-  // 原版 db(f)：顶栏位移量 = 进度 × 顶栏实测高（px→vp）。Column 实测高由 onAreaChange 回填
+  // 原版 db(f)：顶栏位移量 = 隐藏进度 × 顶栏实测高（ty=-p*h）
   private topBarTranslate(): number {
-    if (this.toolbarProgress <= 0) {
+    if (this.toolbarHideProgress <= 0) {
       return 0
     }
     const h = this.topBarHeightVp > 0 ? this.topBarHeightVp : (48 + this.insets.top)
-    return h * this.toolbarProgress
+    return h * this.toolbarHideProgress
   }
 
-  // 原版 db(f)：底栏位移量 = 进度 × 底栏实测高
+  // 原版 db(f)：底栏位移量 = 隐藏进度 × 底栏实测高（ty=+p*h）
   private bottomBarTranslate(): number {
-    if (this.toolbarProgress <= 0) {
+    if (this.toolbarHideProgress <= 0) {
       return 0
     }
     const h = this.bottomBarHeightVp > 0 ? this.bottomBarHeightVp : 48
-    return h * this.toolbarProgress
+    return h * this.toolbarHideProgress
   }
 
   // 竖滑宿主 barExtentPx()：vp 转 px 供手势状态机使用
@@ -1592,12 +1581,23 @@ struct Index {
       }
       .padding({ bottom: this.insets.bottom })
       .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
+      // 原版 Ya 布局3：f2600w0 = 地址栏+工具栏整块，db(p) ty=+p*h
+      .translate({ y: this.bottomBarTranslate() })
+      .onAreaChange((_old: Area, newArea: Area) => {
+        this.bottomBarHeightVp = Number(newArea.height)
+      })
     } else {
       Column() {
         this.ChromeToolbar(false)
       }
       .padding({ bottom: this.insets.bottom })
       .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
+      // 原版 Ya 布局0（传统）：工具栏在底栏容器 f2600w0（高 = tabbar 36dp + 工具栏
+      // 48dp，6477-6484），db(p) ty=+p*h —— 与顶栏地址栏同步收放
+      .translate({ y: this.bottomBarTranslate() })
+      .onAreaChange((_old: Area, newArea: Area) => {
+        this.bottomBarHeightVp = Number(newArea.height)
+      })
     }
   }
 
@@ -1761,13 +1761,13 @@ struct Index {
   }
 
   build() {
+    // 原版 c8/y7（Shell 根布局）：RelativeLayout 全屏容器，网页 f2586p0 铺满
+    // （Jb:4645 RelativeLayout.LayoutParams(-1,-1)），顶栏 f2604y0 / 底栏 f2600w0
+    // 悬浮其上，db(p) 用 translationY 收放 —— 网页不位移，隐藏时自然扩到全屏。
     Stack() {
       Navigation(this.mainNavStack) {
-        Column() {
+        Stack() {
           if (this.ready) {
-          if (!this.settings.gameMode && !this.videoOverlay.active) {
-            this.TopBarArea()
-          }
           Tabs({ index: this.tabStore.currentIndex }) {
             ForEach(this.tabStore.tabs, (tab: TabItem) => {
               TabContent() {
@@ -1777,8 +1777,15 @@ struct Index {
                     // 原版 Shell.dispatchKeyEvent：Web 获焦时按键先经宿主处理（k6.n8 1:1）
                     onPcKey: (event: KeyEvent): boolean => this.handlePcKey(event),
                     // 原版 k6.b0 → d9() → pb()：页面加载/标题落定时确保 FAB 在场
-                    onPageSettle: (): void => this.maybeShowFab()
+                    onPageSettle: (): void => this.maybeShowFab(),
+                    // 原版 WebView OnTouchListener → k6.E → GestureTouchEvent.g()：
+                    // 触摸事件全量喂竖滑状态机（action 0=down 1=up 2=move 3=cancel）
+                    onAutoHideTouch: (action: number, x: number, y: number): void => {
+                      this.autoHideGesture.onTouch(action, x, y)
+                    }
                   })
+                  // 主页是同一 WebView 的内部页（原版 u9.d.m 主页 = WebView 内 about:page），
+                  // 手势触点同样在 WebView 上——HomePage 覆盖层把手势回调透传给状态机
                   if (tab.isHomePage()) {
                     HomePage({
                       searchOpen: this.showSearch,
@@ -1793,7 +1800,12 @@ struct Index {
                       onLogoTap: () => {
                         // 原版 logo 点击 via.cmd(257)→ja(true)→aa(null)：打开书签管理页（RecordContainerFragment 标签 1）
                         this.openPage('bookmarks')
-                      }
+                      },
+                      onAutoHideTouch: (action: number, x: number, y: number): void => {
+                        this.autoHideGesture.onTouch(action, x, y)
+                      },
+                      // 原版 isGestureDisabled → via.cmd(515)：工具栏隐藏时禁用主页下拉搜索
+                      gestureEnabledQuery: (): boolean => this.toolbarShown || this.fabVisible
                     })
                   }
                 }
@@ -1806,33 +1818,36 @@ struct Index {
           // 全仓库无 ViewPager2.setCurrentItem / PageTransformer 用法，无滑动补间，
           // 故将 Tabs 内置切换动画时长置 0，避免引入原版没有的过渡。
           .animationDuration(0)
-          .layoutWeight(1)
-          .onChange((index: number) => {
-            this.tabStore.switchTo(index)
-          })
-          // 原版 db(f)：网页容器（f2586p0）贴齐 hidden 边——工具栏在上时容器
-          // translationY = -p*h（跟随顶栏上移），工具栏在下时高度补差由布局承担。
-          // 顶栏布局下网页随进度上移，避免露底。
-          .translate(this.effectiveLayout() === LAYOUT_TOOLBAR_TOP
-            ? { y: -this.topBarTranslate() } : { y: 0 })
-          // 原版 GestureTouchEvent 触点：WebView OnTouchListener → k6.E → g()。
-          // 鸿蒙 Web 不透传原生触摸，这里在网页容器上并行挂手势识别，直接喂状态机。
-          .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 1 })
-            .onActionUpdate((event: GestureEvent) => {
-              this.autoHideGesture.onTouch(2, event.offsetX, event.offsetY)
-            })
-            .onActionEnd(() => {
-              this.autoHideGesture.onTouch(1, 0, 0)
-            })
-            .onActionCancel(() => {
-              this.autoHideGesture.onTouch(3, 0, 0)
-            }))
+          .width('100%')
+          .height('100%')
 
+          // 原版 y7：顶栏 f2604y0（RelativeLayout alignParentTop）与底栏 f2600w0
+          // （alignParentBottom）是各自锚定边的兄弟视图——用全屏包裹容器分别贴顶/
+          // 贴底（不能靠 Stack 全局 alignContent，传统布局两栏同现会叠到同一边）。
+          // 包裹容器自身 HitTestMode.None：空白区不拦截触摸、不阻塞子节点，
+          // 网页/主页照常收到手势与点击。
           if (!this.settings.gameMode && !this.videoOverlay.active) {
-            this.BottomBarArea()
+            Column() {
+              this.TopBarArea()
+            }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Start)
+            .hitTestBehavior(HitTestMode.None)
+          }
+          if (!this.settings.gameMode && !this.videoOverlay.active) {
+            Column() {
+              this.BottomBarArea()
+            }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.End)
+            .hitTestBehavior(HitTestMode.None)
           }
           }
         }
+        .width('100%')
+        .height('100%')
       }
       .width('100%')
       .height('100%')
