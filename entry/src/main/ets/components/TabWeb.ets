@@ -25,6 +25,8 @@ import { VideoOverlayState } from './VideoPlayerOverlay'
 import { TranslateState } from './TranslatePanel'
 import { MARK_AD_INJECT_JS } from './MenuSheet'
 import { AppIcon } from './AppIcon'
+// 原版横滑指示层图标（via_ic_back / via_ic_forward，rotate180 复用）
+import { ViaIcon } from './ViaIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 // 原版 hb/g4 + w9/k.G2()：ignoredsslwarning 位掩码（SSL 证书警告忽略白名单）
@@ -140,12 +142,28 @@ export struct TabWeb {
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
   // —— 原版 GestureTouchEvent 横滑前进/后退（mark/via/common/widget/GestureTouchEvent.java 对齐）——
-  // 位移按 0.8 增益累计并限幅 ±80% 宽度；提交阈值 80% 宽度、300ms 动画
-  @Local swipeNavOffset: number = 0
-  @Local swipeNavAlpha: number = 1
+  // ★ 载体：原版 c8/k6.java:4104 把状态机绑在「独立指示视图」f2584o0.f2940p（c8/y7.java:136
+  //   的 ImageView，72dp 宽 × 60dp 高、四边 20dp 内边距、圆角白底 drawable b_、
+  //   elevation 12dp、CENTER_VERTICAL + alignParentLeft；marginStart = -73dp 初始藏于左侧屏外）。
+  //   m()（377-388）对**该 ImageView** setTranslationX，e()（248）对**该 ImageView**
+  //   ALPHA 1→0；网页视图 WebView 全程不动、不透明度不变。
+  //   早期实现把 translate/opacity 挂在 Web 上（整页跟着动），与原版不符，此处改为独立指示层。
+  //   指示图标：i10==1 后退 → drawable b2（via_ic_back）、i10==2 前进 → a3（rotate180 的 b2）。
+  // 原版 y7.f()（70-77）setVisibility(INVISIBLE=4)：指示层无手势时不可见
+  @Local swipeIndicatorVisible: boolean = false
+  @Local swipeIndicatorShift: number = 0
+  @Local swipeIndicatorAlpha: number = 1
+  // 原版 f9565t：指示层基准 X（滑右 → -10 屏外左侧；滑左 → 宽+72+10 屏外右侧）
+  private swipeIndicatorBase: number = 0
+  // 原版 f9563r：限幅 = 指示层宽 * 4/5
+  private swipeIndicatorMax: number = 0
+  // 原版 f9556k：o() 里记录的上一次 X，用于算增量
+  private swipeLastX: number = 0
+  @Local swipeIndicatorForward: boolean = false
   private swipeNavActive: boolean = false
   private swipeNavLocked: boolean = false
   private swipeNavWidth: number = 0
+  private swipeNavHeight: number = 0
   // —— 原版权限询问弹窗（k6.Ca + e8/y0 1:1）——
   @Local permDialogTitle: string = ''
   @Local permDialogLines: string[] = []
@@ -714,12 +732,10 @@ export struct TabWeb {
         .onFullScreenExit(() => {
           VideoOverlayState.getInstance().end()
         })
-        // 原版「滑动屏幕前进后退」（cm 开关=swipeSwitchTab）：GestureTouchEvent 状态机横滑，
-        // 0.8 增益位移、80% 宽度提交、300ms 动画
-        .translate({ x: this.swipeNavOffset })
-        .opacity(this.swipeNavAlpha)
+        // 原版 k6.java:4104：状态机绑定的是独立指示视图，Web 本身不位移也不改变透明度
         .onAreaChange((_old: Area, newArea: Area) => {
           this.swipeNavWidth = Number(newArea.width)
+          this.swipeNavHeight = Number(newArea.height)
         })
         // 原版 e8/i.java:124 WebView.setOnTouchListener → k6.E → GestureTouchEvent.g()：
         // 触摸事件全量喂给竖滑隐藏状态机（与横滑并存，状态机内部 |dx|>=|dy| 让位横滑）。
@@ -752,6 +768,42 @@ export struct TabWeb {
             this.onAutoHideTouch(3, 0, 0)
             this.swipeNavReset()
           }))
+      // 原版 y7.f2940p 横滑指示层（c8/y7.java:136 + h6/a 链式参数逐项换算）：
+      //   .m(g6.f.d(x7.n.f13699r))   → LayoutParams.height = dimen "ag" = 60dp
+      //   .X(g6.f.d(x7.n.f13701t))   → LayoutParams.width  = dimen "ai" = 72dp
+      //   .F(1, 20)                  → h6.a.E(TypedValue.COMPLEX_UNIT_DIP, 20) = 四边内边距 20dp
+      //   .h(144)                    → gravity CENTER_VERTICAL|ALIGN_PARENT_LEFT（=48+64 → addRule(15)+addRule(20)）
+      //   .i(x7.u.sc)                → contentDescription "操作设定"
+      //   .y(g6.f.d(x7.n.f13700s))   → marginStart = dimen "ah" = -73dp（初始完全藏于左侧屏外）
+      //   .d(x7.o.N1)                → background = drawable "b_"（96x96 圆角底色，见下 tint）
+      //   y7.f()（70-77）：setVisibility(INVISIBLE=4)、setColorFilter(-1 白)、API21+ elevation 12dp
+      // 图标：i10==1 后退用 drawable b2（via_ic_back），i10==2 前进用 a3（= rotate180 的 b2）
+      // 位移由 m()/o() 驱动：m() 开局 setTranslationX(f9565t)，o() 每次 +dx*0.8 并限幅 ±f9563r
+      if (this.settings.swipeSwitchTab && this.swipeIndicatorVisible) {
+        Row() {
+          ViaIcon({
+            icon: this.swipeIndicatorForward ? $r('app.media.via_ic_forward') : $r('app.media.via_ic_back'),
+            iconSize: 24,
+            iconColor: '#FFFFFF'
+          })
+        }
+        .width(72)
+        .height(60)
+        .padding(20)
+        // 原版 background = drawable b_（96x96 png，圆角 10px@4x → 72dp 宽时约 8dp 圆角）
+        .backgroundColor('#FFFFFFFF')
+        .borderRadius(8)
+        .alignItems(VerticalAlign.Center)
+        .justifyContent(FlexAlign.Center)
+        // 原版 y7.f()：API21+ setElevation(12dp)
+        .shadow({ radius: 12, color: 'rgba(0,0,0,0.2)', offsetY: 2 })
+        .position({
+          x: this.swipeIndicatorBase + this.swipeIndicatorShift,
+          y: this.swipeNavHeight / 2 - 30
+        })
+        .opacity(this.swipeIndicatorAlpha)
+        .hitTestBehavior(HitTestMode.None)
+      }
       // 原版 k6 f2570c1：网页容器前景黑色蒙版，夜间生效时 alpha=nightfilter（默认 77）
       if (this.settings.isNightActive()) {
         Column()
@@ -1218,9 +1270,14 @@ export struct TabWeb {
     .transition(dialogTransition())
   }
 
-  // 检测段（GestureTouchEvent.c）：4dp 检测阈值、横向优势、速度 0.5px/ms；
-  // 方向闸 k6.a.f→V7/W7：右滑后退需 canBack、左滑前进需 canForward；
-  // 拖动段（o()）：0.8 增益、±80% 宽度限幅
+  // 检测段（GestureTouchEvent.c 191-215）：4dp 检测阈值、横向优势、速度 0.5px/ms；
+  // 方向闸 k6.a.f→V7/W7：右滑后退需 canBack、左滑前进需 canForward。
+  // 起手（m() 376-389）：进入 HORIZONTAL 时算好 f9563r / f9565t 并把指示层搬到屏外基准位：
+  //   iMax     = max(指示层宽, 指示层测量宽) = 72dp
+  //   f9563r   = iMax * 4 / 5              = 57.6dp（限幅）
+  //   f9565t   = dx > 0 ? -10 : 页面宽 + iMax + 10（屏外左侧 / 屏外右侧）
+  // 拖动段（o() 403-419）：i10 = (x - f9556k) * 8 / 10，累加到 f9564s 并限幅 ±f9563r，
+  //   且回穿 0 时归零（i10 = 0）。
   private swipeNavUpdate(event: GestureEvent): void {
     if (!this.settings.swipeSwitchTab || this.swipeNavLocked) {
       return
@@ -1240,9 +1297,33 @@ export struct TabWeb {
         return
       }
       this.swipeNavActive = true
+      // 原版 m()：指示层宽度取 72dp、限幅 4/5
+      this.swipeIndicatorMax = 72 * 4 / 5
+      // 原版 m()：f9565t = f10 > 0 ? -10 : 页面宽 + iMax + 10
+      this.swipeIndicatorBase = dx > 0 ? -10 : this.swipeNavWidth + 72 + 10
+      this.swipeIndicatorForward = dx < 0
+      this.swipeIndicatorShift = 0
+      this.swipeIndicatorAlpha = 1
+      // 原版 GestureTouchEvent 构造器末行 view.setVisibility(0)：起手即让指示层可见
+      this.swipeIndicatorVisible = true
+      // 原版 m() 末尾 o(f9554i + f10)：以「起点坐标 + 已滑位移」为增量基准
+      this.swipeLastX = dx
     }
-    const max = this.swipeNavWidth * 0.8
-    this.swipeNavOffset = Math.max(-max, Math.min(max, dx * 0.8))
+    // 原版 o(f10) 403-419：i10 = ((f10 - f9556k) * 8) / 10（**增量**，f9556k 为上次 X），
+    //   累加到 f9564s 后按 ±f9563r 限幅；位移回穿 0 时 i10 归零（防抖）
+    const delta = Math.round((dx - this.swipeLastX) * 8 / 10)
+    this.swipeLastX = dx
+    const prev: number = this.swipeIndicatorShift
+    let step: number = delta
+    if (prev + step > this.swipeIndicatorMax && step > 0) {
+      step = this.swipeIndicatorMax - prev
+    } else if (prev + step < -this.swipeIndicatorMax && step < 0) {
+      step = -this.swipeIndicatorMax - prev
+    }
+    if ((prev > 0 && prev + step <= 0) || (prev < 0 && prev + step >= 0)) {
+      step = 0
+    }
+    this.swipeIndicatorShift = prev + step
   }
 
   // 原版 e8/h0.java I()（102-121）：把 SslError 的错误类型映射成位集合。
@@ -1283,11 +1364,15 @@ export struct TabWeb {
     return 0
   }
 
+  // 原版 j()（333-342）：取消动画、f9564s=0、alpha 复位 1、translationX 复位 0
   private swipeNavReset(): void {
     this.swipeNavActive = false
     this.swipeNavLocked = false
-    this.swipeNavOffset = 0
-    this.swipeNavAlpha = 1
+    this.swipeIndicatorShift = 0
+    this.swipeIndicatorAlpha = 1
+    this.swipeLastX = 0
+    // 归位到屏外基准后不再显示（原版 y7.f() 初始 INVISIBLE）
+    this.swipeIndicatorVisible = false
   }
 
   // 松手（GestureTouchEvent.h → e()）：mark/via/common/widget/GestureTouchEvent.java:239-255
@@ -1303,10 +1388,12 @@ export struct TabWeb {
       this.swipeNavReset()
       return
     }
-    const max = this.swipeNavWidth * 0.8
-    const passed = max > 0 && Math.abs(this.swipeNavOffset) >= max
+    // 原版 e()：iAbs = |f9564s|（已滑位移），i10 = f9563r（= 指示层宽 * 4/5）为提交阈值
+    const max = this.swipeIndicatorMax
+    const passed = max > 0 && Math.abs(this.swipeIndicatorShift) >= max
     if (passed) {
-      const goBack = this.swipeNavOffset > 0
+      // 原版 e()：h(f9564s <= 0 ? 2 : 1) —— 位移右正 → 1（后退），左负 → 2（前进）
+      const goBack = this.swipeIndicatorShift > 0
       // 原版在同一处先发起导航（h()），再让 alpha 淡出；旧实现把导航塞进 300ms 的
       // setTimeout，导致淡出结束后才换页，与原版时序不符。
       try {
@@ -1320,10 +1407,9 @@ export struct TabWeb {
         console.error('swipe navigate failed')
       }
       // fAbs = 1.0f → duration = 300ms
-      // 复位时机：原版在下次 touchstart 的 j() 里才把 alpha 复位 1（期间靠新页面重建视图），
-      // 本端 Web 是同一持久节点、不会重建，若一直保持 alpha=0 页面会永久不可见，
-      // 故把复位挂到动画 onFinish（等价于旧实现里那个 300ms 定时器，但改用原生回调，
-      // 不再依赖 setTimeout 与动画时长的巧合对齐）。
+      // 复位时机：原版指示层是常驻 View，下次 touchstart 的 j() 才把 alpha 复位 1。
+      // 本端虽也是常驻节点，但仍把复位挂到 onFinish —— 否则指示层会一直停在
+      // alpha=0 且 translationX 停在过阈值位置，下次手势起手前会短暂可见错位。
       this.getUIContext().animateTo({
         duration: 300,
         curve: ACCELERATE_DECELERATE_CURVE,
@@ -1331,14 +1417,14 @@ export struct TabWeb {
           this.swipeNavReset()
         }
       }, () => {
-        this.swipeNavAlpha = 0
+        this.swipeIndicatorAlpha = 0
       })
     } else {
       // fAbs = |位移| / 阈值 → duration = fAbs * 300ms
-      const ratio = max > 0 ? Math.abs(this.swipeNavOffset) / max : 0
+      const ratio = max > 0 ? Math.abs(this.swipeIndicatorShift) / max : 0
       const duration = Math.max(1, Math.round(ratio * 300))
       this.getUIContext().animateTo({ duration: duration, curve: ACCELERATE_DECELERATE_CURVE }, () => {
-        this.swipeNavOffset = 0
+        this.swipeIndicatorShift = 0
       })
     }
   }

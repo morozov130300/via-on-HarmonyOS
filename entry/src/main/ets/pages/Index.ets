@@ -374,6 +374,24 @@ struct Index {
     this.showBookmarkPicker = true
   }
 
+  // 原版 k6.Ua()（k6.java:5994-6023）书签对话框选中后的落地：
+  //   r4.a aVarD = this.L0.d();
+  //   if (aVarD == null || z11) { this.f2580m0.i1(strV, true); }   // 无当前标签才新开
+  //   else { aVarD.v(strV); aVarD.o(); }                             // 否则由当前标签加载
+  // 书签对话框走 Ra(str) → Ta(str,false) → Ua(str,false,false)，即 z11=false，
+  // 故**当前标签存在时用当前标签打开**，不是新标签。
+  private navigateFromBookmarkPicker(url: string): void {
+    if (url === '') {
+      return
+    }
+    const current: TabItem = this.tabStore.current()
+    if (current === null || current === undefined) {
+      this.tabStore.newTabAt(url, false)
+      return
+    }
+    this.tabStore.navigate(url)
+  }
+
   // 原版 k6.d9()（6945-6953）：点击地址栏左图标前，若当前有面板/内部页面栈非空，
   // 先弹栈关面板（pb() + h9()）并 return true 拦截本次点击。
   // 调用点：k6.java:676-690（f.a() 里 id==n0.f9702v 分支先 `if (k6.this.d9()) return;`）。
@@ -2542,9 +2560,15 @@ struct Index {
           onReadAloud: () => {
             this.startReadAloud()
           },
-          // 原版 W9()（a8.k 书签快捷选择对话框）选中书签 → 新标签打开
+          // 原版 P9 case2 → W9()：菜单长按书签请求打开书签快捷选择对话框（承载在本页）
+          onOpenBookmarkDialog: () => {
+            this.openBookmarkDialog()
+          },
+          // 原版 W9()（a8.k 书签快捷选择对话框）选中书签 → 由**当前标签**打开。
+          // 该回调已不使用（对话框承载统一收敛到 Index 的 showBookmarkPicker 块），
+          // 保留仅为 MenuSheet 侧接口完整性；行为按原版语义实现以免误用。
           onOpenUrlInNewTab: (url: string) => {
-            this.tabStore.newTabAt(url, false)
+            this.navigateFromBookmarkPicker(url)
           }
         })
       }
@@ -2554,7 +2578,7 @@ struct Index {
           BookmarkPickerDialog({
             onPickUrl: (url: string): void => {
               this.showBookmarkPicker = false
-              this.tabStore.newTabAt(url, false)
+              this.navigateFromBookmarkPicker(url)
             },
             onDismiss: (): void => {
               this.showBookmarkPicker = false
