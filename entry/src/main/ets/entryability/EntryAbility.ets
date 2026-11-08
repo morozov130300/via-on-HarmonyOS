@@ -171,7 +171,12 @@ export default class EntryAbility extends UIAbility {
     }
     // 原版 Trampoline filter#3：ACTION_SEND text/plain 分享接收（b0.A ACTION_SEND → i0.v）
     this.handleSharedText(want, true)
-    // 原版 k6.i9()：显式退出（Index 双击返回）时才执行退出清除（na.r0 → z8/h0.c）
+    // 原版 k6.i9()（7374-7385）→ na.r0()（na.java:1719-1721）→ z8/h0.c（h0.java:81-110）：
+    // 【逆向实证】k6.i9() 全仓库唯一调用点是 k6.java:6261，位于 public void X1(View,Bundle)
+    // （BrowserFragment.onViewCreated）——即「页面创建/每次启动」时执行，不是退出时。
+    // 故本端在 onWindowStageCreate → setupWindow 之后执行（见下方 onWindowStageCreate）；
+    // 这里保留 Index 双击返回的 emit 作为超集（原版菜单退出不额外清除，此处多清一次无副作用：
+    // applyClearOnExit 内缓存位带 lastcleantime 5 天兜底，重复调用不会重复清历史/存储）。
     emitter.on({ eventId: EXIT_CLEAR_EVENT_ID }, () => {
       this.applyClearOnExit();
     });
@@ -413,6 +418,10 @@ export default class EntryAbility extends UIAbility {
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
       this.setupWindow(windowStage);
+      // 原版 k6.i9()（k6.java:6261，X1/onViewCreated，即每次启动）→ na.r0() → z8/h0.c：
+      // 退出时清除数据在「启动时」执行。放在 loadContent 成功后，确保 Web 缓存/Cookie
+      // 子系统已就绪（removeAllCache 需要 Web 内核已初始化）。
+      this.applyClearOnExit();
     });
 
     // 仅在当前 colorMode 与目标不一致时才调用 setColorMode：

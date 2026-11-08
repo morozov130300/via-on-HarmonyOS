@@ -1668,9 +1668,29 @@ export class AppSettings {
     this.flushKey('customCss', css)
   }
 
+  // 原版 z8/t1.java l()（:121-124）Locale.setDefault + p()（:~163）setLocale，
+  // 由 Shell.java attachBaseContext（:113-132）按 prefs key "language" 生成 Configuration 生效，
+  // 故原版切换后需重启应用。鸿蒙对应实现：i18n.System.setAppPreferredLanguage(language)
+  // （@kit.LocalizationKit，API 11+，见官方《应用偏好语言》指南与 js-apis-i18n）
+  //   0 = 跟随系统 → 'default'（清除应用偏好语言，跟随系统语言，冷启动生效）
+  //   1 = 简体中文 → 'zh-Hans'（官方指南示例值）
+  //   2 = English  → 'en-Latn-US'（官方 FAQ/系统语言列表示例值；资源目录为 en_US）
+  // 写入失败不影响持久化（try/catch 包裹），仍需重启生效，保留 confirmRestart 流程
   setAppLanguage(index: number): void {
     this.appLanguage = index
     this.flushKey('appLanguage', index)
+    let language: string = 'default'
+    if (index === 1) {
+      language = 'zh-Hans'
+    } else if (index === 2) {
+      language = 'en-Latn-US'
+    }
+    try {
+      i18n.System.setAppPreferredLanguage(language)
+    } catch (error) {
+      const err = error as BusinessError
+      console.error(`setAppPreferredLanguage failed: ${err.code} ${err.message}`)
+    }
   }
 
   setMenuHidden(list: string[]): void {

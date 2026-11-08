@@ -1,0 +1,1916 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Via Browser main module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Via Browser"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Via"
+    },
+    {
+      "name": "app_name",
+      "value": "Via"
+    },
+    {
+      "name": "search_or_type_url",
+      "value": "Input URL"
+    },
+    {
+      "name": "search",
+      "value": "Search"
+    },
+    {
+      "name": "more",
+      "value": "More"
+    },
+    {
+      "name": "done",
+      "value": "Done"
+    },
+    {
+      "name": "edit",
+      "value": "Edit"
+    },
+    {
+      "name": "blocked_ads_count",
+      "value": "Blocked %d ads"
+    },
+    {
+      "name": "block_page_blocked",
+      "value": "Via has prevented the following page from loading:"
+    },
+    {
+      "name": "block_page_reason",
+      "value": "Because of the following filter:"
+    },
+    {
+      "name": "block_page_continue",
+      "value": "Continue loading"
+    },
+    {
+      "name": "press_back_again_exit_game_mode",
+      "value": "Press one more time to exit game mode"
+    },
+    {
+      "name": "press_back_again_exit",
+      "value": "Press one more time to exit"
+    },
+    {
+      "name": "page_failed_load",
+      "value": "Unable to open page"
+    },
+    {
+      "name": "page_error_retry",
+      "value": "Retry"
+    },
+    {
+      "name": "entered_incognito",
+      "value": "You've gone incognito"
+    },
+    {
+      "name": "incognito_hint",
+      "value": "This tab won't keep browsing history"
+    },
+    {
+      "name": "paste_and_go",
+      "value": "Paste & Go"
+    },
+    {
+      "name": "new_tab",
+      "value": "New tab"
+    },
+    {
+      "name": "new_incognito_tab",
+      "value": "New incognito tab"
+    },
+    {
+      "name": "tab_default_title",
+      "value": "New tab"
+    },
+    {
+      "name": "bookmarks",
+      "value": "Bookmarks"
+    },
+    {
+      "name": "history",
+      "value": "History"
+    },
+    {
+      "name": "downloads",
+      "value": "Download contents"
+    },
+    {
+      "name": "settings",
+      "value": "Settings"
+    },
+    {
+      "name": "about",
+      "value": "About"
+    },
+    {
+      "name": "refresh",
+      "value": "Reload"
+    },
+    {
+      "name": "home_page",
+      "value": "Home"
+    },
+    {
+      "name": "site_info",
+      "value": "Site info"
+    },
+    {
+      "name": "scan_qr_code",
+      "value": "Scan QR code"
+    },
+    {
+      "name": "open_reader_mode",
+      "value": "Show reader"
+    },
+    {
+      "name": "paste",
+      "value": "Paste"
+    },
+    {
+      "name": "share",
+      "value": "Share"
+    },
+    {
+      "name": "add_bookmark",
+      "value": "Add bookmark"
+    },
+    {
+      "name": "edit_bookmark",
+      "value": "Edit bookmark"
+    },
+    {
+      "name": "remove_bookmark",
+      "value": "Remove bookmark"
+    },
+    {
+      "name": "bookmark_added",
+      "value": "Bookmark added successfully"
+    },
+    {
+      "name": "bookmark_removed",
+      "value": "Bookmark removed"
+    },
+    {
+      "name": "find_in_page",
+      "value": "Find in page"
+    },
+    {
+      "name": "offline_page",
+      "value": "Saved pages"
+    },
+    {
+      "name": "translate",
+      "value": "Translate"
+    },
+    {
+      "name": "add_to_desktop",
+      "value": "Add to home screen"
+    },
+    {
+      "name": "scripts",
+      "value": "Scripts"
+    },
+    {
+      "name": "ai",
+      "value": "AI"
+    },
+    {
+      "name": "print_pdf",
+      "value": "Print/PDF"
+    },
+    {
+      "name": "net_log",
+      "value": "Network log"
+    },
+    {
+      "name": "reader_mode",
+      "value": "Reader mode"
+    },
+    {
+      "name": "night_mode",
+      "value": "Night mode"
+    },
+    {
+      "name": "no_image_mode",
+      "value": "Block images"
+    },
+    {
+      "name": "pc_mode",
+      "value": "Desktop site"
+    },
+    {
+      "name": "site_settings",
+      "value": "Site configuration"
+    },
+    {
+      "name": "ad_block",
+      "value": "Ad blocking"
+    },
+    {
+      "name": "status_enabled",
+      "value": "%s is on"
+    },
+    {
+      "name": "status_disabled",
+      "value": "%s is off"
+    },
+    {
+      "name": "text_size",
+      "value": "Text size"
+    },
+    {
+      "name": "clear_data",
+      "value": "Clear data"
+    },
+    {
+      "name": "qr_code",
+      "value": "QR code"
+    },
+    {
+      "name": "read_aloud",
+      "value": "Read aloud"
+    },
+    {
+      "name": "stop_reading",
+      "value": "Stop reading aloud"
+    },
+    {
+      "name": "read_aloud_cannot",
+      "value": "Cannot read this page aloud"
+    },
+    {
+      "name": "read_aloud_wait",
+      "value": "Wait a moment…"
+    },
+    {
+      "name": "read_aloud_started",
+      "value": "Start reading aloud"
+    },
+    {
+      "name": "read_aloud_view",
+      "value": "View"
+    },
+    {
+      "name": "read_aloud_engine_failed",
+      "value": "TTS engine could not be initialized"
+    },
+    {
+      "name": "read_aloud_js_disabled",
+      "value": "It can only work if JavaScript is allowed."
+    },
+    {
+      "name": "read_aloud_panel_title",
+      "value": "Read aloud panel"
+    },
+    {
+      "name": "read_aloud_rewind",
+      "value": "Rewind"
+    },
+    {
+      "name": "read_aloud_forward",
+      "value": "Fastforward"
+    },
+    {
+      "name": "read_aloud_pause",
+      "value": "Pause"
+    },
+    {
+      "name": "read_aloud_resume",
+      "value": "Resume"
+    },
+    {
+      "name": "read_aloud_empty",
+      "value": "Empty"
+    },
+    {
+      "name": "read_aloud_copy_done",
+      "value": "Text copied successfully"
+    },
+    {
+      "name": "read_aloud_operation_failed",
+      "value": "Operation failed"
+    },
+    {
+      "name": "read_aloud_no_title",
+      "value": "Untitled"
+    },
+    {
+      "name": "user_scripts",
+      "value": "User scripts"
+    },
+    {
+      "name": "custom_rules",
+      "value": "Custom filter"
+    },
+    {
+      "name": "page_info",
+      "value": "Site info"
+    },
+    {
+      "name": "cancel",
+      "value": "Cancel"
+    },
+    {
+      "name": "confirm",
+      "value": "OK"
+    },
+    {
+      "name": "delete",
+      "value": "Delete"
+    },
+    {
+      "name": "save",
+      "value": "Save"
+    },
+    {
+      "name": "search_engine",
+      "value": "Search engine"
+    },
+    {
+      "name": "search_history",
+      "value": "Search history"
+    },
+    {
+      "name": "clear_search_history",
+      "value": "Clear search history"
+    },
+    {
+      "name": "url_input_clear_text",
+      "value": "Clear text"
+    },
+    {
+      "name": "url_input_expand_text",
+      "value": "Expand text"
+    },
+    {
+      "name": "url_input_collapse_text",
+      "value": "Collapse text"
+    },
+    {
+      "name": "url_input_fill_text",
+      "value": "Fill in text"
+    },
+    {
+      "name": "url_input_suggestion",
+      "value": "Suggestion"
+    },
+    {
+      "name": "url_input_confirm_clear_history",
+      "value": "Are you sure you want to clear search history?"
+    },
+    {
+      "name": "restore_tabs",
+      "value": "Restore tabs"
+    },
+    {
+      "name": "empty_bookmarks",
+      "value": "No bookmarks"
+    },
+    {
+      "name": "empty_history",
+      "value": "Empty"
+    },
+    {
+      "name": "empty_downloads",
+      "value": "Empty"
+    },
+    {
+      "name": "empty_page_placeholder",
+      "value": "Empty"
+    },
+    {
+      "name": "download_started",
+      "value": "Download started"
+    },
+    {
+      "name": "download_failed",
+      "value": "Download failed"
+    },
+    {
+      "name": "download_finished",
+      "value": "Download completed"
+    },
+    {
+      "name": "downloaded_size",
+      "value": "%1$s downloaded"
+    },
+    {
+      "name": "download_size_unknown",
+      "value": "Unknown size"
+    },
+    {
+      "name": "download_paused",
+      "value": "Paused"
+    },
+    {
+      "name": "security_warning",
+      "value": "Security warning"
+    },
+    {
+      "name": "ssl_error_message",
+      "value": "There is a problem with the security certificate of this website. Continuing may be risky."
+    },
+    {
+      "name": "continue_visit",
+      "value": "Continue"
+    },
+    {
+      "name": "go_back",
+      "value": "Back"
+    },
+    {
+      "name": "clear_cache",
+      "value": "Clear cache"
+    },
+    {
+      "name": "clear_cookies",
+      "value": "Clear cookies"
+    },
+    {
+      "name": "clear_form_data",
+      "value": "Clear form data"
+    },
+    {
+      "name": "cleared",
+      "value": "Cleared"
+    },
+    {
+      "name": "version",
+      "value": "Version"
+    },
+    {
+      "name": "feedback",
+      "value": "Feedback"
+    },
+    {
+      "name": "open_in_new_tab",
+      "value": "Open in new tab"
+    },
+    {
+      "name": "copy_link",
+      "value": "Copy link"
+    },
+    {
+      "name": "copied",
+      "value": "Text copied successfully"
+    },
+    {
+      "name": "name_label",
+      "value": "Name"
+    },
+    {
+      "name": "address_label",
+      "value": "Address"
+    },
+    {
+      "name": "search_suggestion",
+      "value": "Search suggestions"
+    },
+    {
+      "name": "homepage_setting",
+      "value": "Homepage settings"
+    },
+    {
+      "name": "logo_slogan",
+      "value": "Simple, pure, speed first"
+    },
+    {
+      "name": "toolbar_edit",
+      "value": "Edit toolbar"
+    },
+    {
+      "name": "no_results_found",
+      "value": "Not found"
+    },
+    {
+      "name": "match_count",
+      "value": "%d/%d"
+    },
+    {
+      "name": "script_enabled",
+      "value": "Enabled"
+    },
+    {
+      "name": "script_disabled",
+      "value": "Disabled"
+    },
+    {
+      "name": "add_script",
+      "value": "New script"
+    },
+    {
+      "name": "add_rule",
+      "value": "Add rule"
+    },
+    {
+      "name": "rule_hint",
+      "value": "Enter a domain, e.g. ad.example.com"
+    },
+    {
+      "name": "allowlist",
+      "value": "Allowlist"
+    },
+    {
+      "name": "subscription_rules",
+      "value": "Filter subscriptions"
+    },
+    {
+      "name": "delete_tab",
+      "value": "Close tab"
+    },
+    {
+      "name": "close_all_tabs",
+      "value": "Close all tabs"
+    },
+    {
+      "name": "tab_count_unit",
+      "value": "tabs"
+    },
+    {
+      "name": "tab_closed",
+      "value": "Tab is closed"
+    },
+    {
+      "name": "undo",
+      "value": "Undo"
+    },
+    {
+      "name": "invalid_input",
+      "value": "Name or URL cannot be empty"
+    },
+    {
+      "name": "block",
+      "value": "Block"
+    },
+    {
+      "name": "allow",
+      "value": "Allow"
+    },
+    {
+      "name": "enabled",
+      "value": "Enabled"
+    },
+    {
+      "name": "no_site_settings",
+      "value": "No site settings yet"
+    },
+    {
+      "name": "no_rules",
+      "value": "No custom rules yet"
+    },
+    {
+      "name": "no_scripts",
+      "value": "No user scripts yet"
+    },
+    {
+      "name": "remove",
+      "value": "Remove"
+    },
+    {
+      "name": "all_sites",
+      "value": "All sites"
+    },
+    {
+      "name": "match_host",
+      "value": "Matching domain"
+    },
+    {
+      "name": "script_code",
+      "value": "Script code"
+    },
+    {
+      "name": "edit_script",
+      "value": "Edit script"
+    },
+    {
+      "name": "update_subscription",
+      "value": "Update subscription"
+    },
+    {
+      "name": "rules_added",
+      "value": "%d rules added"
+    },
+    {
+      "name": "subscription_url_hint",
+      "value": "Enter an ABP subscription URL"
+    },
+    {
+      "name": "web_mask_filter",
+      "value": "Night filter for web contents"
+    },
+    {
+      "name": "night_force_dark",
+      "value": "Force dark operation for web contents"
+    },
+    {
+      "name": "night_force_dark_desc",
+      "value": "When enabled, webpages will be forced to darken, which may cause some pages to behave abnormally."
+    },
+    {
+      "name": "night_label_on",
+      "value": "Night mode enabled"
+    },
+    {
+      "name": "night_label_off",
+      "value": "Night mode disabled"
+    },
+    {
+      "name": "night_follow_toast",
+      "value": "Follow system dark mode is enabled"
+    },
+    {
+      "name": "night_filter_opacity",
+      "value": "Night filter for web contents"
+    },
+    {
+      "name": "reader_confirm",
+      "value": "Require confirmation to show reader"
+    },
+    {
+      "name": "reader_confirm_desc_on",
+      "value": "Show menu first when clicking on the address bar's reader mode icon"
+    },
+    {
+      "name": "reader_confirm_desc_off",
+      "value": "Show reader when clicking on the address bar's reader mode icon"
+    },
+    {
+      "name": "appearance",
+      "value": "Appearance"
+    },
+    {
+      "name": "font_size",
+      "value": "Text size"
+    },
+    {
+      "name": "custom_reader_css",
+      "value": "Custom reader CSS"
+    },
+    {
+      "name": "app_layout",
+      "value": "Toolbar UI mode"
+    },
+    {
+      "name": "layout_traditional",
+      "value": "Sandwich"
+    },
+    {
+      "name": "layout_toolbar_top",
+      "value": "Toolbar at top"
+    },
+    {
+      "name": "layout_toolbar_bottom",
+      "value": "Toolbar at bottom"
+    },
+    {
+      "name": "layout_double_toolbar",
+      "value": "Two-row toolbar"
+    },
+    {
+      "name": "auto_hide_toolbar",
+      "value": "Auto-hide toolbars"
+    },
+    {
+      "name": "auto_hide_always",
+      "value": "Always show"
+    },
+    {
+      "name": "auto_hide_swipe",
+      "value": "Scroll to hide/show"
+    },
+    {
+      "name": "auto_hide_tap",
+      "value": "Press to hide/show"
+    },
+    {
+      "name": "auto_hide_swipe_desc",
+      "value": "Scroll to hide/show"
+    },
+    {
+      "name": "auto_hide_tap_desc",
+      "value": "Press to hide/show"
+    },
+    {
+      "name": "enable_tab_bar",
+      "value": "Enable tab bar"
+    },
+    {
+      "name": "tab_bar_need_layout",
+      "value": "Please choose another toolbar UI mode to enable the tab bar"
+    },
+    {
+      "name": "address_content",
+      "value": "URL field content"
+    },
+    {
+      "name": "content_title",
+      "value": "Title"
+    },
+    {
+      "name": "content_address",
+      "value": "URL"
+    },
+    {
+      "name": "content_domain",
+      "value": "Domain"
+    },
+    {
+      "name": "color_mode",
+      "value": "Color mode"
+    },
+    {
+      "name": "color_mode_desc",
+      "value": "Auto-adjust color of toolbars"
+    },
+    {
+      "name": "read_pasteboard_reason",
+      "value": "Used to read clipboard content for Paste & Go"
+    },
+    {
+      "name": "incognito",
+      "value": "Incognito mode"
+    },
+    {
+      "name": "toolbox",
+      "value": "Tools"
+    },
+    {
+      "name": "exit_app",
+      "value": "Exit"
+    },
+    {
+      "name": "general",
+      "value": "General"
+    },
+    {
+      "name": "customize",
+      "value": "Customization"
+    },
+    {
+      "name": "privacy",
+      "value": "Privacy"
+    },
+    {
+      "name": "advanced",
+      "value": "Advanced"
+    },
+    {
+      "name": "script",
+      "value": "Scripts"
+    },
+    {
+      "name": "sync",
+      "value": "Sync"
+    },
+    {
+      "name": "browser_ua",
+      "value": "User-agent"
+    },
+    {
+      "name": "password_manager",
+      "value": "Password manager"
+    },
+    {
+      "name": "toolbar_settings",
+      "value": "Toolbars settings"
+    },
+    {
+      "name": "customize_menu",
+      "value": "Customize menu"
+    },
+    {
+      "name": "customize_long_press_menu",
+      "value": "Customize context menu"
+    },
+    {
+      "name": "language",
+      "value": "Language"
+    },
+    {
+      "name": "language_value",
+      "value": "Chinese (Simplified)"
+    },
+    {
+      "name": "search_settings",
+      "value": "Search settings"
+    },
+    {
+      "name": "ai_settings",
+      "value": "AI settings"
+    },
+    {
+      "name": "ua_iphone",
+      "value": "iPhone"
+    },
+    {
+      "name": "ua_default",
+      "value": "Default"
+    },
+    {
+      "name": "ignore_ssl_warning",
+      "value": "Ignore SSL certificate warnings"
+    },
+    {
+      "name": "disable_safe_browsing",
+      "value": "Disable safe browsing"
+    },
+    {
+      "name": "data_saver",
+      "value": "Save data"
+    },
+    {
+      "name": "data_saver_desc",
+      "value": "Enable data-savings mode on compatible websites"
+    },
+    {
+      "name": "allow_web_debug",
+      "value": "Enable webpage debugging"
+    },
+    {
+      "name": "auto_sniff_button",
+      "value": "Show sniffer button automatically"
+    },
+    {
+      "name": "do_not_sell",
+      "value": "Do not sell or share data"
+    },
+    {
+      "name": "do_not_sell_desc",
+      "value": "Request the website not to sell or share my data to protect privacy (experimental)"
+    },
+    {
+      "name": "do_not_track",
+      "value": "Do not track"
+    },
+    {
+      "name": "disable_webrtc",
+      "value": "Disable WebRTC"
+    },
+    {
+      "name": "check_update",
+      "value": "Check for updates"
+    },
+    {
+      "name": "open_source_license",
+      "value": "Open source licenses"
+    },
+    {
+      "name": "terms_of_use",
+      "value": "Terms of use"
+    },
+    {
+      "name": "privacy_policy",
+      "value": "Privacy policy"
+    },
+    {
+      "name": "join_qq_group",
+      "value": "Join QQ group"
+    },
+    {
+      "name": "contact_by_email",
+      "value": "Email me"
+    },
+    {
+      "name": "wechat_account",
+      "value": "Wechat official account"
+    },
+    {
+      "name": "help_translate",
+      "value": "Help us translate"
+    },
+    {
+      "name": "enable_script",
+      "value": "Enable scripts"
+    },
+    {
+      "name": "auto_update",
+      "value": "Update interval"
+    },
+    {
+      "name": "update_freq_daily",
+      "value": "Every day"
+    },
+    {
+      "name": "web_accelerator",
+      "value": "Web accelerator"
+    },
+    {
+      "name": "immersive_translate",
+      "value": "Immersive translate"
+    },
+    {
+      "name": "github_cn_plugin",
+      "value": "GitHub Chinese localization"
+    },
+    {
+      "name": "home_default",
+      "value": "Default"
+    },
+    {
+      "name": "feature_wip",
+      "value": "Feature in development"
+    },
+    {
+      "name": "import_done",
+      "value": "Import completed"
+    },
+    {
+      "name": "import_failed",
+      "value": "Operation failed"
+    },
+    {
+      "name": "export_done",
+      "value": "Export completed"
+    },
+    {
+      "name": "page_saved",
+      "value": "Page saved"
+    },
+    {
+      "name": "reset_done",
+      "value": "Reset"
+    },
+    {
+      "name": "reset",
+      "value": "Reset"
+    },
+    {
+      "name": "reset_default_title",
+      "value": "Reset to default settings"
+    },
+    {
+      "name": "reset_default_msg",
+      "value": "Are you sure you want to proceed?"
+    },
+    {
+      "name": "drag_to_reorder_hint",
+      "value": "Hold and drag to rearrange items"
+    },
+    {
+      "name": "drag_to_add_hint",
+      "value": "Hold and drag or tap to add item"
+    },
+    {
+      "name": "reset_action",
+      "value": "Reset"
+    },
+    {
+      "name": "toolbar_action_title",
+      "value": "Select action"
+    },
+    {
+      "name": "latest_version",
+      "value": "Latest version already installed"
+    },
+    {
+      "name": "new_version_available",
+      "value": "New version available"
+    },
+    {
+      "name": "update_btn",
+      "value": "Update"
+    },
+    {
+      "name": "email_copied",
+      "value": "Email copied"
+    },
+    {
+      "name": "script_updated",
+      "value": "Script updated"
+    },
+    {
+      "name": "ai_need_key",
+      "value": "Configure AI in settings first"
+    },
+    {
+      "name": "sync_done",
+      "value": "Synced with cloud"
+    },
+    {
+      "name": "sync_failed",
+      "value": "Sync failed, check network or cloud switch"
+    },
+    {
+      "name": "no_page_open",
+      "value": "Open a page first"
+    },
+    {
+      "name": "search_widget_name",
+      "value": "Via"
+    },
+    {
+      "name": "search_widget_desc",
+      "value": "Via Browser"
+    },
+    {
+      "name": "transparent_search_widget_name",
+      "value": "Via"
+    },
+    {
+      "name": "transparent_search_widget_desc",
+      "value": "Via Browser"
+    },
+    {
+      "name": "widget_white_solid_name",
+      "value": "Via · White solid"
+    },
+    {
+      "name": "widget_white_solid_desc",
+      "value": "White search box"
+    },
+    {
+      "name": "widget_white_transparent_name",
+      "value": "Via · White transparent"
+    },
+    {
+      "name": "widget_white_transparent_desc",
+      "value": "Transparent with white border"
+    },
+    {
+      "name": "widget_black_solid_name",
+      "value": "Via · Black solid"
+    },
+    {
+      "name": "widget_black_solid_desc",
+      "value": "Dark search box"
+    },
+    {
+      "name": "widget_black_transparent_name",
+      "value": "Via · Black transparent"
+    },
+    {
+      "name": "widget_black_transparent_desc",
+      "value": "Transparent with dark border"
+    },
+    {
+      "name": "shortcut_scan_qr",
+      "value": "Scan QR code"
+    },
+    {
+      "name": "shortcut_search",
+      "value": "Search"
+    },
+    {
+      "name": "shortcut_history",
+      "value": "History"
+    },
+    {
+      "name": "shortcut_bookmark",
+      "value": "Bookmarks"
+    },
+    {
+      "name": "link_copied",
+      "value": "Link copied to clipboard"
+    },
+    {
+      "name": "ua_empty",
+      "value": "Title and identification cannot be empty"
+    },
+    {
+      "name": "webdav_not_configured",
+      "value": "Set the WebDAV server address first"
+    },
+    {
+      "name": "backup_done",
+      "value": "Backup completed"
+    },
+    {
+      "name": "backup_failed",
+      "value": "Operation failed"
+    },
+    {
+      "name": "restore_done",
+      "value": "Restore completed"
+    },
+    {
+      "name": "view_source",
+      "value": "View source"
+    },
+    {
+      "name": "res_sniffer",
+      "value": "Resource sniffer"
+    },
+    {
+      "name": "res_sniffer_empty",
+      "value": "The page has no resource.\nNote: media files are easier to detect while music or video is being played. Resource sniffer doesn't work on certain websites."
+    },
+    {
+      "name": "screen_orientation",
+      "value": "Orientation"
+    },
+    {
+      "name": "mark_ad",
+      "value": "Mark as ad"
+    },
+    {
+      "name": "scan_qr",
+      "value": "Scan QR code"
+    },
+    {
+      "name": "refresh_page",
+      "value": "Reload"
+    },
+    {
+      "name": "read_aloud_menu",
+      "value": "Read aloud"
+    },
+    {
+      "name": "report_site",
+      "value": "Report abuse"
+    },
+    {
+      "name": "fullscreen",
+      "value": "Full-screen"
+    },
+    {
+      "name": "image_mode",
+      "value": "Show images"
+    },
+    {
+      "name": "open_with",
+      "value": "Open with"
+    },
+    {
+      "name": "game_mode",
+      "value": "Game mode"
+    },
+    {
+      "name": "add_home_fav",
+      "value": "Add favorite"
+    },
+    {
+      "name": "image_mode_block",
+      "value": "Block images"
+    },
+    {
+      "name": "image_mode_wifi",
+      "value": "Show images only via Wi-Fi"
+    },
+    {
+      "name": "report_reason_distracting",
+      "value": "Too much distracting content"
+    },
+    {
+      "name": "report_reason_dangerous",
+      "value": "This is a dangerous website"
+    },
+    {
+      "name": "report_reason_broken",
+      "value": "The page is displaying incorrectly"
+    },
+    {
+      "name": "report_remarks_hint",
+      "value": "Remarks (optional)"
+    },
+    {
+      "name": "report_success",
+      "value": "Report submitted successfully"
+    },
+    {
+      "name": "open_with_failed",
+      "value": "Unable to find associated app to open the link"
+    },
+    {
+      "name": "mark_ad_http_only",
+      "value": "Only URLs starting with \"http\" or \"https\" are supported"
+    },
+    {
+      "name": "fullscreen_toast_on",
+      "value": "Fullscreen enabled"
+    },
+    {
+      "name": "fullscreen_toast_off",
+      "value": "Fullscreen disabled"
+    },
+    {
+      "name": "game_mode_toast_on",
+      "value": "Game mode is on, press the back key twice to exit"
+    },
+    {
+      "name": "game_mode_toast_off",
+      "value": "Game mode disabled"
+    },
+    {
+      "name": "orientation_system",
+      "value": "System"
+    },
+    {
+      "name": "orientation_auto",
+      "value": "Auto"
+    },
+    {
+      "name": "orientation_portrait",
+      "value": "Portrait"
+    },
+    {
+      "name": "orientation_landscape",
+      "value": "Landscape"
+    },
+    {
+      "name": "orientation_toast",
+      "value": "Orientation set to %s"
+    },
+    {
+      "name": "close_other_tabs",
+      "value": "Close other tabs"
+    },
+    {
+      "name": "close_tabs_above",
+      "value": "Close tabs to the top"
+    },
+    {
+      "name": "close_tabs_below",
+      "value": "Close tabs to the bottom"
+    },
+    {
+      "name": "duplicate_tab",
+      "value": "Duplicate tab"
+    },
+    {
+      "name": "no_title",
+      "value": "Untitled"
+    },
+    {
+      "name": "manage_home_favs",
+      "value": "Favorite manager"
+    },
+    {
+      "name": "new_home_fav",
+      "value": "New"
+    },
+    {
+      "name": "home_fav_name",
+      "value": "Name"
+    },
+    {
+      "name": "home_fav_url",
+      "value": "URL"
+    },
+    {
+      "name": "copied_link",
+      "value": "Link copied successfully"
+    },
+    {
+      "name": "bookmark_added_state",
+      "value": "Bookmark added"
+    },
+    {
+      "name": "permission_request",
+      "value": "Permission request"
+    },
+    {
+      "name": "perm_request_use",
+      "value": "%1$s would like to use"
+    },
+    {
+      "name": "perm_unknown_site",
+      "value": "Unknown website"
+    },
+    {
+      "name": "perm_res_item",
+      "value": "%1$s: %2$s"
+    },
+    {
+      "name": "perm_line_prefix",
+      "value": "- %1$s"
+    },
+    {
+      "name": "perm_mic_label",
+      "value": "Microphone"
+    },
+    {
+      "name": "perm_mic_desc",
+      "value": "Used for voice input or audio recording on websites"
+    },
+    {
+      "name": "perm_camera_label",
+      "value": "Camera"
+    },
+    {
+      "name": "perm_camera_desc",
+      "value": "Used for taking photos or recording videos on websites"
+    },
+    {
+      "name": "perm_remember_choice",
+      "value": "Remember my choice"
+    },
+    {
+      "name": "perm_allow",
+      "value": "Allow"
+    },
+    {
+      "name": "perm_refuse",
+      "value": "Refuse"
+    },
+    {
+      "name": "geo_allow_title",
+      "value": "Location access"
+    },
+    {
+      "name": "geo_request_message",
+      "value": "%1$s would like to use your location."
+    },
+    {
+      "name": "geo_using_toast",
+      "value": "%1$s is using your location"
+    },
+    {
+      "name": "perm_camera_reason",
+      "value": "Used for camera and scanning features requested by websites"
+    },
+    {
+      "name": "perm_microphone_reason",
+      "value": "Used for voice input or audio recording requested by websites"
+    },
+    {
+      "name": "perm_location_reason",
+      "value": "Used for location information requested by websites"
+    },
+    {
+      "name": "home_fav_added",
+      "value": "Favorite added successfully"
+    },
+    {
+      "name": "webpage",
+      "value": "Webpage"
+    },
+    {
+      "name": "exit_incognito",
+      "value": "Incognito is off"
+    },
+    {
+      "name": "close_all_tabs_title",
+      "value": "Close all tabs"
+    },
+    {
+      "name": "exit_incognito_confirm_msg",
+      "value": "Do you want to close all tabs before disabling incognito mode?"
+    },
+    {
+      "name": "keep_tabs",
+      "value": "Keep"
+    },
+    {
+      "name": "close_btn",
+      "value": "Close"
+    },
+    {
+      "name": "download_confirm_title",
+      "value": "Would you like to download this file?"
+    },
+    {
+      "name": "file_size_label",
+      "value": "File size: %s"
+    },
+    {
+      "name": "download_btn",
+      "value": "Download"
+    },
+    {
+      "name": "retry_download",
+      "value": "Re-download"
+    },
+    {
+      "name": "pause_download",
+      "value": "Pause"
+    },
+    {
+      "name": "resume_download",
+      "value": "Resume"
+    },
+    {
+      "name": "restore_session_ask",
+      "value": "Would you like to restore unclosed tabs from the last session?"
+    },
+    {
+      "name": "restore_btn",
+      "value": "Resume"
+    },
+    {
+      "name": "clear_history_title",
+      "value": "Delete history from"
+    },
+    {
+      "name": "delete_items_confirm",
+      "value": "Are you sure you want to delete %1$d items?"
+    },
+    {
+      "name": "new_bookmark",
+      "value": "New bookmark"
+    },
+    {
+      "name": "bookmark_folder",
+      "value": "Folder"
+    },
+    {
+      "name": "new_folder",
+      "value": "New folder"
+    },
+    {
+      "name": "delete_folder_confirm",
+      "value": "Would you like to delete this folder?"
+    },
+    {
+      "name": "home_fav_deleted",
+      "value": "\"%s\" deleted"
+    },
+    {
+      "name": "home_css_hint",
+      "value": "The CSS added here will be appended to the end of the homepage stylesheet and only affects the web homepage."
+    },
+    {
+      "name": "copy",
+      "value": "Copy"
+    },
+    {
+      "name": "invalid_url",
+      "value": "Invalid URL"
+    },
+    {
+      "name": "ai_provider",
+      "value": "AI service provider"
+    },
+    {
+      "name": "ai_prompts",
+      "value": "AI prompt"
+    },
+    {
+      "name": "ai_all_topics",
+      "value": "Threads"
+    },
+    {
+      "name": "ai_new_topic",
+      "value": "New thread"
+    },
+    {
+      "name": "ai_messages",
+      "value": "Message"
+    },
+    {
+      "name": "ai_casual",
+      "value": "Casual chat"
+    },
+    {
+      "name": "ai_assistant",
+      "value": "Assistant"
+    },
+    {
+      "name": "ai_empty",
+      "value": "Empty"
+    },
+    {
+      "name": "ai_select_model",
+      "value": "Select model"
+    },
+    {
+      "name": "ai_export_chat",
+      "value": "Export thread"
+    },
+    {
+      "name": "ai_clear_messages",
+      "value": "Clear messages"
+    },
+    {
+      "name": "ai_confirm_clear",
+      "value": "Confirm to clear"
+    },
+    {
+      "name": "ai_copy_full",
+      "value": "Copy all"
+    },
+    {
+      "name": "ai_preview",
+      "value": "Preview"
+    },
+    {
+      "name": "ai_delete",
+      "value": "Delete"
+    },
+    {
+      "name": "ai_copied",
+      "value": "Text copied successfully"
+    },
+    {
+      "name": "ai_confirm_delete_item",
+      "value": "Are you sure you want to delete %1$s?"
+    },
+    {
+      "name": "ai_confirm_delete_items",
+      "value": "Are you sure you want to delete %1$d items?"
+    },
+    {
+      "name": "ai_title_label",
+      "value": "Title"
+    },
+    {
+      "name": "ai_content_label",
+      "value": "Content"
+    },
+    {
+      "name": "ai_available_vars",
+      "value": "Available variables"
+    },
+    {
+      "name": "ai_system_prompts",
+      "value": "System prompt"
+    },
+    {
+      "name": "ai_msg_templates",
+      "value": "Message template"
+    },
+    {
+      "name": "ai_edit",
+      "value": "Edit"
+    },
+    {
+      "name": "ai_new_label",
+      "value": "New"
+    },
+    {
+      "name": "ai_save",
+      "value": "Save"
+    },
+    {
+      "name": "ai_custom_label",
+      "value": "Custom"
+    },
+    {
+      "name": "ai_none_label",
+      "value": "None"
+    },
+    {
+      "name": "ai_unsaved_title",
+      "value": "Message"
+    },
+    {
+      "name": "ai_unsaved_msg",
+      "value": "The modified content has not been saved. Do you want to save it?"
+    },
+    {
+      "name": "ai_save_and_exit",
+      "value": "Save & Exit"
+    },
+    {
+      "name": "ai_open_key_page",
+      "value": "Open the API Key generation and management page"
+    },
+    {
+      "name": "ai_model_id",
+      "value": "Model ID"
+    },
+    {
+      "name": "ai_add_model",
+      "value": "Add model"
+    },
+    {
+      "name": "ai_api_key_label",
+      "value": "API key"
+    },
+    {
+      "name": "ai_addr_label",
+      "value": "URL"
+    },
+    {
+      "name": "ai_verify",
+      "value": "Validate"
+    },
+    {
+      "name": "ai_verify_fail",
+      "value": "Validate failed"
+    },
+    {
+      "name": "ai_verify_ok",
+      "value": "Validate success"
+    },
+    {
+      "name": "ai_wait",
+      "value": "Wait a moment…"
+    },
+    {
+      "name": "ai_markdown",
+      "value": "Markdown"
+    },
+    {
+      "name": "ai_plain_text",
+      "value": "Plain text"
+    },
+    {
+      "name": "ai_stop_label",
+      "value": "Stop"
+    },
+    {
+      "name": "ai_send_label",
+      "value": "Send"
+    },
+    {
+      "name": "ai_more_label",
+      "value": "More"
+    },
+    {
+      "name": "ai_no_title",
+      "value": "Untitled"
+    },
+    {
+      "name": "ai_no_messages",
+      "value": "No messages"
+    },
+    {
+      "name": "ai_no_provider",
+      "value": "No AI service provider"
+    },
+    {
+      "name": "ai_request_incomplete",
+      "value": "No completion"
+    },
+    {
+      "name": "ai_provider_misconfigured",
+      "value": "AI service provider invalid"
+    },
+    {
+      "name": "ai_http_error",
+      "value": "HTTP error: %1$d\n\n%2$s"
+    },
+    {
+      "name": "ai_unknown_error",
+      "value": "Unknown error: %1$s"
+    },
+    {
+      "name": "ai_export_ok",
+      "value": "Data exported successfully"
+    },
+    {
+      "name": "ai_exported_to",
+      "value": "Export data to: %1$s"
+    },
+    {
+      "name": "ai_var_input",
+      "value": "The input box content."
+    },
+    {
+      "name": "ai_var_content",
+      "value": "The plain text content of the webpage."
+    },
+    {
+      "name": "ai_var_title",
+      "value": "The title of the webpage."
+    },
+    {
+      "name": "ai_var_link",
+      "value": "The URL of the webpage."
+    },
+    {
+      "name": "ai_var_time",
+      "value": "Current time yyyy-MM-dd HH:mm:ss EEEE (ZZZZ)."
+    },
+    {
+      "name": "ai_just_now",
+      "value": "just now"
+    },
+    {
+      "name": "preview",
+      "value": "Preview"
+    },
+    {
+      "name": "preview_pdf",
+      "value": "Preview PDF"
+    },
+    {
+      "name": "dl_tab_all",
+      "value": "All"
+    },
+    {
+      "name": "dl_tab_docs",
+      "value": "Documents"
+    },
+    {
+      "name": "dl_tab_archives",
+      "value": "Archives"
+    },
+    {
+      "name": "dl_tab_apk",
+      "value": "APK"
+    },
+    {
+      "name": "dl_tab_images",
+      "value": "Image"
+    },
+    {
+      "name": "dl_tab_video",
+      "value": "Video"
+    },
+    {
+      "name": "dl_tab_audio",
+      "value": "Audio"
+    },
+    {
+      "name": "dl_tab_others",
+      "value": "Others"
+    },
+    {
+      "name": "new_download",
+      "value": "New"
+    },
+    {
+      "name": "new_download_download",
+      "value": "Download"
+    },
+    {
+      "name": "select_all",
+      "value": "Select all"
+    },
+    {
+      "name": "cancel_select_all",
+      "value": "Cancel all"
+    },
+    {
+      "name": "delete_count",
+      "value": "Delete (%1$d)"
+    },
+    {
+      "name": "download_url_hint",
+      "value": "URL"
+    },
+    {
+      "name": "download_file_name_hint",
+      "value": "File name"
+    },
+    {
+      "name": "url_invalid_toast",
+      "value": "Only URLs starting with \"http\" or \"https\" can be downloaded"
+    },
+    {
+      "name": "rename_download",
+      "value": "Rename"
+    },
+    {
+      "name": "copy_download_link",
+      "value": "Copy download link"
+    },
+    {
+      "name": "copy_text",
+      "value": "Copy text"
+    },
+    {
+      "name": "open_action",
+      "value": "On"
+    },
+    {
+      "name": "delete_task_confirm",
+      "value": "Delete this downloaded task?"
+    },
+    {
+      "name": "delete_task_with_file_confirm",
+      "value": "Downloaded file will also be deleted. Are you sure?"
+    },
+    {
+      "name": "delete_tasks_confirm",
+      "value": "Delete these download tasks (%1$d in total)?"
+    },
+    {
+      "name": "delete_with_file_option",
+      "value": "Including the downloaded file"
+    },
+    {
+      "name": "redownload_confirm",
+      "value": "Are you sure you want to delete the downloaded file and re-download %1$s?"
+    },
+    {
+      "name": "no_app_to_open",
+      "value": "Unable to find associated app to open file"
+    },
+    {
+      "name": "file_not_exist",
+      "value": "The file does not exist"
+    },
+    {
+      "name": "download_failed_detail",
+      "value": "Download failed: %1$s"
+    },
+    {
+      "name": "download_contents",
+      "value": "Download contents"
+    },
+    {
+      "name": "waiting_for_network",
+      "value": "Waiting for network"
+    },
+    {
+      "name": "na_text",
+      "value": "N/A"
+    },
+    {
+      "name": "time_secs_left",
+      "value": "%d secs left"
+    },
+    {
+      "name": "time_mins_left",
+      "value": "%d mins left"
+    },
+    {
+      "name": "time_hours_left",
+      "value": "%d hours left"
+    },
+    {
+      "name": "size_progress",
+      "value": "%1$s/%2$s"
+    },
+    {
+      "name": "size_only",
+      "value": "%1$s"
+    },
+    {
+      "name": "pair_text",
+      "value": "%1$s • %2$s"
+    },
+    {
+      "name": "triple_text",
+      "value": "%1$s • %2$s • %3$s"
+    },
+    {
+      "name": "save_page_title",
+      "value": "Save page"
+    },
+    {
+      "name": "save_page_name_hint",
+      "value": "Title"
+    },
+    {
+      "name": "save_as_pdf",
+      "value": "Save as PDF"
+    },
+    {
+      "name": "page_saved_to_offline",
+      "value": "Webpage has been saved to: Bookmarks > Saved pages"
+    },
+    {
+      "name": "view_action",
+      "value": "View"
+    },
+    {
+      "name": "open_in_background",
+      "value": "Open in background"
+    },
+    {
+      "name": "open_new_tab_short",
+      "value": "Open in new tab"
+    },
+    {
+      "name": "offline_empty_hint",
+      "value": "These are saved webpages. You can open them even when you are offline."
+    },
+    {
+      "name": "export_action",
+      "value": "Export"
+    },
+    {
+      "name": "offline_delete_name_confirm",
+      "value": "Are you sure you want to delete %1$s?"
+    },
+    {
+      "name": "site_not_supported",
+      "value": "It cannot work on this site."
+    },
+    {
+      "name": "res_sniffer_unsupported",
+      "value": "This site does not support resource sniffing"
+    },
+    {
+      "name": "translate_hint",
+      "value": "Text"
+    },
+    {
+      "name": "translate_detect_language",
+      "value": "Detect language"
+    },
+    {
+      "name": "translate_source_language",
+      "value": "Source language"
+    },
+    {
+      "name": "translate_target_language",
+      "value": "Target language"
+    },
+    {
+      "name": "translate_swap_language",
+      "value": "Swap language"
+    },
+    {
+      "name": "translate_clear_text",
+      "value": "Clear text"
+    },
+    {
+      "name": "translate_exit",
+      "value": "Exit"
+    }
+  ]
+}

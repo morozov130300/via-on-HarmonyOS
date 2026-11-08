@@ -13,3 +13,13 @@
 /.cache
 /.deveco
 .env
+# 临时诊断产物（AGENTS.md：临时文件用完必清，禁止入库）
+/.diag/
+/screenshots/
+_shot*
+_screenshot*
+screenshot_*
+*.jpeg
+*.jpg
+!resources/**/*.jpg
+!resources/**/*.jpeg

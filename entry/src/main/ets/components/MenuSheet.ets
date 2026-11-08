@@ -17,6 +17,8 @@ import { scriptPatternMatches } from '../common/ScriptMatch'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
+// 原版 a8/k.java：书签快捷选择对话框（W9() / P9 case2）
+import { BookmarkPickerDialog } from './BookmarkPickerDialog'
 import { ZoomSlider } from './ZoomSlider'
 import { TranslateState } from './TranslatePanel'
 import { computeDialogWidthVp } from './ViaDialogCard'
@@ -90,6 +92,8 @@ export const MARK_AD_INJECT_JS: string = `(function(){if(window.__via_mark_ad__)
 export struct MenuSheet {
   @Event onClose: () => void = () => {}
   @Event onOpenPage: (page: string) => void = (page: string) => {}
+  // 原版 W9()（a8.k 书签快捷选择对话框）选中书签后在新标签打开
+  @Event onOpenUrlInNewTab: (url: string) => void = (url: string) => {}
   @Event onFindInPage: () => void = () => {}
   @Event onShare: () => void = () => {}
   @Event onSavePage: () => void = () => {}
@@ -105,6 +109,10 @@ export struct MenuSheet {
   // 默认 cleardata2=7（缓存|历史），aboutToAppear 按 settings.clearData2 重算
   @Local clearDataSelection: boolean[] = [true, true, false, false, false, false]
   @Local showImageModeDialog: boolean = false
+  // 原版 k6.P9 case4 → A0()：下载管理选择弹窗
+  @Local showDlManagerDialog: boolean = false
+  // 原版 k6.P9 case2 → W9() → a8.k：书签快捷选择对话框
+  @Local showBookmarkPicker: boolean = false
   @Local showReportDialog: boolean = false
   @Local showOrientationDialog: boolean = false
   @Local showAddHomeFavDialog: boolean = false
@@ -192,6 +200,12 @@ export struct MenuSheet {
       }
       if (this.showImageModeDialog) {
         this.ImageModeDialog()
+      }
+      if (this.showDlManagerDialog) {
+        this.DlManagerDialog()
+      }
+      if (this.showBookmarkPicker) {
+        this.BookmarkPickerOverlay()
       }
       if (this.showReportDialog) {
         this.ReportDialog()
@@ -445,10 +459,13 @@ export struct MenuSheet {
         this.onClose()
         this.onOpenPage('uaPage')
         break
-      // 原版 k6.P9 case28（k6.java:5544-5546）：长按「广告拦截」→ z7.d 广告拦截规则页
+      // 原版 k6.P9 case28（k6.java:5544-5546）：`g6.i.g(this, z7.d.class)`。
+      // z7.d = 广告拦截**设置页**（5 行：主开关/内建规则/自定义规则/规则订阅/自动展开），
+      // 对应本工程 view/SettingsAdBlockPage.ets（路由 settingsAdBlock）。
+      // 注意：不是 'rules'（RulesPage = z7.v 自定义拦截规则编辑器）。
       case 'adblock':
         this.onClose()
-        this.onOpenPage('rules')
+        this.onOpenPage('settingsAdBlock')
         break
       case 'font_size':
         // 原版 P9 case29 → jb.k5：字体大小页
@@ -469,21 +486,24 @@ export struct MenuSheet {
         this.onClose()
         this.onOpenPage('aiSettings')
         break
-      // 原版 k6.P9 case2 → W9()：书签快捷选择弹窗（a8.k）——接书签管理页
+      // 原版 k6.P9 case2（k6.java:5454 段）→ W9() → a8.k：书签**快捷选择对话框**
+      // （标题 hb/v4.java:127-128 H9=pn「打开书签对话框」，从当前页快速挑一个书签打开）。
+      // 不是书签管理页；早期实现退化为跳 bookmarks，已改回对话框。
       case 'bookmarks':
-        this.onClose()
-        this.onOpenPage('bookmarks')
+        this.showBookmarkPicker = true
         break
       // 原版 k6.P9 case3 → na.s1(3)：历史内部页
       case 'history':
         this.onClose()
         this.onOpenPage('history')
         break
-      // 原版 k6.P9 case4 → w5.k 下载管理弹窗（下载器选择：内建/系统/第三方）。
-      // 工程无下载器选择能力，接最近似：打开下载管理页
+      // 原版 k6.P9 case4（k6.java:5467-5487）→ A0()：弹「下载管理」选择弹窗
+      // （标题 x7.u.A0=bf「下载管理」，选项来自 download/j1.e().d() 枚举的下载器，
+      // 勾选当前项，选中写 w9 dlmanager 键）。
+      // 鸿蒙无法枚举第三方下载器，列表只保留「内建下载器」（Settings.dlManager='builtin'），
+      // 与通用设置页「下载管理」行同一数据源与写回键（settings.setDlManager）。
       case 'downloads':
-        this.onClose()
-        this.onOpenPage('downloads')
+        this.showDlManagerDialog = true
         break
       // 原版 k6.P9 case6 → pa(S8())：分享当前页
       case 'share':
@@ -758,6 +778,83 @@ export struct MenuSheet {
     return 0
   }
 
+  // 原版 a8.k 书签快捷选择对话框的承载层（点击遮罩关闭）
+  @Builder
+  BookmarkPickerOverlay() {
+    Stack({ alignContent: Alignment.Center }) {
+      BookmarkPickerDialog({
+        onPickUrl: (url: string): void => {
+          this.showBookmarkPicker = false
+          this.onClose()
+          this.onOpenUrlInNewTab(url)
+        },
+        onDismiss: (): void => {
+          this.showBookmarkPicker = false
+        }
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('rgba(0,0,0,0.2)')
+    .transition(dimTransition(240))
+    .onClick(() => {
+      this.showBookmarkPicker = false
+    })
+  }
+  // 原版 k6.P9 case4 → A0() → w5.k.l(I()).d0(x7.u.A0「下载管理」).b0(下载器列表, 当前项, 回调)
+  // 鸿蒙无法枚举第三方下载器，列表仅「内建下载器」；写回键与设置页一致（dlManager）
+  @Builder
+  DlManagerDialog() {
+    Stack({ alignContent: Alignment.Center }) {
+      Column() {
+        Text('下载管理')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.fg'))
+          .width('100%')
+          .padding({ left: 20, top: 18, bottom: 8 })
+        Column() {
+          this.DlManagerRow('内建下载器', 'builtin')
+        }
+        .width('100%')
+        .padding({ bottom: 12 })
+      }
+      .width('100%')
+      .constraintSize({ maxHeight: '70%' })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .transition(dialogTransition())
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('rgba(0,0,0,0.2)')
+    .transition(dimTransition(240))
+    .onClick(() => {
+      this.showDlManagerDialog = false
+    })
+  }
+
+  @Builder
+  DlManagerRow(label: string, value: string) {
+    Row({ space: 14 }) {
+      Circle({ width: 18, height: 18 })
+        .fill(this.settings.dlManager === value ? '#4C6FFF' : Color.Transparent)
+        .stroke(this.settings.dlManager === value ? '#4C6FFF' : $r('app.color.fg_secondary'))
+        .strokeWidth(1)
+      Text(label)
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .height(48)
+    .padding({ left: 20, right: 20 })
+    .onClick(() => {
+      this.settings.setDlManager(value)
+      this.showDlManagerDialog = false
+    })
+  }
   @Builder
   ImageModeDialog() {
     Stack({ alignContent: Alignment.Center }) {
@@ -1455,7 +1552,8 @@ export struct MenuSheet {
         action()
       }
     })
-    .gesture(LongPressGesture().onAction(() => {
+    // 长按时长与 Toolbar/AddressBar 统一 400ms（原版系统默认约 400ms）
+    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
       longPress()
     }))  }
 

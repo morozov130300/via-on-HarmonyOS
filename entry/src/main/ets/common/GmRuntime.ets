@@ -1032,8 +1032,13 @@ export class GmHttpRequest {
         hilog.error(DOMAIN, TAG, 'basic auth encode failed')
       }
     }
-    // o5/b.e:325-326：timeout 原样透传，缺省 0 = 无限；鸿蒙 http 超时上限 600000ms，
-    // 0（无限）取平台上限近似，正值超出上限按平台规则收敛
+    // o5/b.e:325-326：optInt("timeout") 原样透传，缺省 0 = 无限。
+    // 鸿蒙 http.HttpRequestOptions 的 connectTimeout/readTimeout 只能取正整数（0 会被当作
+    // 「未设置」走默认 60s），平台上限 600000ms。故：
+    //   · timeout <= 0（原版无限）→ 取平台上限 600000ms（可观测语义最接近「不主动超时」）
+    //   · timeout > 平台上限 → 收敛到上限（平台限制）
+    //   · 其余原样透传
+    // 这是平台能力限制导致的近似，非遗漏：ArkTS 侧无「永不超时」选项。
     const effectiveTimeout = this.timeout > 0 ? Math.min(this.timeout, 600000) : 600000
     const options: http.HttpRequestOptions = {
       method: this.toHttpMethod(),

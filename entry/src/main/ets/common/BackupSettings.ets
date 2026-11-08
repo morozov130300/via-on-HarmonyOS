@@ -360,7 +360,10 @@ export class BackupSettings {
     st['webflag2'] = s.simplifyUa ? 1 : 0
     st['appflag'] = appflag
     // 原版 long 白名单（w9/i.c）：updater_filter_subscriptions = 最近一次订阅规则更新时间戳；
-    // 本工程取各订阅 lastUpdate 最大值。updater_scripts 本工程无脚本更新时间持久化，不导
+    // 本工程取各订阅 lastUpdate 最大值。updater_scripts = 最近一次脚本自动更新时间戳，
+    // 本工程对应 Settings.lastScriptUpdate（Settings.ets:238，由 markScriptsUpdated() 写入，
+    // ScriptUpdater.ets:91 = 原版 w9/k.p0("scripts", now)）——真实存在，必须导出以保证
+    // 安卓端 ↔ 鸿蒙端自动更新节流互认（拍板要求 settings.txt 真互通）。
     let lastFilterUpdate = 0
     for (let i = 0; i < s.ruleSubscriptions.length; i++) {
       if (s.ruleSubscriptions[i].lastUpdate > lastFilterUpdate) {
@@ -369,6 +372,10 @@ export class BackupSettings {
     }
     if (lastFilterUpdate > 0) {
       st['updater_filter_subscriptions'] = lastFilterUpdate
+    }
+    // 原版 w9/i.c long 白名单第 2 项：updater_scripts（脚本自动更新最近时间戳）
+    if (s.lastScriptUpdate > 0) {
+      st['updater_scripts'] = s.lastScriptUpdate
     }
     return st
   }
@@ -908,8 +915,14 @@ export class BackupSettings {
       if (hiddenmenus !== '') {
         kv['menuHidden'] = JSON.stringify(menuIdCsvToKeys(hiddenmenus))
       }
-      // updater_filter_subscriptions / updater_scripts（long 白名单）：
-      // 本工程无单一时间戳存储（订阅时间为逐条 lastUpdate），导入忽略
+      // updater_filter_subscriptions（long 白名单）：订阅时间为逐条 lastUpdate，无单一
+      // 标量可回写，导入侧忽略（导出侧取最大值，足以让安卓端节流正确）。
+      // updater_scripts（long 白名单）：对应 Settings.lastScriptUpdate，单值可直接回写，
+      // 保证从安卓备份恢复到鸿蒙后自动更新节流不立刻重跑。
+      // updater_scripts → lastScriptUpdate（w9/k.p0("scripts", now) 对等）
+      if (typeof st['updater_scripts'] === 'number' && st['updater_scripts'] > 0) {
+        kv['lastScriptUpdate'] = st['updater_scripts'] as number
+      }
       // webflag（w9/p）位分解
       if (typeof st['webflag'] === 'number') {
         const webflag = st['webflag'] as number

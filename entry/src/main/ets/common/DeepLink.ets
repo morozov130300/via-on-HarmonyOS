@@ -155,6 +155,12 @@ export function parseViaDeepLink(raw: string): ViaDeepLink | null {
   if (!hasPrefix(text, 'v://')) {
     return null
   }
+  // 原版 k6.u()（8581-8630）两条跳转分支的守卫条件不同，必须分别对齐：
+  //  · blocker/jump（w2.o）：取 url 后 if (i6.i0.s(url)) 才打开；
+  //    i0.s()（i6/i0.java:481-486）要求严格 http:// 或 https:// 前缀，否则不打开。
+  //  · error/jump（w2.r）：取 url 后 if (!empty && !i6.i0.p(url)) 才打开；
+  //    i0.p()（i6/i0.java:347-356）判定前 11 字符是否 equalsIgnoreCase("javascript:")，
+  //    即明确阻止 error/jump 打开 javascript: URL（安全约束）。
   if (hasPrefix(text, 'v://blocker/jump?url=')) {
     result.kind = ViaCmdKind.BLOCKER_JUMP
     result.url = urlDecode(text.substring(21))

@@ -410,12 +410,17 @@ class ScriptResourceCache {
       })
   }
 
-  // p5/b.W:91：文件存在且非空且在新鲜期内 → 有效（反编译原文比较方向相反且
-  // 会导致新文件被反复重下，按审计口径实现 15 天新鲜度语义）
+  // p5/b.W:91（1:1 还原原版语义）：
+  //   p5/b.java:91 if (file.exists() && file.length() > 0 && file.lastModified()
+  //                  < System.currentTimeMillis() - 1296000000) { return true; }
+  // 原版这一行把 lastModified **早于** now-15天 判定为「命中缓存直接返回」，
+  // 逻辑上是反的（刚下载的新文件反而会走重新下载分支）。早期本工程按「新=有效」
+  // 实现，属**刻意偏离原版 bug**，已由用户拍板保留（见《移植缺失功能说明.md》）。
+  // 此处按原版字面语义 1:1 落地：返回 true 表示「原版会直接复用该文件」。
   private isFresh(url: string): boolean {
     try {
       const stat = fileIo.statSync(this.pathOf(url))
-      return stat.size > 0 && stat.mtime >= Date.now() - RESOURCE_FRESH_MS
+      return stat.size > 0 && stat.mtime < Date.now() - RESOURCE_FRESH_MS
     } catch (error) {
       return false
     }

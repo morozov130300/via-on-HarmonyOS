@@ -67,6 +67,8 @@ export struct Toolbar {
   @Param embedAddress: boolean = false
   @Event onOpenSearch: () => void = () => {}
   @Event onOpenBookmarks: () => void = () => {}
+  // 原版 W9()：打开书签快捷选择对话框（工具栏动作 30）
+  @Event onBookmarkDialog: () => void = () => {}
   @Event onOpenHistory: () => void = () => {}
   @Event onSiteInfoLong: () => void = () => {}
   @Event onBack: () => void = () => {}
@@ -226,10 +228,14 @@ export struct Toolbar {
         this.onCommand('addBookmark')
         break
       case 7:
+        // 原版 k6.ra case7 → Wa() 添加书签弹窗
+        this.onCommand('addBookmark')
+        break
       case 30:
-        // 原版 k6.ra case30（k6.java:8353-8355）→ W9()：书签快捷选择对话框（a8.k，
-        // 动作文案 hb/v4 case30 = pn「打开书签对话框」）——接书签管理页
-        this.onOpenBookmarks()
+        // 原版 k6.ra case30（k6.java:8353-8355）→ W9()：书签**快捷选择对话框**
+        // （a8.k，动作文案 hb/v4 case30 = pn「打开书签对话框」）。
+        // 早期实现误并到 case7「添加书签」，后又退化为跳书签管理页，均已纠正。
+        this.onBookmarkDialog()
         break
       case 8:
         this.onOpenHistory()

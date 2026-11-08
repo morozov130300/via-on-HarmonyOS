@@ -306,7 +306,33 @@
 
 # 📌 当前状态清单（每完成一项实时更新，禁止留成「待定」）
 
-**当前任务：动画全量对齐原版 Via 7.4.0（已完成，待真机确认）**
+**当前任务：全量未对齐审核与修复（2026-11-08，已完成编译，待真机确认）**
+
+### 本轮修复（全量审核后，详见《移植缺失功能说明.md》）
+- [x] **A1 自动隐藏进度语义反相**（high）：`AutoHideGesture.drag()` 的 `show = progress() > 0` 改为 `<= 0`。原版 `k6.db()` 中 `f2591r1` **0=显示 / 1=隐藏**，`GestureTouchEvent.d():222-223` 为 `z10 = m() <= 0`。此前拖到隐藏反而结算为显示。
+- [x] **A2 竖滑绝对坐标**：`TabWeb` 改用 `fingerList[0].globalX/globalY`（对齐原版 `getRawX/getRawY`），此前喂相对 offset 导致 down 恒 (0,0)。
+- [x] **D1 退出清除时机**：原版 `k6.i9()` 唯一调用点在 `k6.java:6261`（`X1`/`onViewCreated` = **启动时**），已从「双击返回才执行」改为启动时执行（`EntryAbility.onWindowStageCreate`），双击返回保留为超集。
+- [x] **E4 SSL 白名单三重断链**：设置页按 `hb/z.k3()` 分支跳页、白名单页即时 flush、`TabWeb` 消费 6 位掩码（原版 `e8/h0.v()`）。
+- [x] **E5 语言切换**：`i18n.System.setAppPreferredLanguage()`（原版 `Shell.attachBaseContext` → `z8/t1`）。
+- [x] **E6 英文资源**：新增 `resources/en_US`，478 键与 base 完全一致。
+- [x] **B1/B2/B3/B5 菜单**：广告拦截长按改 `settingsAdBlock`（原版 `z7.d`）、下载长按补「下载管理」弹窗（`A0()`）、书签长按/工具栏动作 30 改弹书签快捷选择对话框（`a8/k`）、菜单格长按 400ms。
+- [x] **C1-C4 地址栏/搜索**：多 URL 单条改后台打开、URL 补 5/4 字符回退、左图标前置关面板（`k6.d9()`）、清空按钮不复位引擎选中（`tb/k0.U2()`）。
+- [x] **D3/D4 跳转守卫**：blocker/jump 严格 http(s)、error/jump 排除 `javascript:`（原版 `i6/i0.p()`，安全）。
+- [x] **E1/E2/E3 设置行**：导出数据补摘要、撤销提示补副标题、外置视频播放器行加回。
+- [x] **D7/D8/D9**：GM timeout 平台上限注释、@resource 新鲜度按原版字面语义、备份 `updater_scripts` 互通。
+- [x] **G1/G2/G3 仓库卫生**：26 个诊断临时文件移出版本库并删除、`.gitignore` 补规则、《移植缺失功能说明.md》恢复并按本轮重写。
+- [x] **E7 版本号**：`app.json5` → `7.4.0.beta` / `20260920`。
+- [x] `devecocli check arkts`：122 文件 0 error；`devecocli build`：BUILD SUCCESSFUL。
+
+### ⚠️ 本轮勘误（历史清单误报，勿再改）
+- 资源图标显隐 **150ms 是正确的**（原版 `n0.java:297,304`）；历史「改 200ms」是错的。
+- `logoRadius` 用 **max 是正确的**（`r8/d.java:133` 用 max、`:124` 收藏用 min，当前 1:1）；历史「改 min」是误报。
+- **书签页没有「粘贴并打开」**（`cb/e0.java` 无 clipboard/paste）。
+- **历史页没有侧滑删除**（`db/n.java` 无 ItemTouchHelper/swipe）。
+- **印尼语语言码是 `id`**（`oa/a.java:115` → `Name.MARK` = `id`）。
+- **PowerShell 控制台中文乱码不是文件问题**（文件是正确 UTF-8，全仓扫描 0 命中）；**禁止任何智能体去「修乱码」**。
+
+**上一任务：动画全量对齐原版 Via 7.4.0（已完成，待真机确认）**
 
 - [x] 逆向确认：`k6.oa()` → `tb/k0.C3()` uiflags bit0 → 布局0/1 顶栏贴屏幕顶部、布局2/3 贴底部；`Y2()` 对顶栏应用窗口 insets padding
 - [x] 修复 [Index.ets](entry/src/main/ets/pages/Index.ets) showSearch 块：整屏 `Column` + `justifyContent(Start/End)` 承载 SearchOverlay，替代旧的 `Row().padding(top: insets.top+48)`（旧写法被根 Stack 默认垂直居中，输入框落到屏幕中部 y≈1202）
