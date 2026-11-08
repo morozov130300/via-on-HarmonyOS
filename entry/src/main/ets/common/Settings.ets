@@ -614,6 +614,12 @@ export class AppSettings {
     }
   }
 
+  // 原版 w9/k.java:1249 q3("fab", i10)：FAB 九宫重力位持久化（t0 吸附 → c.e() → o2）
+  setFab(gravity: number): void {
+    this.fab = gravity
+    this.flushKey('fab', gravity)
+  }
+
   // 原版 g6/q.a()：系统当前是否深色
   getSystemDark(): boolean {
     try {

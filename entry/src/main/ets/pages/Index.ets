@@ -181,6 +181,7 @@ struct Index {
   private fabShown: boolean = false
   private fabDragBaseX: number = 0
   private fabDragBaseY: number = 0
+  @Local fabFreeDrag: boolean = false
   // 竖滑手势状态机（GestureTouchEvent 1:1，slop 用 8vp≈系统 touchSlop）
   private autoHideGesture: AutoHideGesture = new AutoHideGesture(vp2px(8))
   // 原版 db(f) 位移基准 = 实测栏高（f2604y0/f2600w0.getHeight()）；由 onAreaChange 回填
@@ -1449,6 +1450,210 @@ struct Index {
     return 0
   }
 
+  // ============ FAB 触摸三段语义（t0.java 1:1） ============
+  // DOWN：300ms 定时器把 f9774d=true（长按→自由拖动，alpha 0.5 + 震动）
+  // MOVE：f9774d → 自由拖动 translation 跟手；否则单轴 0.75 增益限幅拖动，
+  //       拖出方向超 30dp（f9783m）记 f9782l 位（1左/2右/4上/8下）并 c(dir) 换图标
+  // UP：  f9774d → 吸附九宫 e()（fab(int) 持久化）回位；拖出方向 → b(dir) 动作键；
+  //       <300ms 未动 → d() = ub() 显示工具栏
+  private fabLongPressTimer: number = -1
+  private fabTouchDownTime: number = 0
+  private fabTouchStartX: number = 0
+  private fabTouchStartY: number = 0
+  // 自由拖动基准（绝对坐标，vp）：DOWN 时由锚定基准换算
+  private fabAbsBaseX: number = 0
+  private fabAbsBaseY: number = 0
+
+  // 原版 t0.h()：非长按态的单轴限幅拖动。返回 translation [x, y]（相对锚点位）
+  private fabClampedDrag(dx: number, dy: number): number[] {
+    // 方向锁：首次超 6dp（f9772b）锁定横/竖（f9776f：3=横、12=竖）
+    if (this.fabAxisLock === 0) {
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+        this.fabAxisLock = Math.abs(dx) > Math.abs(dy) ? 3 : 12
+      } else {
+        return [0, 0]
+      }
+    }
+    if ((this.fabAxisLock & 3) !== 0) {
+      // 原版单侧限位：贴左（i10&1==0）不允许负位移、贴右（i10&2==0）不允许正位移
+      const allowLeft = !this.fabAlignLeft
+      const allowRight = !this.fabAlignRight
+      const scaled = dx * 0.75
+      let tx = this.fabDragBaseX + scaled
+      if (!allowLeft) {
+        tx = Math.max(0, tx)
+      }
+      if (!allowRight) {
+        tx = Math.min(0, tx)
+      }
+      return [tx, 0]
+    }
+    const allowUp = !this.fabAlignTop
+    const allowDown = !this.fabAlignBottom
+    const scaledY = dy * 0.75
+    let ty = this.fabDragBaseY + scaledY
+    if (!allowUp) {
+      ty = Math.max(0, ty)
+    }
+    if (!allowDown) {
+      ty = Math.min(0, ty)
+    }
+    return [0, ty]
+  }
+
+  private fabAxisLock: number = 0
+
+  // 原版 t0.i → c.e()（k6.java:624-668）：松手吸附九宫。返回目标 fab(int) 重力位
+  private fabSnapGravity(lastX: number, lastY: number): number {
+    // lastX/lastY = 松手时 FAB 中心在父容器中的位置（vp）。原版用 raw 坐标三分：
+    // x < w/3 → 左3；x > 2w/3 → 右5；y 下 1/4 区 → 底80；中带 → 中16
+    return lastX
+  }
+
+  private handleFabTouch(action: number, x: number, y: number): void {
+    // action 0=down 1=up 2=move 3=cancel；x/y 为相对 FAB 自身的局部偏移
+    if (action === 0) {
+      this.fabTouchDownTime = Date.now()
+      this.fabTouchStartX = x
+      this.fabTouchStartY = y
+      this.fabAxisLock = 0
+      this.fabDragBaseX = 0
+      this.fabDragBaseY = 0
+      this.fabDirFlag = 0
+      // 原版 f9771a：300ms 后进入自由拖动
+      this.fabLongPressTimer = setTimeout(() => {
+        this.fabFreeDrag = true
+        this.fabAlpha = 0.5
+      }, 300)
+      return
+    }
+    if (action === 2) {
+      const dx = x - this.fabTouchStartX
+      const dy = y - this.fabTouchStartY
+      if (this.fabFreeDrag) {
+        // 自由拖动：translation 跟手（无增益，原版 setTranslation 直接累加 raw 差值）
+        this.fabOffsetX = this.fabOffsetX + (x - this.fabLastTouchX)
+        this.fabOffsetY = this.fabOffsetY + (y - this.fabLastTouchY)
+      } else {
+        const t = this.fabClampedDrag(dx, dy)
+        this.fabOffsetX = t[0]
+        this.fabOffsetY = t[1]
+        // f9782l：单轴位移超 30dp 记方向位
+        if (Math.abs(this.fabOffsetX) > 30) {
+          this.fabDirFlag = this.fabOffsetX <= 0 ? 1 : 2
+        } else if (Math.abs(this.fabOffsetY) > 30) {
+          this.fabDirFlag = this.fabOffsetY <= 0 ? 4 : 8
+        } else {
+          this.fabDirFlag = 0
+        }
+      }
+      this.fabLastTouchX = x
+      this.fabLastTouchY = y
+      return
+    }
+    // UP / CANCEL
+    if (this.fabLongPressTimer >= 0) {
+      clearTimeout(this.fabLongPressTimer)
+      this.fabLongPressTimer = -1
+    }
+    if (action === 3) {
+      // CANCEL：原版 onTouch 不处理 action==3（半透明态残留至下次 DOWN 复位）
+      this.fabFreeDrag = false
+      this.fabAlpha = 1
+      this.fabOffsetX = 0
+      this.fabOffsetY = 0
+      return
+    }
+    const elapsed = Date.now() - this.fabTouchDownTime
+    if (this.fabFreeDrag) {
+      // 长按自由拖动松手：吸附九宫 + fab(int) 持久化 + 回位
+      this.fabFreeDrag = false
+      this.fabAlpha = 1
+      this.snapFabToGrid()
+    } else if (this.fabDirFlag !== 0) {
+      // 快速拖出方向：b(dir) 执行五方向动作键，图标复位 c(0)
+      this.onFabFling(this.fabDirFlag)
+      this.fabDirFlag = 0
+      this.fabOffsetX = 0
+      this.fabOffsetY = 0
+    } else if (elapsed < 300) {
+      // t0.j()：短按（<300ms、未拖动、未长按）→ d() → ub() 显示工具栏
+      this.onFabTap()
+      this.fabOffsetX = 0
+      this.fabOffsetY = 0
+    } else {
+      // 长按未拖动：回位
+      this.fabOffsetX = 0
+      this.fabOffsetY = 0
+    }
+  }
+
+  private fabLastTouchX: number = 0
+  private fabLastTouchY: number = 0
+  private fabDirFlag: number = 0
+
+  // 原版 c.e()（k6.java:624-668）吸附：x 三分（左/中/右）、y 下 1/4 分界（上/中/下），
+  // 结果写回设置 fab(int)（o2），位置由 Gravity 重排（Ga）
+  private snapFabToGrid(): void {
+    // 取 FAB 中心点（把当前 translation 加到锚定基准上，换算为屏幕三分判定）
+    const parentW = this.fabParentW()
+    const parentH = this.fabParentH()
+    if (parentW <= 0 || parentH <= 0) {
+      this.fabOffsetX = 0
+      this.fabOffsetY = 0
+      return
+    }
+    const size = this.fabSize
+    const margin = this.fabMargin
+    // 当前中心（锚定基准 + translation）
+    const baseCenterX = this.fabAlignLeft ? margin + size / 2 : parentW - margin - size / 2
+    const baseCenterY = this.fabAlignTop ? margin + size / 2 : parentH - margin - size / 2
+    const cx = baseCenterX + this.fabOffsetX
+    const cy = baseCenterY + this.fabOffsetY
+    // 原版三分判定（e()）：x < w/3 → 左、x > 2w/3 → 右；y ≥ 3h/4-margin → 底、
+    // y ≥ h/2 → 中、否则顶。命中后写 fab(int)，Ga() 按 Gravity 重排
+    let gravityX = 0
+    if (cx < parentW / 3) {
+      gravityX = 3
+    } else if (cx > parentW / 3 * 2) {
+      gravityX = 5
+    } else {
+      gravityX = 1
+    }
+    let gravityY = 0
+    if (cy >= parentH / 4 * 3 - margin) {
+      gravityY = 80
+    } else if (cy >= parentH / 2) {
+      gravityY = 16
+    } else {
+      gravityY = 16
+      // 原版顶部三分无独立重力（16=TOP），中带与顶带同落 TOP
+    }
+    const newGravity = gravityX | gravityY
+    this.settings.setFab(newGravity)
+    this.initFabPosition()
+    this.fabOffsetX = 0
+    this.fabOffsetY = 0
+  }
+
+  private fabParentW(): number {
+    const ctx = this.getUIContext().getHostContext()
+    if (ctx === undefined) {
+      return 0
+    }
+    const d = display.getDefaultDisplaySync()
+    return d.width / d.densityPixels
+  }
+
+  private fabParentH(): number {
+    const ctx = this.getUIContext().getHostContext()
+    if (ctx === undefined) {
+      return 0
+    }
+    const d = display.getDefaultDisplaySync()
+    return d.height / d.densityPixels
+  }
+
   @Builder
   TopBarArea() {
     // 原版 db(f)：顶栏 translationY = -p * height（p=1 全隐藏）
@@ -1474,13 +1679,6 @@ struct Index {
             this.showSearch = true
           }
         })
-        // 原版 k6.Rb：搜索工具栏挂在网页容器之后（传统布局即地址栏下）
-        SearchToolbar({
-          tab: this.tabStore.current(),
-          onOpenSettings: () => {
-            this.openPage('settingsSearch')
-          }
-        })
       }
       .padding({ top: this.insets.top })
       .backgroundColor(this.bottomBg())
@@ -1491,13 +1689,6 @@ struct Index {
     } else if (this.effectiveLayout() === LAYOUT_TOOLBAR_TOP) {
       Column() {
         this.ChromeToolbar(true)
-        // 原版：工具栏上布局时搜索工具栏同样在顶栏区之下（m.n 命中才显示）
-        SearchToolbar({
-          tab: this.tabStore.current(),
-          onOpenSettings: () => {
-            this.openPage('settingsSearch')
-          }
-        })
       }
       .padding({ top: this.insets.top })
       // 背景延伸进状态栏避让区（只有组件需要避让，背景不需要）
@@ -1540,12 +1731,20 @@ struct Index {
     // 原版 z8/l3.m + k6.r9：窗口全屏布局、系统导航栏透明，背景铺到导航条下，
     // 仅交互组件用 insets.bottom 避让。故底栏容器自身必须有底色，
     // 否则 padding 出来的导航条那一段没有背景（背景缺肉）。
+    // 原版 k6.n9/Rb：搜索工具栏 B0 是 RelativeLayout 独立子视图，rule=ABOVE(底栏)，
+    // 悬浮在网页之上、底栏正上方 —— 所有布局都在底部区域，不随顶栏收放。
     if (this.effectiveLayout() === LAYOUT_TOOLBAR_TOP) {
       Column()
         .height(6 + this.insets.bottom)
         .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
     } else if (this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM) {
       Column() {
+        SearchToolbar({
+          tab: this.tabStore.current(),
+          onOpenSettings: () => {
+            this.openPage('settingsSearch')
+          }
+        })
         this.ChromeToolbar(true)
       }
       .padding({ bottom: this.insets.bottom })
@@ -1557,6 +1756,12 @@ struct Index {
       })
     } else if (this.effectiveLayout() === LAYOUT_DOUBLE) {
       Column() {
+        SearchToolbar({
+          tab: this.tabStore.current(),
+          onOpenSettings: () => {
+            this.openPage('settingsSearch')
+          }
+        })
         // 原版主页地址栏保留（uiautomator home.xml 实证），点击进搜索不带文本
         AddressBar({
           tab: this.tabStore.current(),
@@ -1588,6 +1793,12 @@ struct Index {
       })
     } else {
       Column() {
+        SearchToolbar({
+          tab: this.tabStore.current(),
+          onOpenSettings: () => {
+            this.openPage('settingsSearch')
+          }
+        })
         this.ChromeToolbar(false)
       }
       .padding({ bottom: this.insets.bottom })
@@ -1875,10 +2086,9 @@ struct Index {
       }
 
       // 原版 k6.f2594t0：模式2（点击隐藏）隐藏后的悬浮钮——
-      // 尺寸 42dp（dimen v=f13689h）、内边距 10dp、背景圆形白底（drawable N1=cr.xml）、
-      // 内容图标 = 五方向动作键映射（u0.a：左=返回箭头/右=前进箭头/上=下箭头/下=上箭头/默认=菜单）。
-      // 初始位置由设置 fab(int) 九宫决定（k6.Ga：margin 12dp，dimen u=f13688g）。
-      // 点击（t0.j <300ms 未拖动）→ ub() 显示工具栏；长按拖动松手吸附三区九宫（t0.i→e()）。
+      // 尺寸 42dp（dimen v）、内边距 10dp、白圆底（drawable N1=cr.xml）、阴影 elevation 12dp。
+      // 触摸三段（t0 1:1）：短按<300ms=显示工具栏；快拖出方向=五方向动作键；
+      // 长按 300ms（alpha 0.5）=自由拖动，松手吸附九宫并持久化 fab(int)。
       if (this.fabVisible) {
         Stack() {
           Image($r('app.media.via_ic_menu'))
@@ -1891,47 +2101,44 @@ struct Index {
         .padding(10)
         .borderRadius(this.fabSize / 2)
         .backgroundColor('#FFFFFF')
-        .shadow({ radius: 8, color: 'rgba(0,0,0,0.26)', offsetY: 2 })
+        .shadow({ radius: 12, color: 'rgba(0,0,0,0.26)', offsetY: 2 })
         .opacity(this.fabAlpha)
-        .translate({ x: this.fabOffsetX, y: this.fabOffsetY })
-        .position({
-          x: this.fabAlignLeft ? this.fabMargin : undefined,
-          y: this.fabAlignTop ? this.fabMargin : undefined
-        })
-        .margin({
-          right: this.fabAlignRight ? this.fabMargin : 0,
-          bottom: this.fabAlignBottom ? this.fabMargin : 0
-        })
-        .align(this.fabAlignRight
+        .translate({ x: this.fabFreeDrag ? 0 : this.fabOffsetX, y: this.fabFreeDrag ? 0 : this.fabOffsetY })
+        .position(this.fabFreeDrag
+          ? {
+            x: this.fabAbsBaseX + this.fabOffsetX,
+            y: this.fabAbsBaseY + this.fabOffsetY
+          }
+          : {
+            x: this.fabAlignLeft ? this.fabMargin : undefined,
+            y: this.fabAlignTop ? this.fabMargin : undefined
+          })
+        .markAnchor(this.fabFreeDrag ? { x: 0, y: 0 } : { x: 0, y: 0 })
+        .align(this.fabFreeDrag ? Alignment.TopStart : (this.fabAlignRight
           ? (this.fabAlignBottom ? Alignment.BottomEnd : Alignment.TopEnd)
-          : (this.fabAlignBottom ? Alignment.BottomStart : Alignment.TopStart))
-        .onClick(() => {
-          this.onFabTap()
-        })
-        .gesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 6 })
-          .onActionStart((event: GestureEvent) => {
-            this.fabDragBaseX = this.fabOffsetX
-            this.fabDragBaseY = this.fabOffsetY
-          })
-          .onActionUpdate((event: GestureEvent) => {
-            // 原版 t0.h()：拖动增益 0.75（x/y 双向）
-            const gain = 0.75
-            this.fabOffsetX = this.fabDragBaseX + event.offsetX * gain
-            this.fabOffsetY = this.fabDragBaseY + event.offsetY * gain
-          })
-          .onActionEnd(() => {
-            // 原版 t0.j()：拖出方向 → c.b(dir) 执行五方向动作键，FAB 留在原位
-            const dir = this.fabDragDir(this.fabOffsetX - this.fabDragBaseX,
-              this.fabOffsetY - this.fabDragBaseY)
-            if (dir !== 0) {
-              this.onFabFling(dir)
+          : (this.fabAlignBottom ? Alignment.BottomStart : Alignment.TopStart)))
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            // 记录自由拖动基准（锚定点转为绝对坐标）
+            if (this.fabAlignRight) {
+              this.fabAbsBaseX = this.fabParentW() - this.fabMargin - this.fabSize
+            } else {
+              this.fabAbsBaseX = this.fabMargin
             }
-            // 原版 t0.i()：拖动后回弹原位（ValueAnimator 回 left/top，含 0.75 增益复位）
-            this.getUIContext().animateTo({ duration: 150, curve: ACCELERATE_CURVE }, () => {
-              this.fabOffsetX = 0
-              this.fabOffsetY = 0
-            })
-          }))
+            if (this.fabAlignBottom) {
+              this.fabAbsBaseY = this.fabParentH() - this.fabMargin - this.fabSize
+            } else {
+              this.fabAbsBaseY = this.fabMargin
+            }
+            this.handleFabTouch(0, event.touches[0].x, event.touches[0].y)
+          } else if (event.type === TouchType.Move) {
+            this.handleFabTouch(2, event.touches[0].x, event.touches[0].y)
+          } else if (event.type === TouchType.Up) {
+            this.handleFabTouch(1, 0, 0)
+          } else if (event.type === TouchType.Cancel) {
+            this.handleFabTouch(3, 0, 0)
+          }
+        })
       }
 
       if (this.showSearch) {
