@@ -12,3 +12,4 @@
 /.appanalyzer
 /.cache
 /.deveco
+.env
