@@ -382,6 +382,7 @@ export struct AddressBar {
         stop = s.length
       }
       // 原版 substring(start, end)，仅当 end > iW+3（段非空）且 i0.t 校验通过才收集
+      // （i0.t → h0.s()；项目内 isUrlLike 为同一判定的等价实现）
       if (stop > w + 3) {
         const url = s.substring(start, stop)
         if (isUrlLike(url) && urls.indexOf(url) < 0) {
