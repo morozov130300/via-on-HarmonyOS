@@ -39,6 +39,10 @@ export struct HomePage {
   @Event onLogoTap: () => void = () => {}
   // 原版原生搜索面板打开时下拉手势禁用（k6 window.via.cmd(515)==0）
   @Param searchOpen: boolean = false
+  // 原版主页是同一 WebView 内部页，触摸事件同样喂竖滑隐藏状态机
+  // （e8/i.java:124 OnTouchListener 挂 WebView 本体，主页不过滤）
+  @Param onAutoHideTouch: (action: number, x: number, y: number) => void =
+    (_action: number, _x: number, _y: number): void => {}
   @Local favs: HomeFavRec[] = []
   @Local favColors: Record<string, string> = {}
   @Local searchShift: number = 0
@@ -333,21 +337,30 @@ export struct HomePage {
         this.reload()
       }
     })
-    // 原版 initGesture：顶部下拉 0~98px 内容跟手位移+渐隐，松手 >88.2px 唤起搜索
-    .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 5 })
+    // 原版 initGesture（i6/o.java:45）+ isGestureDisabled：
+    //   禁用条件 = 焦点在搜索框 || !via.cmd(515) || 页面已滚动。
+    //   via.cmd(515) = k6.java:1426-1427 返回 (f2589q1 || f2597u1)，
+    //   即「工具栏显示或 FAB 可见」=1。⇒ 工具栏隐藏时主页下拉搜索被禁用，
+    //   此时下滑只走原生竖滑状态机恢复工具栏；工具栏显示时下拉搜索照常。
+    //   本端以 toolbarShown 标志等价 cmd(515)：隐藏态下不再累积下拉位移、
+    //   不触发搜索，仅喂状态机。
+    .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
       .onActionStart((event: GestureEvent) => {
-        if (!this.atTop || this.searchOpen) {
+        this.onAutoHideTouch(0, event.offsetX, event.offsetY)
+        if (!this.atTop || this.searchOpen || !this.toolbarShownForGesture()) {
           return
         }
         this.applyPull(event.offsetY)
       })
       .onActionUpdate((event: GestureEvent) => {
-        if (!this.atTop || this.searchOpen) {
+        this.onAutoHideTouch(2, event.offsetX, event.offsetY)
+        if (!this.atTop || this.searchOpen || !this.toolbarShownForGesture()) {
           return
         }
         this.applyPull(event.offsetY)
       })
       .onActionEnd(() => {
+        this.onAutoHideTouch(1, 0, 0)
         const shift = this.pullShift
         // 原版 i6/o.java:45 initGesture 的 touchend 分支：
         //   if(0!==a){ if(88.2<a) callNativeSearch();
@@ -368,8 +381,21 @@ export struct HomePage {
         if (shift > 88.2) {
           this.onSearchTap()
         }
+      })
+      .onActionCancel(() => {
+        this.onAutoHideTouch(3, 0, 0)
       }))
   }
+
+  // 原版 i6/o.java initGesture 的 isGestureDisabled → via.cmd(515)
+  // （k6.java:1426-1427：return (f2589q1 || f2597u1) ? 1 : 0）。
+  // 工具栏隐藏时=0 → 主页下拉搜索禁用，下滑只恢复工具栏。
+  // Index 通过 onGestureEnabledQuery 回调查询当前显隐态。
+  private toolbarShownForGesture(): boolean {
+    return this.gestureEnabledQuery()
+  }
+
+  @Event gestureEnabledQuery: () => boolean = (): boolean => true
 
   // 原版 i6/o.java:45 initGesture 的 touchmove 分支：
   //   g=b; b=e.touches[0].screenY-h; a=Math.min(98,Math.max(0,a+b-g));
