@@ -38,7 +38,7 @@ import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit
 import { util } from '@kit.ArkTS'
 import { scanBarcode } from '@kit.ScanKit'
 import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
-import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID } from '../common/DeepLink'
+import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
@@ -542,22 +542,16 @@ struct Index {
       // 也与原版「非 http(s) 不跳」不符。
       case ViaCmdKind.BLOCKER_JUMP:
       case ViaCmdKind.ERROR_JUMP: {
+        // DeepLink 解析层已按各自守卫过滤（isStrictHttp / isJavaScriptUrl），
+        // 此处再兜一层，避免将来有人绕过 parseViaDeepLink 直接构造 cmd
         const jumpUrl: string = cmd.url
-        if (jumpUrl === '') {
+        if (jumpUrl === '' || isJavaScriptUrl(jumpUrl)) {
           break
         }
-        const lower: string = jumpUrl.length > 11 ? jumpUrl.substring(0, 11).toLowerCase() : jumpUrl.toLowerCase()
-        const isJavascript: boolean = lower === 'javascript:'
-        const isHttp: boolean = jumpUrl.length > 7 &&
-          (jumpUrl.substring(0, 7).toLowerCase() === 'http://' ||
-           (jumpUrl.length > 8 && jumpUrl.substring(0, 8).toLowerCase() === 'https://'))
-        if (cmd.kind === ViaCmdKind.BLOCKER_JUMP) {
-          if (isHttp) {
-            this.tabStore.navigate(jumpUrl)
-          }
-        } else if (!isJavascript) {
-          this.tabStore.navigate(jumpUrl)
+        if (cmd.kind === ViaCmdKind.BLOCKER_JUMP && !isStrictHttp(jumpUrl)) {
+          break
         }
+        this.tabStore.navigate(jumpUrl)
         break
       }
       // k6.u 8624：v://scanner → ga() 扫码（与菜单「扫描二维码」同一管线）
@@ -704,10 +698,53 @@ struct Index {
       buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), trimmed))
   }
 
-  // 原版 z8/b0.A() VIEW 分支 → k6.c0 → na.q1：外部链接直接开标签，无中转/确认页
-  // （Trampoline.b 直转 Shell，反编译资源中无任何确认文案）
+  // 原版 z8/b0.A() VIEW 分支 → k6.c0 → k6.u()：外部链接先过内部命令分发器。
+  // 原版 k6.u()（8562-8687）本身就是所有 URL 的入口：先判 v:// 内部命令，
+  // 不匹配再走 8581-8597 的特殊 scheme（thunder/qqdl/flashget 下载、baidubox 忽略、
+  // file://*.pdf 内置查看器），最后才 V9() 交给系统 Intent。
+  // 因此外部入口必须先尝试 parseViaDeepLink，命中即按命令处理，未命中才开标签。
   private openExternalLink(url: string, external: boolean): void {
-    this.tabStore.navigate(url)
+    const cmd = parseViaDeepLink(url)
+    if (cmd === null) {
+      // 非 v://、非特殊 scheme → 原版 V9()/普通网页：开标签
+      this.tabStore.navigate(url)
+      return
+    }
+    if (cmd.kind === ViaCmdKind.SCHEME_DOWNLOAD) {
+      let pageUa = ''
+      try {
+        pageUa = this.tabStore.current().controller.getUserAgent()
+      } catch (error) {
+        pageUa = ''
+      }
+      this.downloads.requestUrlDownload(cmd.url, '', pageUa, '')
+      return
+    }
+    if (cmd.kind === ViaCmdKind.SCHEME_IGNORED) {
+      return
+    }
+    if (cmd.kind === ViaCmdKind.SCHEME_PDF) {
+      this.openPdfViewer(cmd.url)
+      return
+    }
+    // 其余 v:// 内部命令（含未知 → CATALOG、NONE → 无动作）统一交给同一分发器，
+    // 绝不再把 v://xxx 当网页 URL 塞进标签（原版 k6.u 对这些分支一律 return true）
+    AppStorage.setOrCreate('via_internal_cmd', url)
+    this.handleInternalCmd()
+  }
+
+  // 原版 k6.u 8592-8596：file:// 且扩展名 pdf → g6.i.h(za.g.class, "pdfPath", str)。
+  // PdfViewerPage 的 param 是沙箱文件路径（与 TabWeb.openPdfPreview 同口径换算），不是 URI。
+  private openPdfViewer(fileUri: string): void {
+    let pdfPath: string = fileUri.substring('file://'.length)
+    try {
+      pdfPath = decodeURIComponent(pdfPath)
+    } catch (error) {
+      pdfPath = fileUri.substring('file://'.length)
+    }
+    if (pdfPath !== '') {
+      this.mainNavStack.pushPathByName('pdfViewer', pdfPath, true)
+    }
   }
 
   private setupImmersiveWindow(): void {

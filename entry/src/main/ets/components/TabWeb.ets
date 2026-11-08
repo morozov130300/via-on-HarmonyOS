@@ -31,6 +31,8 @@ import { PdfViewerView } from '../view/PdfViewerPage'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 // 原版 hb/g4 + w9/k.G2()：ignoredsslwarning 位掩码（SSL 证书警告忽略白名单）
 import { SslWhitelistStore, SSL_BIT_UNTRUSTED, SSL_BIT_DATE_INVALID, SSL_BIT_ID_MISMATCH, SSL_BIT_INVALID } from '../common/SslWhitelist'
+// 原版 i6/i0.s()：严格 http:// 或 https://（blocker/jump 守卫，与 k6.u/DeepLink 共用）
+import { isStrictHttp } from '../common/DeepLink'
 
 // 1x1 GIF 占位（原版 u4/a.f12819d base64 1:1 解码）
 const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
@@ -376,11 +378,7 @@ export struct TabWeb {
           // 原版 k6.u() 8598-8609：`if (i6.i0.s(str))` 才打开；
           // i0.s()（i6/i0.java:481-486）= m() || n()，即严格 http:// 或 https:// 前缀，
           // 不是宽泛的 startsWith('http')（那样 'httpfoo:' 也会放行）。
-          const targetLower: string = target.toLowerCase()
-          const isStrictHttp: boolean = target.length > 7 &&
-            (targetLower.substring(0, 7) === 'http://' ||
-             (target.length > 8 && targetLower.substring(0, 8) === 'https://'))
-          if (isStrictHttp) {
+          if (isStrictHttp(target)) {
             this.adBlocker.addBypassHost(hostOf(target))
             try {
               this.tab.controller.loadUrl(target)
