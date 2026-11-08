@@ -84,6 +84,23 @@ function hasPrefixSep(text: string, prefix: string): boolean {
   return next === '?' || next === '/'
 }
 
+// 原版 i6/i0.s()（481-486）= m() || n()：严格 http:// 或 https://（忽略大小写），
+// 且要求长度足够（m 要 >6、n 要 >7）。
+export function isStrictHttp(url: string): boolean {
+  if (url.length > 6 && url.substring(0, 7).toLowerCase() === 'http://') {
+    return true
+  }
+  return url.length > 7 && url.substring(0, 8).toLowerCase() === 'https://'
+}
+
+// 原版 i6/i0.p()（347-356）：长度 > 10 且前 11 字符 equalsIgnoreCase("javascript:")
+export function isJavaScriptUrl(url: string): boolean {
+  if (url.length <= 10) {
+    return false
+  }
+  return url.substring(0, 11).toLowerCase() === 'javascript:'
+}
+
 // v0.i：URL 解码（失败回退原文）
 function urlDecode(text: string): string {
   try {
@@ -268,18 +285,29 @@ export function parseViaDeepLink(raw: string): ViaDeepLink | null {
   //  · error/jump（w2.r）：取 url 后 if (!empty && !i6.i0.p(url)) 才打开；
   //    i0.p()（i6/i0.java:347-356）判定前 11 字符是否 equalsIgnoreCase("javascript:")，
   //    即明确阻止 error/jump 打开 javascript: URL（安全约束）。
+  // blocker/jump（w2.o）：原版取参后 if (i6.i0.s(url)) 才打开 —— i0.s()（i6/i0.java:481-486）
+  // 要求严格 http:// 或 https:// 前缀；不满足则分支消费但不打开。
   if (hasPrefix(text, 'v://blocker/jump?url=')) {
-    result.kind = ViaCmdKind.BLOCKER_JUMP
-    result.url = urlDecode(text.substring(21))
+    const jump: string = urlDecode(text.substring(21))
+    if (isStrictHttp(jump)) {
+      result.kind = ViaCmdKind.BLOCKER_JUMP
+      result.url = jump
+    }
     return result
   }
+  // error/jump（w2.r）：原版取参后 if (!empty && !i6.i0.p(url)) 才打开 ——
+  // i0.p()（i6/i0.java:347-356）判前 11 字符是否 equalsIgnoreCase("javascript:")。
+  // 即在解析层就拒绝把 javascript: URL 变成可执行跳转（安全约束）。
   if (hasPrefix(text, 'v://error/jump?url=')) {
-    result.kind = ViaCmdKind.ERROR_JUMP
     let end: number = text.indexOf('&', 19)
     if (end < 0) {
       end = text.length
     }
-    result.url = urlDecode(text.substring(19, end))
+    const jump: string = urlDecode(text.substring(19, end))
+    if (jump !== '' && !isJavaScriptUrl(jump)) {
+      result.kind = ViaCmdKind.ERROR_JUMP
+      result.url = jump
+    }
     return result
   }
   if (hasPrefixSep(text, 'v://scanner')) {
