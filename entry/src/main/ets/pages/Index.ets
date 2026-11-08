@@ -24,7 +24,6 @@ import { TranslatePanel, TranslateState } from '../components/TranslatePanel'
 import { AiPanel } from '../components/AiPanel'
 import { CopilotStore, AiAttachment } from '../common/CopilotStore'
 import { MediaListPage } from '../components/MediaListPage'
-import { LinkInterstitial } from '../components/LinkInterstitial'
 import { VideoPlayerOverlay, VideoOverlayState } from '../components/VideoPlayerOverlay'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd, preferences } from '@kit.ArkData'
@@ -131,8 +130,6 @@ struct Index {
   @Local exitHintTime: number = 0
   // 游戏模式双击返回退出计时
   @Local gameModeBackTime: number = 0
-  @Local showLinkConfirm: boolean = false
-  @Local linkConfirmUrl: string = ''
   // 下载确认弹层（原版 mark/via/download/m.java）
   @Local downloadConfirm: PendingDownloadUi | null = null
   // 保存网页弹窗（原版 k6.m0：标题/输入/保存为 PDF 复选框）
@@ -579,13 +576,10 @@ struct Index {
       buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), trimmed))
   }
 
+  // 原版 z8/b0.A() VIEW 分支 → k6.c0 → na.q1：外部链接直接开标签，无中转/确认页
+  // （Trampoline.b 直转 Shell，反编译资源中无任何确认文案）
   private openExternalLink(url: string, external: boolean): void {
-    if (!external || this.settings.disableCustomTabs) {
-      this.tabStore.navigate(url)
-      return
-    }
-    this.linkConfirmUrl = url
-    this.showLinkConfirm = true
+    this.tabStore.navigate(url)
   }
 
   private setupImmersiveWindow(): void {
@@ -637,11 +631,6 @@ struct Index {
     // 原版返回键：Fragment 栈顶 f8.w0 翻译面板先出栈
     if (TranslateState.getInstance().visible) {
       TranslateState.getInstance().close()
-      return true
-    }
-    if (this.showLinkConfirm) {
-      this.showLinkConfirm = false
-      this.linkConfirmUrl = ''
       return true
     }
     if (this.showMediaList) {
@@ -763,7 +752,7 @@ struct Index {
   // 原版 k6.w9()：Fragment 栈空（无弹层）才进入快捷键主流程
   private pcOverlayOpen(): boolean {
     return this.showMenu || this.showSearch || this.showTabPanel || this.showFindBar || this.showAi ||
-      this.showMediaList || this.showLinkConfirm || this.downloadConfirm !== null || this.showReadAloudPanel ||
+      this.showMediaList || this.downloadConfirm !== null || this.showReadAloudPanel ||
       TranslateState.getInstance().visible
   }
 
@@ -785,11 +774,6 @@ struct Index {
     // f8.w0 翻译面板：Fragment 栈顶，最先关闭
     if (TranslateState.getInstance().visible) {
       TranslateState.getInstance().close()
-      return
-    }
-    if (this.showLinkConfirm) {
-      this.showLinkConfirm = false
-      this.linkConfirmUrl = ''
       return
     }
     if (this.showMediaList) {
@@ -2427,21 +2411,6 @@ struct Index {
           mediaUrls: this.mediaList,
           onClose: () => {
             this.showMediaList = false
-          }
-        })
-      }
-      if (this.showLinkConfirm) {
-        LinkInterstitial({
-          linkUrl: this.linkConfirmUrl,
-          onConfirm: () => {
-            const url = this.linkConfirmUrl
-            this.showLinkConfirm = false
-            this.linkConfirmUrl = ''
-            this.tabStore.navigate(url)
-          },
-          onClose: () => {
-            this.showLinkConfirm = false
-            this.linkConfirmUrl = ''
           }
         })
       }

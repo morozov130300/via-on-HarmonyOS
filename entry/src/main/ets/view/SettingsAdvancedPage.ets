@@ -52,14 +52,6 @@ export struct SettingsAdvancedPage {
               }
             })
             SettingCheckRow({
-              rowLabel: '禁用 Custom Tabs',
-              rowDesc: '跳过第三方应用通过 Custom Tabs 打开链接时的中转页',
-              isChecked: this.settings.disableCustomTabs,
-              onCheckRow: (isOn: boolean) => {
-                this.settings.setDisableCustomTabs(isOn)
-              }
-            })
-            SettingCheckRow({
               rowLabel: '禁用安全浏览',
               rowDesc: '安全浏览允许 WebView 通过验证链接来防止恶意软件和网络钓鱼攻击',
               isChecked: this.settings.disableSafeBrowsing,

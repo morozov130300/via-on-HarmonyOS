@@ -38,7 +38,7 @@ const SYNC_KEYS: string[] = [
   'engineKey', 'customEngineTemplate', 'customEngines', 'searchsuggestion', 'adBlockOn', 'textZoom', 'nightMode2', 'nightFilter', 'nightCss',
   'uaMode', 'customUa', 'noImage', 'homepageMode', 'homeUrl',
   'ruleSubUrl', 'scriptEnabled', 'doNotTrack', 'disableWebRtc', 'doNotSell', 'privacyProxy',
-  'dataSaver', 'autoSniffButton', 'allowDebugWeb', 'disableCustomTabs',
+  'dataSaver', 'autoSniffButton', 'allowDebugWeb',
   'disableSafeBrowsing', 'ignoreSslWarning',
   'homeBgColor', 'homeLogoText', 'homeLogoType', 'homeLogoSize', 'homeLogoStyle',
   'homeLogoWidth', 'homeLogoHeight', 'homeLogoCorner', 'homeBgImage',
@@ -182,7 +182,6 @@ export class AppSettings {
   @Trace dataSaver: boolean = false
   @Trace autoSniffButton: boolean = false
   @Trace allowDebugWeb: boolean = false
-  @Trace disableCustomTabs: boolean = false
   @Trace disableSafeBrowsing: boolean = false
   @Trace ignoreSslWarning: boolean = false
   @Trace homeBgColor: string = ''
@@ -460,7 +459,6 @@ export class AppSettings {
       this.dataSaver = await this.readBoolean('dataSaver', false)
       this.autoSniffButton = await this.readBoolean('autoSniffButton', false)
       this.allowDebugWeb = await this.readBoolean('allowDebugWeb', false)
-      this.disableCustomTabs = await this.readBoolean('disableCustomTabs', false)
       this.disableSafeBrowsing = await this.readBoolean('disableSafeBrowsing', false)
       this.ignoreSslWarning = await this.readBoolean('ignoreSslWarning', false)
       this.homeBgColor = await this.readString('homeBgColor', '')
@@ -1516,11 +1514,6 @@ export class AppSettings {
   setAllowDebugWeb(on: boolean): void {
     this.allowDebugWeb = on
     this.flushKey('allowDebugWeb', on)
-  }
-
-  setDisableCustomTabs(on: boolean): void {
-    this.disableCustomTabs = on
-    this.flushKey('disableCustomTabs', on)
   }
 
   setDisableSafeBrowsing(on: boolean): void {

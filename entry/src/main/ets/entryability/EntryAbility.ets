@@ -218,8 +218,11 @@ export default class EntryAbility extends UIAbility {
     subscribe(DL_ACTION_RESUME, false)
   }
 
-  onNewEntry(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewEntry');
+  // UIAbility 单例已启动（launchType=singleton）再次被拉起 → 系统回调 onNewWant
+  // （原版 Shell.onNewIntent → k6.c0 → na.q1）。此前误写为不存在的 onNewEntry，
+  // 导致设为默认浏览器后外部点链接全部丢失。
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewWant');
     if (!this.handleNfcWant(want, false)) {
       const entry = extractEntryUrl(want)
       if (entry.url !== '') {

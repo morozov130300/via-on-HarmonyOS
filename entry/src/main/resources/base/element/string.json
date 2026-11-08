@@ -737,14 +737,6 @@
       "value": "用于读取剪贴板内容，提供粘贴并前往功能"
     },
     {
-      "name": "link_interstitial_title",
-      "value": "即将通过 Via 打开链接"
-    },
-    {
-      "name": "link_interstitial_continue",
-      "value": "继续打开"
-    },
-    {
       "name": "incognito",
       "value": "隐身"
     },
@@ -827,10 +819,6 @@
     {
       "name": "ignore_ssl_warning",
       "value": "忽略 SSL 证书警告"
-    },
-    {
-      "name": "disable_custom_tabs",
-      "value": "禁用 Custom Tabs"
     },
     {
       "name": "disable_safe_browsing",
