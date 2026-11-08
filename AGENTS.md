@@ -332,6 +332,7 @@
 - [x] **A3 横滑指示层**：横滑位移/淡出从整个 Web 改为独立指示层（原版 `c8/y7.java f2940p`：60×72dp、20dp 内边距、初始 -73dp 屏外），网页本体不动。
 - [x] **B3 打开方式**：书签对话框按原版 `k6.Ua()`（5994-6023）——当前标签存在时由**当前标签**加载，仅无标签才新开；承载层收敛到 Index（删 MenuSheet 并行份）。
 - [x] **C3 d9() 接线**：`closeTopPanelsForLeftIcon()` 按 onBackPress 弹层优先级实现，两处 AddressBar 注入 `onTryClosePanels`。
+- [x] **B4 菜单宽限/贴顶贴底**：`Index` 侧 `menuAvailableSizeVp()`（=原版 `N8()`，大屏非布局0 时 `min(短边-96, 384)`）+ `menuSideGapVp()`（布局1→48/其余→80）经 AppStorage 发布；`MenuSheet` 容器按 `via_menu_layout` 切 `Alignment.Top/Bottom` 并消费宽度上限（`constraintSize maxWidth`）。
 - [x] `devecocli check arkts`：123 文件 0 error；`devecocli build`：BUILD SUCCESSFUL。
 - [x] 提交并推送：`4e64549`/`df3e552`/`1176680`/`5321c6a`/`4e1778e`/`b3e1ed9`（含你手动补的 AGENTS.md 行为准则三条）。
 

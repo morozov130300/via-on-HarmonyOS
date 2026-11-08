@@ -1,0 +1,13 @@
+feat(菜单): 主菜单宽度 384dp 宽限与贴顶/贴底对齐原版 N8/gravity
+
+check arkts 123 文件 0 error、build SUCCESSFUL（PackageHap 首次因页面文件太小
+JVM 内存提交失败，属环境偶发，重试通过）。
+
+- Index 侧 menuAvailableSizeVp() = 原版 N8()（k6.java:5072-5078）：普通 = 短边；
+  大屏非布局0 = min(短边-96dp, 384dp)；menuSideGapVp() = k6.java:8557 的
+  W0==1→48 / 其余→80。经 AppStorage（via_menu_size_vp/side_gap/layout）发布，
+  打开菜单前 publishMenuMetrics() 已在两个入口调用。
+- MenuSheet 容器消费：Stack alignContent 按布局1 切 Alignment.Top（其余 Bottom，
+  对齐 gravity 48/80）；constraintSize maxWidth 消费 384dp 宽限（扣自身左右 margin）；
+  margin 随布局切 top/bottom insets。
+- 《移植缺失功能说明.md》B4 条目由「部分」改「已实现」。

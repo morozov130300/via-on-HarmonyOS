@@ -161,8 +161,21 @@ export struct MenuSheet {
     this.clearDataSelection = selection
   }
 
+  // 原版 k6.java:8558：`int i10 = this.W0 == 1 ? 48 : 80;`（布局1=工具栏在上 → gravity 48 贴顶，
+  // 其余 80 贴底）——菜单容器按布局切 Top/Bottom，由 Index 经 AppStorage 'via_menu_layout' 提供。
+  private menuLayout(): number {
+    return AppStorage.get<number>('via_menu_layout') ?? 0
+  }
+
+  // 原版 N8()（k6.java:5072-5078）：菜单宽 = min(容器宽,容器高)；大屏非布局0 时
+  //   min(短边-96dp, 384dp)。由 Index 经 AppStorage 'via_menu_size_vp' 提供（含 384dp 宽限）。
+  private menuWidthVp(): number {
+    const size: number = AppStorage.get<number>('via_menu_size_vp') ?? 0
+    return size > 0 ? size - 24 : 0  // 减去容器左右 margin 12+12
+  }
+
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
+    Stack({ alignContent: this.menuLayout() === 1 ? Alignment.Top : Alignment.Bottom }) {
       Column()
         .width('100%')
         .height('100%')
@@ -177,11 +190,13 @@ export struct MenuSheet {
         this.DotsBar()
         this.BottomRow()
       }
-      .width('100%')
+      // 原版 N8()：大屏时 min(短边-96, 384)（见 menuWidthVp）；布局1 贴顶时改用顶部 insets
+      .constraintSize({ maxWidth: this.menuWidthVp() > 0 ? this.menuWidthVp() : '100%' })
       .margin({
         left: 12,
         right: 12,
-        bottom: this.insets.bottom > 0 ? this.insets.bottom + 8 : 16
+        top: this.menuLayout() === 1 ? (this.insets.top > 0 ? this.insets.top + 8 : 16) : 0,
+        bottom: this.menuLayout() === 1 ? 0 : (this.insets.bottom > 0 ? this.insets.bottom + 8 : 16)
       })
       .borderRadius(24)
       .clip(true)
