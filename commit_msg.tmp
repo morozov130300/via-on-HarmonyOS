@@ -1,0 +1,24 @@
+fix(复核): 外置视频播放器键语义对齐原版 + 字体重命名按钮文案
+
+主控自主复核（不派子代理）发现两处未对齐，均已修复。check arkts 123 文件 0 error、
+build SUCCESSFUL。
+
+1. 外置视频播放器键语义错位（E3 遗留）：
+   原版键语义（w9/k.w0 + k6.U7:5952-5968）：videoplayer 空串/null = 系统 Intent 分发
+   （C0[0] 键就是空串，hb/c4.java:690），非空 = intentH.setPackage 直投指定播放器，
+   直投失败回退系统 Intent。原版没有「站内播放」选项。
+   此前鸿蒙端把 '' 当「内置播放器」、'share' 当「系统分享」，与原版键语义冲突：
+   安卓备份里 videoplayer="com.xxx" 导入鸿蒙后会被当「系统分享」处理，站内播放条件误判。
+   修复：MediaListPage.play 改为 videoPlayer==='builtin'（工程扩展值）才走站内，
+   其余（'' 与外部包名）一律走系统 want 分发（等价原版「直投失败回退」分支）；
+   SettingsGeneralPage 选项改为 [系统分享(写'')、内置播放器(写'builtin')]；
+   旧值 'share' 启动时归一为 ''；externalPlayer 迁移目标同步改 ''。
+
+2. 字体重命名确认钮文案（FontRenameOverlay）：原版 hb/j2.A3（:222）确认钮 = 
+   R.string.ok「确定」，此前误用 done「完成」。已改 app.string.confirm。
+   （复核了全部 4 处 app.string.done 残留：OfflinePage/DownloadPage 多选完成 = 原版
+   x7.u.K3「完成」✓ 正确；HomeFavEditor 表单完成钮经 qa/o 布局资源链路核实一致 ✓）
+
+复核确认无误的项：B2 下载管理 toast 参数序（已设置 下载管理 为 X = a1(f14171t7, A0, 名)）、
+z8/b0.D 三种 scheme 解码差异（thunder 去首尾 2 字符/qqdl 纯 base64/flashget 去 [FLASHGET]）、
+SSL 白名单页 flush、B4 AppStorage 发布时机（两个菜单入口均先 publishMenuMetrics）。

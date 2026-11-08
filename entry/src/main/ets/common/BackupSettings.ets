@@ -218,7 +218,8 @@ export class BackupSettings {
     if (s.readerCustomCss !== '') {
       st['readercustomcss'] = BackupCrypto.base64Wrap76(BackupCrypto.utf8Encode(s.readerCustomCss))
     }
-    // 原版 videoplayer（w9/k.java:366）：仅 prefs 含键才导出，空值（内置播放）不导
+    // 原版 videoplayer（w9/k.java:366）：仅 prefs 含键才导出；键语义（w9/k.w0 + k6.U7）
+  // 空串 = 系统分享、非空 = 播放器包名，导出条件 = 键存在且非空
     if (s.videoPlayer !== '') {
       st['videoplayer'] = s.videoPlayer
     }

@@ -1307,7 +1307,10 @@ export struct SettingsGeneralPage {
 
   // 原版 hb/c4.java:692/270/434（U3）：行值取 C0[D0].b，即当前外置播放器显示名
   private videoPlayerLabel(): string {
-    if (this.settings.videoPlayer === '') {
+    // 原版键语义（w9/k.w0 + k6.U7）：videoplayer 空串/null = 系统分享（C0[0]「系统分享」，
+    // D0 匹配不到包名时也落 0）；非空 = 指定播放器包名。本工程扩展值 'builtin' = 站内播放。
+    // 显示上鸿蒙无法枚举播放器，非空一律呈现「系统分享」。
+    if (this.settings.videoPlayer === 'builtin') {
       return '内置播放器'
     }
     return '系统分享'
@@ -1321,9 +1324,11 @@ export struct SettingsGeneralPage {
   // 取舍说明：原版可逐条列出已安装播放器包名并 setPackage 直投，鸿蒙端需由系统分发器自选，
   // 故不再产生"特定应用"选项；videoPlayer 键与 BackupSettings 的 videoplayer 映射保持不变。
   private pickVideoPlayer(): void {
-    this.openListDialog('外置视频播放器', ['内置播放器', '系统分享'],
-      this.settings.videoPlayer === '' ? 0 : 1, false, (index: number): void => {
-        this.settings.setVideoPlayer(index === 0 ? '' : 'share')
+    // 选项「系统分享」写 ''（原版键语义：C0[0] 键就是空串，见 hb/c4.java:690）；
+    // 选项「内置播放器」写工程扩展值 'builtin'（原版无此项）。
+    this.openListDialog('外置视频播放器', ['系统分享', '内置播放器'],
+      this.settings.videoPlayer === 'builtin' ? 1 : 0, false, (index: number): void => {
+        this.settings.setVideoPlayer(index === 0 ? '' : 'builtin')
       })
   }
 

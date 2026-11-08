@@ -561,9 +561,13 @@ export class AppSettings {
       this.showStatusBar = await this.readBoolean('showStatusBar', true)
       this.downloadDir = await this.readString('downloadDir', '')
       this.videoPlayer = await this.readString('videoPlayer', '')
-      // 旧版布尔 externalPlayer 迁移：true → 系统分享
+      // 旧工程值 'share' 与原版空串语义相同（都走系统分享），统一归一为原版空串
+      if (this.videoPlayer === 'share') {
+        this.videoPlayer = ''
+      }
+      // 旧版布尔 externalPlayer 迁移：true → 系统分享（原版键语义：空串 = 系统分享）
       if (await this.readBoolean('externalPlayer', false)) {
-        this.videoPlayer = 'share'
+        this.videoPlayer = ''
       }
       this.dlManager = await this.readString('dlManager', 'builtin')
       this.clearOnExit = await this.readNumber('clearOnExit', 0)

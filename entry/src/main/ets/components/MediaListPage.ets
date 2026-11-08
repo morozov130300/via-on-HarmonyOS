@@ -100,8 +100,14 @@ export struct MediaListPage {
   }
 
   private play(url: string): void {
-    // 原版 c8/k6.U7 + w9/k.w0（videoplayer）：'share' 时用系统分享/其它应用打开
-    if (this.settings.videoPlayer === 'share') {
+    // 原版 c8/k6.U7（k6.java:5952-5968）+ w9/k.w0()：videoplayer 为空/null → 系统 Intent
+    // （z8.f1.j，分发器自选应用）；非空 → intentH.setPackage(值) 直投指定播放器，直投失败
+    // 回退系统 Intent。鸿蒙无法按包名直投，故非空一律走系统 want 分发（等价原版「直投
+    // 失败回退」分支）。注意：原版没有「站内播放」选项——站内播放是本工程扩展（用户拍板
+    // 保留），仅当 videoPlayer 为工程自造值 'builtin' 时走站内；'share' 与外部包名值均走外部。
+    if (this.settings.videoPlayer === 'builtin') {
+      // 站内播放（本工程扩展，见上注释）
+    } else {
       this.playExternal(url)
       return
     }
