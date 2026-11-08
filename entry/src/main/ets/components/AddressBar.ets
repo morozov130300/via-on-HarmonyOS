@@ -3,7 +3,7 @@ import { pasteboard, emitter } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { ViaIcon } from './ViaIcon'
-import { hostOf, getBuiltinEngines } from '../common/SearchEngines'
+import { hostOf, getBuiltinEngines, isUrlLike } from '../common/SearchEngines'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -17,6 +17,26 @@ const ICON_SIZE: number = 22
 const ICON_MARGIN: number = 13
 // 原版 n0.j()：图标视图宽 48dp（dimens bi=48dp）
 const ICON_SLOT: number = 48
+
+// 原版 i6/g0.a（i6/g0.java:13-27）定界符配对表：
+// ''""{}()[]<>「」『』【】〔〕〖〗〘〙〚〛（）［］｛｝＜＞〈〉《》‘’“”
+// 偶数位=起始定界符，其后一位=对应闭合符；非起始定界符（含未命中）按空格处理
+const URL_DELIMITER_PAIRS: string =
+  "''\"\"{}()[]<>「」『』【】〔〕〖〗〘〙〚〛（）［］｛｝＜＞〈〉《》‘’“”"
+
+// 原版 i6/g0.a：按起始定界符取配对闭合符（非起始符/未命中 → 空格）
+function urlCloserOf(openChar: string): string {
+  const i = URL_DELIMITER_PAIRS.indexOf(openChar)
+  if (i < 0 || i % 2 !== 0) {
+    return ' '
+  }
+  return URL_DELIMITER_PAIRS.charAt(i + 1)
+}
+
+// 原版 i6/f.e（i6/f.java:92-94）：' '/换行/制表/不间断空格/Character.isWhitespace|isSpaceChar
+function isUrlBlankChar(ch: string): boolean {
+  return ch === ' ' || ch === '\n' || ch === '\t' || ch === '\u00a0' || /\s/.test(ch)
+}
 
 // 原版标题长按菜单项（k6.h.onLongClick：复制/粘贴/粘贴并前往）
 class TitleMenuItem {
@@ -52,6 +72,11 @@ export struct AddressBar {
   @Event onScan: () => void = () => {}
   // 原版 k6.f：阅读图标显示期点击左图标 → B8() 进阅读
   @Event onReader: () => void = () => {}
+  // 原版 k6.d9()（6945-6953）：点击地址栏左图标前，若当前有面板/内部页面栈非空，
+  // 先弹栈关面板（pb() + h9()）并**拦截**本次点击，不再执行网站信息/阅读模式。
+  // 返回 true = 已消费（已关面板），调用方不再继续。
+  // 由 Index 注入（Index 侧持有菜单/搜索/标签面板状态）；未注入时恒 false（行为回落旧逻辑）。
+  @Event onTryClosePanels: () => boolean = (): boolean => false
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   @Local showTitleMenu: boolean = false
@@ -305,24 +330,65 @@ export struct AddressBar {
     }).catch(() => {})
   }
 
-  // i6/g0.e（i6/g0.java:75）等价实现：扫描 http(s):// 起始的连续段，
-  // 段止于空白/引号/括号等定界符，尾部句读剥离后逐条收集
+  // 原版 i6/g0.e（i6/g0.java:75-120）1:1 移植：
+  //   1) text 去首尾空白（v7.m.I）；长度 < 8 直接返回空
+  //   2) 循环以 "://" 为锚点：向前取 5 字符窗口（"https"）或 4 字符窗口（"http"），
+  //      命中即得起点 start = w - 窗口长；未命中则 i = w + 3 继续找下一个 "://"
+  //   3) 段尾：从 w+3 起用 g0.a(str, 起点前一个字符, w+3) 扫描，遇「配对闭合符」或空白即止；
+  //      无结果时：start==0 → 整段放弃；否则取到串尾
+  //   4) 候选 substring(start, end) 经 i0.t（h0 解析器 s()：URL 合法性）校验后入表；
+  //      i = end + 1 继续
+  // 注：原版只认完整 "http"/"https" 窗口，剪贴板里脱离 scheme 的 "ttp://x" 不会被补全。
   private extractUrls(text: string): string[] {
     const urls: string[] = []
     if (text.length < 8) {
       return urls
     }
-    const pattern: RegExp = /https?:\/\/[^\s"'<>（）【】\[\]{}（）]+/g
-    let match: RegExpExecArray | null = pattern.exec(text)
-    while (match !== null) {
-      let url = match[0]
-      while (url.length > 0 && '.,;:!?，。；：！？'.indexOf(url.charAt(url.length - 1)) >= 0) {
-        url = url.substring(0, url.length - 1)
+    const s = text.trim()
+    let i = 0
+    while (i < s.length) {
+      const w = s.indexOf('://', i)
+      if (w < 0) {
+        break
       }
-      if (url.length > 8 && url.indexOf('.') > 0 && urls.indexOf(url) < 0) {
-        urls.push(url)
+      // 原版 g0.e:85-99：先取 :// 前 5 字符窗口忽略大小写比 "https"，
+      // 否则取前 4 字符窗口比 "http"；两者都不中则只把游标推到 iW+3 继续找下一个 "://"
+      // （实测原版**不**识别裸 "ttp://"、"ttps://"，只有完整 http(s) 才成立）
+      let start = -1
+      if (w >= 5 && s.substring(w - 5, w).toLowerCase() === 'https') {
+        start = w - 5
+      } else if (w >= 4 && s.substring(w - 4, w).toLowerCase() === 'http') {
+        start = w - 4
+      } else {
+        i = w + 3
+        continue
       }
-      match = pattern.exec(text)
+      // 原版 g0.a(str, 前一个字符, iW+3)：按起点前一个字符决定配对闭合符，
+      // 遇配对闭合符或空白即止；找不到（-1）时 start==0 放弃整段，否则取到串尾
+      const closer = urlCloserOf(start > 0 ? s.charAt(start - 1) : ' ')
+      let end = w + 3
+      while (end < s.length) {
+        const ch = s.charAt(end)
+        if (ch === closer || isUrlBlankChar(ch)) {
+          break
+        }
+        end++
+      }
+      let stop = end
+      if (stop >= s.length) {
+        if (start === 0) {
+          return urls
+        }
+        stop = s.length
+      }
+      // 原版 substring(start, end)，仅当 end > iW+3（段非空）且 i0.t 校验通过才收集
+      if (stop > w + 3) {
+        const url = s.substring(start, stop)
+        if (isUrlLike(url) && urls.indexOf(url) < 0) {
+          urls.push(url)
+        }
+      }
+      i = stop + 1
     }
     return urls
   }
@@ -334,7 +400,10 @@ export struct AddressBar {
       sheets.push({
         title: url,
         action: (): void => {
-          this.tabStore.newTabAt(url, false)
+          // 原版 k6.sa()（8423-8446）：多 URL 弹窗点单条 → na.i1(url, true)
+          // （c8/na.java:1538-1540，第 2 参 true = **后台**打开该标签，
+          // 让用户继续在弹窗里挑下一个；早期实现误传 false 走前台。）
+          this.tabStore.newTabAt(url, true)
         }
       })
     }
@@ -394,7 +463,13 @@ export struct AddressBar {
       .alignContent(Alignment.Center)
       .margin({ left: ICON_MARGIN })
       .onClick(() => {
-        // 原版 k6.f：!v()（非阅读提示期）或主页 → Bb() 网站信息；否则 B8() 进阅读
+        // 原版 c8/k6.java f.a()（676-690）：id == n0.f9702v（左图标）时
+        //   1) if (d9()) return;   —— 面板/Fragment 栈非空则弹栈关闭并**拦截**点击
+        //      d9()（6945-6953）：z0().u0() > 0 → pb()（关面板）+ h9() + z0().e1()，返回 true
+        //   2) 否则才走 f2602x0.o()/n0.v() 判定 → Bb()（网站信息）/ B8()（阅读模式）
+        if (this.onTryClosePanels()) {
+          return
+        }
         if (!this.readerHint || this.tab.isHomePage()) {
           this.onSiteInfo()
         } else {

@@ -188,8 +188,14 @@ export class AutoHideGesture {
     if (extent > 0) {
       this.onProgress(this.progress() - dy / extent)
       if (dy !== 0 && (dy >= 0 ? this.progress() <= 0 : this.progress() >= 1)) {
-        // 触到 0=已隐藏 → show=false；触到 1=已显示 → show=true
-        const show = this.progress() > 0
+        // 原版 GestureTouchEvent.d()（222-224）：
+        //   boolean z10 = this.f9547b.m() <= 0.0f;   // m() = k6.f2591r1 = 隐藏进度
+        //   this.f9547b.e(z10);                      // e() → k6.G8(show)
+        // k6.db()（6969-6993）里 f2591r1 的语义是 **0=完全显示、1=完全隐藏**
+        // （顶栏 translationY=-r1*height、底栏=+r1*height，r1=0 时位移 0 即完全显示）。
+        // 故：进度触到 0 → show=true（显示）；进度触到 1 → show=false（隐藏）。
+        // 此处早期写成 show = progress() > 0，语义恰好反相（拖到隐藏反而结算为显示）。
+        const show = this.progress() <= 0
         this.onCommitImmediate(show)
         if (!show && !this.canSwipeOnly()) {
           // 拖到隐藏且非滑动隐藏模式：手势结束（原版直接 return，不更新锚点）

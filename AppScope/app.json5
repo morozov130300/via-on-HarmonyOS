@@ -2,8 +2,11 @@
   "app": {
     "bundleName": "cn.edu.whut.via",
     "vendor": "example",
-    "versionCode": 1000000,
-    "versionName": "1.0.0",
+    // 与移植基准 Via 7.4.0 对齐（原版 AndroidManifest：versionCode=20260920、
+    // versionName=7.4.0.beta）。关于页展示的 7.4.0.b13.edf6737e 是原版 hb/d.java:90
+    // 里的构建号文案，两者语义不同，均保留。
+    "versionCode": 20260920,
+    "versionName": "7.4.0.beta",
     "buildVersion": "1",
     "icon": "$media:layered_image",
     "label": "$string:app_name",

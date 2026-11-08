@@ -391,6 +391,10 @@ export struct SearchOverlay {
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
   private textController: TextInputController = new TextInputController()
+  // 原版 tb/k0.U2()（207-213）清空按钮只 setText("")+D3()、不清 K0；
+  // ArkTS 的 onChange 无法区分「清空按钮」与「回删到空」，用该一次性旗标标记清空动作来源：
+  // 置位后第一个空值 onChange 视为清空按钮路径（不复发 K0），随后立即复位
+  private clearButtonArmed: boolean = false
   private engineDialogId: number = -1
   private timerId: number = -1
   private currentRequest: http.HttpRequest | null = null
@@ -652,10 +656,15 @@ export struct SearchOverlay {
         .onSubmit((enterKey: EnterKeyType) => {
           this.commit(this.inputText)
         })
-      // 4) 清空（f12385r0）：drawable b8 / ic_close，空文本 GONE；清空即复位 K0（k0.E3）
+      // 4) 清空（f12385r0）：drawable b8 / ic_close，空文本 GONE
+      // 原版 tb/k0.java U2()（207-213）：清空按钮**只** setText("") + D3()（重取建议），
+      // **不复位 K0**（引擎 chip 保持）。K0 只在「回删到空」(E3，:399-400) 或
+      // 「切换引擎」(:527-530) 时复位。
+      // 注意：不能走 applyShortcutQualification('')——那条路会清 K0。
       if (this.inputText.length > 0) {
         this.IconSlot($r('app.media.via_ic_url_clear'), $r('app.string.url_input_clear_text'), () => {
-          this.qualifiedEngineId = 0
+          // 标记「本次置空来自清空按钮」，供 applyShortcutQualification 判定不清 K0
+          this.clearButtonArmed = true
           this.inputText = ''
           this.rows = []
           this.fetchSuggestions('')
@@ -987,15 +996,28 @@ export struct SearchOverlay {
   }
 
   // 原版 k0.z3/p3（beforeTextChanged）：首词命中快捷词表 → K0=id、chip 显示、
-  // 剥离快捷词前缀（g6.p.e 首空格位之后 trim）并重取建议；已命中(K0≠0)不重复判定；
-  // 空文本复位 K0（等价 l3 回删至空 → E3；ArkTS TextInput 无法区分回删与清空钮，
-  // 清空钮路径同走空文本复位，与原版 U2 的「不清 K0」存在此单点差异）
+  // 剥离快捷词前缀（g6.p.e 首空格位之后 trim）并重取建议；已命中(K0≠0)不重复判定。
+  // 空文本分支对应原版两条**互不相同**的路径：
+  //   · 回删到空：l3()（tb/k0.java:397-402）KEYCODE_DEL 且 selectionStart/End==0 → E3()（清 K0）
+  //   · 清空按钮：U2()（tb/k0.java:207-213）只 setText("") + D3()，**不调 E3()、不清 K0**
+  // ArkTS 的 TextInput 无法在 onChange 里区分这两者（都得到 value===''），
+  // 故用 clearButtonArmed 一次性旗标把「点清空按钮引起的这一次置空」排除在清 K0 之外；
+  // 切换引擎另走 EngineOption 的 w3 等价分支（tb/k0.java:527-531）。
   private applyShortcutQualification(value: string): void {
     if (value === '') {
+      // 清空按钮路径（U2）：保留 K0，仅 D3() 等价的重取建议；旗标只消费一次
+      if (this.clearButtonArmed) {
+        this.clearButtonArmed = false
+        this.fetchSuggestions('')
+        return
+      }
+      // 回删到空（l3 → E3）：复位 K0、chip 隐藏
       this.qualifiedEngineId = 0
       this.fetchSuggestions('')
       return
     }
+    // 出现任何非空内容即撤销清空标记，避免旗标滞留影响之后的回删判定
+    this.clearButtonArmed = false
     if (this.qualifiedEngineId !== 0) {
       this.fetchSuggestions(value)
       return

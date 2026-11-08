@@ -27,6 +27,8 @@ import { MARK_AD_INJECT_JS } from './MenuSheet'
 import { AppIcon } from './AppIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
+// 原版 hb/g4 + w9/k.G2()：ignoredsslwarning 位掩码（SSL 证书警告忽略白名单）
+import { SslWhitelistStore, SSL_BIT_UNTRUSTED, SSL_BIT_DATE_INVALID, SSL_BIT_ID_MISMATCH, SSL_BIT_INVALID } from '../common/SslWhitelist'
 
 // 1x1 GIF 占位（原版 u4/a.f12819d base64 1:1 解码）
 const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
@@ -353,7 +355,14 @@ export struct TabWeb {
             target = decodeURIComponent(url.substring(prefix.length))
           } catch (error) {
           }
-          if (target.startsWith('http')) {
+          // 原版 k6.u() 8598-8609：`if (i6.i0.s(str))` 才打开；
+          // i0.s()（i6/i0.java:481-486）= m() || n()，即严格 http:// 或 https:// 前缀，
+          // 不是宽泛的 startsWith('http')（那样 'httpfoo:' 也会放行）。
+          const targetLower: string = target.toLowerCase()
+          const isStrictHttp: boolean = target.length > 7 &&
+            (targetLower.substring(0, 7) === 'http://' ||
+             (target.length > 8 && targetLower.substring(0, 8) === 'https://'))
+          if (isStrictHttp) {
             this.adBlocker.addBypassHost(hostOf(target))
             try {
               this.tab.controller.loadUrl(target)
@@ -514,7 +523,31 @@ export struct TabWeb {
             }
           })
         })
+        // 原版 e8/h0.java v()（147-172）：
+        //   int mask = w9/k.G2();                       // ignoredsslwarning 位掩码
+        //   int bits = I(sslError);                     // 本次错误的位集合（见下 I()）
+        //   if (mask != 0 && (mask & bits) == bits) { sslErrorHandler.proceed(); return true; }
+        // 即：**6 个位全部命中才放行**，否则走弹窗询问。
+        // 原版 I()（e8/h0.java:102-121）的位映射（Android SslError.hasError 入参 → bit）：
+        //   hasError(3) SSL_UNTRUSTED     → bit0 (1)
+        //   hasError(4) SSL_DATE_INVALID  → bit1 (2)
+        //   hasError(1) SSL_EXPIRED       → bit2 (4)
+        //   hasError(2) SSL_IDMISMATCH    → bit3 (8)
+        //   hasError(0) SSL_NOTYETVALID   → bit4 (16)
+        //   hasError(5) SSL_INVALID       → bit5 (32)
+        // ArkWeb 的 SslError 枚举只有 4 个（web.d.ts:1285-1310）：
+        //   Invalid=0 / HostMismatch=1 / DateInvalid=2 / Untrusted=3
+        // 按语义一一对应到原版位（见 sslBitsOf）。
         .onSslErrorEventReceive((event: OnSslErrorEventReceiveEvent) => {
+          const bits: number = this.sslBitsOf(event.error)
+          const mask: number = SslWhitelistStore.getInstance().mask
+          // 原版 (mask & bits) == bits 才放行；bits 为 0（无法识别）时不放行
+          if (bits !== 0 && (mask & bits) === bits) {
+            event.handler.handleConfirm()
+            return
+          }
+          // 超集：本工程既有全局「忽略 SSL 证书警告」布尔开关（设置页写入），
+          // 原版无此键（原版只有位掩码），保留以避免破坏既有用户设置。
           if (this.settings.ignoreSslWarning) {
             event.handler.handleConfirm()
           } else {
@@ -693,13 +726,22 @@ export struct TabWeb {
         // ArkWeb 原生层吃事件，须把 PanGesture 直接挂 Web 组件且方向 All 才收得到竖滑。
         .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 1 })
           .onActionStart((event: GestureEvent) => {
-            // down 坐标（原版 l() 记录 rawX/rawY）
-            this.onAutoHideTouch(0, event.offsetX, event.offsetY)
+            // 原版 GestureTouchEvent.l()（g6:360-368）记录的是 MotionEvent.getRawX()/getRawY()，
+            // 即**屏幕绝对坐标**；状态机 k()（反向锚点判定，347-354）与 p()（方向闸，421-431）
+            // 都依赖「down 与 move 同一绝对坐标系」。
+            // 早期实现喂的是 event.offsetX/offsetY（相对手势起点的累计位移），导致：
+            //   ① down 恒为 (0,0)，与原版 rawX/rawY 不符；
+            //   ② VERTICAL_PENDING 的反向锚点随位移累积偏置。
+            // ArkUI GestureEvent.globalX/globalY（component/gesture.d.ts:644/655）即屏幕绝对坐标，
+            // 与原版 getRawX/getRawY 语义一致。
+            const startPoint = this.gestureGlobalPoint(event)
+            this.onAutoHideTouch(0, startPoint[0], startPoint[1])
             this.swipeNavReset()
           })
           .onActionUpdate((event: GestureEvent) => {
-            // move：offset 是相对手势起点的累计位移，换算为屏幕坐标喂状态机
-            this.onAutoHideTouch(2, event.offsetX, event.offsetY)
+            // 同坐标系绝对坐标（见上）；横滑判定仍用 offsetX（相对位移）语义不变
+            const movePoint = this.gestureGlobalPoint(event)
+            this.onAutoHideTouch(2, movePoint[0], movePoint[1])
             this.swipeNavUpdate(event)
           })
           .onActionEnd(() => {
@@ -1201,6 +1243,44 @@ export struct TabWeb {
     }
     const max = this.swipeNavWidth * 0.8
     this.swipeNavOffset = Math.max(-max, Math.min(max, dx * 0.8))
+  }
+
+  // 原版 e8/h0.java I()（102-121）：把 SslError 的错误类型映射成位集合。
+  // Android 侧 hasError(n) 的 n 与位对应关系见调用处注释；ArkWeb 枚举只有 4 值，
+  // 按语义映射：
+  //   Untrusted(3)    → bit0 SSL_BIT_UNTRUSTED   (原版 hasError(3))
+  //   DateInvalid(2)  → bit1 SSL_BIT_DATE_INVALID(原版 hasError(4))
+  //   HostMismatch(1) → bit3 SSL_BIT_ID_MISMATCH (原版 hasError(2))
+  //   Invalid(0)      → bit5 SSL_BIT_INVALID     (原版 hasError(5))
+  // 原版还有 SSL_EXPIRED(bit2)/SSL_NOTYETVALID(bit4)，ArkWeb 无对应枚举值，
+  // 因此这两项在白名单页勾选后不会生效（属平台枚举粒度限制，已记入差异说明）。
+  // 取手势触点的屏幕绝对坐标：ArkUI 把 globalX/globalY 放在 GestureEvent.fingerList[i]
+  // （component/gesture.d.ts:592 FingerInfo），GestureEvent 本身只有 offsetX/offsetY（相对起点）
+  // 与 localX/localY（相对组件）。原版 GestureTouchEvent.l()/k() 用 MotionEvent.getRawX/getRawY，
+  // 语义等同 FingerInfo.globalX/globalY。
+  // 返回 [x, y]；fingerList 为空（键盘/手柄触发）时退回 0,0，与原版无触点时行为一致。
+  private gestureGlobalPoint(event: GestureEvent): number[] {
+    const fingers = event.fingerList
+    if (fingers !== undefined && fingers.length > 0) {
+      return [fingers[0].globalX, fingers[0].globalY]
+    }
+    return [0, 0]
+  }
+
+  private sslBitsOf(error: SslError): number {
+    if (error === SslError.Untrusted) {
+      return SSL_BIT_UNTRUSTED
+    }
+    if (error === SslError.DateInvalid) {
+      return SSL_BIT_DATE_INVALID
+    }
+    if (error === SslError.HostMismatch) {
+      return SSL_BIT_ID_MISMATCH
+    }
+    if (error === SslError.Invalid) {
+      return SSL_BIT_INVALID
+    }
+    return 0
   }
 
   private swipeNavReset(): void {

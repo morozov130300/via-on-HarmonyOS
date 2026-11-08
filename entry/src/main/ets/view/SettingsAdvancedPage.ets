@@ -1,4 +1,7 @@
 import { AppSettings } from '../common/Settings'
+import { SslWhitelistStore } from '../common/SslWhitelist'
+import { common } from '@kit.AbilityKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
@@ -8,11 +11,17 @@ import { buildNavSlide } from './PageTransitions'
 @ComponentV2
 export struct SettingsAdvancedPage {
   private settings: AppSettings = AppSettings.getInstance()
+  private sslStore: SslWhitelistStore = SslWhitelistStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
   @Local sslAck: boolean = false
   private sslDialogId: number = -1
+
+  aboutToAppear(): void {
+    const context = getContext(this) as common.Context
+    this.sslStore.init(context)
+  }
 
   private bindAppBar(): void {
     AppBar.show({
@@ -66,7 +75,7 @@ export struct SettingsAdvancedPage {
               rowLabel: '忽略 SSL 证书警告',
               rowValue: '请小心，忽略 SSL 证书警告可能会使网站的连接不安全',
               onTapRow: () => {
-                this.showSslWarningDialog()
+                this.onSslRowTap()
               }
             })
           }
@@ -119,6 +128,29 @@ export struct SettingsAdvancedPage {
         }
       })
     }
+  }
+
+  // 原版 hb/z.java k3()（:133-144）：
+  //   if (w9.l.G2() != 0) { g6.i.g(this, g4.class); }   ← 掩码非 0 直接进白名单页 hb/g4
+  //   else { w5.k.l(I()).d0(Yf 忽略 SSL 证书警告).I(n_ 正文).w(Zf, false).M(true)
+  //          .V(ok, z.g3).N(cancel, null).f0(); }
+  // 掩码读工程已持久化的 ignoredsslwarning（SslWhitelistStore.mask，与 Settings.ets 同库 via_settings）
+  private onSslRowTap(): void {
+    const context = getContext(this) as common.Context
+    this.sslStore.init(context).then(() => {
+      if (this.sslStore.mask !== 0) {
+        this.openSslWhitelist()
+      } else {
+        this.showSslWarningDialog()
+      }
+    }).catch((error: BusinessError) => {
+      console.error(`read ssl whitelist mask failed: ${error.message}`)
+      this.showSslWarningDialog()
+    })
+  }
+
+  private openSslWhitelist(): void {
+    this.navPathStack.pushPathByName('sslWhitelist', '', true)
   }
 
   // 原版 hb/z.k3：w5.k.l(I()).d0(yv 忽略 SSL 证书警告).I(n_ 正文)
@@ -204,8 +236,10 @@ export struct SettingsAdvancedPage {
           .constraintSize({ minWidth: 56 })
           .padding(16)
           .onClick(() => {
-            this.settings.setIgnoreSslWarning(true)
+            // 原版 z.g3（hb/z.java:34-37）→ g6.i.g(z, g4.class)：确认后跳 SSL 白名单页，
+            // 不写任何设置值（掩码只由白名单页 g4.j3 → w9/k.a → ignoredsslwarning 写入）
             this.closeSslDialog()
+            this.openSslWhitelist()
           })
       }
       .width('100%')

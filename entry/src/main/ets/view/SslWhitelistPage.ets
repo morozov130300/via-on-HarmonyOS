@@ -1,4 +1,5 @@
 import { common } from '@kit.AbilityKit'
+import { preferences } from '@kit.ArkData'
 import { SslWhitelistStore, SSL_BIT_UNTRUSTED, SSL_BIT_DATE_INVALID, SSL_BIT_EXPIRED, SSL_BIT_ID_MISMATCH,
   SSL_BIT_NOT_YET_VALID, SSL_BIT_INVALID } from '../common/SslWhitelist'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -49,10 +50,28 @@ export struct SslWhitelistPage {
   private store: SslWhitelistStore = SslWhitelistStore.getInstance()
   // 帮助弹窗（w5.k.d0(yv).I(n_).V(ok).f0()）
   @Local helpDialogId: number = -1
+  // 与 SslWhitelistStore 同一偏好文件，用于切换后立即 flush 落盘（put 只写内存）
+  private prefs: preferences.Preferences | null = null
 
   aboutToAppear(): void {
     const context = getContext(this) as common.Context
     this.store.init(context)
+    preferences.getPreferences(context, 'via_settings').then((p: preferences.Preferences) => {
+      this.prefs = p
+    }).catch((error: BusinessError) => {
+      console.error(`ssl whitelist page open prefs failed: ${error.message}`)
+    })
+  }
+
+  // 原版 g4.g3 → g4.j3（hb/g4.java:73-81）：切换一位后立即写 ignoredsslwarning
+  // （w9.l.a(int) → q3），无"保存"按钮，点击即时生效
+  private toggleRow(bit: number): void {
+    this.store.toggleBit(bit)
+    if (this.prefs !== null) {
+      this.prefs.flush().catch((error: BusinessError) => {
+        console.error(`ssl whitelist flush failed: ${error.message}`)
+      })
+    }
   }
 
   private bindAppBar(): void {
@@ -95,7 +114,7 @@ export struct SslWhitelistPage {
               .alignItems(VerticalAlign.Center)
               .onClick(() => {
                 // g4.j3：已置位则清除，否则置位
-                this.store.toggleBit(row.bit)
+                this.toggleRow(row.bit)
               })
             }, (row: SslRow) => `${row.bit}`)
           }

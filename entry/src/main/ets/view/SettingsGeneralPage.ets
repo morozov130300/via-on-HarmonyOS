@@ -91,6 +91,14 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '下载管理', rowValue: this.dlManagerLabel(), onTapRow: () => {
               this.pickDlManager()
             } })
+            // 原版 hb/c4.java:692 a6.q(27, f13934c5, C0[D0].b)：f13934c5=0x7f10015b→in「外置视频播放器」，
+            // 行值 = C0[D0].b（当前播放器名，默认 C0[0]=w.d.a("", f14213wa=qv「系统分享」)，见 :690）；
+            // 行序在下载管理(id15)之后、退出时清除数据(id18)之前，qVar3.g(true) 无条件显示。
+            // 点击 hb/c4.java:270 case 27 → d0(in).I(io 当选择外置播放器播放视频时，使用).b0(列表, D0)；
+            // 列表来源 hb/c4.java:751 D4() = qv「系统分享」+ 查询可打开 mp4 的第三方播放器（HarmonyOS 无法枚举，见说明）。
+            SettingNavRow({ rowLabel: '外置视频播放器', rowValue: this.videoPlayerLabel(), onTapRow: () => {
+              this.pickVideoPlayer()
+            } })
             SettingNavRow({ rowLabel: '退出时清除数据', onTapRow: () => {
               this.pickClearOnExit()
             } })
@@ -108,16 +116,25 @@ export struct SettingsGeneralPage {
             SettingNavRow({ rowLabel: '导入数据', onTapRow: () => {
               this.importData()
             } })
-            SettingNavRow({ rowLabel: '导出数据', onTapRow: () => {
+            // 原版 hb/c4.java:700 a6.q(22, V4, W4)：V4=0x7f100154→ig「导出数据」，
+            // W4=0x7f100155→ih「导出书签、设置、脚本和广告规则」为行摘要
+            SettingNavRow({ rowLabel: '导出数据', rowValue: '导出书签、设置、脚本和广告规则', onTapRow: () => {
               this.exportData()
             } })
             SettingNavRow({ rowLabel: '启动时恢复未关闭标签', onTapRow: () => {
               // 原版三选一（arrays.xml array g：禁用恢复/总是恢复/优先询问）
               this.pickRestoreMode()
             } })
-            SettingCheckRow({ rowLabel: '显示撤销关闭标签的提示', isChecked: this.settings.undoCloseToast, onCheckRow: (isOn: boolean) => {
-              this.settings.setUndoCloseToast(isOn)
-            } })
+            // 原版 hb/c4.java:702 a6.n(33, Dc, Ec, ...)：Dc=0x7f100301→tz「显示撤销关闭标签的提示」，
+            // Ec=0x7f100302→u0「如果开启了隐身模式，则不会显示提示」为副标题
+            SettingCheckRow({
+              rowLabel: '显示撤销关闭标签的提示',
+              rowDesc: '如果开启了隐身模式，则不会显示提示',
+              isChecked: this.settings.undoCloseToast,
+              onCheckRow: (isOn: boolean) => {
+                this.settings.setUndoCloseToast(isOn)
+              }
+            })
             SettingNavRow({ rowLabel: '设置默认浏览器', onTapRow: () => {
               this.showDefaultBrowserGuide()
             } })
@@ -1286,6 +1303,28 @@ export struct SettingsGeneralPage {
     this.openListDialog('下载管理', ['内建下载器'], 0, false, (index: number): void => {
       this.settings.setDlManager('builtin')
     })
+  }
+
+  // 原版 hb/c4.java:692/270/434（U3）：行值取 C0[D0].b，即当前外置播放器显示名
+  private videoPlayerLabel(): string {
+    if (this.settings.videoPlayer === '') {
+      return '内置播放器'
+    }
+    return '系统分享'
+  }
+
+  // 原版 hb/c4.java:270 case27：d0(in 外置视频播放器).I(io).b0(strArr, D0)；列表 C0 见 :689-690 / D4() :751
+  // 原版 C0[0] = w.d.a("", qv 系统分享)，其后按 queryIntentActivities 枚举可播放 mp4 的应用。
+  // HarmonyOS 无法枚举"能打开某个视频"的第三方播放器（无此能力），故列表只保留可实现项：
+  //   内置播放器（videoPlayer=''，站内 VideoPlayerOverlay/MediaListPage 播放）
+  //   系统分享（videoPlayer='share'，拉起系统打开方式，消费点 MediaListPage.ets:104-129）
+  // 取舍说明：原版可逐条列出已安装播放器包名并 setPackage 直投，鸿蒙端需由系统分发器自选，
+  // 故不再产生"特定应用"选项；videoPlayer 键与 BackupSettings 的 videoplayer 映射保持不变。
+  private pickVideoPlayer(): void {
+    this.openListDialog('外置视频播放器', ['内置播放器', '系统分享'],
+      this.settings.videoPlayer === '' ? 0 : 1, false, (index: number): void => {
+        this.settings.setVideoPlayer(index === 0 ? '' : 'share')
+      })
   }
 
   // 原版 z8/h0.e：默认选中 = 已存掩码 cleardata2（w9.l.V()），位表 {1,4,64,8,16,32}（表单数据位2已移除）

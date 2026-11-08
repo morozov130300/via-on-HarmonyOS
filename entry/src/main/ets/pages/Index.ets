@@ -15,6 +15,8 @@ import { TabPanel } from '../components/TabPanel'
 import { AppBarHeader } from '../components/AppBar'
 import { MenuSheet, TRANSLATE_INJECT_JS } from '../components/MenuSheet'
 import { FindBar } from '../components/FindBar'
+// 原版 a8/k.java：书签快捷选择对话框（W9()）
+import { BookmarkPickerDialog } from '../components/BookmarkPickerDialog'
 import { Reader, READER_THEME_COLORS } from '../common/Reader'
 import { ReadAloudController, ReadAloudTask, ReadAloudListener, sentencesFromJson } from '../common/ReadAloud'
 import { ReadAloudEngine } from '../common/Tts'
@@ -364,6 +366,14 @@ struct Index {
   }
 
   // 原版 k6.u() + z8/w2 + z8/b0.Q()：via://(v://) 内部命令全量分发（深链/Trampoline 入口）
+  // 原版 W9() → a8.k.o3()：打开书签快捷选择对话框（菜单长按书签 / 工具栏动作 30）。
+  // 与「书签管理页」不同：这是从当前页快速挑一个书签在新标签打开的对话框。
+  @Local showBookmarkPicker: boolean = false
+
+  private openBookmarkDialog(): void {
+    this.showBookmarkPicker = true
+  }
+
   private handleInternalCmd(): void {
     const raw = AppStorage.get<string>('via_internal_cmd') ?? ''
     if (raw === '') {
@@ -461,13 +471,33 @@ struct Index {
         }
         break
       }
-      // k6.u 8598/8612：拦截页/错误页跳转 → 打开解码 url
+      // k6.u 8598 / 8612：拦截页 / 错误页「继续」跳转。两条分支守卫不同：
+      //  · blocker/jump（k6.java:8598-8609）：i6.i0.s(url) 为真才打开 ——
+      //    严格 http:// 或 https:// 前缀（i6/i0.java:481-486 = m() 或 n()）。
+      //  · error/jump（k6.java:8612-8622）：非空且 !i6.i0.p(url) 才打开 ——
+      //    p()（i6/i0.java:347-356）判前 11 字符是否为 javascript:，**明确阻止**。
+      // 早期实现无条件 navigate，既能被 javascript: 注入（error/jump），
+      // 也与原版「非 http(s) 不跳」不符。
       case ViaCmdKind.BLOCKER_JUMP:
-      case ViaCmdKind.ERROR_JUMP:
-        if (cmd.url !== '') {
-          this.tabStore.navigate(cmd.url)
+      case ViaCmdKind.ERROR_JUMP: {
+        const jumpUrl: string = cmd.url
+        if (jumpUrl === '') {
+          break
+        }
+        const lower: string = jumpUrl.length > 11 ? jumpUrl.substring(0, 11).toLowerCase() : jumpUrl.toLowerCase()
+        const isJavascript: boolean = lower === 'javascript:'
+        const isHttp: boolean = jumpUrl.length > 7 &&
+          (jumpUrl.substring(0, 7).toLowerCase() === 'http://' ||
+           (jumpUrl.length > 8 && jumpUrl.substring(0, 8).toLowerCase() === 'https://'))
+        if (cmd.kind === ViaCmdKind.BLOCKER_JUMP) {
+          if (isHttp) {
+            this.tabStore.navigate(jumpUrl)
+          }
+        } else if (!isJavascript) {
+          this.tabStore.navigate(jumpUrl)
         }
         break
+      }
       // k6.u 8624：v://scanner → ga() 扫码（与菜单「扫描二维码」同一管线）
       case ViaCmdKind.SCANNER:
         this.startScan()
@@ -1970,6 +2000,10 @@ struct Index {
       onOpenBookmarks: () => {
         this.openPage('bookmarks')
       },
+      // 原版 W9()（a8.k 书签快捷选择对话框）：工具栏动作 30 打开
+      onBookmarkDialog: () => {
+        this.openBookmarkDialog()
+      },
       onOpenHistory: () => {
         this.openPage('history')
       },
@@ -2351,7 +2385,32 @@ struct Index {
           },
           onReadAloud: () => {
             this.startReadAloud()
+          },
+          // 原版 W9()（a8.k 书签快捷选择对话框）选中书签 → 新标签打开
+          onOpenUrlInNewTab: (url: string) => {
+            this.tabStore.newTabAt(url, false)
           }
+        })
+      }
+      // 原版 a8.k 书签快捷选择对话框（W9()）：工具栏动作 30 入口
+      if (this.showBookmarkPicker) {
+        Stack({ alignContent: Alignment.Center }) {
+          BookmarkPickerDialog({
+            onPickUrl: (url: string): void => {
+              this.showBookmarkPicker = false
+              this.tabStore.newTabAt(url, false)
+            },
+            onDismiss: (): void => {
+              this.showBookmarkPicker = false
+            }
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor('rgba(0,0,0,0.2)')
+        .transition(dimTransition(240))
+        .onClick(() => {
+          this.showBookmarkPicker = false
         })
       }
       if (this.showFindBar) {
