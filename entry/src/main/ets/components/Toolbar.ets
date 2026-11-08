@@ -228,13 +228,17 @@ export struct Toolbar {
         this.onCommand('addBookmark')
         break
       case 7:
-        // 原版 k6.ra case7 → Wa() 添加书签弹窗
-        this.onCommand('addBookmark')
+        // 原版 k6.ra case7（k6.java:8279-8281）→ ja(true) → aa(null)（k6.java:6731-6740）
+        // → g6.i.i(this, bb.i, bb.i.n3(true,1))：打开 bb.i 记录容器（f2116t0={1,2,3}，1=e0）
+        // = **书签管理页**（不是对话框）；case8 同分支 ja(false) → fa() = 历史页。
+        // 动作文案 hb/v4.java:81-84：case7 = po「打开书签」、case8 = K9「历史」。
+        this.onOpenBookmarks()
         break
       case 30:
-        // 原版 k6.ra case30（k6.java:8353-8355）→ W9()：书签**快捷选择对话框**
-        // （a8.k，动作文案 hb/v4 case30 = pn「打开书签对话框」）。
-        // 早期实现误并到 case7「添加书签」，后又退化为跳书签管理页，均已纠正。
+        // 原版 k6.ra case30（k6.java:8357-8359）→ W9()（k6.java:6224-6227）
+        // → open a8.k：书签**快捷选择对话框**（动作文案 hb/v4.java:127-128 = x7.u.H9 = pn
+        // 「打开书签对话框」），点书签后在当前标签打开（a8/k.onDismiss → k6.K3 → k6.Ra）。
+        // 不是跳书签管理页，也不是 case7 的「添加书签」（Wa()/a8.u1）。
         this.onBookmarkDialog()
         break
       case 8:

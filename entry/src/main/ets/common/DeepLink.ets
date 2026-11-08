@@ -1,3 +1,5 @@
+import { util } from '@kit.ArkTS'
+
 // 原版 via://(v://) 深链内部命令协议解析 —— 1:1 移植 z8/w2.java + z8/b0.Q() + k6.u() 分发顺序。
 // 入口链路：原版 Trampoline/Search → Shell → k6.c0 → na.l("intentTab") → b0.A/b0.Q → k6.u()；
 // 鸿蒙侧：EntryAbility.extractEntryUrl（via scheme want）→ AppStorage/emitter → Index.handleInternalCmd。
@@ -18,6 +20,11 @@ export const VIA_CMD_EVENT_ID = 10004
 // v://bookmarks[/?folder=&folderName=] → k6.u 8657：aa/X9/s1 书签页
 // v://translator/translate?text= → k6.u 8669：Eb(text) 翻译文本弹窗
 // v://tabs/restore?ids=&selected= → k6.u 8682：F1(ids, selected) 恢复标签
+// 非 v:// 的特殊 scheme（k6.u 8581-8597，注意顺序在 w2.z(v://) 判定之后）：
+//   thunder:// / qqdl:// / flashget:// → z8.b0.D(str) 解出直链后 mb(...) 下载
+//   baidubox:// / baiduboxapp:// / baiduboxlite:// → 直接 return true（忽略）
+//   file:// 且扩展名 pdf → g6.i.h(za.g.class, pdfPath) 内置 PDF 查看器
+//   其余 → V9(str)（外部 Intent / 应用内跳转）
 // 其余 v://xxx → b0.Q()：home→V0()、log→s1(6)、offline→s1(7)、about→s1(4)、未知→s1(5 catalog)
 export enum ViaCmdKind {
   NONE = 0,
@@ -38,7 +45,14 @@ export enum ViaCmdKind {
   LOG = 15,
   OFFLINE = 16,
   ABOUT = 17,
-  CATALOG = 18
+  CATALOG = 18,
+  // —— 非 v:// 特殊 scheme（k6.u 8581-8597）——
+  // 三种下载描述 scheme → z8.b0.D() 解直链后走下载管线
+  SCHEME_DOWNLOAD = 19,
+  // baidubox:// / baiduboxapp:// / baiduboxlite:// → 原版直接 return true（忽略，不打开）
+  SCHEME_IGNORED = 20,
+  // file:// 且扩展名 pdf → g6.i.h(za.g.class, pdfPath) 内置 PDF 查看器
+  SCHEME_PDF = 21
 }
 
 export class ViaDeepLink {
@@ -135,6 +149,97 @@ function extractFolderName(text: string): string {
   return urlDecode(text.substring(start, end))
 }
 
+// 原版 i6/i0.c(str)：取 URL 扩展名（忽略大小写）。
+// i0.d()（105-130）从串尾反向扫：'#'/'?' 收缩右界、'.' 记录起点、'/' 截断。
+function urlExtension(url: string): string {
+  let right: number = url.length
+  let dotIndex: number = -1
+  let i: number = url.length - 1
+  while (i >= 0) {
+    const ch: string = url.charAt(i)
+    if (ch === '#' || ch === '?') {
+      right = i
+    } else if (ch === '.') {
+      if (dotIndex === -1 || dotIndex > right) {
+        dotIndex = i + 1
+      }
+    } else if (ch === '/') {
+      if (dotIndex === -1 || dotIndex > right ||
+        (i >= 2 && url.charAt(i - 1) === '/' && url.charAt(i - 2) === ':')) {
+        return ''
+      }
+      break
+    }
+    i--
+  }
+  if (dotIndex === -1 || dotIndex >= right) {
+    return ''
+  }
+  return url.substring(dotIndex, right).toLowerCase()
+}
+
+// 原版 z8.v0.a(str)：Base64 解码（失败回退空串）
+function base64Decode(text: string): string {
+  try {
+    const helper: util.Base64Helper = new util.Base64Helper()
+    const bytes: Uint8Array = helper.decodeSync(text)
+    return util.TextDecoder.create('utf-8').decodeToString(bytes)
+  } catch (error) {
+    return ''
+  }
+}
+
+// 原版 z8.b0.D(str)（96-113）：迅雷/快车/QQ 旋风三种下载描述 scheme 解出真实直链。
+//   thunder://  解码后去掉首尾各 2 字符（AA...ZZ）
+//   qqdl://     直接解码
+//   flashget:// 解码后去掉 "[FLASHGET]"
+export function decodeDownloadScheme(raw: string): string {
+  const text: string = raw.trim()
+  let decoded: string = ''
+  if (text.startsWith('thunder://')) {
+    const body: string = base64Decode(text.replace('thunder://', ''))
+    if (body.length > 4) {
+      decoded = body.substring(2, body.length - 2)
+    }
+  } else if (text.startsWith('qqdl://')) {
+    decoded = base64Decode(text.replace('qqdl://', ''))
+  } else if (text.startsWith('flashget://')) {
+    decoded = base64Decode(text.replace('flashget://', '')).replace('[FLASHGET]', '')
+  }
+  return decoded.trim()
+}
+
+// 原版 k6.u() 8581-8597：非 v:// 的 scheme 分流（顺序即代码顺序，不可调换）。
+//  8522 thunder:// / qqdl:// / flashget:// → z8.b0.D 解直链后 mb() 下载（空直链则忽略）
+//  8589 baidubox:// / baiduboxapp:// / baiduboxlite:// → return true（什么都不做）
+//  8592 file:// 且 i0.c() == "pdf" → g6.i.h(za.g.class, pdfPath)
+//  8594 其余 → V9(str)（外部 Intent，鸿蒙侧由系统 want 打开，本命令表不处理）
+function parseSpecialScheme(text: string): ViaDeepLink | null {
+  const result: ViaDeepLink = new ViaDeepLink()
+  if (text.startsWith('thunder://') || text.startsWith('qqdl://') || text.startsWith('flashget://')) {
+    const link: string = decodeDownloadScheme(text)
+    if (link === '') {
+      // 原版：直链为空时仍 return true（已消费），只是不发起下载
+      result.kind = ViaCmdKind.SCHEME_IGNORED
+      return result
+    }
+    result.kind = ViaCmdKind.SCHEME_DOWNLOAD
+    result.url = link
+    return result
+  }
+  if (text.startsWith('baidubox://') || text.startsWith('baiduboxapp://') ||
+    text.startsWith('baiduboxlite://')) {
+    result.kind = ViaCmdKind.SCHEME_IGNORED
+    return result
+  }
+  if (text.startsWith('file://') && urlExtension(text) === 'pdf') {
+    result.kind = ViaCmdKind.SCHEME_PDF
+    result.url = text
+    return result
+  }
+  return null
+}
+
 // via:// → v://（k6.u 8564：前 6 位忽略大小写匹配即替换）
 export function parseViaDeepLink(raw: string): ViaDeepLink | null {
   let text: string = raw
@@ -152,8 +257,10 @@ export function parseViaDeepLink(raw: string): ViaDeepLink | null {
     result.kind = ViaCmdKind.HISTORY_URI
     return result
   }
+  // 原版 k6.u() 8581：先问 w2.z(str)（是否 v://）。非 v:// 才进入下面的
+  // 「特殊 scheme → V9」分支；v:// 继续走后面的内部命令表。
   if (!hasPrefix(text, 'v://')) {
-    return null
+    return parseSpecialScheme(text)
   }
   // 原版 k6.u()（8581-8630）两条跳转分支的守卫条件不同，必须分别对齐：
   //  · blocker/jump（w2.o）：取 url 后 if (i6.i0.s(url)) 才打开；

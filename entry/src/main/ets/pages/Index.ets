@@ -554,8 +554,44 @@ struct Index {
       case ViaCmdKind.TABS_RESTORE:
         this.tabStore.restoreByIds(cmd.ids, cmd.selected)
         break
-      // catalog.html 站点目录页我方无对应页面，如实 no-op
+      // z8/b0.Q() 默认 id5 → u9/d.java:129 catalog.html：站点目录页（6 入口）
       case ViaCmdKind.CATALOG:
+        this.openPage('catalog')
+        break
+      // 原版 k6.u 8582-8588：thunder:// / qqdl:// / flashget:// → z8.b0.D 解出直链后
+      //   mb(new e.b().j(直链).k(L1).c("attachment").d(-1).b()) 走下载管线
+      case ViaCmdKind.SCHEME_DOWNLOAD: {
+        const link: string = cmd.url
+        if (link !== '') {
+          let pageUa = ''
+          try {
+            pageUa = this.tabStore.current().controller.getUserAgent()
+          } catch (error) {
+            pageUa = ''
+          }
+          this.downloads.requestUrlDownload(link, this.tabStore.current().url, pageUa, '')
+        }
+        break
+      }
+      // 原版 k6.u 8589-8591：baidubox:// 系列 → 直接 return true（什么都不做）；
+      // thunder/qqdl/flashget 解出空直链时同样已消费
+      case ViaCmdKind.SCHEME_IGNORED:
+        break
+      // 原版 k6.u 8592-8596：file:// 且扩展名 pdf → g6.i.h(za.g.class, pdfPath)
+      // PdfViewerPage 的 param 是沙箱文件路径（同 TabWeb.openPdfPreview 的
+      // 「去 file:// 前缀 + decodeURIComponent」换算），不是 URI
+      case ViaCmdKind.SCHEME_PDF: {
+        let pdfPath: string = cmd.url.substring('file://'.length)
+        try {
+          pdfPath = decodeURIComponent(pdfPath)
+        } catch (error) {
+          pdfPath = cmd.url.substring('file://'.length)
+        }
+        if (pdfPath !== '') {
+          this.mainNavStack.pushPathByName('pdfViewer', pdfPath, true)
+        }
+        break
+      }
       default:
         break
     }
@@ -1112,11 +1148,12 @@ struct Index {
     }
   }
 
-  // 原版 tb()：打开菜单
+  // 原版 tb()：打开菜单（k6.java:8547-8558 —— 先算 N8() 宽与 i10 贴边距）
   private pcMenu(): void {
     if (!this.pcMainScene()) {
       return
     }
+    this.publishMenuMetrics()
     this.showMenu = true
   }
 
@@ -1259,6 +1296,75 @@ struct Index {
     }
     const tab = this.tabStore.current()
     return tab.isHomePage() ? '' : tab.url
+  }
+
+  // ============ 原版菜单窗口尺寸（k6.tb / N8，供 MenuSheet 取用） ============
+  // 原版 c8/k6.java:8557-8558：
+  //   int i10 = this.W0 == 1 ? 48 : 80;                       // 贴边距
+  //   i8.k.y3(S8(), Q8(), N8(), i10 | 8388613);              // 宽 = N8()，gravity=LEFT|TOP
+  // 原版 N8()（5072-5078）：
+  //   int iMin = min(f2606z0.getMeasuredWidth(), f2606z0.getMeasuredHeight());  // 容器短边
+  //   if (iMin == 0) iMin = g6.y.p(I());                     // 短边 = min(屏宽,屏高)
+  //   return (!this.Z0 || this.W0 == 0) ? iMin
+  //        : Math.min(iMin - g6.y.h(I(), 96.0f), g6.y.h(I(), 384.0f));  // 大屏且非布局0
+  // Z0 = g6.y.E(context)（k6.java:8398）：screenLayout 为 LARGE/XLARGE 且对角线 >= 7 英寸。
+  // 鸿蒙侧等价判据：窗口短边 vp >= 600（ViaDialogCard 同口径的大屏分界）。
+  private largeScreenByShortSide(): boolean {
+    const shortVp: number = this.windowShortSideVp()
+    return shortVp >= 600
+  }
+
+  // 应用窗口短边（vp）：分屏/悬浮窗时需要窗口尺寸而非物理屏，
+  // 与 computeDialogWidthVp 同口径（AppStorage 的 mainWindow → windowRect，失败退物理屏）
+  private windowShortSideVp(): number {
+    try {
+      let wPx: number = 0
+      let hPx: number = 0
+      const win = AppStorage.get<window.Window>('mainWindow')
+      if (win) {
+        const rect = win.getWindowProperties().windowRect
+        wPx = rect.width
+        hPx = rect.height
+      }
+      if (wPx <= 0 || hPx <= 0) {
+        const d = display.getDefaultDisplaySync()
+        wPx = d.width
+        hPx = d.height
+      }
+      const density: number = display.getDefaultDisplaySync().densityPixels
+      if (density <= 0 || wPx <= 0) {
+        return 360
+      }
+      const wVp: number = wPx / density
+      const hVp: number = hPx / density
+      return Math.min(wVp, hVp)
+    } catch (error) {
+      return 360
+    }
+  }
+
+  // 原版 N8()：菜单可用边长
+  menuAvailableSizeVp(): number {
+    const shortVp: number = this.windowShortSideVp()
+    if (!this.largeScreenByShortSide() || this.effectiveLayout() === LAYOUT_TRADITIONAL) {
+      return shortVp
+    }
+    return Math.min(shortVp - 96, 384)
+  }
+
+  // 原版 k6.java:8557：贴边距 = 布局1（工具栏在上）时 48，其余 80
+  menuSideGapVp(): number {
+    return this.effectiveLayout() === LAYOUT_TOOLBAR_TOP ? 48 : 80
+  }
+
+  // 打开菜单前把尺寸参数发布给 MenuSheet（MenuSheet 不在本域，取用端由主控接线）：
+  //   AppStorage 'via_menu_size_vp'     : number  菜单可用边长（原版 N8()）
+  //   AppStorage 'via_menu_side_gap_vp' : number  贴边距（原版 i10）
+  //   AppStorage 'via_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
+  private publishMenuMetrics(): void {
+    AppStorage.setOrCreate('via_menu_size_vp', this.menuAvailableSizeVp())
+    AppStorage.setOrCreate('via_menu_side_gap_vp', this.menuSideGapVp())
+    AppStorage.setOrCreate('via_menu_layout', this.effectiveLayout())
   }
 
   private bottomBg(): ResourceColor {
@@ -2090,6 +2196,8 @@ struct Index {
         this.showTabPanel = true
       },
       onMenu: () => {
+        // 原版 tb()：菜单打开前按 N8()/i10 计算可用宽高与贴边距
+        this.publishMenuMetrics()
         this.showMenu = true
       },
       onAddressTap: () => {
