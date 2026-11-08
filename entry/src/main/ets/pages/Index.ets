@@ -1583,7 +1583,7 @@ struct Index {
 
   private fabLastTouchX: number = 0
   private fabLastTouchY: number = 0
-  private fabDirFlag: number = 0
+  @Local fabDirFlag: number = 0
 
   // 原版 c.e()（k6.java:624-668）吸附：x 三分（左/中/右）、y 下 1/4 分界（上/中/下），
   // 结果写回设置 fab(int)（o2），位置由 Gravity 重排（Ga）
@@ -2034,6 +2034,18 @@ struct Index {
           .animationDuration(0)
           .width('100%')
           .height('100%')
+          // 原版 k6.Ya()（6469-6495）+ db()（6969-6974）：网页容器视口不能与顶栏重叠，
+          // 否则网页内 position:fixed 的常驻头部会被浏览器地址栏盖住。
+          //  · X0==0（未开自动隐藏）：f2586p0 用 RelativeLayout BELOW 顶栏 / ABOVE 底栏
+          //    规则布局，视口夹在两栏之间 → 用 padding 等价实现。
+          //  · X0==1（开自动隐藏）：f2586p0 全屏 -1,-1，db(p) 令
+          //    translationY = 顶栏高 × (1 - p)：显示态让出顶栏、隐藏态铺满全屏。
+          .padding(this.settings.toolbarAutoHide === 0
+            ? { top: this.topBarHeightVp, bottom: this.bottomBarHeightVp }
+            : { top: 0, bottom: 0 })
+          .translate({ y: this.settings.toolbarAutoHide === 0
+            ? 0
+            : this.topBarHeightVp * (1 - this.toolbarHideProgress) })
 
           // 原版 y7：顶栏 f2604y0（RelativeLayout alignParentTop）与底栏 f2600w0
           // （alignParentBottom）是各自锚定边的兄弟视图——用全屏包裹容器分别贴顶/
@@ -2094,13 +2106,18 @@ struct Index {
       // 长按 300ms（alpha 0.5）=自由拖动，松手吸附九宫并持久化 fab(int)。
       // 摆放 = 原版 RelativeLayout gravity（Ga）：全屏包裹容器按 Gravity 对齐，
       // FAB 在容器内做 margin 12dp 偏移；自由拖动时切绝对 position。
+      // 图标 = u0.a 五态（方向位 c(dir) 换图）：左=b2 0°、右=b2 180°（drawable a3）、
+      // 上=b2 90°（ab）、下=b2 -90°（aa）、默认=cm 菜单（原 fab 拖出方向 c()）。
       if (this.fabVisible) {
         Stack() {
           Stack() {
-            Image($r('app.media.via_ic_menu'))
+            Image(this.fabDirFlag === 0 ? $r('app.media.via_ic_menu') : $r('app.media.via_fab_arrow_back'))
               .width(22)
               .height(22)
               .fillColor('#61000000')
+              .rotate({
+                angle: this.fabDirFlag === 2 ? 180 : (this.fabDirFlag === 4 ? 90 : (this.fabDirFlag === 8 ? -90 : 0))
+              })
           }
           .width(this.fabSize)
           .height(this.fabSize)
