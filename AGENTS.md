@@ -325,7 +325,15 @@
 - [x] **D7/D8/D9**：GM timeout 平台上限注释、@resource 新鲜度按原版字面语义、备份 `updater_scripts` 互通。
 - [x] **G1/G2/G3 仓库卫生**：26 个诊断临时文件移出版本库并删除、`.gitignore` 补规则、《移植缺失功能说明.md》恢复并按本轮重写。
 - [x] **E7 版本号**：`app.json5` → `7.4.0.beta` / `20260920`。
-- [x] `devecocli check arkts`：122 文件 0 error；`devecocli build`：BUILD SUCCESSFUL。
+- [x] **D5 非 v:// 特殊 scheme**：thunder/qqdl/flashget 经 `z8.b0.D` 解直链走分块下载（base64 解码去首尾 2 字符）、baidubox 系忽略、`file://*.pdf` 进内置查看器（原版 `k6.u:8581-8597`）。
+- [x] **D6 catalog 站点目录页**：新建 `view/CatalogPage.ets`（6 入口共用同一个 CSS 手绘标签字形，`u9/d.g` 的 `.tag.icon`；「主页」是动作不入路由栈）+ 路由注册。
+- [x] **外部入口统一走 k6.u 分发**：`openExternalLink` 重构——原版 `z8/b0.A() VIEW` 分支 → `k6.c0` → `k6.u()`，所有外部 URL 先过内部命令分发器，不匹配才开标签。此前无条件 navigate 会把 `v://xxx` 当网页塞进标签。
+- [x] **跳转守卫收敛到解析层**：`DeepLink` 新增 `isStrictHttp()`（=i6/i0.s）与 `isJavaScriptUrl()`（=i6/i0.p），blocker/error jump 在解析层过滤；TabWeb 复用消除三处重复实现。
+- [x] **A3 横滑指示层**：横滑位移/淡出从整个 Web 改为独立指示层（原版 `c8/y7.java f2940p`：60×72dp、20dp 内边距、初始 -73dp 屏外），网页本体不动。
+- [x] **B3 打开方式**：书签对话框按原版 `k6.Ua()`（5994-6023）——当前标签存在时由**当前标签**加载，仅无标签才新开；承载层收敛到 Index（删 MenuSheet 并行份）。
+- [x] **C3 d9() 接线**：`closeTopPanelsForLeftIcon()` 按 onBackPress 弹层优先级实现，两处 AddressBar 注入 `onTryClosePanels`。
+- [x] `devecocli check arkts`：123 文件 0 error；`devecocli build`：BUILD SUCCESSFUL。
+- [x] 提交并推送：`4e64549`/`df3e552`/`1176680`/`5321c6a`/`4e1778e`/`b3e1ed9`（含你手动补的 AGENTS.md 行为准则三条）。
 
 ### ⚠️ 本轮勘误（历史清单误报，勿再改）
 - 资源图标显隐 **150ms 是正确的**（原版 `n0.java:297,304`）；历史「改 200ms」是错的。
