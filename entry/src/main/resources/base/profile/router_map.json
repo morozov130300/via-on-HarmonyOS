@@ -279,6 +279,11 @@
       "name": "closedTabs",
       "pageSourceFile": "src/main/ets/view/ClosedTabsPage.ets",
       "buildFunction": "ClosedTabsPageBuilder"
+    },
+    {
+      "name": "catalog",
+      "pageSourceFile": "src/main/ets/view/CatalogPage.ets",
+      "buildFunction": "CatalogPageBuilder"
     }
   ]
 }

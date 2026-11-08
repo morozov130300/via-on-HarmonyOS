@@ -1,9 +1,43 @@
 import { BusinessError } from '@kit.BasicServicesKit'
+import { display, window } from '@kit.ArkUI'
 import { BookmarkRec, BookmarkFolderRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
-import { computeDialogWidthVp } from './ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { ViaIcon } from './ViaIcon'
+
+// 原版 a8/k.T1()（a8/k.java:197-206）：
+//   int iMin  = min(g6.y.p(I())*4/5, g6.y.h(I(), 450.0f));   // 宽
+//   int iMin2 = min(g6.y.p(I())*4/5, g6.y.h(I(), 600.0f));   // 高
+//   Z2().getWindow().setLayout(iMin, iMin2);
+// g6.y.p = 屏宽 px、g6.y.h = dp→px；这里统一换算成 vp（与窗口 rect 一致，兼容分屏/悬浮窗）。
+function a8kWindowSizeVp(): number[] {
+  try {
+    let wPx = 0
+    let hPx = 0
+    const win = AppStorage.get<window.Window>('mainWindow')
+    if (win !== undefined) {
+      const rect = win.getWindowProperties().windowRect
+      wPx = rect.width
+      hPx = rect.height
+    }
+    if (wPx <= 0 || hPx <= 0) {
+      const d = display.getDefaultDisplaySync()
+      wPx = d.width
+      hPx = d.height
+    }
+    const density = display.getDefaultDisplaySync().densityPixels
+    if (density <= 0 || wPx <= 0) {
+      return [288, 480]
+    }
+    const wVp = wPx / density
+    const hVp = hPx / density
+    return [Math.min(wVp * 4 / 5, 450), Math.min(hVp * 4 / 5, 600)]
+  } catch (error) {
+    const err = error as BusinessError
+    console.error(`resolve dialog size failed: ${err.code}`)
+    return [288, 480]
+  }
+}
 
 // 原版 a8/k.java（extends k8/a.java DialogFragment）：书签快捷选择对话框。
 // 入口：k6.W9()（k6.java:6224-6227，P9 case2 长按「书签」）
@@ -46,8 +80,14 @@ export struct BookmarkPickerDialog {
   // 从根到当前文件夹的路径（用于「..」上级与标题）
   @Local folderChain: BookmarkFolderRec[] = []
   @Local entries: PickerEntry[] = []
+  // 原版 a8/k.T1()：窗口 = min(屏宽*4/5,450dp) × min(屏高*4/5,600dp)
+  @Local dialogWidthVp: number = 288
+  @Local dialogHeightVp: number = 480
 
   aboutToAppear(): void {
+    const size: number[] = a8kWindowSizeVp()
+    this.dialogWidthVp = size[0]
+    this.dialogHeightVp = size[1]
     this.currentFolderId = this.initialFolderId
     this.openFolder(this.initialFolderId)
   }
@@ -228,8 +268,8 @@ export struct BookmarkPickerDialog {
       }
       .width('100%')
     }
-    .width(computeDialogWidthVp())
-    .constraintSize({ maxWidth: 450, maxHeight: 600 })
+    .width(this.dialogWidthVp)
+    .height(this.dialogHeightVp)
     .backgroundColor($r('app.color.dialog_bg'))
     .borderRadius(18)
     .border({ width: 1, color: $r('app.color.dialog_border') })

@@ -92,7 +92,9 @@ export const MARK_AD_INJECT_JS: string = `(function(){if(window.__via_mark_ad__)
 export struct MenuSheet {
   @Event onClose: () => void = () => {}
   @Event onOpenPage: (page: string) => void = (page: string) => {}
-  // 原版 W9()（a8.k 书签快捷选择对话框）选中书签后在新标签打开
+  // 保留给 Index 的既有接线（Index 侧仍传入）。原版 a8/k 选中书签走 k6.K3 → k6.Ra
+  // → Ta/Ua（k6.java:5994-6023）：当前标签存在时**在当前标签打开**，故 MenuSheet 内
+  // 直接用 tabStore.navigate(url)，此回调不再参与该链路。
   @Event onOpenUrlInNewTab: (url: string) => void = (url: string) => {}
   @Event onFindInPage: () => void = () => {}
   @Event onShare: () => void = () => {}
@@ -447,6 +449,19 @@ export struct MenuSheet {
   }
 
   // 原版 k6.P9（k6.java:5454-5556）：长按直达对应页面/弹窗（O9/P9 由 i8/k X2 按 flags 分发）
+  //
+  // 【B6 锚定结论——本菜单的所有长按弹层都是「居中」，原版也不用触点锚定】
+  //   原版有两种弹层：
+  //     (a) w5/k.f0()：WindowManager gravity = 17（居中），k8/a DialogFragment 同样 gravity 17。
+  //         ← 本菜单长按全部走这一种：case2 W9→a8.k、case4 A0()→f0()、case7 Wa()、
+  //           case14 Db(true)→f0()、case8 eb()。
+  //     (b) w5/k.g0(i10,i11)：按触点 x/y + gravity(48 贴顶/80 贴底) 锚定的浮动菜单
+  //         （w5/k.java:727-792，触点离边 <10px 夹到 12dp，距边 >半屏时翻到另一侧，
+  //          再减系统栏 insets）——**只** 用于 WebView 上下文菜单：
+  //           k6.java:3762（A9 图片/链接长按菜单）、k6.java:5673（Qa 以图搜图引擎菜单）。
+  //   故本文件（菜单弹层宿主）不需要锚定；需要的锚定在 TabWeb 域（图片/链接长按 → 以图搜图），
+  //   若将来要做：LongPressGesture 的 GestureEvent.fingerList[0].globalX/globalY 已是 vp 窗口坐标，
+  //   菜单层是铺满窗口的 Stack，可直接用 .position()/bindPopup placement+offset 复现 g0 的夹边逻辑。
   private menuLongPress(id: string): void {
     switch (id) {
       case 'settings':
@@ -784,9 +799,12 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       BookmarkPickerDialog({
         onPickUrl: (url: string): void => {
+          // 原版链路：a8/k.onDismiss → result → k6.K3（k6.java:1846-1863）→ k6.Ra(url)
+          //   → Ta/Ua（k6.java:5994-6023）：当前标签存在时 aVarD.v(str) = **在当前标签打开**，
+          //   仅无标签时才 i1(str,true) 新开；随后 d9() 收起菜单。
           this.showBookmarkPicker = false
           this.onClose()
-          this.onOpenUrlInNewTab(url)
+          this.tabStore.navigate(url)
         },
         onDismiss: (): void => {
           this.showBookmarkPicker = false
@@ -801,8 +819,14 @@ export struct MenuSheet {
       this.showBookmarkPicker = false
     })
   }
-  // 原版 k6.P9 case4 → A0() → w5.k.l(I()).d0(x7.u.A0「下载管理」).b0(下载器列表, 当前项, 回调)
-  // 鸿蒙无法枚举第三方下载器，列表仅「内建下载器」；写回键与设置页一致（dlManager）
+  // 原版 k6.P9 case4（k6.java:5467-5487）→ A0()：
+  //   strArrD = download/j1.e().d(ctx)（[0]=下载器键, [1]=显示名；首项 "" + d5「内建下载器」）；
+  //   当前项 = w9 K2()「dlmanager」在 [0] 中的下标；
+  //   w5.k.l(I()).d0(x7.u.A0=bf「下载管理」).b0([1], 当前项, a5).f0()  —— f0() 是**居中**弹窗，
+  //   不是 g0(i10,i11) 锚定弹层（锚定只用于图片长按/文本选择菜单，见 k6.java:3762/5673）。
+  //   点击 → k6.a5：n0.E0(str) 写 dlmanager、O0.j(str) 应用、toast m4「已设置 %1$s 为 %2$s」。
+  // 鸿蒙无法枚举第三方下载器（无 cross-app Intent 查询），列表只保留「内建下载器」（d5），
+  // 写回键与通用设置页「下载管理」行一致（settings.dlManager='builtin'）。
   @Builder
   DlManagerDialog() {
     Stack({ alignContent: Alignment.Center }) {
@@ -851,10 +875,16 @@ export struct MenuSheet {
     .height(48)
     .padding({ left: 20, right: 20 })
     .onClick(() => {
+      // 原版 k6.a5（k6.java:2699-2706）：写 dlmanager → 应用下载器 → toast m4「已设置 %1$s 为 %2$s」
       this.settings.setDlManager(value)
       this.showDlManagerDialog = false
+      this.onClose()
+      this.getUIContext().getPromptAction().showToast({
+        message: `已设置 下载管理 为 ${label}`, duration: 1500
+      })
     })
   }
+
   @Builder
   ImageModeDialog() {
     Stack({ alignContent: Alignment.Center }) {
