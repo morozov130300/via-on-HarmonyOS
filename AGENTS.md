@@ -311,17 +311,16 @@
 **当前任务：应用更名为 Uia（2026-11-09，已完成并编译通过）**
 
 ### 应用更名 Uia（已完成）
-- [x] 包名 `cn.edu.whut.via` → `cn.edu.whut.uia`（`AppScope/app.json5`、`shortcuts_config.json` 4 处）
+- [x] **包名保持 `cn.edu.whut.via` 不变**（AGC 包名创建后不支持修改，官方创建页原文「应用包名不可修改 创建后不支持修改」；更名只改显示名，不动包名，因此复用原应用与原签名）
 - [x] 应用名/模块名/卡片名/描述 `Via` → `Uia`（`AppScope` + `entry` 的 `base`/`en_US` 资源共 26 处）
 - [x] 界面文案同步：关于页标题、站点目录页标题、广告规则帮助、用户脚本 GM_* 说明
 - [x] 主页默认 Logo 文字 `VIA` → `UIA`（`Settings.ets` 4 处：字段默认值 / 读取回退 / 置空回退 / 重置主页）
 - [x] 导出文件名前缀 `Via_` → `Uia_`（备份 ZIP、书签 HTML）
-- [x] AGC 新建应用 `cn.edu.whut.uia`（appId `6917621312976094801`，名称 Uia，项目 via）
-- [x] AGC 为该应用新建调试/发布 Profile 并回写到 `signing/`（p7b 校验：bundle=cn.edu.whut.uia，type=debug/release）
-- [x] AGC 语言项更新为 Uia（简介/更新说明同步），并为新应用提交 `READ_PASTEBOARD` ACL 申请（status=0 待审）
+- [x] AGC 原应用 `cn.edu.whut.via`（appId `6917619994375829712`）语言项 appName/简介/更新说明改为 Uia，复用其原有调试/发布 Profile 与 `READ_PASTEBOARD` ACL（免重新审批）
 - [x] 工程目录 `D:\via` → `D:\Uia`，同步 AGENTS.md / Transitions.ets / PageTransitions.ets 内绝对路径
-- [x] 清理 `.hvigor`/`build`/`entry/build` 旧路径缓存后全量构建 BUILD SUCCESSFUL；HAP 校验 bundle=cn.edu.whut.uia、资源索引 26 处 Uia / 0 处 Via
+- [x] 清理 `.hvigor`/`build`/`entry/build` 旧路径缓存后全量构建 BUILD SUCCESSFUL；HAP 校验 bundle=cn.edu.whut.via、资源索引 26 处 Uia / 0 处 Via
 - [x] 提交并推送：`ae2e42c`（更名）、`68ff635`（目录更名后的路径同步）
+- ⚠️ **教训（勿重犯）**：AGC 包名不可改 ≠ 需要新建应用。用户只说「应用名称改成 Uia」时，只需改显示名，**不得顺手改包名、不得新建应用**——新建会在 AGC 留下删不掉的重复应用
 
 **上一任务：全量未对齐审核与修复（2026-11-08，已完成编译，待真机确认）**
 
