@@ -1,7 +1,7 @@
 import { curves } from '@kit.ArkUI'
 
 // 原版 Via 7.4.0 窗口/控件动画逐项复刻
-// 依据：反编译产物 D:\via\via_v7.4.0反编译产物
+// 依据：反编译产物 D:\Uia\via_v7.4.0反编译产物
 //  - 窗口动画资源：r/a/a.xml ~ r/a/n.xml（即 APK 的 res/anim/a..n）
 //  - 样式映射：resources/res/values/styles.xml —— style k(a/b)、q(m/l)、r(k/n)
 //  - 时长整数：resources/res/values/integers.xml —— integer/a=240、integer/d=160
