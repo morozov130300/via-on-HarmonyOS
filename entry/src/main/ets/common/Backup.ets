@@ -393,7 +393,7 @@ export class BackupManager {
         JSON.stringify(javaHashMapOrderedRecord(values)))
     }
 
-    const zipPath = `${context.cacheDir}/Via_导出数据_${stamp}.zip`
+    const zipPath = `${context.cacheDir}/Uia_导出数据_${stamp}.zip`
     await writer.writeTo(zipPath)
     return zipPath
   }

@@ -68,7 +68,7 @@ export struct CatalogPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: 'Via',
+      title: 'Uia',
       onBack: () => {
         this.navPathStack.pop()
       }

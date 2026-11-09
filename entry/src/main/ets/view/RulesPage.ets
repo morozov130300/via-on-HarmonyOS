@@ -312,7 +312,7 @@ export struct RulesPage {
         .fontColor($r('app.color.fg'))
         .width('100%')
       Column({ space: 12 }) {
-        Text('Via 几乎支持所有的 Adblock Plus 规则。\n你可以这样拦截 example.com 的所有请求：\n||example.com^（或 example.com）')
+        Text('Uia 几乎支持所有的 Adblock Plus 规则。\n你可以这样拦截 example.com 的所有请求：\n||example.com^（或 example.com）')
           .fontSize(13)
           .fontColor($r('app.color.fg'))
         Text('通配符也是支持的，比如：\n||example.com/js/ads_*.js')

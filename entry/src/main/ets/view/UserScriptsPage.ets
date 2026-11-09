@@ -668,7 +668,7 @@ const HELP_HTML: string = '<b>Metadata 块</b><br /> Metadata 必须使用如下
   'DOM 加载完成后注入脚本， <tt>document-idle</tt> 用于在页面空闲后注入脚本。 <br /><br /> <b><tt>@grant</tt>' +
   '</b>：定义脚本所使用和应被授权的特殊 GM_* API。<br /> <br /><br /> <b><tt>@downloadURL</tt></b>：脚本的' +
   '下载地址。 <br /><br /> <b><tt>@supportURL</tt></b>：脚本的支持地址。 <br /><br /> <b><tt>@homepageURL' +
-  '</tt></b>：脚本的主页。 <br /><br /> <b>GM_* API</b><br /> <tt>GM_*</tt> 是一组 Via 提供的特殊 API 集合。' +
+  '</tt></b>：脚本的主页。 <br /><br /> <b>GM_* API</b><br /> <tt>GM_*</tt> 是一组 Uia 提供的特殊 API 集合。' +
   '当前支持的特殊 API 包括：<br/> <tt>GM_getValue/GM_setValue/GM_deleteValue/GM_listValues/' +
   'GM_getResourceText/GM_getResourceURL/GM_addElement/GM_addStyle/GM_setClipboard/GM_xmlhttpRequest/' +
   'GM_download/GM_registerMenuCommand/GM_unregisterMenuCommand</tt>. <br /><br /> <b>匹配</b><br /> ' +

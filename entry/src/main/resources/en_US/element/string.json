@@ -2,19 +2,19 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "Via Browser main module"
+      "value": "Uia Browser main module"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Via Browser"
+      "value": "Uia Browser"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "app_name",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "search_or_type_url",
@@ -42,7 +42,7 @@
     },
     {
       "name": "block_page_blocked",
-      "value": "Via has prevented the following page from loading:"
+      "value": "Uia has prevented the following page from loading:"
     },
     {
       "name": "block_page_reason",
@@ -1006,23 +1006,23 @@
     },
     {
       "name": "search_widget_name",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "search_widget_desc",
-      "value": "Via Browser"
+      "value": "Uia Browser"
     },
     {
       "name": "transparent_search_widget_name",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "transparent_search_widget_desc",
-      "value": "Via Browser"
+      "value": "Uia Browser"
     },
     {
       "name": "widget_white_solid_name",
-      "value": "Via · White solid"
+      "value": "Uia · White solid"
     },
     {
       "name": "widget_white_solid_desc",
@@ -1030,7 +1030,7 @@
     },
     {
       "name": "widget_white_transparent_name",
-      "value": "Via · White transparent"
+      "value": "Uia · White transparent"
     },
     {
       "name": "widget_white_transparent_desc",
@@ -1038,7 +1038,7 @@
     },
     {
       "name": "widget_black_solid_name",
-      "value": "Via · Black solid"
+      "value": "Uia · Black solid"
     },
     {
       "name": "widget_black_solid_desc",
@@ -1046,7 +1046,7 @@
     },
     {
       "name": "widget_black_transparent_name",
-      "value": "Via · Black transparent"
+      "value": "Uia · Black transparent"
     },
     {
       "name": "widget_black_transparent_desc",

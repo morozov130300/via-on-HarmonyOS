@@ -59,7 +59,7 @@ export struct SettingsAboutPage {
             .onClick(() => {
               this.checkUpdate()
             })
-            Text('Via')
+            Text('Uia')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.fg'))

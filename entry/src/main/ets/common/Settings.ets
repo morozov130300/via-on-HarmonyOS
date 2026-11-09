@@ -185,7 +185,7 @@ export class AppSettings {
   @Trace disableSafeBrowsing: boolean = false
   @Trace ignoreSslWarning: boolean = false
   @Trace homeBgColor: string = ''
-  @Trace homeLogoText: string = 'VIA'
+  @Trace homeLogoText: string = 'UIA'
   @Trace homeLogoType: number = 0
   @Trace homeLogoSize: number = 28
   @Trace homeLogoStyle: number = 1
@@ -462,7 +462,7 @@ export class AppSettings {
       this.disableSafeBrowsing = await this.readBoolean('disableSafeBrowsing', false)
       this.ignoreSslWarning = await this.readBoolean('ignoreSslWarning', false)
       this.homeBgColor = await this.readString('homeBgColor', '')
-      this.homeLogoText = await this.readString('homeLogoText', 'VIA')
+      this.homeLogoText = await this.readString('homeLogoText', 'UIA')
       this.homeLogoType = await this.readNumber('homeLogoType', 0)
       this.homeLogoSize = await this.readNumber('homeLogoSize', 28)
       this.homeLogoStyle = await this.readNumber('homeLogoStyle', 1)
@@ -1592,7 +1592,7 @@ export class AppSettings {
   }
 
   setHomeLogoText(text: string): void {
-    const value = text.trim() !== '' ? text : 'VIA'
+    const value = text.trim() !== '' ? text : 'UIA'
     this.homeLogoText = value
     this.flushKey('homeLogoText', value)
   }
@@ -1881,7 +1881,7 @@ export class AppSettings {
   resetHomeStyle(): void {
     this.setHomeBgColor('')
     this.setHomeBgImage('')
-    this.setHomeLogoText('VIA')
+    this.setHomeLogoText('UIA')
     this.setHomeLogoType(0)
     this.setHomeLogoSize(28)
     this.setHomeLogoStyle(1)
