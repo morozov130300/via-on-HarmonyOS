@@ -1052,7 +1052,7 @@ export struct BookmarkPage {
     }
     const docPicker = new picker.DocumentViewPicker(context as common.UIAbilityContext)
     const options = new picker.DocumentSaveOptions()
-    options.newFileNames = [`Via_书签_${formatDateStamp(new Date())}.html`]
+    options.newFileNames = [`Uia_书签_${formatDateStamp(new Date())}.html`]
     options.fileSuffixChoices = ['.html']
     docPicker.save(options).then((uris: string[]) => {
       if (uris === undefined || uris === null || uris.length === 0) {

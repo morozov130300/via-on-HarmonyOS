@@ -686,7 +686,7 @@ export struct SettingsGeneralPage {
     }
     const now = new Date()
     const ymd = `${now.getFullYear()}${this.pad2(now.getMonth() + 1)}${this.pad2(now.getDate())}`
-    const fileName = `Via_导出数据_${ymd}.zip`
+    const fileName = `Uia_导出数据_${ymd}.zip`
     try {
       const documentPicker = new picker.DocumentViewPicker(context)
       documentPicker.save({ newFileNames: [fileName] }).then((uris: Array<string>) => {

@@ -2,19 +2,19 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "Via 浏览器主模块"
+      "value": "Uia 浏览器主模块"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Via 浏览器"
+      "value": "Uia 浏览器"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "app_name",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "search_or_type_url",
@@ -42,7 +42,7 @@
     },
     {
       "name": "block_page_blocked",
-      "value": "Via 阻止了以下页面加载:"
+      "value": "Uia 阻止了以下页面加载:"
     },
     {
       "name": "block_page_reason",
@@ -1006,23 +1006,23 @@
     },
     {
       "name": "search_widget_name",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "search_widget_desc",
-      "value": "Via 浏览器"
+      "value": "Uia 浏览器"
     },
     {
       "name": "transparent_search_widget_name",
-      "value": "Via"
+      "value": "Uia"
     },
     {
       "name": "transparent_search_widget_desc",
-      "value": "Via 浏览器"
+      "value": "Uia 浏览器"
     },
     {
       "name": "widget_white_solid_name",
-      "value": "Via · 白色实心"
+      "value": "Uia · 白色实心"
     },
     {
       "name": "widget_white_solid_desc",
@@ -1030,7 +1030,7 @@
     },
     {
       "name": "widget_white_transparent_name",
-      "value": "Via · 白色透明"
+      "value": "Uia · 白色透明"
     },
     {
       "name": "widget_white_transparent_desc",
@@ -1038,7 +1038,7 @@
     },
     {
       "name": "widget_black_solid_name",
-      "value": "Via · 黑色实心"
+      "value": "Uia · 黑色实心"
     },
     {
       "name": "widget_black_solid_desc",
@@ -1046,7 +1046,7 @@
     },
     {
       "name": "widget_black_transparent_name",
-      "value": "Via · 黑色透明"
+      "value": "Uia · 黑色透明"
     },
     {
       "name": "widget_black_transparent_desc",
