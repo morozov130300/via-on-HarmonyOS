@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "cn.edu.whut.uia",
+    "bundleName": "cn.edu.whut.via",
     "vendor": "example",
     // 与移植基准 Via 7.4.0 对齐（原版 AndroidManifest：versionCode=20260920、
     // versionName=7.4.0.beta）。关于页展示的 7.4.0.b13.edf6737e 是原版 hb/d.java:90
