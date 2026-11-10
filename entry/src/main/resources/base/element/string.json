@@ -38,7 +38,7 @@
     },
     {
       "name": "blocked_ads_count",
-      "value": "已拦截 %d 个广告"
+      "value": "已拦截 %1$d 个广告"
     },
     {
       "name": "block_page_blocked",
@@ -494,7 +494,7 @@
     },
     {
       "name": "match_count",
-      "value": "%d/%d"
+      "value": "%1$d/%1$d"
     },
     {
       "name": "script_enabled",
@@ -598,7 +598,7 @@
     },
     {
       "name": "rules_added",
-      "value": "已添加 %d 条规则"
+      "value": "已添加 %1$d 条规则"
     },
     {
       "name": "subscription_url_hint",
@@ -1198,7 +1198,7 @@
     },
     {
       "name": "orientation_toast",
-      "value": "已设置 屏幕方向 为 %s"
+      "value": "已设置 屏幕方向 为 %1$s"
     },
     {
       "name": "close_other_tabs",
@@ -1350,7 +1350,7 @@
     },
     {
       "name": "file_size_label",
-      "value": "文件大小：%s"
+      "value": "文件大小：%1$s"
     },
     {
       "name": "download_btn",
@@ -1402,7 +1402,7 @@
     },
     {
       "name": "home_fav_deleted",
-      "value": "\"%s\" 已删除"
+      "value": "\"%1$s\" 已删除"
     },
     {
       "name": "home_css_hint",
@@ -1790,15 +1790,15 @@
     },
     {
       "name": "time_secs_left",
-      "value": "剩余 %d 秒"
+      "value": "剩余 %1$d 秒"
     },
     {
       "name": "time_mins_left",
-      "value": "剩余 %d 分钟"
+      "value": "剩余 %1$d 分钟"
     },
     {
       "name": "time_hours_left",
-      "value": "剩余 %d 小时"
+      "value": "剩余 %1$d 小时"
     },
     {
       "name": "size_progress",

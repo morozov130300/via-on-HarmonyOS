@@ -62,7 +62,7 @@ export struct ZoomSlider {
         .width('100%')
         .height(2)
         .borderRadius(1)
-        .backgroundColor('#40808080')
+        .backgroundColor($r('app.color.hc_40808080'))
       // 进度（accent）
       Column()
         .width(this.pct(this.dragZoom))
@@ -72,7 +72,7 @@ export struct ZoomSlider {
       // highlight 圆点（w0.onDraw）
       if (this.highlightZoom >= 50 && this.highlightZoom <= 200) {
         Circle({ width: 8, height: 8 })
-          .fill(this.highlightZoom <= this.dragZoom ? $r('app.color.accent') : '#40808080')
+          .fill(this.highlightZoom <= this.dragZoom ? $r('app.color.accent') : $r('app.color.hc_40808080'))
           .position({ x: this.pct(this.highlightZoom), y: '50%' })
           .markAnchor({ x: 4, y: 4 })
       }

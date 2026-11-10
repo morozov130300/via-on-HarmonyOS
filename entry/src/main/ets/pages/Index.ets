@@ -2527,7 +2527,7 @@ struct Index {
           .width('100%')
           .height('100%')
           // 原版压暗层正常态 color a8 = #40808080（0x70808080 仅为 focused 态）
-          .backgroundColor('#40808080')
+          .backgroundColor($r('app.color.hc_40808080'))
           // 原版搜索面板 k6.oa（c8/k6.java 7874）与 tb/k0（tb/k0.java 801）：
           //   .v(f13636a, f13642g, f13642g, f13637b) = .v(anim/c, anim/j, anim/j, anim/d)
           //   enter=anim/c（alpha 0→1，240ms 线性）、exit=anim/j（alpha 1→1，240ms，即无过渡）、
@@ -2647,7 +2647,7 @@ struct Index {
         Column()
           .width('100%')
           .height('100%')
-          .backgroundColor('#33000000')
+          .backgroundColor($r('app.color.hc_33000000'))
           .transition(dimTransition(160))
           .onClick(() => {
             this.showAi = false

@@ -259,8 +259,8 @@ export struct MenuSheet {
             ForEach(UA_CHOICES, (choice: UaChoice) => {
               Row({ space: 14 }) {
                 Circle({ width: 18, height: 18 })
-                  .fill(this.settings.uaKey === choice.key ? '#4C6FFF' : Color.Transparent)
-                  .stroke(this.settings.uaKey === choice.key ? '#4C6FFF' : '#8A8A8E')
+                  .fill(this.settings.uaKey === choice.key ? $r('app.color.hc_4c6fff') : Color.Transparent)
+                  .stroke(this.settings.uaKey === choice.key ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
                   .strokeWidth(1.5)
                 Text(choice.label)
                   .fontSize(15)
@@ -278,9 +278,9 @@ export struct MenuSheet {
               Row({ space: 14 }) {
                 Circle({ width: 18, height: 18 })
                   .fill(this.settings.uaKey === 'custom' && this.settings.customUa === entry.ua
-                    ? '#4C6FFF' : Color.Transparent)
+                    ? $r('app.color.hc_4c6fff') : Color.Transparent)
                   .stroke(this.settings.uaKey === 'custom' && this.settings.customUa === entry.ua
-                    ? '#4C6FFF' : '#8A8A8E')
+                    ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
                   .strokeWidth(1.5)
                 Text(entry.title)
                   .fontSize(15)
@@ -853,8 +853,8 @@ export struct MenuSheet {
   DlManagerRow(label: string, value: string) {
     Row({ space: 14 }) {
       Circle({ width: 18, height: 18 })
-        .fill(this.settings.dlManager === value ? '#4C6FFF' : Color.Transparent)
-        .stroke(this.settings.dlManager === value ? '#4C6FFF' : $r('app.color.fg_secondary'))
+        .fill(this.settings.dlManager === value ? $r('app.color.hc_4c6fff') : Color.Transparent)
+        .stroke(this.settings.dlManager === value ? $r('app.color.hc_4c6fff') : $r('app.color.fg_secondary'))
         .strokeWidth(1)
       Text(label)
         .fontSize(15)
@@ -914,8 +914,8 @@ export struct MenuSheet {
   ImageModeRow(index: number, label: Resource) {
     Row({ space: 14 }) {
       Circle({ width: 18, height: 18 })
-        .fill(this.imageModeIndex() === index ? '#4C6FFF' : Color.Transparent)
-        .stroke(this.imageModeIndex() === index ? '#4C6FFF' : '#8A8A8E')
+        .fill(this.imageModeIndex() === index ? $r('app.color.hc_4c6fff') : Color.Transparent)
+        .stroke(this.imageModeIndex() === index ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
         .strokeWidth(1.5)
       Text(label)
         .fontSize(15)
@@ -1052,8 +1052,8 @@ export struct MenuSheet {
   OrientationRow(index: number, label: Resource) {
     Row({ space: 14 }) {
       Circle({ width: 18, height: 18 })
-        .fill(this.orientationIndex === index ? '#4C6FFF' : Color.Transparent)
-        .stroke(this.orientationIndex === index ? '#4C6FFF' : '#8A8A8E')
+        .fill(this.orientationIndex === index ? $r('app.color.hc_4c6fff') : Color.Transparent)
+        .stroke(this.orientationIndex === index ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
         .strokeWidth(1.5)
       Text(label)
         .fontSize(15)
@@ -1541,7 +1541,7 @@ export struct MenuSheet {
       Row({ space: 4 }) {
         ForEach(this.chunk(this.mainItemIds(), 10), (_: string[], index: number) => {
           Circle({ width: 4, height: 4 })
-            .fill(index === this.pageIndex ? $r('app.color.accent') : '#40808080')
+            .fill(index === this.pageIndex ? $r('app.color.accent') : $r('app.color.hc_40808080'))
         }, (_: string[], index: number) => `dot_${index}`)
       }
       .width('100%')
