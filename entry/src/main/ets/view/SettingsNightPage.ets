@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { i18n } from '@kit.LocalizationKit'
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
@@ -69,7 +70,7 @@ export struct SettingsNightPage {
   private toggleForceDark(isOn: boolean): void {
     this.settings.setNightCss(isOn)
     if (isOn && !this.settings.jsEnabled) {
-      this.getUIContext().getPromptAction().showToast({ message: '这将仅在启用 JavaScript 时生效。', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '这将仅在启用 JavaScript 时生效。', duration: TOAST_SHORT })
     }
   }
 

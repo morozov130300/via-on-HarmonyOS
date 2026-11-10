@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { BookmarkRec, BookmarkFolderRec, HomeFavRec } from '../common/Types'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { dialogTransition, dimTransition } from '../common/Transitions'
@@ -214,7 +215,7 @@ export struct BookmarkPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         if (this.detailMode) {
-          Text(`${this.folderChildCount(folder.id)} 个项目`)
+          Text($r('app.plural.items_count', this.folderChildCount(folder.id)))
             .fontSize(12)
             .fontColor($r('app.color.fg_secondary'))
             .maxLines(1)
@@ -1219,7 +1220,7 @@ export struct BookmarkPage {
   }
 
   private toastMsg(message: string): void {
-    this.getUIContext().getPromptAction().showToast({ message: message, duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: TOAST_SHORT })
   }
 
   // 视图/排序持久化（原版 w9.l h(viewMode)/n1(sortMode) 设置位）
@@ -1524,7 +1525,7 @@ struct BookmarkEditOverlay {
     const name = this.name.trim()
     const address = this.address.trim()
     if (name === '' || address === '') {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.invalid_input'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.invalid_input'), duration: TOAST_SHORT })
       return
     }
     const url = /^https?:\/\//i.test(address) ? address : `https://${address}`
@@ -1618,7 +1619,7 @@ struct NewFolderOverlay {
   private save(): void {
     const name = this.name.trim()
     if (name === '') {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.invalid_input'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.invalid_input'), duration: TOAST_SHORT })
       return
     }
     if (this.renameTarget !== null) {

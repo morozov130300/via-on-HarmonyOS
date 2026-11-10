@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
@@ -285,7 +286,7 @@ export struct OfflinePage {
   private openExternal(entry: OfflineEntry): void {
     if (!fileIo.accessSync(entry.path)) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.file_not_exist'), duration: 1500
+        message: $r('app.string.file_not_exist'), duration: TOAST_SHORT
       })
       return
     }
@@ -298,7 +299,7 @@ export struct OfflinePage {
     filePreview.openPreview(context, info).catch((error: BusinessError) => {
       console.error(`open preview failed: ${error.code} ${error.message}`)
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.no_app_to_open'), duration: 1500
+        message: $r('app.string.no_app_to_open'), duration: TOAST_SHORT
       })
     })
   }
@@ -307,7 +308,7 @@ export struct OfflinePage {
   private shareEntry(entry: OfflineEntry): void {
     if (!fileIo.accessSync(entry.path)) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.file_not_exist'), duration: 1500
+        message: $r('app.string.file_not_exist'), duration: TOAST_SHORT
       })
       return
     }
@@ -420,7 +421,7 @@ export struct OfflinePage {
       }
       if (payload === null) {
         this.getUIContext().getPromptAction().showToast({
-          message: $r('app.string.file_not_exist'), duration: 1500
+          message: $r('app.string.file_not_exist'), duration: TOAST_SHORT
         })
         return
       }
@@ -440,7 +441,7 @@ export struct OfflinePage {
         this.showExportDialog = true
       } else {
         this.getUIContext().getPromptAction().showToast({
-          message: '导出成功', duration: 1500
+          message: '导出成功', duration: TOAST_SHORT
         })
       }
     } catch (error) {

@@ -1,0 +1,123 @@
+{
+  "plural": [
+    {
+      "name": "rules_count",
+      "value": [
+        {
+          "quantity": "zero",
+          "value": "0 条规则"
+        },
+        {
+          "quantity": "one",
+          "value": "1 条规则"
+        },
+        {
+          "quantity": "other",
+          "value": "%d 条规则"
+        }
+      ]
+    },
+    {
+      "name": "hours_left",
+      "value": [
+        {
+          "quantity": "zero",
+          "value": "剩余 0 小时"
+        },
+        {
+          "quantity": "one",
+          "value": "剩余 1 小时"
+        },
+        {
+          "quantity": "other",
+          "value": "剩余 %d 小时"
+        }
+      ]
+    },
+    {
+      "name": "items_count",
+      "value": [
+        {
+          "quantity": "zero",
+          "value": "0 个项目"
+        },
+        {
+          "quantity": "one",
+          "value": "1 个项目"
+        },
+        {
+          "quantity": "other",
+          "value": "%d 个项目"
+        }
+      ]
+    },
+    {
+      "name": "mins_left",
+      "value": [
+        {
+          "quantity": "zero",
+          "value": "剩余 0 分钟"
+        },
+        {
+          "quantity": "one",
+          "value": "剩余 1 分钟"
+        },
+        {
+          "quantity": "other",
+          "value": "剩余 %d 分钟"
+        }
+      ]
+    },
+    {
+      "name": "tabs_open",
+      "value": [
+        {
+          "quantity": "zero",
+          "value": "0 个打开的标签"
+        },
+        {
+          "quantity": "one",
+          "value": "1 个打开的标签"
+        },
+        {
+          "quantity": "other",
+          "value": "%d 个打开的标签"
+        }
+      ]
+    },
+    {
+      "name": "secs_left",
+      "value": [
+        {
+          "quantity": "zero",
+          "value": "剩余 0 秒"
+        },
+        {
+          "quantity": "one",
+          "value": "剩余 1 秒"
+        },
+        {
+          "quantity": "other",
+          "value": "剩余 %d 秒"
+        }
+      ]
+    },
+    {
+      "name": "tabs_closed",
+      "value": [
+        {
+          "quantity": "zero",
+          "value": "已关闭 0 个标签页"
+        },
+        {
+          "quantity": "one",
+          "value": "已关闭 1 个标签页"
+        },
+        {
+          "quantity": "other",
+          "value": "已关闭 %d 个标签页"
+        }
+      ]
+    }
+  ]
+}

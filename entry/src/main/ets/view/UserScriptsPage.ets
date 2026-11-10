@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { fileIo, picker } from '@kit.CoreFileKit'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { preferences } from '@kit.ArkData'
@@ -328,7 +329,7 @@ export struct UserScriptsPage {
     // T3:4：复制下载链接（pg 已复制链接）
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, script.downloadUrl)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: TOAST_SHORT })
     }).catch(() => {
     })
   }
@@ -568,7 +569,7 @@ export struct UserScriptsPage {
   }
 
   private toast(message: string): void {
-    this.getUIContext().getPromptAction().showToast({ message: message, duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: TOAST_SHORT })
   }
 }
 

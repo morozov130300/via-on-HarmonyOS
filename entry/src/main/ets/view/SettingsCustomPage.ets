@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 // 定制页：与原版录屏逐帧对齐——
 // 上方实时预览（HomePage），底部「分类标签行」与「参数条目行」；
 // 点数值型条目在条目上方展开主题色导轨滑杆实时调节预览；
@@ -740,7 +741,7 @@ export struct SettingsCustomPage {
             .onClick(() => {
               if (this.confirmKind === 'clear') {
                 this.settings.bumpIconEpoch()
-                this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
+                this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: TOAST_SHORT })
               } else {
                 this.settings.resetHomeStyle()
               }

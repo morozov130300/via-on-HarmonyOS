@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { TabItem, RuleSubEntry, BookmarkFolderRec } from '../common/Types'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
@@ -838,12 +839,12 @@ struct Index {
       if (now - this.gameModeBackTime < 1500) {
         this.gameModeBackTime = 0
         this.settings.setGameMode(false)
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.game_mode_toast_off'), duration: 1500 })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.game_mode_toast_off'), duration: TOAST_SHORT })
         // 原版 bb(false)（6822-6844）→ else 分支 → g9()：退出游戏模式隐藏操作栏（模式2）
         this.hideToolbarsForPage()
       } else {
         this.gameModeBackTime = now
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit_game_mode'), duration: 1500 })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit_game_mode'), duration: TOAST_SHORT })
       }
       return true
     }
@@ -885,7 +886,7 @@ struct Index {
       return false
     }
     this.exitHintTime = now
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit'), duration: TOAST_SHORT })
     return true
   }
 
@@ -2855,7 +2856,7 @@ struct Index {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.page_failed_load'), duration: 1500
+        message: $r('app.string.page_failed_load'), duration: TOAST_SHORT
       })
       return
     }
@@ -2867,7 +2868,7 @@ struct Index {
       if (RemoteConfig.getInstance().isInWld(tab.url)) {
         this.getUIContext().getPromptAction().showToast({
           message: $r('app.string.site_not_supported'),
-          duration: 1500
+          duration: TOAST_SHORT
         })
         return
       }
@@ -2877,7 +2878,7 @@ struct Index {
       }).then((ok: boolean) => {
         if (!ok) {
           this.getUIContext().getPromptAction().showToast({
-            message: $r('app.string.page_failed_load'), duration: 1500
+            message: $r('app.string.page_failed_load'), duration: TOAST_SHORT
           })
         }
       })
@@ -2928,7 +2929,7 @@ struct Index {
     const jsEnabled = siteSetting !== null ? siteSetting.javaScript : this.settings.jsEnabled
     if (!jsEnabled) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_js_disabled'), duration: 1500
+        message: $r('app.string.read_aloud_js_disabled'), duration: TOAST_SHORT
       })
       return
     }
@@ -2941,12 +2942,12 @@ struct Index {
     const state = this.readAloudController.getEngine().getState()
     if (state !== 0 && state !== 1 && state !== 2) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_engine_failed'), duration: 1500
+        message: $r('app.string.read_aloud_engine_failed'), duration: TOAST_SHORT
       })
       return
     }
     this.getUIContext().getPromptAction().showToast({
-      message: $r('app.string.read_aloud_wait'), duration: 1500
+      message: $r('app.string.read_aloud_wait'), duration: TOAST_SHORT
     })
     const taskId = `ra${Date.now()}${Math.floor(Math.random() * 100000)}`
     const url = tab.url
@@ -2956,7 +2957,7 @@ struct Index {
         if (error) {
           console.error(`read aloud extract failed: ${error.code}`)
           this.getUIContext().getPromptAction().showToast({
-            message: $r('app.string.read_aloud_cannot'), duration: 1500
+            message: $r('app.string.read_aloud_cannot'), duration: TOAST_SHORT
           })
           return
         }
@@ -2965,7 +2966,7 @@ struct Index {
     } catch (error) {
       console.error('runJavaScript read aloud failed')
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_cannot'), duration: 1500
+        message: $r('app.string.read_aloud_cannot'), duration: TOAST_SHORT
       })
     }
   }
@@ -2975,7 +2976,7 @@ struct Index {
     const sentences = sentencesFromJson(json)
     if (sentences.length === 0) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_cannot'), duration: 1500
+        message: $r('app.string.read_aloud_cannot'), duration: TOAST_SHORT
       })
       return
     }
@@ -3117,7 +3118,7 @@ struct Index {
     const tab = this.tabStore.current()
     if (tab.isHomePage() || tab.url === '') {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.mark_ad_http_only'), duration: 1500
+        message: $r('app.string.mark_ad_http_only'), duration: TOAST_SHORT
       })
       return
     }
@@ -3394,7 +3395,7 @@ struct DownloadConfirmOverlay {
   private copyUrl(): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.info.url)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied_link'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied_link'), duration: TOAST_SHORT })
     }).catch(() => {
       console.error('copy download url failed')
     })
@@ -3415,7 +3416,7 @@ struct DownloadConfirmOverlay {
     } else {
       this.coordinator.confirmUrlDownload(this.fileName)
     }
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_started'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_started'), duration: TOAST_SHORT })
     this.onDone()
   }
 }

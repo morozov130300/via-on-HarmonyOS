@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { hostOf } from '../common/SearchEngines'
 import { DownloadCoordinator } from '../common/Downloads'
 import { AppSettings } from '../common/Settings'
@@ -131,7 +132,7 @@ export struct MediaListPage {
       type: mime
     }
     context.startAbility(want).catch(() => {
-      this.getUIContext().getPromptAction().showToast({ message: '没有可用的外置播放器', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '没有可用的外置播放器', duration: TOAST_SHORT })
     })
   }
 
