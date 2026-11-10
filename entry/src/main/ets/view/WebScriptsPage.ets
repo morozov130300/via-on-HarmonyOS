@@ -20,6 +20,25 @@ export struct WebScriptsPage {
   @Local slideOffset: string = '0'
   @Local adding: boolean = false
   @Local refreshTick: number = 0
+  // ua.t:202-203：标题 z4「作用于 %1$s 的脚本」/ uc「脚本」，走资源以支持语言切换
+  @Local pageTitleText: string = ''
+
+  aboutToAppear(): void {
+    const host = hostOf(this.pageUrl())
+    try {
+      const ctx = this.getUIContext().getHostContext()
+      if (ctx !== undefined) {
+        if (host === '') {
+          this.pageTitleText = ctx.resourceManager.getStringSync($r('app.string.scripts').id)
+        } else {
+          const tpl = ctx.resourceManager.getStringSync($r('app.string.scripts_for_host').id)
+          this.pageTitleText = tpl.replace('%1$s', host).replace('%s', host)
+        }
+      }
+    } catch (error) {
+      // 资源读取异常时保留空标题，不使用中文硬编码，避免英文环境下回退中文
+    }
+  }
 
   private pageUrl(): string {
     return TabStore.getInstance().current().url
@@ -28,20 +47,7 @@ export struct WebScriptsPage {
   // ua.t:202-203：标题 = i0.f(url) 非空 ? z4「作用于 %1$s 的脚本」 : uc「脚本」
   // 走资源 + getStringSync 保证英文切换生效（原版 R.string 占位符语义）
   private pageTitle(): string {
-    const host = hostOf(this.pageUrl())
-    try {
-      const ctx = this.getUIContext().getHostContext()
-      if (ctx !== undefined) {
-        if (host === '') {
-          return ctx.resourceManager.getStringSync($r('app.string.scripts').id)
-        }
-        const tpl = ctx.resourceManager.getStringSync($r('app.string.scripts_for_host').id)
-        return tpl.replace('%1$s', host).replace('%s', host)
-      }
-    } catch (error) {
-      // 资源不可用时回退：优先用已有 scripts 键，仍失败则返回 host 本身，避免中文硬编码
-    }
-    return host !== '' ? host : ''
+    return this.pageTitleText
   }
 
   // ua.y c0.C(url)（p5.G）：匹配当前网址的脚本列表（id>=0，不筛启用位）
