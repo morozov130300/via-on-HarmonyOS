@@ -31,7 +31,7 @@ export struct ClosedTabsMorePage {
           Stack() {
             Column() {
               SettingNavRow({
-                rowLabel: '启动时恢复未关闭标签',
+                rowLabel: $r('app.string.orig_s3'),
                 rowValue: this.restoreModeLabel(),
                 onTapRow: (): void => {
                   this.modeMenuOpen = !this.modeMenuOpen
@@ -42,8 +42,8 @@ export struct ClosedTabsMorePage {
                 .color($r('app.color.divider'))
                 .margin({ left: 16, right: 16 })
               SettingCheckRow({
-                rowLabel: '显示撤销关闭标签的提示',
-                rowDesc: '如果开启了隐身模式，则不会显示提示',
+                rowLabel: $r('app.string.orig_tz'),
+                rowDesc: $r('app.string.orig_u0'),
                 isChecked: this.settings.undoCloseToast,
                 onCheckRow: (isOn: boolean): void => {
                   this.settings.setUndoCloseToast(isOn)
@@ -108,7 +108,7 @@ export struct ClosedTabsMorePage {
         .onClick(() => {
           this.navPathStack.pop()
         })
-      Text('标签页设置')
+      Text($r('app.string.orig_vs'))
         .fontSize(15)
         .fontColor($r('app.color.fg'))
         .layoutWeight(1)
@@ -155,7 +155,7 @@ export struct ClosedTabsMorePage {
       if (mode !== 0) {
         // 原版 e7.g3：选非 0 toast s5
         this.getUIContext().getPromptAction().showToast({
-          message: '开启"隐身模式"时不会恢复未关闭标签。', duration: TOAST_SHORT
+          message: $r('app.string.orig_s5'), duration: TOAST_SHORT
         })
       }
     })

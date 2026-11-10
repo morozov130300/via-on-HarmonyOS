@@ -40,7 +40,7 @@ export struct SettingsSearchPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '搜索设置',
+      title: $r('app.string.search_settings'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -54,14 +54,14 @@ export struct SettingsSearchPage {
         Scroll() {
           Column() {
             SettingNavRow({
-              rowLabel: '搜索引擎',
+              rowLabel: $r('app.string.search_engine'),
               rowValue: this.engineLabel(),
               onTapRow: () => {
                 this.pickEngine()
               }
             })
             SettingNavRow({
-              rowLabel: '搜索建议',
+              rowLabel: $r('app.string.search_suggestion'),
               rowValue: this.suggestValue(),
               onTapRow: () => {
                 this.openSuggestDialog()
@@ -69,8 +69,8 @@ export struct SettingsSearchPage {
             })
             // 原版 hb/b6.k3 第三项（id3）：搜索工具栏，值 = 已启用/已禁用（w9.a.r）
             SettingNavRow({
-              rowLabel: '搜索工具栏',
-              rowValue: this.settings.searchToolbarEnabled ? '已启用' : '已禁用',
+              rowLabel: $r('app.string.orig_t9'),
+              rowValue: this.settings.searchToolbarEnabled ? $r('app.string.script_enabled') : $r('app.string.orig_gf'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('settingsSearchToolbar', '', true)
               }
@@ -160,7 +160,7 @@ export struct SettingsSearchPage {
       this.inputCustomEngine()
     } })
     ActionSheet.show({
-      title: '搜索引擎',
+      title: $r('app.string.search_engine'),
       message: '选择默认搜索引擎',
       sheets: sheets
     })
@@ -194,11 +194,11 @@ export struct SettingsSearchPage {
   @Builder
   SuggestDialog() {
     Column({ space: 12 }) {
-      Text('搜索建议')
+      Text($r('app.string.search_suggestion'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
-      Text('使用地址栏时，从下列内容获取建议')
+      Text($r('app.string.orig_ni'))
         .fontSize(13)
         .fontColor($r('app.color.fg_secondary'))
       ForEach(SettingsSearchPage.SUGGEST_ITEMS, (item: SuggestItem, index: number) => {
@@ -298,7 +298,7 @@ export struct SettingsSearchPage {
       Text('用 %s 代表搜索词，例如：https://example.com/search?q=%s')
         .fontSize(13)
         .fontColor($r('app.color.fg_secondary'))
-      TextInput({ placeholder: '名称', text: this.engineNameInput })
+      TextInput({ placeholder: $r('app.string.name_label'), text: this.engineNameInput })
         .width('100%')
         .height(44)
         .fontSize(14)

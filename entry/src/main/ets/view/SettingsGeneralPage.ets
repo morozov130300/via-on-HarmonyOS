@@ -23,7 +23,7 @@ export struct SettingsGeneralPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '通用',
+      title: $r('app.string.general'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -36,60 +36,60 @@ export struct SettingsGeneralPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            SettingNavRow({ rowLabel: '同步', rowValue: this.syncLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.sync'), rowValue: this.syncLabel(), onTapRow: () => {
               this.navPathStack.pushPathByName('syncPage', '', true)
             } })
-            SettingNavRow({ rowLabel: '浏览器标识', rowValue: this.uaLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.browser_ua'), rowValue: this.uaLabel(), onTapRow: () => {
               this.navPathStack.pushPathByName('uaPage', '', true)
             } })
-            SettingNavRow({ rowLabel: '清除数据', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.clear_data'), onTapRow: () => {
               this.confirmClear()
             } })
-            SettingNavRow({ rowLabel: '广告拦截', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.ad_block'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsAdBlock', '', true)
             } })
-            SettingNavRow({ rowLabel: '网站设定', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.site_settings'), onTapRow: () => {
               this.navPathStack.pushPathByName('siteSettings', '', true)
             } })
-            SettingNavRow({ rowLabel: '密码管理器', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.password_manager'), onTapRow: () => {
               this.showPasswordVaultGuide()
             } })
-            SettingNavRow({ rowLabel: '夜间模式', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.night_mode'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsNight', '', true)
             } })
-            SettingNavRow({ rowLabel: '阅读模式', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.reader_mode'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsReader', '', true)
             } })
-            SettingNavRow({ rowLabel: '工具栏设置', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.toolbar_settings'), onTapRow: () => {
               this.navPathStack.pushPathByName('toolbarCustom', '', true)
             } })
-            SettingNavRow({ rowLabel: '定制菜单', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.customize_menu'), onTapRow: () => {
               this.navPathStack.pushPathByName('menuCustom', '', true)
             } })
-            SettingNavRow({ rowLabel: '定制长按菜单', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.customize_long_press_menu'), onTapRow: () => {
               this.navPathStack.pushPathByName('longPressCustom', '', true)
             } })
-            SettingNavRow({ rowLabel: '语言', rowValue: this.languageLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.language'), rowValue: this.languageLabel(), onTapRow: () => {
               this.pickLanguage()
             } })
-            SettingNavRow({ rowLabel: '主页', rowValue: this.homeLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.home_page'), rowValue: this.homeLabel(), onTapRow: () => {
               this.pickHome()
             } })
             // 原版 hb/c4 id31：搜索设置行无行值，跳 hb/b6 搜索设置页
-            SettingNavRow({ rowLabel: '搜索设置', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.search_settings'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsSearch', '', true)
             } })
-            SettingNavRow({ rowLabel: 'AI 设置', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.ai_settings'), onTapRow: () => {
               this.navPathStack.pushPathByName('aiSettings', '', true)
             } })
-            SettingNavRow({ rowLabel: '屏幕方向', rowValue: this.orientationLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.screen_orientation'), rowValue: this.orientationLabel(), onTapRow: () => {
               this.pickOrientation()
             } })
-            SettingNavRow({ rowLabel: '下载目录', rowValue: this.downloadDirLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_go'), rowValue: this.downloadDirLabel(), onTapRow: () => {
               this.pickDownloadDir()
             } })
             // 原版 hb/c4 id15：下载管理 = 下载器选择（dlmanager）
-            SettingNavRow({ rowLabel: '下载管理', rowValue: this.dlManagerLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_bf'), rowValue: this.dlManagerLabel(), onTapRow: () => {
               this.pickDlManager()
             } })
             // 原版 hb/c4.java:692 a6.q(27, f13934c5, C0[D0].b)：f13934c5=0x7f10015b→in「外置视频播放器」，
@@ -97,46 +97,46 @@ export struct SettingsGeneralPage {
             // 行序在下载管理(id15)之后、退出时清除数据(id18)之前，qVar3.g(true) 无条件显示。
             // 点击 hb/c4.java:270 case 27 → d0(in).I(io 当选择外置播放器播放视频时，使用).b0(列表, D0)；
             // 列表来源 hb/c4.java:751 D4() = qv「系统分享」+ 查询可打开 mp4 的第三方播放器（HarmonyOS 无法枚举，见说明）。
-            SettingNavRow({ rowLabel: '外置视频播放器', rowValue: this.videoPlayerLabel(), onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_in'), rowValue: this.videoPlayerLabel(), onTapRow: () => {
               this.pickVideoPlayer()
             } })
-            SettingNavRow({ rowLabel: '退出时清除数据', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_dr'), onTapRow: () => {
               this.pickClearOnExit()
             } })
             // 原版 c4.u4() row35：字体（K5，value = w9.l.a1() 当前 uifont，默认空）→ case35 打开 hb.j2
-            SettingNavRow({ rowLabel: '字体', rowValue: this.settings.uiFont, onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_jn'), rowValue: this.settings.uiFont, onTapRow: () => {
               this.navPathStack.pushPathByName('fontPage', '', true)
             } })
             // 原版 c4.u4() row19：操作设定（sc，value = C9「手势，快捷方式，功能键」）
-            SettingNavRow({ rowLabel: '操作设定', rowValue: '手势，快捷方式，功能键', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_to'), rowValue: $r('app.string.orig_pi'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsGesture', '', true)
             } })
-            SettingNavRow({ rowLabel: '导入/备份书签', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_l6'), onTapRow: () => {
               this.pickBookmarkIO()
             } })
-            SettingNavRow({ rowLabel: '导入数据', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_l1'), onTapRow: () => {
               this.importData()
             } })
             // 原版 hb/c4.java:700 a6.q(22, V4, W4)：V4=0x7f100154→ig「导出数据」，
             // W4=0x7f100155→ih「导出书签、设置、脚本和广告规则」为行摘要
-            SettingNavRow({ rowLabel: '导出数据', rowValue: '导出书签、设置、脚本和广告规则', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_f7'), rowValue: $r('app.string.orig_ih'), onTapRow: () => {
               this.exportData()
             } })
-            SettingNavRow({ rowLabel: '启动时恢复未关闭标签', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_s3'), onTapRow: () => {
               // 原版三选一（arrays.xml array g：禁用恢复/总是恢复/优先询问）
               this.pickRestoreMode()
             } })
             // 原版 hb/c4.java:702 a6.n(33, Dc, Ec, ...)：Dc=0x7f100301→tz「显示撤销关闭标签的提示」，
             // Ec=0x7f100302→u0「如果开启了隐身模式，则不会显示提示」为副标题
             SettingCheckRow({
-              rowLabel: '显示撤销关闭标签的提示',
-              rowDesc: '如果开启了隐身模式，则不会显示提示',
+              rowLabel: $r('app.string.orig_tz'),
+              rowDesc: $r('app.string.orig_u0'),
               isChecked: this.settings.undoCloseToast,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setUndoCloseToast(isOn)
               }
             })
-            SettingNavRow({ rowLabel: '设置默认浏览器', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_ti'), onTapRow: () => {
               this.showDefaultBrowserGuide()
             } })
           }
@@ -418,7 +418,7 @@ export struct SettingsGeneralPage {
     // 原版 z8.h0.f：w5.k.l().d0(dr 退出时清除数据).K(array c, 已选位).V(ok).N(cancel).f0()
     // 布局 = layout u.xml 同款卡片（详见 ExportDataDialog 注释）
     Column() {
-      Text('退出时清除数据')
+      Text($r('app.string.orig_dr'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -760,7 +760,7 @@ export struct SettingsGeneralPage {
   @Builder
   ExportDataDialog() {
     Column() {
-      Text('导出数据')
+      Text($r('app.string.orig_f7'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -809,7 +809,7 @@ export struct SettingsGeneralPage {
   @Builder
   PasswordDialog() {
     Column() {
-      Text('输入密码')
+      Text($r('app.string.orig_ht'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -817,14 +817,14 @@ export struct SettingsGeneralPage {
         .width('100%')
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
-      Text('你正在导出隐私数据，请输入密码以加密数据。请牢记密码，如果密码丢失，你将无法导入其中加密的数据。')
+      Text($r('app.string.orig_hu'))
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .lineHeight(21)
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
       Row() {
-        TextInput({ text: this.passwordInput, placeholder: '密码' })
+        TextInput({ text: this.passwordInput, placeholder: $r('app.string.orig_ke') })
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .placeholderColor($r('app.color.dialog_hint'))
@@ -936,7 +936,7 @@ export struct SettingsGeneralPage {
   @Builder
   DefaultBrowserGuideDialog() {
     UiaDialogCard() {
-      Text('设置默认浏览器')
+      Text($r('app.string.orig_ti'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1000,7 +1000,7 @@ export struct SettingsGeneralPage {
   @Builder
   PasswordVaultGuideDialog() {
     UiaDialogCard() {
-      Text('密码管理器')
+      Text($r('app.string.password_manager'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1129,7 +1129,7 @@ export struct SettingsGeneralPage {
   @Builder
   RestartConfirmDialog() {
     UiaDialogCard() {
-      Text('语言')
+      Text($r('app.string.language'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1137,7 +1137,7 @@ export struct SettingsGeneralPage {
         .width('100%')
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
-      Text('这将在下次启动应用时生效，你希望立即重启应用以生效吗？')
+      Text($r('app.string.orig_s2'))
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .lineHeight(21)
@@ -1154,7 +1154,7 @@ export struct SettingsGeneralPage {
           .onClick(() => {
             this.closeRestartConfirmDialog()
           })
-        Text('重启应用')
+        Text($r('app.string.orig_er'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)
@@ -1223,7 +1223,7 @@ export struct SettingsGeneralPage {
   @Builder
   HomeUrlDialog() {
     Column() {
-      Text('自定义主页')
+      Text($r('app.string.orig_ym'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1232,7 +1232,7 @@ export struct SettingsGeneralPage {
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
       Row() {
-        TextInput({ placeholder: '自定义主页', text: this.homeUrlInput })
+        TextInput({ placeholder: $r('app.string.orig_ym'), text: this.homeUrlInput })
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .placeholderColor($r('app.color.dialog_hint'))
@@ -1389,7 +1389,7 @@ export struct SettingsGeneralPage {
     // 原版 z8.h0.e：w5.k.l().d0(dq 清除数据).K(array c, 已选位).V(ok).N(cancel).f0()
     // 布局 = layout u.xml 同款卡片（详见 ExportDataDialog 注释）
     Column() {
-      Text('清除数据')
+      Text($r('app.string.clear_data'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1497,7 +1497,7 @@ export struct SettingsGeneralPage {
     }
     this.settings.setClearData2(mask)
     if (mask !== 0) {
-      this.getUIContext().getPromptAction().showToast({ message: '数据已清除', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_f4'), duration: TOAST_SHORT })
     }
   }
 

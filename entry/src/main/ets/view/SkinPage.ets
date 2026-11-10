@@ -34,7 +34,7 @@ export struct SkinPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '皮肤',
+      title: $r('app.string.orig_uf'),
       rightIcon: $r('app.media.uia_ic_add'),
       onBack: () => {
         this.navPathStack.pop()
@@ -87,15 +87,15 @@ export struct SkinPage {
 
   private showApplyDialog(): void {
     AlertDialog.show({
-      title: '皮肤已变更',
-      message: '这将在下次启动应用时生效，你希望立即重启应用以生效吗？',
+      title: $r('app.string.orig_uc'),
+      message: $r('app.string.orig_s2'),
       primaryButton: {
         value: $r('app.string.cancel'),
         action: () => {
         }
       },
       secondaryButton: {
-        value: '重启应用',
+        value: $r('app.string.orig_er'),
         action: () => {
           const context = this.getUIContext().getHostContext() as common.UIAbilityContext
           this.store.restartApp(context)
@@ -110,7 +110,7 @@ export struct SkinPage {
       return
     }
     AlertDialog.show({
-      title: '删除',
+      title: $r('app.string.delete'),
       message: `你确定删除 ${entry.name} 吗？`,
       primaryButton: {
         value: $r('app.string.cancel'),
@@ -155,7 +155,7 @@ export struct SkinPage {
           // 原版 s3：首项固定默认（mb.c("", u.fd「默认」, 0)）
           ListItem() {
             SettingRadioRow({
-              rowLabel: '默认',
+              rowLabel: $r('app.string.ua_default'),
               isSelected: this.current === '',
               onTapRow: () => {
                 this.selectSkin(new SkinEntry('', 0))

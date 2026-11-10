@@ -735,7 +735,7 @@ export struct VideoPlayerOverlay {
               .backgroundColor('#33000000')
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
-              .accessibilityText(this.state.locked ? '解锁' : '锁定')
+              .accessibilityText(this.state.locked ? $r('app.string.orig_a0b') : $r('app.string.orig_ml'))
               .onClick(() => {
                 this.state.toggleLock()
               })
@@ -753,7 +753,7 @@ export struct VideoPlayerOverlay {
               .backgroundColor('#33000000')
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
-              .accessibilityText('屏幕方向')
+              .accessibilityText($r('app.string.screen_orientation'))
               .onClick(() => {
                 this.showOrientationMenu()
               })

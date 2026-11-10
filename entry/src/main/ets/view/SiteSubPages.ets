@@ -44,8 +44,8 @@ export struct SiteAllPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '所有网站',
-      rightText: '新建',
+      title: $r('app.string.all_sites'),
+      rightText: $r('app.string.new_home_fav'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -137,13 +137,13 @@ export struct SiteAllPage {
       message: '',
       sheets: [
         {
-          title: '编辑',
+          title: $r('app.string.edit'),
           action: (): void => {
             this.openRenameDialog(host)
           }
         },
         {
-          title: '删除',
+          title: $r('app.string.delete'),
           action: (): void => {
             this.settings.removeSiteSetting(host)
           }
@@ -287,7 +287,7 @@ export struct SiteAllPage {
   @Builder
   RenameHostDialog() {
     Column() {
-      Text('编辑')
+      Text($r('app.string.edit'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -359,7 +359,7 @@ export struct FontSizePage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '字体大小',
+      title: $r('app.string.text_size'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -376,7 +376,7 @@ export struct FontSizePage {
             // 全宽滑条（max 30、步进 5），预览诗（14sp×zoom/100、minHeight 36、maxLines 3）
             Column() {
               Row() {
-                Text('字体大小')
+                Text($r('app.string.text_size'))
                   .fontSize(14)
                   .fontColor($r('app.color.fg'))
                   .maxLines(1)
@@ -417,7 +417,7 @@ export struct FontSizePage {
 
             // a6.n 强制缩放（a6.o：pad 16/20，右侧圆形复选框）
             SettingCheckRow({
-              rowLabel: '强制缩放',
+              rowLabel: $r('app.string.orig_jr'),
               isChecked: this.settings.forceZoom,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setForceZoom(isOn)
@@ -427,7 +427,7 @@ export struct FontSizePage {
             // a6.e 添加例外网站（a6.f：18dp 图标 + drawablePadding 18 + 14sp 文字，pad 16/20）
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
-              Text('添加例外网站')
+              Text($r('app.string.orig_bc'))
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -441,7 +441,7 @@ export struct FontSizePage {
 
             // a6.l 例外表头（a6.m：12sp 粗体 accent，padH16 T12 B4）+ a6.q 站点行（a6.r）
             if (this.settings.siteFontZoomHosts().length > 0) {
-              Text('例外')
+              Text($r('app.string.orig_i4'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -531,7 +531,7 @@ export struct FontSizePage {
   @Builder
   AddHostDialog() {
     Column() {
-      Text('添加例外网站')
+      Text($r('app.string.orig_bc'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -655,7 +655,7 @@ export struct FontSizePage {
       Row() {
         if (this.siteDialogEditing) {
           // w5.k.R(x 删除) → l5.r(host)
-          Text('删除')
+          Text($r('app.string.delete'))
             .fontSize(14)
             .fontColor($r('app.color.dialog_action'))
             .textAlign(TextAlign.Center)
@@ -783,7 +783,7 @@ export struct PermissionPage {
               // a6.e 添加例外网站（lb.b + Rd 加号图标）
               Row({ space: 18 }) {
                 UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
-                Text('添加例外网站')
+                Text($r('app.string.orig_bc'))
                   .fontSize(14)
                   .fontColor($r('app.color.fg'))
                   .maxLines(1)
@@ -1340,7 +1340,7 @@ export struct PermissionPage {
   @Builder
   AddExceptionDialog() {
     Column() {
-      Text('添加例外网站')
+      Text($r('app.string.orig_bc'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1378,7 +1378,7 @@ export struct PermissionPage {
             .fill(this.addAskCheck ? $r('app.color.accent') : Color.Transparent)
             .stroke(this.addAskCheck ? Color.Transparent : $r('app.color.dialog_border'))
             .strokeWidth(2)
-          Text('优先询问')
+          Text($r('app.string.orig_ch'))
             .fontSize(14)
             .fontColor($r('app.color.fg'))
             .maxLines(1)
@@ -1679,7 +1679,7 @@ export struct PopupSettingPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '弹出式窗口',
+      title: $r('app.string.orig_qw'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -1695,11 +1695,11 @@ export struct PopupSettingPage {
             // n(1, qw 弹出式窗口, h3=z10 ? c8 允许 : qx，z10 = !h())
             Row({ space: 12 }) {
               Column() {
-                Text('弹出式窗口')
+                Text($r('app.string.orig_qw'))
                   .fontSize(15)
                   .fontColor($r('app.color.fg'))
                   .maxLines(1)
-                Text(this.settings.popupAskFirst ? '网站需先询问并得到许可才能显示弹出式窗口' : '允许')
+                Text(this.settings.popupAskFirst ? $r('app.string.orig_qx') : $r('app.string.perm_allow'))
                   .fontSize(13)
                   .fontColor($r('app.color.fg_secondary'))
                   .maxLines(2)
@@ -1773,7 +1773,7 @@ export struct AdBlockExceptionPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '广告拦截',
+      title: $r('app.string.ad_block'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -1788,7 +1788,7 @@ export struct AdBlockExceptionPage {
           Column() {
             // n(1, ct, z10 = 全局广告拦截)
             Row({ space: 12 }) {
-              Text('广告拦截')
+              Text($r('app.string.ad_block'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
                 .layoutWeight(1)
@@ -1806,7 +1806,7 @@ export struct AdBlockExceptionPage {
             // a6.e 添加例外网站
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
-              Text('添加例外网站')
+              Text($r('app.string.orig_bc'))
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -1819,7 +1819,7 @@ export struct AdBlockExceptionPage {
             })
             // 第一组：Y8 关闭（站点不拦截）
             if (this.groupOffHosts().length > 0) {
-              Text('关闭')
+              Text($r('app.string.close_btn'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -1840,7 +1840,7 @@ export struct AdBlockExceptionPage {
             }
             // 第二组：z10 ? os 打开 : i4 例外
             if (this.groupOnHosts().length > 0) {
-              Text(this.settings.adBlockOn ? '打开' : '例外')
+              Text(this.settings.adBlockOn ? $r('app.string.open_action') : $r('app.string.orig_i4'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -1999,7 +1999,7 @@ export struct AdBlockExceptionPage {
           .fill(this.pickDialogChecked === 1 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickDialogChecked === 1 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('打开')
+        Text($r('app.string.open_action'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -2015,7 +2015,7 @@ export struct AdBlockExceptionPage {
           .fill(this.pickDialogChecked === 2 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickDialogChecked === 2 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('关闭')
+        Text($r('app.string.close_btn'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -2027,7 +2027,7 @@ export struct AdBlockExceptionPage {
         this.pickDialogChecked = 2
       })
       Row() {
-        Text('删除')
+        Text($r('app.string.delete'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)
@@ -2102,7 +2102,7 @@ export struct AdBlockExceptionPage {
   @Builder
   AddExceptionDialog() {
     Column() {
-      Text('添加例外网站')
+      Text($r('app.string.orig_bc'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -2111,7 +2111,7 @@ export struct AdBlockExceptionPage {
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
       // b4 为特定网站关闭广告拦截。/ b5 为特定网站打开广告拦截。
-      Text(this.settings.adBlockOn ? '为特定网站关闭广告拦截。' : '为特定网站打开广告拦截。')
+      Text(this.settings.adBlockOn ? $r('app.string.orig_b4') : $r('app.string.orig_b5'))
         .fontSize(14)
         .fontColor($r('app.color.fg_secondary'))
         .width('100%')

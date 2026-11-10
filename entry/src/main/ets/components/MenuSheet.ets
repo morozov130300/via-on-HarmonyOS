@@ -613,7 +613,7 @@ export struct MenuSheet {
           console.error('refresh after script enable failed')
         }
       }
-      this.getUIContext().getPromptAction().showToast({ message: '脚本已启用', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_so'), duration: TOAST_SHORT })
       return
     }
     if (!wouldRun) {
@@ -708,7 +708,7 @@ export struct MenuSheet {
         })
           .margin({ left: 16, right: 16, bottom: 16 })
         if (this.fontSiteMode) {
-          Text('仅对当前网站生效')
+          Text($r('app.string.orig_ou'))
             .fontSize(12)
             .fontColor($r('app.color.fg_secondary'))
             .width('100%')
@@ -821,7 +821,7 @@ export struct MenuSheet {
   DlManagerDialog() {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
-        Text('下载管理')
+        Text($r('app.string.orig_bf'))
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
@@ -880,7 +880,7 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         // 原版弹窗标题 = kt「图像」（k6.O9 case17 d0(x7.u.f14235y6)），非「有图模式」
-        Text('图像')
+        Text($r('app.string.orig_kt'))
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
@@ -1077,7 +1077,7 @@ export struct MenuSheet {
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
-        Text('标题')
+        Text($r('app.string.content_title'))
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1089,7 +1089,7 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addHomeFavTitle = value
           })
-        Text('网址')
+        Text($r('app.string.address_label'))
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1164,7 +1164,7 @@ export struct MenuSheet {
           this.TranslateMenuRow('谷歌页内翻译', (): void => {
             this.translatePage()
             this.showTranslateMenuDialog = false
-            this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: TOAST_SHORT })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.read_aloud_wait'), duration: TOAST_SHORT })
           })
           this.TranslateMenuRow('谷歌翻译', (): void => {
             this.translateGooglePage()
@@ -1217,7 +1217,7 @@ export struct MenuSheet {
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
-        Text('标题')
+        Text($r('app.string.content_title'))
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1229,7 +1229,7 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addBookmarkTitle = value
           })
-        Text('网址')
+        Text($r('app.string.address_label'))
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1709,7 +1709,7 @@ export struct MenuSheet {
     try {
       this.tabStore.current().controller.runJavaScript(js)
       this.showTranslateMenuDialog = false
-      this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.read_aloud_wait'), duration: TOAST_SHORT })
       this.onClose()
     } catch (error) {
       console.error('inject edge translate failed')

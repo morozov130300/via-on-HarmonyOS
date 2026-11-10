@@ -11,7 +11,7 @@ export struct SettingsGesturePage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '操作设定',
+      title: $r('app.string.orig_to'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -26,21 +26,21 @@ export struct SettingsGesturePage {
           Column() {
             // 原版 hb/u4.X1 列表顺序：滑动屏幕前进后退 / 使用音量键翻页 /
             // 启用视频播放器手势（带描述 hr）/ 键盘快捷键（入口 ra.i）
-            SettingCheckRow({ rowLabel: '滑动屏幕前进后退', isChecked: this.settings.swipeSwitchTab, onCheckRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: $r('app.string.orig_cm'), isChecked: this.settings.swipeSwitchTab, onCheckRow: (isOn: boolean) => {
               this.settings.setSwipeSwitchTab(isOn)
             } })
-            SettingCheckRow({ rowLabel: '使用音量键翻页', isChecked: this.settings.volumePageFlip, onCheckRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: $r('app.string.orig_a1l'), isChecked: this.settings.volumePageFlip, onCheckRow: (isOn: boolean) => {
               this.settings.setVolumePageFlip(isOn)
             } })
             SettingCheckRow({
-              rowLabel: '启用视频播放器手势',
-              rowDesc: '如果可能，在全屏播放视频时允许滑动屏幕以调整视频进度、屏幕亮度、设备音量',
+              rowLabel: $r('app.string.orig_hq'),
+              rowDesc: $r('app.string.orig_hr'),
               isChecked: this.settings.videoGesture,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setVideoGesture(isOn)
               }
             })
-            SettingNavRow({ rowLabel: '键盘快捷键', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.orig_m5'), onTapRow: () => {
               this.navPathStack.pushPathByName('keyboardShortcuts', '', true)
             } })
           }

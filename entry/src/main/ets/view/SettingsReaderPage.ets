@@ -54,7 +54,7 @@ export struct SettingsReaderPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '阅读模式',
+      title: $r('app.string.reader_mode'),
       onBack: () => {
         this.navPathStack.pop()
       }

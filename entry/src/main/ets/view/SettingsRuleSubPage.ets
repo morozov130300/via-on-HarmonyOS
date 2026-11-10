@@ -58,8 +58,8 @@ export struct SettingsRuleSubPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '规则订阅',
-      rightText: '更新',
+      title: $r('app.string.orig_jf'),
+      rightText: $r('app.string.update_btn'),
       rightIcon: $r('sys.symbol.plus'),
       onBack: () => {
         this.navPathStack.pop()
@@ -80,7 +80,7 @@ export struct SettingsRuleSubPage {
         Scroll() {
           Column() {
             Column() {
-              Text('自动更新')
+              Text($r('app.string.auto_update'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -97,7 +97,7 @@ export struct SettingsRuleSubPage {
               this.pickAutoUpdate()
             })
 
-            Text('规则订阅')
+            Text($r('app.string.orig_jf'))
               .fontSize(14)
               .fontColor($r('app.color.accent'))
               .width('100%')
@@ -207,7 +207,7 @@ export struct SettingsRuleSubPage {
       })
     }
     ActionSheet.show({
-      title: '自动更新',
+      title: $r('app.string.auto_update'),
       message: '',
       sheets: sheets
     })
@@ -220,31 +220,31 @@ export struct SettingsRuleSubPage {
       message: '',
       sheets: [
         {
-          title: '预览',
+          title: $r('app.string.ai_preview'),
           action: (): void => {
             this.previewSub(sub)
           }
         },
         {
-          title: '更新',
+          title: $r('app.string.update_btn'),
           action: (): void => {
             this.updateOne(sub)
           }
         },
         {
-          title: '编辑',
+          title: $r('app.string.edit'),
           action: (): void => {
             this.openEditDialog(sub)
           }
         },
         {
-          title: '复制链接',
+          title: $r('app.string.copy_link'),
           action: (): void => {
             this.copyLink(sub)
           }
         },
         {
-          title: '删除',
+          title: $r('app.string.delete'),
           action: (): void => {
             this.confirmRemove(sub)
           }
@@ -264,7 +264,7 @@ export struct SettingsRuleSubPage {
     if (context === undefined || this.updating) {
       return
     }
-    this.getUIContext().getPromptAction().showToast({ message: '开始更新…', duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0q'), duration: TOAST_SHORT })
     this.updating = true
     RuleSubManager.getInstance().updateSubscription(context, sub).then((count: number) => {
       this.settings.updateRuleSubEntry(sub.key, count, Date.now())
@@ -292,7 +292,7 @@ export struct SettingsRuleSubPage {
       return
     }
     this.updating = true
-    this.getUIContext().getPromptAction().showToast({ message: '正在开始下载…', duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_h3'), duration: TOAST_SHORT })
     const manager = RuleSubManager.getInstance()
     let done = 0
     for (let i = 0; i < targets.length; i++) {
@@ -306,7 +306,7 @@ export struct SettingsRuleSubPage {
         if (done === targets.length) {
           this.updating = false
           this.reloadBlocker()
-          this.getUIContext().getPromptAction().showToast({ message: '订阅规则更新完成。', duration: TOAST_SHORT })
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0k'), duration: TOAST_SHORT })
         }
       })
     }
@@ -359,7 +359,7 @@ export struct SettingsRuleSubPage {
   private copyLink(sub: RuleSubEntry): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, sub.url)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied_link'), duration: TOAST_SHORT })
     })
   }
 
@@ -386,13 +386,13 @@ export struct SettingsRuleSubPage {
       })
     }
     sheets.push({
-      title: '自定义',
+      title: $r('app.string.ai_custom_label'),
       action: (): void => {
         this.openAddDialog()
       }
     })
     ActionSheet.show({
-      title: '添加规则订阅',
+      title: $r('app.string.orig_b8'),
       message: '',
       sheets: sheets
     })
@@ -430,12 +430,12 @@ export struct SettingsRuleSubPage {
   private applyUrl(newUrl: string): boolean {
     const url = newUrl.trim()
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0z'), duration: TOAST_SHORT })
       return false
     }
     for (let i = 0; i < this.settings.ruleSubscriptions.length; i++) {
       if (this.settings.ruleSubscriptions[i].url === url) {
-        this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: TOAST_SHORT })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_jd'), duration: TOAST_SHORT })
         return false
       }
     }
@@ -480,7 +480,7 @@ export struct SettingsRuleSubPage {
   @Builder
   AddSubDialog() {
     Column({ space: 14 }) {
-      Text('添加规则订阅')
+      Text($r('app.string.orig_b8'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -527,7 +527,7 @@ export struct SettingsRuleSubPage {
   @Builder
   EditSubDialog() {
     Column({ space: 14 }) {
-      Text('编辑规则订阅')
+      Text($r('app.string.orig_hd'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -565,11 +565,11 @@ export struct SettingsRuleSubPage {
               }
             }
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
-              this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: TOAST_SHORT })
+              this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0z'), duration: TOAST_SHORT })
               return
             }
             if (dup) {
-              this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: TOAST_SHORT })
+              this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_jd'), duration: TOAST_SHORT })
               return
             }
             if (sub !== undefined) {

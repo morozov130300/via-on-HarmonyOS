@@ -13,7 +13,7 @@ export struct SettingsScriptPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '脚本',
+      title: $r('app.string.scripts'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -26,7 +26,7 @@ export struct SettingsScriptPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            SettingCheckRow({ rowLabel: '启用脚本', isChecked: this.settings.scriptEnabled, onCheckRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: $r('app.string.enable_script'), isChecked: this.settings.scriptEnabled, onCheckRow: (isOn: boolean) => {
               this.settings.setScriptEnabled(isOn)
             } })
           }

@@ -18,7 +18,7 @@ export struct MediaListPage {
   build() {
     Column() {
       SettingsHeader({
-        headerTitle: '资源嗅探',
+        headerTitle: $r('app.string.res_sniffer'),
         rightText: this.mediaUrls.length > 0 ? `${this.mediaUrls.length} 个` : '',
         onBack: () => {
           this.close()
@@ -38,10 +38,10 @@ export struct MediaListPage {
       if (this.mediaUrls.length === 0) {
         Column({ space: 10 }) {
           UiaIcon({ icon: $r('app.media.uia_ic_download'), iconSize: 40, iconColor: $r('app.color.fg_tertiary') })
-          Text('该网站不支持资源嗅探')
+          Text($r('app.string.res_sniffer_unsupported'))
             .fontSize(14)
             .fontColor($r('app.color.fg_secondary'))
-          Text('注：音乐或视频在播放时更容易被获取。资源嗅探不支持部分网站。')
+          Text($r('app.string.orig_s0'))
             .fontSize(12)
             .fontColor($r('app.color.fg_tertiary'))
             .textAlign(TextAlign.Center)

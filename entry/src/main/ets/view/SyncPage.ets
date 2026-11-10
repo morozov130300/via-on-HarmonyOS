@@ -29,8 +29,8 @@ export struct SyncPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '同步',
-      rightText: this.mode === 'cloud' ? 'WebDAV' : '云同步',
+      title: $r('app.string.sync'),
+      rightText: this.mode === 'cloud' ? 'WebDAV' : $r('app.string.orig_tm'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -130,13 +130,13 @@ export struct SyncPage {
       SettingNavRow({ rowLabel: '账号', rowValue: this.settings.webdavUser === '' ? '未设置' : this.settings.webdavUser, onTapRow: () => {
         this.editField('webdav_user')
       } })
-      SettingNavRow({ rowLabel: '密码', rowValue: this.settings.webdavPwd === '' ? '未设置' : '已设置', onTapRow: () => {
+      SettingNavRow({ rowLabel: $r('app.string.orig_ke'), rowValue: this.settings.webdavPwd === '' ? '未设置' : '已设置', onTapRow: () => {
         this.editField('webdav_pwd')
       } })
       SettingNavRow({ rowLabel: '立即备份', rowValue: this.working ? '正在备份…' : '上传书签、历史与设置到 WebDAV 服务器', onTapRow: () => {
         this.webdavBackup()
       } })
-      SettingNavRow({ rowLabel: '恢复', rowValue: '从 WebDAV 服务器下载并恢复数据', onTapRow: () => {
+      SettingNavRow({ rowLabel: $r('app.string.read_aloud_resume'), rowValue: '从 WebDAV 服务器下载并恢复数据', onTapRow: () => {
         this.webdavRestore()
       } })
     }
@@ -301,7 +301,7 @@ export struct SyncPage {
       return
     }
     AlertDialog.show({
-      title: '恢复',
+      title: $r('app.string.read_aloud_resume'),
       message: '将从 WebDAV 服务器下载数据并覆盖当前书签、历史与设置',
       primaryButton: {
         value: $r('app.string.cancel'),

@@ -16,7 +16,7 @@ export struct SettingsPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '设置',
+      title: $r('app.string.settings'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -48,27 +48,27 @@ export struct SettingsPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            SettingNavRow({ rowLabel: '通用', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.general'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsGeneral', '', true)
             } })
-            SettingNavRow({ rowLabel: '定制', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.customize'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsCustom', '', true)
             } })
-            SettingNavRow({ rowLabel: '隐私', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.privacy'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsPrivacy', '', true)
             } })
-            SettingNavRow({ rowLabel: '高级', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.advanced'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsAdvanced', '', true)
             } })
-            SettingNavRow({ rowLabel: '脚本', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.scripts'), onTapRow: () => {
               this.navPathStack.pushPathByName('userScripts', '', true)
             } })
             if (this.settings.isLabEntryVisible()) {
-              SettingNavRow({ rowLabel: '实验', onTapRow: () => {
+              SettingNavRow({ rowLabel: $r('app.string.orig_ic'), onTapRow: () => {
                 this.navPathStack.pushPathByName('settingsExperimental', '', true)
               } })
             }
-            SettingNavRow({ rowLabel: '关于', onTapRow: () => {
+            SettingNavRow({ rowLabel: $r('app.string.about'), onTapRow: () => {
               this.navPathStack.pushPathByName('settingsAbout', '', true)
             } })
           }

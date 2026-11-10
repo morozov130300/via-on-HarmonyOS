@@ -441,7 +441,7 @@ export struct OfflinePage {
         this.showExportDialog = true
       } else {
         this.getUIContext().getPromptAction().showToast({
-          message: '导出成功', duration: TOAST_SHORT
+          message: $r('app.string.orig_il'), duration: TOAST_SHORT
         })
       }
     } catch (error) {
@@ -496,7 +496,7 @@ export struct OfflinePage {
   @Builder
   ExportDialog() {
     Column({ space: 14 }) {
-      Text('提示')
+      Text($r('app.string.ai_unsaved_title'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))

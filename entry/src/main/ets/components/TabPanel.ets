@@ -239,7 +239,7 @@ export struct TabPanel {
           // （f8/l0.c3：contentDescription ad「新建标签」，longClick → b.f() → k6.ia()）
           UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 24, iconColor: PANEL_FG })
             .padding(12)
-            .accessibilityText('新建标签')
+            .accessibilityText($r('app.string.orig_ad'))
             .onClick(() => {
               // 原版隐身会话中新建标签同为隐身（k6.cb/l8 会话模型）
               this.tabStore.newTab(this.tabStore.sessionIncognito)

@@ -353,7 +353,7 @@ export struct BookmarkPage {
           .width(36)
           .height(36)
           .color($r('app.color.accent'))
-        Text('稍等片刻…')
+        Text($r('app.string.read_aloud_wait'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
       }
@@ -711,7 +711,7 @@ export struct BookmarkPage {
   private confirmDeleteBookmark(item: BookmarkRec): void {
     const shown = item.title !== '' ? item.title : item.url
     AlertDialog.show({
-      title: '删除',
+      title: $r('app.string.delete'),
       message: `你确定删除 ${shown} 吗？`,
       primaryButton: {
         value: $r('app.string.cancel'),
@@ -811,8 +811,8 @@ export struct BookmarkPage {
       return
     }
     AlertDialog.show({
-      title: '删除',
-      message: '你确定继续吗？',
+      title: $r('app.string.delete'),
+      message: $r('app.string.reset_default_msg'),
       primaryButton: {
         value: $r('app.string.cancel'),
         action: () => {
@@ -1075,7 +1075,7 @@ export struct BookmarkPage {
             return
           }
           AlertDialog.show({
-            title: '提示',
+            title: $r('app.string.ai_unsaved_title'),
             message: `书签备份到：${uris[0]}`,
             primaryButton: {
               value: $r('app.string.confirm'),

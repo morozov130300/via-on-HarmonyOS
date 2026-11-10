@@ -29,7 +29,7 @@ export struct SettingsSearchToolbarPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '搜索工具栏',
+      title: $r('app.string.orig_t9'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -107,7 +107,7 @@ export struct SettingsSearchToolbarPage {
         List() {
           ListItem() {
             SettingCheckRow({
-              rowLabel: '启用搜索工具栏',
+              rowLabel: $r('app.string.orig_hn'),
               isChecked: this.settings.searchToolbarEnabled,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setSearchToolbarEnabled(isOn)
@@ -116,7 +116,7 @@ export struct SettingsSearchToolbarPage {
           }
           ListItem() {
             Row() {
-              Text('搜索引擎')
+              Text($r('app.string.search_engine'))
                 .fontSize(13)
                 .fontColor($r('app.color.fg_secondary'))
             }

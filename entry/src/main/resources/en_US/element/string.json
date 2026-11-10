@@ -1895,6 +1895,1122 @@
     {
       "name": "scripts_for_host",
       "value": "Scripts for %1$s"
+    },
+    {
+      "name": "orig_cp",
+      "value": "Baidu"
+    },
+    {
+      "name": "orig_k2",
+      "value": "Google"
+    },
+    {
+      "name": "orig_cq",
+      "value": "Bing"
+    },
+    {
+      "name": "orig_nm",
+      "value": "Metaso"
+    },
+    {
+      "name": "orig_ul",
+      "value": "Sogou"
+    },
+    {
+      "name": "orig_zw",
+      "value": "Toutiao"
+    },
+    {
+      "name": "orig_tt",
+      "value": "ShenMa"
+    },
+    {
+      "name": "orig_k5",
+      "value": "360 Search"
+    },
+    {
+      "name": "orig_bj",
+      "value": "Android (Phone)"
+    },
+    {
+      "name": "orig_bk",
+      "value": "Android (Tablet)"
+    },
+    {
+      "name": "orig_br",
+      "value": "Symbian"
+    },
+    {
+      "name": "orig_ic",
+      "value": "Experimental"
+    },
+    {
+      "name": "orig_to",
+      "value": "Gestures"
+    },
+    {
+      "name": "orig_cm",
+      "value": "Back/Forward gesture"
+    },
+    {
+      "name": "orig_a1l",
+      "value": "Use volume keys to scroll"
+    },
+    {
+      "name": "orig_hq",
+      "value": "Enable video player gestures"
+    },
+    {
+      "name": "orig_hr",
+      "value": "Allow swipe to adjust video progress, screen brightness, device volume when playing video in full screen if possible"
+    },
+    {
+      "name": "orig_m5",
+      "value": "Keyboard shortcuts"
+    },
+    {
+      "name": "orig_hj",
+      "value": "Enable built-in filters"
+    },
+    {
+      "name": "orig_hk",
+      "value": "Built-in filters only block common ads"
+    },
+    {
+      "name": "orig_ew",
+      "value": "Including custom filters and marked ads"
+    },
+    {
+      "name": "orig_jf",
+      "value": "Filter subscriptions"
+    },
+    {
+      "name": "orig_jg",
+      "value": "Subscribe to Adblock Plus filter lists"
+    },
+    {
+      "name": "orig_ia",
+      "value": "Expand webpage content automatically"
+    },
+    {
+      "name": "orig_ib",
+      "value": "Expand collapsed content automatically when open a webpage"
+    },
+    {
+      "name": "orig_t9",
+      "value": "Search toolbar"
+    },
+    {
+      "name": "orig_hn",
+      "value": "Enable search toolbar"
+    },
+    {
+      "name": "orig_kt",
+      "value": "Images"
+    },
+    {
+      "name": "orig_cx",
+      "value": "Blocked"
+    },
+    {
+      "name": "orig_qw",
+      "value": "Pop-ups"
+    },
+    {
+      "name": "orig_ch",
+      "value": "Ask first"
+    },
+    {
+      "name": "orig_dg",
+      "value": "Basics"
+    },
+    {
+      "name": "orig_di",
+      "value": "Permissions"
+    },
+    {
+      "name": "orig_dx",
+      "value": "Clipboard"
+    },
+    {
+      "name": "orig_oz",
+      "value": "Open app"
+    },
+    {
+      "name": "orig_mh",
+      "value": "Location"
+    },
+    {
+      "name": "orig_q5",
+      "value": "Page redirection"
+    },
+    {
+      "name": "orig_q_",
+      "value": "Ask first before cross-origin redirection"
+    },
+    {
+      "name": "orig_a1f",
+      "value": "Vibrate"
+    },
+    {
+      "name": "orig_r4",
+      "value": "Go back without reloading"
+    },
+    {
+      "name": "orig_ky",
+      "value": "Allowed only via Wi-Fi"
+    },
+    {
+      "name": "orig_ei",
+      "value": "Allowed, except third party"
+    },
+    {
+      "name": "orig_ad",
+      "value": "New tab"
+    },
+    {
+      "name": "orig_pl",
+      "value": "Next tab"
+    },
+    {
+      "name": "orig_pk",
+      "value": "Last tab"
+    },
+    {
+      "name": "orig_pg",
+      "value": "Go back"
+    },
+    {
+      "name": "orig_ph",
+      "value": "Go forward"
+    },
+    {
+      "name": "orig_pf",
+      "value": "Close tab"
+    },
+    {
+      "name": "orig_fw",
+      "value": "Menu"
+    },
+    {
+      "name": "orig_t3",
+      "value": "Show"
+    },
+    {
+      "name": "orig_b0",
+      "value": "View image"
+    },
+    {
+      "name": "orig_aq",
+      "value": "Save image"
+    },
+    {
+      "name": "orig_a1",
+      "value": "Download image"
+    },
+    {
+      "name": "orig_ts",
+      "value": "Share image"
+    },
+    {
+      "name": "orig_sw",
+      "value": "Search by image"
+    },
+    {
+      "name": "orig_ak",
+      "value": "Picture mode"
+    },
+    {
+      "name": "orig_ah",
+      "value": "Page info"
+    },
+    {
+      "name": "orig_u",
+      "value": "Copy link text"
+    },
+    {
+      "name": "orig_kn",
+      "value": "HTML code"
+    },
+    {
+      "name": "orig_d0",
+      "value": "Bold"
+    },
+    {
+      "name": "orig_lu",
+      "value": "Italics"
+    },
+    {
+      "name": "orig_su",
+      "value": "Line"
+    },
+    {
+      "name": "orig_t2",
+      "value": "Hide"
+    },
+    {
+      "name": "orig_j3",
+      "value": "Transparent"
+    },
+    {
+      "name": "orig_j5",
+      "value": "Icon first"
+    },
+    {
+      "name": "orig_k9",
+      "value": "Help"
+    },
+    {
+      "name": "orig_ot",
+      "value": "One filter per line."
+    },
+    {
+      "name": "orig_jm",
+      "value": "The following filters are not in the correct format:"
+    },
+    {
+      "name": "orig_z_",
+      "value": "Warning"
+    },
+    {
+      "name": "orig_m_",
+      "value": "Learn more"
+    },
+    {
+      "name": "orig_yo",
+      "value": "Safe browsing allows WebView to protect against malware and phishing attacks by verifying the links"
+    },
+    {
+      "name": "orig_yx",
+      "value": "Be careful, ignoring ssl certificate warnings may make connection to website insecure"
+    },
+    {
+      "name": "orig_a1o",
+      "value": "Now you can connect your phone to computer, then debug the webpage with Chrome (PC) using \"chrome://inspect\". Remember to first enable USB Debugging in the menu: More Tools > Developer Tools."
+    },
+    {
+      "name": "orig_n_",
+      "value": "SSL certificates are used to verify website identities and encrypt connection. It's like putting a letter in an envelope and posting it, only you and the website can open envelope and read the letter.\n\nOnce you ignore the SSL warnings, the connection to the website may be insecure, which means that the data transmitted with the website may be stolen. It's like putting the letter in a broken envelope and posting it, someone who forged the certificate could open it."
+    },
+    {
+      "name": "orig_yw",
+      "value": "I know this may make connection insecure"
+    },
+    {
+      "name": "orig_a4",
+      "value": "Favorites"
+    },
+    {
+      "name": "orig_vt",
+      "value": "Tabs"
+    },
+    {
+      "name": "orig_gf",
+      "value": "Disabled"
+    },
+    {
+      "name": "orig_ni",
+      "value": "When using the address bar, suggest"
+    },
+    {
+      "name": "orig_cr",
+      "value": "Block"
+    },
+    {
+      "name": "orig_z3",
+      "value": "Reset site configuration"
+    },
+    {
+      "name": "orig_bc",
+      "value": "Add site exception"
+    },
+    {
+      "name": "orig_i4",
+      "value": "Exception"
+    },
+    {
+      "name": "orig_g1",
+      "value": "Disable desktop mode for a specific site."
+    },
+    {
+      "name": "orig_g2",
+      "value": "Enable desktop mode for a specific site."
+    },
+    {
+      "name": "orig_bi",
+      "value": "Set user-agent for a specific site."
+    },
+    {
+      "name": "orig_kx",
+      "value": "Allow sites to load images only via Wi-Fi"
+    },
+    {
+      "name": "orig_kw",
+      "value": "Allow sites to load images"
+    },
+    {
+      "name": "orig_kv",
+      "value": "Block images for a specific site."
+    },
+    {
+      "name": "orig_ku",
+      "value": "Show images for a specific site."
+    },
+    {
+      "name": "orig_m0",
+      "value": "Allow sites to run JavaScript"
+    },
+    {
+      "name": "orig_lz",
+      "value": "Block JavaScript for a specific site."
+    },
+    {
+      "name": "orig_ly",
+      "value": "Allow JavaScript for a specific site."
+    },
+    {
+      "name": "orig_ur",
+      "value": "Certificate is not trusted"
+    },
+    {
+      "name": "orig_um",
+      "value": "Date of certificate is invalid"
+    },
+    {
+      "name": "orig_uo",
+      "value": "Certificate is expired"
+    },
+    {
+      "name": "orig_un",
+      "value": "Domain in certificate does not match the site domain"
+    },
+    {
+      "name": "orig_uq",
+      "value": "Certificate is not yet valid"
+    },
+    {
+      "name": "orig_up",
+      "value": "Certificate is invalid"
+    },
+    {
+      "name": "orig_a12",
+      "value": "User-agent in desktop mode"
+    },
+    {
+      "name": "orig_a13",
+      "value": "User-agent reduction"
+    },
+    {
+      "name": "orig_a14",
+      "value": "Remove device information and minor version information from User-agent"
+    },
+    {
+      "name": "orig_a0b",
+      "value": "Unlock"
+    },
+    {
+      "name": "orig_ml",
+      "value": "Lock"
+    },
+    {
+      "name": "orig_oy",
+      "value": "Open all"
+    },
+    {
+      "name": "orig_pm",
+      "value": "None"
+    },
+    {
+      "name": "orig_pu",
+      "value": "Scroll to top"
+    },
+    {
+      "name": "orig_pe",
+      "value": "Scroll to bottom"
+    },
+    {
+      "name": "orig_po",
+      "value": "Open bookmark"
+    },
+    {
+      "name": "orig_pq",
+      "value": "Open history"
+    },
+    {
+      "name": "orig_qa",
+      "value": "Page up"
+    },
+    {
+      "name": "orig_q1",
+      "value": "Page down"
+    },
+    {
+      "name": "orig_pt",
+      "value": "Show tabs panel"
+    },
+    {
+      "name": "orig_pr",
+      "value": "Open settings"
+    },
+    {
+      "name": "orig_pp",
+      "value": "Open downloads"
+    },
+    {
+      "name": "orig_pd",
+      "value": "Open AI panel"
+    },
+    {
+      "name": "orig_pn",
+      "value": "Open bookmarks dialog"
+    },
+    {
+      "name": "orig_vp",
+      "value": "Tab actions"
+    },
+    {
+      "name": "orig_j7",
+      "value": "Feature actions"
+    },
+    {
+      "name": "orig_bg",
+      "value": "Address bar actions"
+    },
+    {
+      "name": "orig_a1r",
+      "value": "Webpage actions"
+    },
+    {
+      "name": "orig_zu",
+      "value": "Press a selected button below to set its long-press action, or long-press it to check what action has been set. You can also slide the toolbar to set the slide action."
+    },
+    {
+      "name": "orig_sv",
+      "value": "Rectangle"
+    },
+    {
+      "name": "orig_j2",
+      "value": "Colorful"
+    },
+    {
+      "name": "orig_sr",
+      "value": "Blur"
+    },
+    {
+      "name": "orig_dv",
+      "value": "Clear the website icon cache"
+    },
+    {
+      "name": "orig_dw",
+      "value": "Note that this will clear all the favorite icons on the homepage. Each icon will be downloaded the next time you visit the corresponding website."
+    },
+    {
+      "name": "orig_uf",
+      "value": "Skins"
+    },
+    {
+      "name": "orig_cy",
+      "value": "Blur effect"
+    },
+    {
+      "name": "orig_cz",
+      "value": "Enable blur effect for the app. Some devices may not support it."
+    },
+    {
+      "name": "orig_tu",
+      "value": "Show background in settings"
+    },
+    {
+      "name": "orig_tv",
+      "value": "It will take effect the next time you open Settings"
+    },
+    {
+      "name": "orig_yj",
+      "value": "The title can not be empty"
+    },
+    {
+      "name": "orig_a11",
+      "value": "The user-agent can not be empty"
+    },
+    {
+      "name": "orig_et",
+      "value": "Custom CSS"
+    },
+    {
+      "name": "orig_a1z",
+      "value": "Yesterday"
+    },
+    {
+      "name": "orig_s0",
+      "value": "It is easier to detect media files while music or video is being played. Resource sniffer doesn't work on certain websites."
+    },
+    {
+      "name": "orig_k1",
+      "value": "Google Lens"
+    },
+    {
+      "name": "orig_jh",
+      "value": "Find"
+    },
+    {
+      "name": "orig_s3",
+      "value": "Restore tabs on startup"
+    },
+    {
+      "name": "orig_tz",
+      "value": "Show toast to undo closing tab"
+    },
+    {
+      "name": "orig_u0",
+      "value": "The toast will not be shown if incognito mode is on"
+    },
+    {
+      "name": "orig_vs",
+      "value": "Tab settings"
+    },
+    {
+      "name": "orig_gd",
+      "value": "Don't restore"
+    },
+    {
+      "name": "orig_c_",
+      "value": "Always restore"
+    },
+    {
+      "name": "orig_s5",
+      "value": "Tabs will not be restored when you are in \"Incognito mode\"."
+    },
+    {
+      "name": "orig_rf",
+      "value": "Closed tabs"
+    },
+    {
+      "name": "orig_y",
+      "value": "Delete all"
+    },
+    {
+      "name": "orig_pc",
+      "value": "New tab opened in the background"
+    },
+    {
+      "name": "orig_jn",
+      "value": "Font"
+    },
+    {
+      "name": "orig_zo",
+      "value": "Today"
+    },
+    {
+      "name": "orig_m7",
+      "value": "The last hour"
+    },
+    {
+      "name": "orig_zp",
+      "value": "Today and yesterday"
+    },
+    {
+      "name": "orig_m8",
+      "value": "Last 7 days"
+    },
+    {
+      "name": "orig_c1",
+      "value": "All time"
+    },
+    {
+      "name": "orig_il",
+      "value": "Exported successfully"
+    },
+    {
+      "name": "orig_m2",
+      "value": "Join Telegram group"
+    },
+    {
+      "name": "orig_ue",
+      "value": "Search bar"
+    },
+    {
+      "name": "orig_ub",
+      "value": "Background"
+    },
+    {
+      "name": "orig_a1v",
+      "value": "Width"
+    },
+    {
+      "name": "orig_k8",
+      "value": "Height"
+    },
+    {
+      "name": "orig_en",
+      "value": "Corner radius"
+    },
+    {
+      "name": "orig_jo",
+      "value": "Font style"
+    },
+    {
+      "name": "orig_b3",
+      "value": "Adaptive"
+    },
+    {
+      "name": "orig_ow",
+      "value": "Opacity"
+    },
+    {
+      "name": "orig_v3",
+      "value": "Border width"
+    },
+    {
+      "name": "orig_v2",
+      "value": "Border opacity"
+    },
+    {
+      "name": "orig_st",
+      "value": "Bar style"
+    },
+    {
+      "name": "orig_yc",
+      "value": "Theme color"
+    },
+    {
+      "name": "orig_j4",
+      "value": "Icon style"
+    },
+    {
+      "name": "orig_j1",
+      "value": "Icon color"
+    },
+    {
+      "name": "orig_sq",
+      "value": "Bar effect"
+    },
+    {
+      "name": "orig_t1",
+      "value": "Search part"
+    },
+    {
+      "name": "orig_j0",
+      "value": "Clear icons"
+    },
+    {
+      "name": "orig_go",
+      "value": "Download location"
+    },
+    {
+      "name": "orig_bf",
+      "value": "Download manager"
+    },
+    {
+      "name": "orig_in",
+      "value": "External video player"
+    },
+    {
+      "name": "orig_dr",
+      "value": "Clear data on exit"
+    },
+    {
+      "name": "orig_pi",
+      "value": "Gestures, shortcuts, function keys"
+    },
+    {
+      "name": "orig_l6",
+      "value": "Import/export bookmarks"
+    },
+    {
+      "name": "orig_l1",
+      "value": "Import data"
+    },
+    {
+      "name": "orig_f7",
+      "value": "Data export"
+    },
+    {
+      "name": "orig_ih",
+      "value": "Export bookmarks, settings, scripts and ad filters"
+    },
+    {
+      "name": "orig_ti",
+      "value": "Set as default browser"
+    },
+    {
+      "name": "orig_ie",
+      "value": "Export bookmarks"
+    },
+    {
+      "name": "orig_l0",
+      "value": "Import bookmarks"
+    },
+    {
+      "name": "orig_v8",
+      "value": "Favorites"
+    },
+    {
+      "name": "orig_qj",
+      "value": "Passwords"
+    },
+    {
+      "name": "orig_ht",
+      "value": "Enter password"
+    },
+    {
+      "name": "orig_hu",
+      "value": "You are exporting secret data, please enter a password to encrypt the data. Please remember the password. Once the password is lost, you will not be able to import the encrypted data."
+    },
+    {
+      "name": "orig_ke",
+      "value": "Password"
+    },
+    {
+      "name": "orig_g",
+      "value": "Blank page"
+    },
+    {
+      "name": "orig_s2",
+      "value": "This will take effect the next time you open the app. Would you like to restart it now to take effect immediately?"
+    },
+    {
+      "name": "orig_er",
+      "value": "Restart"
+    },
+    {
+      "name": "orig_ym",
+      "value": "Custom homepage"
+    },
+    {
+      "name": "orig_d5",
+      "value": "Built-in download manager"
+    },
+    {
+      "name": "orig_qv",
+      "value": "System sharing"
+    },
+    {
+      "name": "orig_f4",
+      "value": "Data cleared"
+    },
+    {
+      "name": "orig_f3",
+      "value": "Cache"
+    },
+    {
+      "name": "orig_f_",
+      "value": "Web storage"
+    },
+    {
+      "name": "orig_f5",
+      "value": "Cookies (Login status)"
+    },
+    {
+      "name": "orig_f2",
+      "value": "App cache"
+    },
+    {
+      "name": "orig_rs",
+      "value": "This will take effect if JavaScript is enabled."
+    },
+    {
+      "name": "orig_o4",
+      "value": "Never"
+    },
+    {
+      "name": "orig_i1",
+      "value": "Every 3 days"
+    },
+    {
+      "name": "orig_i3",
+      "value": "Every week"
+    },
+    {
+      "name": "orig_i0",
+      "value": "Every 15 days"
+    },
+    {
+      "name": "orig_k7",
+      "value": "has not been updated"
+    },
+    {
+      "name": "orig_a0q",
+      "value": "Starting update…"
+    },
+    {
+      "name": "orig_h3",
+      "value": "Starting download…"
+    },
+    {
+      "name": "orig_a0k",
+      "value": "Filter subscriptions update completed."
+    },
+    {
+      "name": "orig_b8",
+      "value": "Add filter subscription"
+    },
+    {
+      "name": "orig_a0z",
+      "value": "The URL is invalid."
+    },
+    {
+      "name": "orig_jd",
+      "value": "The filter subscription already exists."
+    },
+    {
+      "name": "orig_hd",
+      "value": "Edit filter subscription"
+    },
+    {
+      "name": "orig_jr",
+      "value": "Enable force zoom"
+    },
+    {
+      "name": "orig_e1",
+      "value": "Ask first before allowing sites to use your clipboard"
+    },
+    {
+      "name": "orig_e2",
+      "value": "Block sites to use your clipboard"
+    },
+    {
+      "name": "orig_e0",
+      "value": "Allow sites to use your clipboard"
+    },
+    {
+      "name": "orig_p3",
+      "value": "Ask first before allowing sites to open your app"
+    },
+    {
+      "name": "orig_p4",
+      "value": "Block sites to open your app"
+    },
+    {
+      "name": "orig_p2",
+      "value": "Allow sites to open your app"
+    },
+    {
+      "name": "orig_mk",
+      "value": "Ask first before allowing sites to know your location"
+    },
+    {
+      "name": "orig_d9",
+      "value": "Ask first before allowing sites to use your camera"
+    },
+    {
+      "name": "orig_nq",
+      "value": "Ask first before allowing sites to use your microphone"
+    },
+    {
+      "name": "orig_q9",
+      "value": "Ask first before page redirection to cross-origin URL"
+    },
+    {
+      "name": "orig_q8",
+      "value": "Allow page redirection to any URL"
+    },
+    {
+      "name": "orig_a1g",
+      "value": "Allow sites to vibrate"
+    },
+    {
+      "name": "orig_dz",
+      "value": "Block a specific site to use your clipboard."
+    },
+    {
+      "name": "orig_dy",
+      "value": "Allow a specific site to use your clipboard."
+    },
+    {
+      "name": "orig_p1",
+      "value": "Block a specific site to open your app."
+    },
+    {
+      "name": "orig_p0",
+      "value": "Allow a specific site to open your app."
+    },
+    {
+      "name": "orig_mi",
+      "value": "Allow a specific site to use your location."
+    },
+    {
+      "name": "orig_mj",
+      "value": "Block a specific site to use your location."
+    },
+    {
+      "name": "orig_d7",
+      "value": "Allow a specific site to use your camera."
+    },
+    {
+      "name": "orig_d8",
+      "value": "Block a specific site to use your camera."
+    },
+    {
+      "name": "orig_no",
+      "value": "Allow a specific site to use your microphone."
+    },
+    {
+      "name": "orig_np",
+      "value": "Block a specific site to use your microphone."
+    },
+    {
+      "name": "orig_q6",
+      "value": "Allow page redirection to any URL for a specific site."
+    },
+    {
+      "name": "orig_q7",
+      "value": "Ask first before cross-origin redirection for a specific site."
+    },
+    {
+      "name": "orig_r5",
+      "value": "Disable go back without reloading for a specific site."
+    },
+    {
+      "name": "orig_r6",
+      "value": "Enable go back without reloading for a specific site."
+    },
+    {
+      "name": "orig_eh",
+      "value": "Allow sites to save and read cookie data"
+    },
+    {
+      "name": "orig_cs",
+      "value": "Block third-party cookies"
+    },
+    {
+      "name": "orig_qx",
+      "value": "Ask first before allowing sites to show pop-ups"
+    },
+    {
+      "name": "orig_b4",
+      "value": "Disable ad blocking for a specific site."
+    },
+    {
+      "name": "orig_b5",
+      "value": "Enable ad blocking for a specific site."
+    },
+    {
+      "name": "orig_mf",
+      "value": "Load skin failed"
+    },
+    {
+      "name": "orig_uc",
+      "value": "Skin changed"
+    },
+    {
+      "name": "orig_tm",
+      "value": "Account"
+    },
+    {
+      "name": "orig_l_",
+      "value": "Import script from URL"
+    },
+    {
+      "name": "orig_l9",
+      "value": "Import script from file"
+    },
+    {
+      "name": "orig_ro",
+      "value": "The script is incomplete and does not work, would you like to download the full script?"
+    },
+    {
+      "name": "orig_zh",
+      "value": "Failed to parse the script!"
+    },
+    {
+      "name": "orig_zm",
+      "value": "Parsing script…"
+    },
+    {
+      "name": "orig_yy",
+      "value": "Install script"
+    },
+    {
+      "name": "orig_z2",
+      "value": "Re-install script"
+    },
+    {
+      "name": "orig_z9",
+      "value": "Update script"
+    },
+    {
+      "name": "orig_a0r",
+      "value": "Scripts update completed."
+    },
+    {
+      "name": "orig_sl",
+      "value": "Code (JavaScript)"
+    },
+    {
+      "name": "orig_yh",
+      "value": "Add metadata block"
+    },
+    {
+      "name": "orig_mz",
+      "value": "This script has no metadata block so it cannot be saved. Do you want to add a default metadata block to it?"
+    },
+    {
+      "name": "orig_so",
+      "value": "Scripts enabled"
+    },
+    {
+      "name": "orig_ou",
+      "value": "Only take effect for the current site"
+    },
+    {
+      "name": "orig_a01",
+      "value": "Microsoft translate"
+    },
+    {
+      "name": "orig_zx",
+      "value": "Baidu translate"
+    },
+    {
+      "name": "orig_zz",
+      "value": "Google in-page translate"
+    },
+    {
+      "name": "orig_zy",
+      "value": "Google translate"
+    },
+    {
+      "name": "orig_a00",
+      "value": "Google text translate"
+    },
+    {
+      "name": "orig_nw",
+      "value": "Move"
+    },
+    {
+      "name": "orig_uk",
+      "value": "Sort order"
+    },
+    {
+      "name": "orig_ka",
+      "value": "Hide details"
+    },
+    {
+      "name": "orig_tw",
+      "value": "Show details"
+    },
+    {
+      "name": "orig_uj",
+      "value": "Oldest first"
+    },
+    {
+      "name": "orig_ui",
+      "value": "Newest first"
+    },
+    {
+      "name": "orig_uh",
+      "value": "Alphabetical order"
+    },
+    {
+      "name": "orig_e",
+      "value": "Add to homepage"
+    },
+    {
+      "name": "orig_be",
+      "value": "Added to homepage successfully"
+    },
+    {
+      "name": "orig_kz",
+      "value": "Couldn't import bookmarks from file!"
     }
   ]
 }

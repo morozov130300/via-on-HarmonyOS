@@ -19,8 +19,8 @@ export struct UaEditPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: this.isNew ? '新建' : '编辑',
-      rightText: '保存',
+      title: this.isNew ? $r('app.string.new_home_fav') : $r('app.string.edit'),
+      rightText: $r('app.string.save'),
       onBack: () => {
         this.confirmExit()
       },
@@ -36,7 +36,7 @@ export struct UaEditPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            TextInput({ placeholder: '标题', text: this.titleInput })
+            TextInput({ placeholder: $r('app.string.content_title'), text: this.titleInput })
               .height(48)
               .fontSize(15)
               .fontColor($r('app.color.fg'))
@@ -47,7 +47,7 @@ export struct UaEditPage {
               .onChange((value: string) => {
                 this.titleInput = value
               })
-            TextArea({ placeholder: '浏览器标识', text: this.uaInput })
+            TextArea({ placeholder: $r('app.string.browser_ua'), text: this.uaInput })
               .fontSize(14)
               .fontColor($r('app.color.fg'))
               .placeholderColor($r('app.color.fg_secondary'))
@@ -126,16 +126,16 @@ export struct UaEditPage {
       }
     }
     this.getUIContext().showAlertDialog({
-      title: '提示',
-      message: '修改的内容未保存，是否保存？',
+      title: $r('app.string.ai_unsaved_title'),
+      message: $r('app.string.ai_unsaved_msg'),
       primaryButton: {
-        value: '保存并退出',
+        value: $r('app.string.ai_save_and_exit'),
         action: (): void => {
           this.save()
         }
       },
       secondaryButton: {
-        value: '退出',
+        value: $r('app.string.exit_app'),
         action: (): void => {
           this.navPathStack.pop()
         }
@@ -147,11 +147,11 @@ export struct UaEditPage {
     const title = this.titleInput.trim()
     const ua = this.uaInput.trim()
     if (title === '') {
-      this.getUIContext().getPromptAction().showToast({ message: '标题不能为空', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_yj'), duration: TOAST_SHORT })
       return
     }
     if (ua === '') {
-      this.getUIContext().getPromptAction().showToast({ message: '浏览器标识不能为空', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a11'), duration: TOAST_SHORT })
       return
     }
     const oldTitle = this.isNew ? '' : this.titleInput

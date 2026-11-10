@@ -41,9 +41,9 @@ export struct SettingsLongPressPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '定制长按菜单',
+      title: $r('app.string.customize_long_press_menu'),
       // 原版 i8/w.a3()：AppBar 右上「重置」，弹确认框后恢复默认（仅隐藏 保存图片）
-      rightText: '重置',
+      rightText: $r('app.string.reset'),
       onRight: () => {
         this.confirmReset()
       },
@@ -131,16 +131,16 @@ export struct SettingsLongPressPage {
   // 原版 i8/w.a3()：「重置为默认设置」/「你确定继续吗？」→ U1(null) 恢复默认（仅隐藏 保存图片）
   private confirmReset(): void {
     this.getUIContext().showAlertDialog({
-      title: '重置为默认设置',
-      message: '你确定继续吗？',
+      title: $r('app.string.reset_default_title'),
+      message: $r('app.string.reset_default_msg'),
       primaryButton: {
-        value: '重置',
+        value: $r('app.string.reset'),
         action: () => {
           this.settings.setLongPressHidden(['save_image'])
         }
       },
       secondaryButton: {
-        value: '取消',
+        value: $r('app.string.cancel'),
         action: () => {
         }
       },
