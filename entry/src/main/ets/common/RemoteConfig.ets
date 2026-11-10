@@ -15,7 +15,7 @@ const FEATURE_API_URL_GLOBAL: string = 'https://us-c.uiayoo.com/api/frontend'
 // Shell.java:56 Authorization token 原样
 const FEATURE_API_TOKEN: string = 'default:production.5ae8018a613c7b4ef6297b23aaf7d5d18d16cac9a6636ae20d378aa2'
 // r9/j.java:114 User-Agent 原样
-const FEATURE_API_UA: string = 'Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Uia/7.4.0.beta'
+const FEATURE_API_UA: string = 'Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Uia/7.4.0'
 // r9/j.java:56 距上次抓取超 60000ms 才重新 POST
 const FETCH_INTERVAL_MS: number = 60000
 // r9/j.java:53 缓存文件 <filesDir>/features；w9/e.java SharedPreferences "features"（uid/last_fetched）

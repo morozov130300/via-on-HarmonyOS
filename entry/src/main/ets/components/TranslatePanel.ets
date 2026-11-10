@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { http } from '@kit.NetworkKit'
 import { display, curves, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
@@ -606,7 +607,7 @@ export struct TranslatePanel {
     pasteboard.getSystemPasteboard().setData(data)
     this.getUIContext().getPromptAction().showToast({
       message: $r('app.string.copied'),
-      duration: 1500
+      duration: TOAST_SHORT
     })
   }
 

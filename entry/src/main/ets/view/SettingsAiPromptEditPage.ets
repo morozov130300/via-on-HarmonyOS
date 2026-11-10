@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { util } from '@kit.ArkTS'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { CopilotStore, AiSuggestion, extractVars, webpageVarFlags } from '../common/CopilotStore'
@@ -161,7 +162,7 @@ export struct SettingsAiPromptEditPage {
   private copyVariable(name: string): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, name)
     pasteboard.getSystemPasteboard().setData(data)
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.ai_copied'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.ai_copied'), duration: TOAST_SHORT })
   }
 
   build() {

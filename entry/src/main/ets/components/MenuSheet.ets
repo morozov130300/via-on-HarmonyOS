@@ -1,3 +1,4 @@
+import { TOAST_SHORT, TOAST_MEDIUM, TOAST_LONG } from '../common/ToastDuration'
 import { i18n } from '@kit.LocalizationKit'
 ﻿import { common, Want } from '@kit.AbilityKit'
 import { print, BusinessError } from '@kit.BasicServicesKit'
@@ -612,7 +613,7 @@ export struct MenuSheet {
           console.error('refresh after script enable failed')
         }
       }
-      this.getUIContext().getPromptAction().showToast({ message: '脚本已启用', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '脚本已启用', duration: TOAST_SHORT })
       return
     }
     if (!wouldRun) {
@@ -869,7 +870,7 @@ export struct MenuSheet {
       this.showDlManagerDialog = false
       this.onClose()
       this.getUIContext().getPromptAction().showToast({
-        message: `已设置 下载管理 为 ${label}`, duration: 1500
+        message: `已设置 下载管理 为 ${label}`, duration: TOAST_SHORT
       })
     })
   }
@@ -1163,7 +1164,7 @@ export struct MenuSheet {
           this.TranslateMenuRow('谷歌页内翻译', (): void => {
             this.translatePage()
             this.showTranslateMenuDialog = false
-            this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: TOAST_SHORT })
           })
           this.TranslateMenuRow('谷歌翻译', (): void => {
             this.translateGooglePage()
@@ -1345,7 +1346,7 @@ export struct MenuSheet {
       }
     }
     this.settings.setClearData2(flags)
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: TOAST_SHORT })
   }
 
   private clearAppCache(): void {
@@ -1526,7 +1527,7 @@ export struct MenuSheet {
         if (this.tabStore.current().isHomePage()) {
           this.homePageGuard()
         } else {
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: TOAST_SHORT })
         }
         break
     }
@@ -1674,7 +1675,7 @@ export struct MenuSheet {
     if (!tab.url.startsWith('http://') && !tab.url.startsWith('https://')) {
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.mark_ad_http_only'),
-        duration: 1500
+        duration: TOAST_SHORT
       })
       return false
     }
@@ -1708,7 +1709,7 @@ export struct MenuSheet {
     try {
       this.tabStore.current().controller.runJavaScript(js)
       this.showTranslateMenuDialog = false
-      this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: TOAST_SHORT })
       this.onClose()
     } catch (error) {
       console.error('inject edge translate failed')
@@ -1779,7 +1780,7 @@ export struct MenuSheet {
       this.showAddBookmarkDialog = false
       this.onClose()
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.bookmark_added'), duration: 1500
+        message: $r('app.string.bookmark_added'), duration: TOAST_SHORT
       })
     }).catch((error: BusinessError) => {
       console.error(`add bookmark dialog failed: ${error.message}`)
@@ -1837,11 +1838,11 @@ export struct MenuSheet {
     }
     if (RemoteConfig.getInstance().isInWlr(tab.url)) {
       this.onClose()
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_unsupported'), duration: 2500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_unsupported'), duration: TOAST_LONG })
       return
     }
     this.onClose()
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_empty'), duration: 2500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_empty'), duration: TOAST_LONG })
   }
 
   // 电脑模式：切换当前站点的桌面版标识并刷新（原版 toast「电脑模式 已开启/已关闭」）
@@ -1860,7 +1861,7 @@ export struct MenuSheet {
     this.settings.upsertSiteSetting(site)
     this.getUIContext().getPromptAction().showToast({
       message: `${this.getUIContext().getHostContext()!.resourceManager.getStringSync($r('app.string.pc_mode').id)} ${site.pcMode ? '已开启' : '已关闭'}`,
-      duration: 1500
+      duration: TOAST_SHORT
     })
     try {
       tab.controller.refresh()
@@ -1876,7 +1877,7 @@ export struct MenuSheet {
 
   private homePageGuard(): void {
     this.onClose()
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.no_page_open'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.no_page_open'), duration: TOAST_SHORT })
   }
 
   // 原版 k6.cb()：!隐身→A8() 进入；已隐身且标签>1→确认框（关闭/保留）；否则 l8(true) 退出
@@ -1885,7 +1886,7 @@ export struct MenuSheet {
     if (!this.tabStore.sessionIncognito) {
       this.tabStore.sessionIncognito = true
       this.tabStore.newTab(true)
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.entered_incognito'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.entered_incognito'), duration: TOAST_SHORT })
       return
     }
     const incognitoCount = this.tabStore.incognitoTabCount()
@@ -1916,7 +1917,7 @@ export struct MenuSheet {
   // 原版 l8(close)：close=关闭全部隐身标签后退出；否则保留标签仅退出会话；toast la「退出隐身浏览」
   private exitIncognito(close: boolean): void {
     this.tabStore.exitIncognitoSession(close)
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.exit_incognito'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.exit_incognito'), duration: TOAST_SHORT })
   }
 
   private exitApp(): void {
@@ -1934,7 +1935,7 @@ export struct MenuSheet {
     const title = tab.title !== '' ? tab.title : hostOf(tab.url)
     BrowserDb.getInstance().addBookmark(title, tab.url).then(() => {
       this.onClose()
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.bookmark_added'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.bookmark_added'), duration: TOAST_SHORT })
     }).catch((error: BusinessError) => {
       console.error(`add bookmark failed: ${error.message}`)
     })
@@ -1955,7 +1956,7 @@ export struct MenuSheet {
     this.onClose()
     const follow = this.settings.toggleNightMode()
     if (follow) {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.night_follow_toast'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.night_follow_toast'), duration: TOAST_SHORT })
     }
   }
 
@@ -1974,7 +1975,7 @@ export struct MenuSheet {
       const template = context.resourceManager.getStringSync(
         (next ? $r('app.string.status_enabled') : $r('app.string.status_disabled')).id)
       const label = context.resourceManager.getStringSync($r('app.string.ad_block').id)
-      this.getUIContext().getPromptAction().showToast({ message: `${label} ${template}`, duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: `${label} ${template}`, duration: TOAST_SHORT })
     }
   }
 
@@ -2026,7 +2027,7 @@ export struct MenuSheet {
     }
     this.getUIContext().getPromptAction().showToast({
       message: next ? $r('app.string.fullscreen_toast_on') : $r('app.string.fullscreen_toast_off'),
-      duration: 1500
+      duration: TOAST_SHORT
     })
     this.onClose()
   }
@@ -2043,7 +2044,7 @@ export struct MenuSheet {
       $r('app.string.image_mode_block'),
       $r('app.string.image_mode_wifi')
     ]
-    this.getUIContext().getPromptAction().showToast({ message: labels[index], duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: labels[index], duration: TOAST_SHORT })
     this.onClose()
   }
 
@@ -2057,7 +2058,7 @@ export struct MenuSheet {
     if (!tab.url.startsWith('http')) {
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.mark_ad_http_only'),
-        duration: 1500
+        duration: TOAST_SHORT
       })
       return
     }
@@ -2118,7 +2119,7 @@ export struct MenuSheet {
     }).then(() => {
       client.destroy()
       this.showReportDialog = false
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.report_success'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.report_success'), duration: TOAST_SHORT })
       this.onClose()
     }).catch((error: BusinessError) => {
       client.destroy()
@@ -2145,7 +2146,7 @@ export struct MenuSheet {
       console.error(`open with failed: ${error.code}`)
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.open_with_failed'),
-        duration: 1500
+        duration: TOAST_SHORT
       })
     })
   }
@@ -2155,7 +2156,7 @@ export struct MenuSheet {
     this.settings.setGameMode(next)
     this.getUIContext().getPromptAction().showToast({
       message: next ? $r('app.string.game_mode_toast_on') : $r('app.string.game_mode_toast_off'),
-      duration: 2000
+      duration: TOAST_MEDIUM
     })
     this.onClose()
   }
@@ -2183,7 +2184,7 @@ export struct MenuSheet {
     if (resourceContext !== undefined) {
       const template = resourceContext.resourceManager.getStringSync($r('app.string.orientation_toast').id)
       const label = resourceContext.resourceManager.getStringSync(labels[index].id)
-      this.getUIContext().getPromptAction().showToast({ message: template.replace('%s', label), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: template.replace('%s', label), duration: TOAST_SHORT })
     }
     this.onClose()
   }
@@ -2211,7 +2212,7 @@ export struct MenuSheet {
       db.addHomeFav(title, url, '', items.length).then(() => {
         this.showAddHomeFavDialog = false
         this.onClose()
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.home_fav_added'), duration: 1500 })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.home_fav_added'), duration: TOAST_SHORT })
       })
     }).catch((error: BusinessError) => {
       console.error(`add home fav failed: ${error.message}`)

@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { AppSettings } from '../common/Settings'
 import { CustomUaEntry } from '../common/UaTable'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -146,11 +147,11 @@ export struct UaEditPage {
     const title = this.titleInput.trim()
     const ua = this.uaInput.trim()
     if (title === '') {
-      this.getUIContext().getPromptAction().showToast({ message: '标题不能为空', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '标题不能为空', duration: TOAST_SHORT })
       return
     }
     if (ua === '') {
-      this.getUIContext().getPromptAction().showToast({ message: '浏览器标识不能为空', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '浏览器标识不能为空', duration: TOAST_SHORT })
       return
     }
     const oldTitle = this.isNew ? '' : this.titleInput

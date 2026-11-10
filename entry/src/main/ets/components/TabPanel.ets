@@ -435,7 +435,9 @@ export struct TabPanel {
       this.openUndoDialog(`已关闭 ${result.titles[0]}`)
       return
     }
-    this.openUndoDialog(`已关闭 ${result.count()} 个标签页`)
+    const n = result.count()
+    this.openUndoDialog(this.getUIContext().getHostContext()!.resourceManager
+      .getPluralStringValueSync($r('app.plural.tabs_closed').id, n))
   }
 
   private openUndoDialog(message: string): void {

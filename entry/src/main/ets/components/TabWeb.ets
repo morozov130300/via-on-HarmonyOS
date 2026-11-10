@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { abilityAccessCtrl, Permissions, PermissionRequestResult } from '@kit.AbilityKit'
@@ -1826,7 +1827,7 @@ export struct TabWeb {
   private copyText(text: string): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied'), duration: TOAST_SHORT })
     }).catch(() => {
       console.error('copy text failed')
     })
@@ -1892,7 +1893,7 @@ export struct TabWeb {
   private copyLink(link: string): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, link)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.link_copied'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.link_copied'), duration: TOAST_SHORT })
     }).catch(() => {
       console.error('copy link failed')
     })
@@ -2015,7 +2016,7 @@ export struct TabWeb {
           if (RemoteConfig.getInstance().isInWld(this.tab.url)) {
             this.getUIContext().getPromptAction().showToast({
               message: $r('app.string.site_not_supported'),
-              duration: 1500
+              duration: TOAST_SHORT
             })
             return false
           }

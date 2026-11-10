@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { SettingNavRow } from '../components/SettingRows'
@@ -73,7 +74,7 @@ export struct SettingsExperimentalPage {
                 .onChange((isOn: boolean) => {
                   this.settings.setShowSettingsBackground(isOn)
                   this.getUIContext().getPromptAction()
-                    .showToast({ message: '将在下次打开设置时生效', duration: 1500 })
+                    .showToast({ message: '将在下次打开设置时生效', duration: TOAST_SHORT })
                 })
             }
             .width('100%')

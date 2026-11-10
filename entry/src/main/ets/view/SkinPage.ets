@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { common } from '@kit.AbilityKit'
 import { picker } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -143,7 +144,7 @@ export struct SkinPage {
   }
 
   private toast(message: string): void {
-    this.getUIContext().getPromptAction().showToast({ message: message, duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: TOAST_SHORT })
   }
 
   build() {

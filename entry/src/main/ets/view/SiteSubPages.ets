@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { AppSettings } from '../common/Settings'
 import { buildNavSlide } from './PageTransitions'
 import { SiteSetting, SITE_MODE_DEFAULT, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
@@ -310,7 +311,7 @@ export struct SiteAllPage {
         if (!renamed) {
           this.getUIContext().getPromptAction().showToast({
             message: `${host} 的网站设定已存在。`,
-            duration: 1500
+            duration: TOAST_SHORT
           })
         }
       })

@@ -1,3 +1,4 @@
+import { TOAST_MEDIUM } from '../common/ToastDuration'
 // AiPanel.ets —— 原版 b9 包 AI 面板 1:1 移植
 //
 // 对应原版：
@@ -915,7 +916,7 @@ export struct AiPanel {
   }
 
   private toast(msg: string): void {
-    this.getUIContext().getPromptAction().showToast({ message: msg, duration: 2000 })
+    this.getUIContext().getPromptAction().showToast({ message: msg, duration: TOAST_MEDIUM })
   }
 
   // ================= UI =================

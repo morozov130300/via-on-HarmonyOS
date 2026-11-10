@@ -1,3 +1,4 @@
+import { TOAST_SHORT, TOAST_MEDIUM } from '../common/ToastDuration'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo, picker } from '@kit.CoreFileKit'
 import { webview } from '@kit.ArkWeb'
@@ -509,7 +510,7 @@ export struct SettingsGeneralPage {
         }
         this.readTextFile(uris[0]).then((html: string) => {
           BackupManager.getInstance().importBookmarksHtml(html).then(() => {
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: TOAST_SHORT })
           }).catch((error: BusinessError) => {
             console.error(`import bookmarks failed: ${error.message}`)
           })
@@ -556,19 +557,19 @@ export struct SettingsGeneralPage {
             return
           }
           BackupManager.getInstance().restoreFromZipBackup(uri, context).then(() => {
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: TOAST_SHORT })
           }).catch((error: BusinessError) => {
             console.error(`import zip backup failed: ${error.message}`)
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: TOAST_SHORT })
           })
           return
         }
         this.readTextFile(uri).then((raw: string) => {
           BackupManager.getInstance().applyBackupJson(raw).then(() => {
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: TOAST_SHORT })
           }).catch((error: BusinessError) => {
             console.error(`import data failed: ${error.message}`)
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: TOAST_SHORT })
           })
         }).catch((error: BusinessError) => {
           console.error(`read backup file failed: ${error.message}`)
@@ -707,14 +708,14 @@ export struct SettingsGeneralPage {
               fileIo.closeSync(src)
             }
             fileIo.unlinkSync(zipPath)
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.export_done'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.export_done'), duration: TOAST_SHORT })
           } catch (error) {
             console.error('copy export zip failed')
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: TOAST_SHORT })
           }
         }).catch((error: BusinessError) => {
           console.error(`build zip backup failed: ${error.message}`)
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: TOAST_SHORT })
         })
       }).catch((error: BusinessError) => {
         console.error(`save export file failed: ${error.message}`)
@@ -886,10 +887,10 @@ export struct SettingsGeneralPage {
           const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC)
           fileIo.writeSync(file.fd, content)
           fileIo.closeSync(file)
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.export_done'), duration: 1500 })
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.export_done'), duration: TOAST_SHORT })
         } catch (error) {
           console.error('write file failed')
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: 1500 })
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: TOAST_SHORT })
         }
       }).catch((error: BusinessError) => {
         console.error(`save file failed: ${error.message}`)
@@ -1448,7 +1449,7 @@ export struct SettingsGeneralPage {
         this.settings.setRestoreTabsMode(index)
         if (index !== 0) {
           this.getUIContext().getPromptAction()
-            .showToast({ message: '开启“隐身模式”时不会恢复未关闭标签。', duration: 2000 })
+            .showToast({ message: '开启“隐身模式”时不会恢复未关闭标签。', duration: TOAST_MEDIUM })
         }
       })
   }
@@ -1496,7 +1497,7 @@ export struct SettingsGeneralPage {
     }
     this.settings.setClearData2(mask)
     if (mask !== 0) {
-      this.getUIContext().getPromptAction().showToast({ message: '数据已清除', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '数据已清除', duration: TOAST_SHORT })
     }
   }
 

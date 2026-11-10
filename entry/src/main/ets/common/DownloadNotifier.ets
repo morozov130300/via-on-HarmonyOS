@@ -1,4 +1,4 @@
-﻿import { notificationManager } from '@kit.NotificationKit'
+import { notificationManager } from '@kit.NotificationKit'
 import { wantAgent, WantAgent, common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { DownloadRec } from './Types'
@@ -56,15 +56,15 @@ export function dlRemainingText(rec: DownloadRec): ResourceStr {
   }
   const secs = Math.trunc((rec.size - rec.received) / rec.speed)
   if (secs <= 60) {
-    return $r('app.string.time_secs_left', secs)
+    return $r('app.plural.secs_left', secs)
   }
   const mins = Math.trunc(secs / 60)
   if (mins <= 120) {
-    return $r('app.string.time_mins_left', mins)
+    return $r('app.plural.mins_left', mins)
   }
   const hours = Math.trunc(mins / 60)
   if (hours <= 12) {
-    return $r('app.string.time_hours_left', hours)
+    return $r('app.plural.hours_left', hours)
   }
   return '-'
 }

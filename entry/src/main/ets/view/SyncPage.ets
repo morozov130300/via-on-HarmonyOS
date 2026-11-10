@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
@@ -167,10 +168,10 @@ export struct SyncPage {
     this.syncing = true
     this.db.cloudSyncNow().then(() => {
       this.syncing = false
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.sync_done'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.sync_done'), duration: TOAST_SHORT })
     }).catch(() => {
       this.syncing = false
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.sync_failed'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.sync_failed'), duration: TOAST_SHORT })
     })
   }
 
@@ -277,17 +278,17 @@ export struct SyncPage {
       return
     }
     if (this.settings.webdavUrl.trim() === '') {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_not_configured'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_not_configured'), duration: TOAST_SHORT })
       return
     }
     this.working = true
     WebDavClient.getInstance().backup().then(() => {
       this.working = false
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.backup_done'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.backup_done'), duration: TOAST_SHORT })
     }).catch((error: BusinessError) => {
       this.working = false
       console.error(`webdav backup failed: ${error.message}`)
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.backup_failed'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.backup_failed'), duration: TOAST_SHORT })
     })
   }
 
@@ -296,7 +297,7 @@ export struct SyncPage {
       return
     }
     if (this.settings.webdavUrl.trim() === '') {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_not_configured'), duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_not_configured'), duration: TOAST_SHORT })
       return
     }
     AlertDialog.show({
@@ -313,11 +314,11 @@ export struct SyncPage {
           this.working = true
           WebDavClient.getInstance().restore().then(() => {
             this.working = false
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.restore_done'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.restore_done'), duration: TOAST_SHORT })
           }).catch((error: BusinessError) => {
             this.working = false
             console.error(`webdav restore failed: ${error.message}`)
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.backup_failed'), duration: 1500 })
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.backup_failed'), duration: TOAST_SHORT })
           })
         }
       }

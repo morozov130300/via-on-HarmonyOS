@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { HistoryRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
@@ -716,7 +717,7 @@ export struct HistoryPage {
   }
 
   private toastMsg(message: string): void {
-    this.getUIContext().getPromptAction().showToast({ message: message, duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: TOAST_SHORT })
   }
 
   private reload(): void {

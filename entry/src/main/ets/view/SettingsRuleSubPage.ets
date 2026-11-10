@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { RuleSubEntry, RULE_SUB_PRESETS } from '../common/Types'
 import { dialogTransition } from '../common/Transitions'
 import { AppSettings } from '../common/Settings'
@@ -263,7 +264,7 @@ export struct SettingsRuleSubPage {
     if (context === undefined || this.updating) {
       return
     }
-    this.getUIContext().getPromptAction().showToast({ message: '开始更新…', duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: '开始更新…', duration: TOAST_SHORT })
     this.updating = true
     RuleSubManager.getInstance().updateSubscription(context, sub).then((count: number) => {
       this.settings.updateRuleSubEntry(sub.key, count, Date.now())
@@ -291,7 +292,7 @@ export struct SettingsRuleSubPage {
       return
     }
     this.updating = true
-    this.getUIContext().getPromptAction().showToast({ message: '正在开始下载…', duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: '正在开始下载…', duration: TOAST_SHORT })
     const manager = RuleSubManager.getInstance()
     let done = 0
     for (let i = 0; i < targets.length; i++) {
@@ -305,7 +306,7 @@ export struct SettingsRuleSubPage {
         if (done === targets.length) {
           this.updating = false
           this.reloadBlocker()
-          this.getUIContext().getPromptAction().showToast({ message: '订阅规则更新完成。', duration: 1500 })
+          this.getUIContext().getPromptAction().showToast({ message: '订阅规则更新完成。', duration: TOAST_SHORT })
         }
       })
     }
@@ -358,7 +359,7 @@ export struct SettingsRuleSubPage {
   private copyLink(sub: RuleSubEntry): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, sub.url)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: TOAST_SHORT })
     })
   }
 
@@ -429,12 +430,12 @@ export struct SettingsRuleSubPage {
   private applyUrl(newUrl: string): boolean {
     const url = newUrl.trim()
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: TOAST_SHORT })
       return false
     }
     for (let i = 0; i < this.settings.ruleSubscriptions.length; i++) {
       if (this.settings.ruleSubscriptions[i].url === url) {
-        this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: 1500 })
+        this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: TOAST_SHORT })
         return false
       }
     }
@@ -564,11 +565,11 @@ export struct SettingsRuleSubPage {
               }
             }
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
-              this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: 1500 })
+              this.getUIContext().getPromptAction().showToast({ message: '链接无效。', duration: TOAST_SHORT })
               return
             }
             if (dup) {
-              this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: 1500 })
+              this.getUIContext().getPromptAction().showToast({ message: '此规则订阅已存在。', duration: TOAST_SHORT })
               return
             }
             if (sub !== undefined) {

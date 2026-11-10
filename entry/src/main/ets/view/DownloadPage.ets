@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { DownloadRec, DownloadStatus } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { DownloadCoordinator } from '../common/Downloads'
@@ -492,7 +493,7 @@ export struct DownloadPage {
     const url = this.newUrl.trim()
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.url_invalid_toast'), duration: 1500
+        message: $r('app.string.url_invalid_toast'), duration: TOAST_SHORT
       })
       return
     }
@@ -510,7 +511,7 @@ export struct DownloadPage {
     }).catch((error: BusinessError) => {
       console.error(`create download task failed: ${error.message}`)
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.download_failed'), duration: 1500
+        message: $r('app.string.download_failed'), duration: TOAST_SHORT
       })
     })
   }
@@ -534,7 +535,7 @@ export struct DownloadPage {
   private copyText(text: string, toast: ResourceStr): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: toast, duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: toast, duration: TOAST_SHORT })
     }).catch(() => {
       console.error('copy text failed')
     })
@@ -547,7 +548,7 @@ export struct DownloadPage {
     }
     if (item.path === '' || !fileIo.accessSync(item.path)) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.file_not_exist'), duration: 1500
+        message: $r('app.string.file_not_exist'), duration: TOAST_SHORT
       })
       return
     }
@@ -560,7 +561,7 @@ export struct DownloadPage {
     filePreview.openPreview(context, info).catch((error: BusinessError) => {
       console.error(`open preview failed: ${error.code} ${error.message}`)
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.no_app_to_open'), duration: 1500
+        message: $r('app.string.no_app_to_open'), duration: TOAST_SHORT
       })
     })
   }

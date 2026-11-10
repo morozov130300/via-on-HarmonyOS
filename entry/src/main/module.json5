@@ -56,6 +56,26 @@
       },
       {
         "name": "ohos.permission.NFC_TAG"
+      },
+      {
+        // 原版 ACCESS_WIFI_STATE → 鸿蒙 GET_WIFI_INFO（官方 permissions-for-all）
+        "name": "ohos.permission.GET_WIFI_INFO"
+      },
+      {
+        // 原版 USE_BIOMETRIC / USE_FINGERPRINT → 鸿蒙 ACCESS_BIOMETRIC（官方）
+        "name": "ohos.permission.ACCESS_BIOMETRIC"
+      },
+      {
+        // 原版 POST_NOTIFICATIONS → 鸿蒙 PUBLISH_AGENT_REMINDER（官方，代理提醒）
+        "name": "ohos.permission.PUBLISH_AGENT_REMINDER"
+      },
+      {
+        // 原版 CREDENTIAL_MANAGER_SET_ORIGIN → 鸿蒙 ACCESS_CERT_MANAGER（官方）
+        "name": "ohos.permission.ACCESS_CERT_MANAGER"
+      },
+      {
+        // 原版 READ_SETTINGS / QUERY_ALL_PACKAGES 语义 → GET_BUNDLE_INFO（官方）
+        "name": "ohos.permission.GET_BUNDLE_INFO"
       }
     ],
     "abilities": [
@@ -91,7 +111,18 @@
             "uris": [
               { "scheme": "http" },
               { "scheme": "https" },
-              { "scheme": "uia" }
+              { "scheme": "uia" },
+              { "scheme": "inline" },
+              { "scheme": "file" },
+              { "scheme": "content" },
+              { "scheme": "via" },
+              { "type": "video/*" },
+              { "type": "*/*" },
+              { "type": "text/html" },
+              { "type": "text/plain" },
+              { "type": "application/xhtml+xml" },
+              { "type": "application/vnd.wap.xhtml+xml" },
+              { "type": "multipart/related" }
             ]
           },
           {
@@ -100,6 +131,22 @@
             ],
             "actions": [
               "ohos.want.action.sendData"
+            ],
+            "uris": [
+              { "type": "text/plain" }
+            ]
+          },
+          {
+            // 原版 WEB_SEARCH / SEND / PROCESS_TEXT 等价入口（官方 wantConstant：
+            // ACTION_SEARCH=ohos.want.action.search、ACTION_SEND=sendData；PROCESS_TEXT 无对应 action，由 viewData 承接）
+            "actions": [
+              "ohos.want.action.search",
+              "ohos.want.action.sendData",
+              "ohos.want.action.viewData"
+            ],
+            "entities": [
+              "entity.system.default",
+              "entity.system.browsable"
             ],
             "uris": [
               { "type": "text/plain" }

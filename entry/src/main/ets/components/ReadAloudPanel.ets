@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { display } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common, Want } from '@kit.AbilityKit'
@@ -221,7 +222,7 @@ export struct ReadAloudPanel {
   private showOperationFailedToast(): void {
     this.getUIContext().getPromptAction().showToast({
       message: $r('app.string.read_aloud_operation_failed'),
-      duration: 1500
+      duration: TOAST_SHORT
     })
   }
 
@@ -257,7 +258,7 @@ export struct ReadAloudPanel {
     pasteboard.getSystemPasteboard().setData(data)
     this.getUIContext().getPromptAction().showToast({
       message: $r('app.string.read_aloud_copy_done'),
-      duration: 1500
+      duration: TOAST_SHORT
     })
   }
 

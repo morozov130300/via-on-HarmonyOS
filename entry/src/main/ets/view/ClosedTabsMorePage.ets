@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { AppSettings } from '../common/Settings'
 import { UiaIcon } from '../components/UiaIcon'
 import { AppIcon } from '../components/AppIcon'
@@ -154,7 +155,7 @@ export struct ClosedTabsMorePage {
       if (mode !== 0) {
         // 原版 e7.g3：选非 0 toast s5
         this.getUIContext().getPromptAction().showToast({
-          message: '开启"隐身模式"时不会恢复未关闭标签。', duration: 1500
+          message: '开启"隐身模式"时不会恢复未关闭标签。', duration: TOAST_SHORT
         })
       }
     })

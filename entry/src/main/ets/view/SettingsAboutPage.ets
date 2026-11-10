@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common, Want } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
@@ -198,7 +199,7 @@ export struct SettingsAboutPage {
     context.startAbility(want).catch(() => {
       const data = pasteboard.createData('text/plain', CONTACT_EMAIL)
       pasteboard.getSystemPasteboard().setData(data).then(() => {
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.email_copied'), duration: 1500 })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.email_copied'), duration: TOAST_SHORT })
       }).catch(() => {
         console.error('copy email failed')
       })
@@ -212,7 +213,7 @@ export struct SettingsAboutPage {
   private checkUpdate(): void {
     UpdateChecker.fetchLatestConfig().then((config: UpdateConfig | null) => {
       if (config === null || !UpdateChecker.isUpdateAvailable(config)) {
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.latest_version'), duration: 1500 })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.latest_version'), duration: TOAST_SHORT })
         return
       }
       this.getUIContext().showAlertDialog({

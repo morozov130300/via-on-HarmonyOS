@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { util } from '@kit.ArkTS'
 import { CopilotStore, AiBackend, presetBackend, getKeyLink } from '../common/CopilotStore'
 import { AiEngine, AiChatResult, ChatMsgIn } from '../common/AiEngine'
@@ -229,7 +230,7 @@ export struct SettingsAiProviderEditPage {
     probe.createdAt = now
     probe.updatedAt = now
     const model = this.models[0]
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.ai_wait'), duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.ai_wait'), duration: TOAST_SHORT })
     const engine = new AiEngine()
     const messages: ChatMsgIn[] = [new ChatMsgIn('user', "Say 'test'")]
     engine.complete(probe, model, messages).then((result: AiChatResult) => {

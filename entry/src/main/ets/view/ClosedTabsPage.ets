@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 import { ClosedTabEntry, ClosedTabsStore } from '../common/ClosedTabsStore'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { TabStore } from '../common/TabStore'
@@ -382,7 +383,7 @@ export struct ClosedTabsPage {
   }
 
   private toastMsg(message: string): void {
-    this.getUIContext().getPromptAction().showToast({ message: message, duration: 1500 })
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: TOAST_SHORT })
   }
 
   // 时间倒序（ic.w3 Collections.sort desc）+ 搜索过滤（ic.v3：b(query, 1024)）

@@ -1,3 +1,4 @@
+import { TOAST_SHORT } from '../common/ToastDuration'
 // 主页自定义 CSS 编辑页（视频 119-124s：标题 自定义 CSS + 右上角 保存 + 全屏编辑区）
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -20,7 +21,7 @@ export struct HomeCssPage {
       },
       onRight: () => {
         this.settings.setCustomCss(this.cssText)
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.save'), duration: 1500 })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.save'), duration: TOAST_SHORT })
       }
     }, this)
   }
