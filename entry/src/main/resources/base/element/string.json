@@ -1895,6 +1895,1122 @@
     {
       "name": "scripts_for_host",
       "value": "作用于 %1$s 的脚本"
+    },
+    {
+      "name": "orig_cp",
+      "value": "百度"
+    },
+    {
+      "name": "orig_k2",
+      "value": "谷歌"
+    },
+    {
+      "name": "orig_cq",
+      "value": "必应"
+    },
+    {
+      "name": "orig_nm",
+      "value": "秘塔 AI"
+    },
+    {
+      "name": "orig_ul",
+      "value": "搜狗"
+    },
+    {
+      "name": "orig_zw",
+      "value": "头条"
+    },
+    {
+      "name": "orig_tt",
+      "value": "神马"
+    },
+    {
+      "name": "orig_k5",
+      "value": "360 搜索"
+    },
+    {
+      "name": "orig_bj",
+      "value": "Android (手机)"
+    },
+    {
+      "name": "orig_bk",
+      "value": "Android (平板)"
+    },
+    {
+      "name": "orig_br",
+      "value": "塞班 (Symbian)"
+    },
+    {
+      "name": "orig_ic",
+      "value": "实验"
+    },
+    {
+      "name": "orig_to",
+      "value": "操作设定"
+    },
+    {
+      "name": "orig_cm",
+      "value": "滑动屏幕前进后退"
+    },
+    {
+      "name": "orig_a1l",
+      "value": "使用音量键翻页"
+    },
+    {
+      "name": "orig_hq",
+      "value": "启用视频播放器手势"
+    },
+    {
+      "name": "orig_hr",
+      "value": "如果可能，在全屏播放视频时允许滑动屏幕以调整视频进度、屏幕亮度、设备音量"
+    },
+    {
+      "name": "orig_m5",
+      "value": "键盘快捷键"
+    },
+    {
+      "name": "orig_hj",
+      "value": "启用内建规则"
+    },
+    {
+      "name": "orig_hk",
+      "value": "内建规则仅拦截常见广告"
+    },
+    {
+      "name": "orig_ew",
+      "value": "包括拦截的规则、标记的广告"
+    },
+    {
+      "name": "orig_jf",
+      "value": "规则订阅"
+    },
+    {
+      "name": "orig_jg",
+      "value": "订阅 Adblock Plus 规则列表"
+    },
+    {
+      "name": "orig_ia",
+      "value": "自动展开网页全文"
+    },
+    {
+      "name": "orig_ib",
+      "value": "打开网页时自动展开网页中折叠的内容"
+    },
+    {
+      "name": "orig_t9",
+      "value": "搜索工具栏"
+    },
+    {
+      "name": "orig_hn",
+      "value": "启用搜索工具栏"
+    },
+    {
+      "name": "orig_kt",
+      "value": "图像"
+    },
+    {
+      "name": "orig_cx",
+      "value": "已禁止"
+    },
+    {
+      "name": "orig_qw",
+      "value": "弹出式窗口"
+    },
+    {
+      "name": "orig_ch",
+      "value": "优先询问"
+    },
+    {
+      "name": "orig_dg",
+      "value": "基本"
+    },
+    {
+      "name": "orig_di",
+      "value": "权限"
+    },
+    {
+      "name": "orig_dx",
+      "value": "剪贴板"
+    },
+    {
+      "name": "orig_oz",
+      "value": "打开应用"
+    },
+    {
+      "name": "orig_mh",
+      "value": "位置信息"
+    },
+    {
+      "name": "orig_q5",
+      "value": "页面重定向"
+    },
+    {
+      "name": "orig_q_",
+      "value": "重定向到非同源页面前先询问"
+    },
+    {
+      "name": "orig_a1f",
+      "value": "振动"
+    },
+    {
+      "name": "orig_r4",
+      "value": "返回不重载"
+    },
+    {
+      "name": "orig_ky",
+      "value": "仅在 Wi-Fi 连接时允许"
+    },
+    {
+      "name": "orig_ei",
+      "value": "允许（第三方除外）"
+    },
+    {
+      "name": "orig_ad",
+      "value": "新建标签"
+    },
+    {
+      "name": "orig_pl",
+      "value": "下一个标签"
+    },
+    {
+      "name": "orig_pk",
+      "value": "上一个标签"
+    },
+    {
+      "name": "orig_pg",
+      "value": "网页后退"
+    },
+    {
+      "name": "orig_ph",
+      "value": "网页前进"
+    },
+    {
+      "name": "orig_pf",
+      "value": "关闭标签"
+    },
+    {
+      "name": "orig_fw",
+      "value": "菜单"
+    },
+    {
+      "name": "orig_t3",
+      "value": "展示"
+    },
+    {
+      "name": "orig_b0",
+      "value": "查看图片"
+    },
+    {
+      "name": "orig_aq",
+      "value": "保存图片"
+    },
+    {
+      "name": "orig_a1",
+      "value": "下载图片"
+    },
+    {
+      "name": "orig_ts",
+      "value": "分享图片"
+    },
+    {
+      "name": "orig_sw",
+      "value": "以图搜图"
+    },
+    {
+      "name": "orig_ak",
+      "value": "看图模式"
+    },
+    {
+      "name": "orig_ah",
+      "value": "页面信息"
+    },
+    {
+      "name": "orig_u",
+      "value": "复制链接文本"
+    },
+    {
+      "name": "orig_kn",
+      "value": "HTML 代码"
+    },
+    {
+      "name": "orig_d0",
+      "value": "粗体"
+    },
+    {
+      "name": "orig_lu",
+      "value": "斜体"
+    },
+    {
+      "name": "orig_su",
+      "value": "线条"
+    },
+    {
+      "name": "orig_t2",
+      "value": "隐藏"
+    },
+    {
+      "name": "orig_j3",
+      "value": "透明"
+    },
+    {
+      "name": "orig_j5",
+      "value": "图标优先"
+    },
+    {
+      "name": "orig_k9",
+      "value": "帮助"
+    },
+    {
+      "name": "orig_ot",
+      "value": "一个过滤规则一行。"
+    },
+    {
+      "name": "orig_jm",
+      "value": "下列规则格式不正确："
+    },
+    {
+      "name": "orig_z_",
+      "value": "警告"
+    },
+    {
+      "name": "orig_m_",
+      "value": "了解更多"
+    },
+    {
+      "name": "orig_yo",
+      "value": "安全浏览允许 WebView 通过验证链接来防止恶意软件和网络钓鱼攻击"
+    },
+    {
+      "name": "orig_yx",
+      "value": "请小心，忽略 SSL 证书警告可能会使网站的连接不安全"
+    },
+    {
+      "name": "orig_a1o",
+      "value": "现在你可以将手机连上电脑，然后在 Chrome 电脑版上通过 \"chrome://inspect\" 来调试网页。别忘了先开启设置中开发者选项里的 USB 调试。"
+    },
+    {
+      "name": "orig_n_",
+      "value": "SSL 证书用于验证网站身份和加密连接。这就像是把信放在信封中再寄出，只有你和网站可以拆开这封信。\n\n一旦你忽略 SSL 警告，则与网站的连接可能不安全，这意味着与网站传输的数据可能被人窃取。这就像把信放在一个破损的信封上然后寄出它，伪造证书的人可以拆开它。"
+    },
+    {
+      "name": "orig_yw",
+      "value": "我了解这可能导致连接不安全"
+    },
+    {
+      "name": "orig_a4",
+      "value": "收藏"
+    },
+    {
+      "name": "orig_vt",
+      "value": "标签页"
+    },
+    {
+      "name": "orig_gf",
+      "value": "已禁用"
+    },
+    {
+      "name": "orig_ni",
+      "value": "使用地址栏时，从下列内容获取建议"
+    },
+    {
+      "name": "orig_cr",
+      "value": "禁止"
+    },
+    {
+      "name": "orig_z3",
+      "value": "重置网站设定"
+    },
+    {
+      "name": "orig_bc",
+      "value": "添加例外网站"
+    },
+    {
+      "name": "orig_i4",
+      "value": "例外"
+    },
+    {
+      "name": "orig_g1",
+      "value": "为特定网站关闭电脑模式。"
+    },
+    {
+      "name": "orig_g2",
+      "value": "为特定网站打开电脑模式。"
+    },
+    {
+      "name": "orig_bi",
+      "value": "为特定网站设置浏览器标识。"
+    },
+    {
+      "name": "orig_kx",
+      "value": "仅在 Wi-Fi 连接时允许网页显示图像"
+    },
+    {
+      "name": "orig_kw",
+      "value": "允许网站显示图像"
+    },
+    {
+      "name": "orig_kv",
+      "value": "禁止特定网站加载图像。"
+    },
+    {
+      "name": "orig_ku",
+      "value": "允许特定网站显示图像。"
+    },
+    {
+      "name": "orig_m0",
+      "value": "允许网页运行 JavaScript"
+    },
+    {
+      "name": "orig_lz",
+      "value": "禁止特定网站运行 JavaScript。"
+    },
+    {
+      "name": "orig_ly",
+      "value": "允许特定网站运行 JavaScript。"
+    },
+    {
+      "name": "orig_ur",
+      "value": "证书不受信任"
+    },
+    {
+      "name": "orig_um",
+      "value": "证书日期无效"
+    },
+    {
+      "name": "orig_uo",
+      "value": "证书已过期"
+    },
+    {
+      "name": "orig_un",
+      "value": "证书域名与网站域名不匹配"
+    },
+    {
+      "name": "orig_uq",
+      "value": "证书尚未生效"
+    },
+    {
+      "name": "orig_up",
+      "value": "证书无效"
+    },
+    {
+      "name": "orig_a12",
+      "value": "电脑模式下的浏览器标识"
+    },
+    {
+      "name": "orig_a13",
+      "value": "简化浏览器标识"
+    },
+    {
+      "name": "orig_a14",
+      "value": "从浏览器标识中移除设备信息及次要版本信息"
+    },
+    {
+      "name": "orig_a0b",
+      "value": "解锁"
+    },
+    {
+      "name": "orig_ml",
+      "value": "锁定"
+    },
+    {
+      "name": "orig_oy",
+      "value": "打开全部"
+    },
+    {
+      "name": "orig_pm",
+      "value": "无操作"
+    },
+    {
+      "name": "orig_pu",
+      "value": "返回顶部"
+    },
+    {
+      "name": "orig_pe",
+      "value": "滑到底部"
+    },
+    {
+      "name": "orig_po",
+      "value": "打开书签"
+    },
+    {
+      "name": "orig_pq",
+      "value": "打开历史"
+    },
+    {
+      "name": "orig_qa",
+      "value": "向上翻页"
+    },
+    {
+      "name": "orig_q1",
+      "value": "向下翻页"
+    },
+    {
+      "name": "orig_pt",
+      "value": "显示标签面板"
+    },
+    {
+      "name": "orig_pr",
+      "value": "打开设置"
+    },
+    {
+      "name": "orig_pp",
+      "value": "打开下载"
+    },
+    {
+      "name": "orig_pd",
+      "value": "打开 AI 面板"
+    },
+    {
+      "name": "orig_pn",
+      "value": "打开书签对话框"
+    },
+    {
+      "name": "orig_vp",
+      "value": "标签页行为"
+    },
+    {
+      "name": "orig_j7",
+      "value": "特性行为"
+    },
+    {
+      "name": "orig_bg",
+      "value": "地址栏行为"
+    },
+    {
+      "name": "orig_a1r",
+      "value": "网页行为"
+    },
+    {
+      "name": "orig_zu",
+      "value": "点击下列按钮来设置它的长按事件，长按查看它的事件。你也可以滑动工具栏来设置滑动事件。"
+    },
+    {
+      "name": "orig_sv",
+      "value": "矩形"
+    },
+    {
+      "name": "orig_j2",
+      "value": "多彩"
+    },
+    {
+      "name": "orig_sr",
+      "value": "模糊"
+    },
+    {
+      "name": "orig_dv",
+      "value": "清除网站图标缓存"
+    },
+    {
+      "name": "orig_dw",
+      "value": "请注意，这会清除所有主页收藏的图标。图标会在你下次访问该网站时下载。"
+    },
+    {
+      "name": "orig_uf",
+      "value": "皮肤"
+    },
+    {
+      "name": "orig_cy",
+      "value": "模糊效果"
+    },
+    {
+      "name": "orig_cz",
+      "value": "为应用启用模糊效果，部分设备可能不支持"
+    },
+    {
+      "name": "orig_tu",
+      "value": "在设置中显示背景"
+    },
+    {
+      "name": "orig_tv",
+      "value": "将在下次打开设置时生效"
+    },
+    {
+      "name": "orig_yj",
+      "value": "标题不能为空"
+    },
+    {
+      "name": "orig_a11",
+      "value": "浏览器标识不能为空"
+    },
+    {
+      "name": "orig_et",
+      "value": "自定义 CSS"
+    },
+    {
+      "name": "orig_a1z",
+      "value": "昨天"
+    },
+    {
+      "name": "orig_s0",
+      "value": "注：音乐或视频在播放时更容易被获取。资源嗅探不支持部分网站。"
+    },
+    {
+      "name": "orig_k1",
+      "value": "谷歌 Lens"
+    },
+    {
+      "name": "orig_jh",
+      "value": "查找"
+    },
+    {
+      "name": "orig_s3",
+      "value": "启动时恢复未关闭标签"
+    },
+    {
+      "name": "orig_tz",
+      "value": "显示撤销关闭标签的提示"
+    },
+    {
+      "name": "orig_u0",
+      "value": "如果开启了隐身模式，则不会显示提示"
+    },
+    {
+      "name": "orig_vs",
+      "value": "标签页设置"
+    },
+    {
+      "name": "orig_gd",
+      "value": "禁用恢复"
+    },
+    {
+      "name": "orig_c_",
+      "value": "总是恢复"
+    },
+    {
+      "name": "orig_s5",
+      "value": "开启\"隐身模式\"时不会恢复未关闭标签。"
+    },
+    {
+      "name": "orig_rf",
+      "value": "关闭的标签页"
+    },
+    {
+      "name": "orig_y",
+      "value": "清空"
+    },
+    {
+      "name": "orig_pc",
+      "value": "已在后台打开"
+    },
+    {
+      "name": "orig_jn",
+      "value": "字体"
+    },
+    {
+      "name": "orig_zo",
+      "value": "今天"
+    },
+    {
+      "name": "orig_m7",
+      "value": "过去一小时"
+    },
+    {
+      "name": "orig_zp",
+      "value": "今天和昨天"
+    },
+    {
+      "name": "orig_m8",
+      "value": "过去 7 天"
+    },
+    {
+      "name": "orig_c1",
+      "value": "所有时间"
+    },
+    {
+      "name": "orig_il",
+      "value": "导出成功"
+    },
+    {
+      "name": "orig_m2",
+      "value": "加入 Telegram 群组"
+    },
+    {
+      "name": "orig_ue",
+      "value": "搜索框"
+    },
+    {
+      "name": "orig_ub",
+      "value": "背景"
+    },
+    {
+      "name": "orig_a1v",
+      "value": "宽度"
+    },
+    {
+      "name": "orig_k8",
+      "value": "高度"
+    },
+    {
+      "name": "orig_en",
+      "value": "圆角值"
+    },
+    {
+      "name": "orig_jo",
+      "value": "字体风格"
+    },
+    {
+      "name": "orig_b3",
+      "value": "自适应"
+    },
+    {
+      "name": "orig_ow",
+      "value": "不透明度"
+    },
+    {
+      "name": "orig_v3",
+      "value": "描边粗细"
+    },
+    {
+      "name": "orig_v2",
+      "value": "描边不透明度"
+    },
+    {
+      "name": "orig_st",
+      "value": "搜索框样式"
+    },
+    {
+      "name": "orig_yc",
+      "value": "主题色"
+    },
+    {
+      "name": "orig_j4",
+      "value": "图标样式"
+    },
+    {
+      "name": "orig_j1",
+      "value": "图标色彩"
+    },
+    {
+      "name": "orig_sq",
+      "value": "搜索框效果"
+    },
+    {
+      "name": "orig_t1",
+      "value": "搜索区域"
+    },
+    {
+      "name": "orig_j0",
+      "value": "清除图标"
+    },
+    {
+      "name": "orig_go",
+      "value": "下载目录"
+    },
+    {
+      "name": "orig_bf",
+      "value": "下载管理"
+    },
+    {
+      "name": "orig_in",
+      "value": "外置视频播放器"
+    },
+    {
+      "name": "orig_dr",
+      "value": "退出时清除数据"
+    },
+    {
+      "name": "orig_pi",
+      "value": "手势，快捷方式，功能键"
+    },
+    {
+      "name": "orig_l6",
+      "value": "导入/备份书签"
+    },
+    {
+      "name": "orig_l1",
+      "value": "导入数据"
+    },
+    {
+      "name": "orig_f7",
+      "value": "导出数据"
+    },
+    {
+      "name": "orig_ih",
+      "value": "导出书签、设置、脚本和广告规则"
+    },
+    {
+      "name": "orig_ti",
+      "value": "设置默认浏览器"
+    },
+    {
+      "name": "orig_ie",
+      "value": "备份书签"
+    },
+    {
+      "name": "orig_l0",
+      "value": "导入书签"
+    },
+    {
+      "name": "orig_v8",
+      "value": "主页收藏"
+    },
+    {
+      "name": "orig_qj",
+      "value": "保存的密码"
+    },
+    {
+      "name": "orig_ht",
+      "value": "输入密码"
+    },
+    {
+      "name": "orig_hu",
+      "value": "你正在导出隐私数据，请输入密码以加密数据。请牢记密码，如果密码丢失，你将无法导入其中加密的数据。"
+    },
+    {
+      "name": "orig_ke",
+      "value": "密码"
+    },
+    {
+      "name": "orig_g",
+      "value": "空白页"
+    },
+    {
+      "name": "orig_s2",
+      "value": "这将在下次启动应用时生效，你希望立即重启应用以生效吗？"
+    },
+    {
+      "name": "orig_er",
+      "value": "重启应用"
+    },
+    {
+      "name": "orig_ym",
+      "value": "自定义主页"
+    },
+    {
+      "name": "orig_d5",
+      "value": "内建下载器"
+    },
+    {
+      "name": "orig_qv",
+      "value": "系统分享"
+    },
+    {
+      "name": "orig_f4",
+      "value": "数据已清除"
+    },
+    {
+      "name": "orig_f3",
+      "value": "缓存"
+    },
+    {
+      "name": "orig_f_",
+      "value": "网页存储"
+    },
+    {
+      "name": "orig_f5",
+      "value": "Cookies (登录状态)"
+    },
+    {
+      "name": "orig_f2",
+      "value": "应用缓存"
+    },
+    {
+      "name": "orig_rs",
+      "value": "这将仅在启用 JavaScript 时生效。"
+    },
+    {
+      "name": "orig_o4",
+      "value": "从不"
+    },
+    {
+      "name": "orig_i1",
+      "value": "每 3 天"
+    },
+    {
+      "name": "orig_i3",
+      "value": "每周"
+    },
+    {
+      "name": "orig_i0",
+      "value": "每 15 天"
+    },
+    {
+      "name": "orig_k7",
+      "value": "从未更新"
+    },
+    {
+      "name": "orig_a0q",
+      "value": "开始更新…"
+    },
+    {
+      "name": "orig_h3",
+      "value": "正在开始下载…"
+    },
+    {
+      "name": "orig_a0k",
+      "value": "订阅规则更新完成。"
+    },
+    {
+      "name": "orig_b8",
+      "value": "添加规则订阅"
+    },
+    {
+      "name": "orig_a0z",
+      "value": "链接无效。"
+    },
+    {
+      "name": "orig_jd",
+      "value": "此规则订阅已存在。"
+    },
+    {
+      "name": "orig_hd",
+      "value": "编辑规则订阅"
+    },
+    {
+      "name": "orig_jr",
+      "value": "强制缩放"
+    },
+    {
+      "name": "orig_e1",
+      "value": "网站需先询问并得到许可才能使用剪贴板"
+    },
+    {
+      "name": "orig_e2",
+      "value": "禁止网站使用剪贴板"
+    },
+    {
+      "name": "orig_e0",
+      "value": "允许网站使用剪贴板"
+    },
+    {
+      "name": "orig_p3",
+      "value": "网站需先询问并得到许可才能打开应用"
+    },
+    {
+      "name": "orig_p4",
+      "value": "禁止网站打开应用"
+    },
+    {
+      "name": "orig_p2",
+      "value": "允许网站打开应用"
+    },
+    {
+      "name": "orig_mk",
+      "value": "网站需先询问并得到许可才能获取你的位置信息"
+    },
+    {
+      "name": "orig_d9",
+      "value": "网站需先询问并得到许可才能使用摄像头"
+    },
+    {
+      "name": "orig_nq",
+      "value": "网站需先询问并得到许可才能使用麦克风"
+    },
+    {
+      "name": "orig_q9",
+      "value": "当页面重定向到非同源页面前先询问"
+    },
+    {
+      "name": "orig_q8",
+      "value": "允许页面重定向到任何页面"
+    },
+    {
+      "name": "orig_a1g",
+      "value": "允许网页振动"
+    },
+    {
+      "name": "orig_dz",
+      "value": "禁止特定网站使用剪贴板。"
+    },
+    {
+      "name": "orig_dy",
+      "value": "允许特定网站使用剪贴板。"
+    },
+    {
+      "name": "orig_p1",
+      "value": "禁止特定网站打开应用。"
+    },
+    {
+      "name": "orig_p0",
+      "value": "允许特定网站打开应用。"
+    },
+    {
+      "name": "orig_mi",
+      "value": "允许特定网站使用位置信息。"
+    },
+    {
+      "name": "orig_mj",
+      "value": "禁止特定网站使用位置信息。"
+    },
+    {
+      "name": "orig_d7",
+      "value": "允许特定网站使用摄像头。"
+    },
+    {
+      "name": "orig_d8",
+      "value": "禁止特定网站使用摄像头。"
+    },
+    {
+      "name": "orig_no",
+      "value": "允许特定网站使用麦克风。"
+    },
+    {
+      "name": "orig_np",
+      "value": "禁止特定网站使用麦克风。"
+    },
+    {
+      "name": "orig_q6",
+      "value": "允许特定网站重定向到任何页面。"
+    },
+    {
+      "name": "orig_q7",
+      "value": "在特定网站重定向到非同源页面前先询问。"
+    },
+    {
+      "name": "orig_r5",
+      "value": "为特定网站关闭返回不重载。"
+    },
+    {
+      "name": "orig_r6",
+      "value": "为特定网站打开返回不重载。"
+    },
+    {
+      "name": "orig_eh",
+      "value": "允许网站保存和读取 Cookie 数据"
+    },
+    {
+      "name": "orig_cs",
+      "value": "拦截第三方 Cookies"
+    },
+    {
+      "name": "orig_qx",
+      "value": "网站需先询问并得到许可才能显示弹出式窗口"
+    },
+    {
+      "name": "orig_b4",
+      "value": "为特定网站关闭广告拦截。"
+    },
+    {
+      "name": "orig_b5",
+      "value": "为特定网站打开广告拦截。"
+    },
+    {
+      "name": "orig_mf",
+      "value": "加载皮肤失败"
+    },
+    {
+      "name": "orig_uc",
+      "value": "皮肤已变更"
+    },
+    {
+      "name": "orig_tm",
+      "value": "云同步"
+    },
+    {
+      "name": "orig_l_",
+      "value": "下载脚本"
+    },
+    {
+      "name": "orig_l9",
+      "value": "导入脚本"
+    },
+    {
+      "name": "orig_ro",
+      "value": "该脚本不完整且无法运行，你想要下载完整脚本吗？"
+    },
+    {
+      "name": "orig_zh",
+      "value": "解析脚本失败！"
+    },
+    {
+      "name": "orig_zm",
+      "value": "解析脚本中…"
+    },
+    {
+      "name": "orig_yy",
+      "value": "安装脚本"
+    },
+    {
+      "name": "orig_z2",
+      "value": "重新安装脚本"
+    },
+    {
+      "name": "orig_z9",
+      "value": "更新脚本"
+    },
+    {
+      "name": "orig_a0r",
+      "value": "脚本更新完成。"
+    },
+    {
+      "name": "orig_sl",
+      "value": "代码 (JavaScript)"
+    },
+    {
+      "name": "orig_yh",
+      "value": "添加 Metadata 块"
+    },
+    {
+      "name": "orig_mz",
+      "value": "此脚本没有 Metadata 块所以无法保存。您想要为其添加一个默认的 Metadata 块吗？"
+    },
+    {
+      "name": "orig_so",
+      "value": "脚本已启用"
+    },
+    {
+      "name": "orig_ou",
+      "value": "仅对当前网站生效"
+    },
+    {
+      "name": "orig_a01",
+      "value": "微软翻译"
+    },
+    {
+      "name": "orig_zx",
+      "value": "百度翻译"
+    },
+    {
+      "name": "orig_zz",
+      "value": "谷歌页内翻译"
+    },
+    {
+      "name": "orig_zy",
+      "value": "谷歌翻译"
+    },
+    {
+      "name": "orig_a00",
+      "value": "谷歌文本翻译"
+    },
+    {
+      "name": "orig_nw",
+      "value": "移动"
+    },
+    {
+      "name": "orig_uk",
+      "value": "排序方式"
+    },
+    {
+      "name": "orig_ka",
+      "value": "隐藏细节"
+    },
+    {
+      "name": "orig_tw",
+      "value": "显示细节"
+    },
+    {
+      "name": "orig_uj",
+      "value": "最旧的优先"
+    },
+    {
+      "name": "orig_ui",
+      "value": "最新的优先"
+    },
+    {
+      "name": "orig_uh",
+      "value": "名称顺序"
+    },
+    {
+      "name": "orig_e",
+      "value": "添加到主页收藏"
+    },
+    {
+      "name": "orig_be",
+      "value": "已添加到主页收藏"
+    },
+    {
+      "name": "orig_kz",
+      "value": "无法导入"
     }
   ]
 }

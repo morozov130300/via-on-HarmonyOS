@@ -410,7 +410,7 @@ export struct AddressBar {
     }
     // 原版确定钮 oy「打开全部」（k6.T5）：逐个新标签打开，最后一个前台
     sheets.push({
-      title: '打开全部',
+      title: $r('app.string.orig_oy'),
       action: (): void => {
         for (let i = 0; i < urls.length; i++) {
           this.tabStore.newTabAt(urls[i], i < urls.length - 1)
@@ -418,7 +418,7 @@ export struct AddressBar {
       }
     })
     ActionSheet.show({
-      title: '提示',
+      title: $r('app.string.ai_unsaved_title'),
       message: text,
       sheets: sheets
     })

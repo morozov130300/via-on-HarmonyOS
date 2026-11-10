@@ -26,7 +26,7 @@ export struct SettingsAboutPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '关于',
+      title: $r('app.string.about'),
       onBack: () => {
         this.navPathStack.pop()
       }

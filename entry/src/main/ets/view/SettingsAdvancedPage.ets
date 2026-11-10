@@ -25,7 +25,7 @@ export struct SettingsAdvancedPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '高级',
+      title: $r('app.string.advanced'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -39,30 +39,30 @@ export struct SettingsAdvancedPage {
         Scroll() {
           Column() {
             SettingCheckRow({
-              rowLabel: '流量节省',
-              rowDesc: '请求网站节省流量',
+              rowLabel: $r('app.string.data_saver'),
+              rowDesc: $r('app.string.data_saver_desc'),
               isChecked: this.settings.dataSaver,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setDataSaver(isOn)
               }
             })
             SettingCheckRow({
-              rowLabel: '自动展示嗅探按钮',
+              rowLabel: $r('app.string.auto_sniff_button'),
               isChecked: this.settings.autoSniffButton,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setAutoSniffButton(isOn)
               }
             })
             SettingCheckRow({
-              rowLabel: '允许调试网页',
+              rowLabel: $r('app.string.allow_web_debug'),
               isChecked: this.settings.allowDebugWeb,
               onCheckRow: (isOn: boolean) => {
                 this.toggleDebugWeb(isOn)
               }
             })
             SettingCheckRow({
-              rowLabel: '禁用安全浏览',
-              rowDesc: '安全浏览允许 WebView 通过验证链接来防止恶意软件和网络钓鱼攻击',
+              rowLabel: $r('app.string.disable_safe_browsing'),
+              rowDesc: $r('app.string.orig_yo'),
               isChecked: this.settings.disableSafeBrowsing,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setDisableSafeBrowsing(isOn)
@@ -72,8 +72,8 @@ export struct SettingsAdvancedPage {
             // 点击 → 白名单空时弹窗（yv 标题 + n_ 正文 + yw 复选框默认不勾 + ok/cancel），
             // 确定后进入 SSL 白名单页；本端白名单机制以全局开关落地（TabWeb 消费）
             SettingNavRow({
-              rowLabel: '忽略 SSL 证书警告',
-              rowValue: '请小心，忽略 SSL 证书警告可能会使网站的连接不安全',
+              rowLabel: $r('app.string.ignore_ssl_warning'),
+              rowValue: $r('app.string.orig_yx'),
               onTapRow: () => {
                 this.onSslRowTap()
               }
@@ -119,10 +119,10 @@ export struct SettingsAdvancedPage {
     this.settings.setAllowDebugWeb(isOn)
     if (isOn) {
       AlertDialog.show({
-        title: '允许调试网页',
-        message: '现在你可以将手机连上电脑，然后在 Chrome 电脑版上通过 "chrome://inspect" 来调试网页。别忘了先开启设置中开发者选项里的 USB 调试。',
+        title: $r('app.string.allow_web_debug'),
+        message: $r('app.string.orig_a1o'),
         confirm: {
-          value: '确定',
+          value: $r('app.string.confirm'),
           action: () => {
           }
         }
@@ -185,7 +185,7 @@ export struct SettingsAdvancedPage {
   @Builder
   SslDialog() {
     Column() {
-      Text('忽略 SSL 证书警告')
+      Text($r('app.string.ignore_ssl_warning'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -193,7 +193,7 @@ export struct SettingsAdvancedPage {
         .width('100%')
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
-      Text('SSL 证书用于验证网站身份和加密连接。这就像是把信放在信封中再寄出，只有你和网站可以拆开这封信。\n\n一旦你忽略 SSL 警告，则与网站的连接可能不安全，这意味着与网站传输的数据可能被人窃取。这就像把信放在一个破损的信封上然后寄出它，伪造证书的人可以拆开它。')
+      Text($r('app.string.orig_n_'))
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .lineHeight(21)
@@ -207,7 +207,7 @@ export struct SettingsAdvancedPage {
           .onChange((value: boolean) => {
             this.sslAck = value
           })
-        Text('我了解这可能导致连接不安全')
+        Text($r('app.string.orig_yw'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .layoutWeight(1)

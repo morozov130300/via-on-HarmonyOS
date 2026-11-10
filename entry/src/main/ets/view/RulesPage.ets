@@ -26,9 +26,9 @@ export struct RulesPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '自定义规则',
-      rightText2: '帮助',
-      rightText: '保存',
+      title: $r('app.string.custom_rules'),
+      rightText2: $r('app.string.orig_k9'),
+      rightText: $r('app.string.save'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -51,7 +51,7 @@ export struct RulesPage {
       Column() {
         AppBarSpacer()
         // 原版 z7.v.n3：hint = ot「一个过滤规则一行。」，等宽字体，顶部对齐
-        TextArea({ text: this.rulesDraft, placeholder: '一个过滤规则一行。' })
+        TextArea({ text: this.rulesDraft, placeholder: $r('app.string.orig_ot') })
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .fontFamily('monospace')
@@ -229,17 +229,17 @@ export struct RulesPage {
   @Builder
   UnsavedDialog() {
     Column({ space: 14 }) {
-      Text('提示')
+      Text($r('app.string.ai_unsaved_title'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
-      Text('修改的内容未保存，是否保存？')
+      Text($r('app.string.ai_unsaved_msg'))
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .width('100%')
       Row() {
-        Text('保存并退出')
+        Text($r('app.string.ai_save_and_exit'))
           .fontSize(14)
           .fontColor($r('app.color.accent'))
           .layoutWeight(1)
@@ -249,7 +249,7 @@ export struct RulesPage {
             // 原版 sa → w3：保存 + 非法行校验 + 退出
             this.validateSaveExit()
           })
-        Text('退出')
+        Text($r('app.string.exit_app'))
           .fontSize(14)
           .fontColor($r('app.color.accent'))
           .layoutWeight(1)
@@ -273,7 +273,7 @@ export struct RulesPage {
   @Builder
   InvalidDialog() {
     Column({ space: 14 }) {
-      Text('警告')
+      Text($r('app.string.orig_z_'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -306,7 +306,7 @@ export struct RulesPage {
   @Builder
   HelpDialog() {
     Column({ space: 14 }) {
-      Text('帮助')
+      Text($r('app.string.orig_k9'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -328,7 +328,7 @@ export struct RulesPage {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
       Row() {
-        Text('了解更多')
+        Text($r('app.string.orig_m_'))
           .fontSize(14)
           .fontColor($r('app.color.accent'))
           .layoutWeight(1)

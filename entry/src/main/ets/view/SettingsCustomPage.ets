@@ -79,7 +79,7 @@ export struct SettingsCustomPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '定制',
+      title: $r('app.string.customize'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -661,7 +661,7 @@ export struct SettingsCustomPage {
   TextInputDialog() {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 12 }) {
-        Text(this.textKind === 'html' ? 'HTML 代码' : '文字')
+        Text(this.textKind === 'html' ? $r('app.string.orig_kn') : $r('app.string.translate_hint'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .width('100%')
@@ -677,13 +677,13 @@ export struct SettingsCustomPage {
           })
         Row({ space: 24 }) {
           Blank()
-          Text('取消')
+          Text($r('app.string.cancel'))
             .fontSize(14)
             .fontColor($r('app.color.accent'))
             .onClick(() => {
               this.textKind = ''
             })
-          Text('确定')
+          Text($r('app.string.confirm'))
             .fontSize(14)
             .fontColor($r('app.color.accent'))
             .onClick(() => {
@@ -729,13 +729,13 @@ export struct SettingsCustomPage {
           .width('100%')
         Row({ space: 24 }) {
           Blank()
-          Text('取消')
+          Text($r('app.string.cancel'))
             .fontSize(14)
             .fontColor($r('app.color.accent'))
             .onClick(() => {
               this.confirmKind = ''
             })
-          Text('确定')
+          Text($r('app.string.confirm'))
             .fontSize(14)
             .fontColor($r('app.color.accent'))
             .onClick(() => {

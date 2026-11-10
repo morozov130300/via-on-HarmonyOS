@@ -108,7 +108,7 @@ export struct ClosedTabsPage {
         .onClick(() => {
           this.navPathStack.pop()
         })
-      Text('关闭的标签页')
+      Text($r('app.string.orig_rf'))
         .fontSize(15)
         .fontColor($r('app.color.fg'))
         .layoutWeight(1)
@@ -293,11 +293,11 @@ export struct ClosedTabsPage {
   ClearConfirmOverlay() {
     Column() {
       Column({ space: 16 }) {
-        Text('清空')
+        Text($r('app.string.orig_y'))
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
-        Text('你确定继续吗？')
+        Text($r('app.string.reset_default_msg'))
           .fontSize(14)
           .fontColor($r('app.color.fg_secondary'))
         Row({ space: 12 }) {

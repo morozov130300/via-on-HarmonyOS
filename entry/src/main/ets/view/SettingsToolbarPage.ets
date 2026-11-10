@@ -206,7 +206,7 @@ export struct SettingsToolbarPage {
   @Builder
   PreviewItem() {
     Column() {
-      Text('点击下列按钮来设置它的长按事件，长按查看它的事件。你也可以滑动工具栏来设置滑动事件。')
+      Text($r('app.string.orig_zu'))
         .fontSize(14)
         .fontColor($r('app.color.fg_secondary'))
         .width('100%')

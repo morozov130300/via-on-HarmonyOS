@@ -87,7 +87,7 @@ export struct LicensePage {
         this.slideOffset = value
       })
     })
-    .title('开源许可协议')
+    .title($r('app.string.open_source_license'))
   }
 }
 

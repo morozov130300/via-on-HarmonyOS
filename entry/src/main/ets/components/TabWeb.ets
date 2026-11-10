@@ -260,7 +260,7 @@ export struct TabWeb {
       id: TextMenuItemId.of(EDIT_MENU_ID_UIA_SEARCH)
     })
     result.push({
-      content: '查找',
+      content: $r('app.string.orig_jh'),
       id: TextMenuItemId.of(EDIT_MENU_ID_UIA_FIND)
     })
     result.push({
@@ -1612,7 +1612,7 @@ export struct TabWeb {
     const sheets: SheetInfo[] = []
     if (hidden.indexOf('open_background') < 0) {
       sheets.push({
-        title: '后台打开',
+        title: $r('app.string.open_in_background'),
         action: (): void => {
           this.tabStore.newTabAt(link, true)
         }
@@ -1620,7 +1620,7 @@ export struct TabWeb {
     }
     if (hidden.indexOf('open_new_tab') < 0) {
       sheets.push({
-        title: '新标签打开',
+        title: $r('app.string.open_new_tab_short'),
         action: (): void => {
           this.tabStore.newTabAt(link, false)
         }
@@ -1628,7 +1628,7 @@ export struct TabWeb {
     }
     if (hidden.indexOf('copy_link') < 0) {
       sheets.push({
-        title: '复制链接',
+        title: $r('app.string.copy_link'),
         action: (): void => {
           this.copyLink(link)
         }
@@ -1636,7 +1636,7 @@ export struct TabWeb {
     }
     if (hidden.indexOf('share') < 0) {
       sheets.push({
-        title: '分享',
+        title: $r('app.string.share'),
         action: (): void => {
           this.shareLink(link)
         }
@@ -1665,14 +1665,14 @@ export struct TabWeb {
     const sheets: SheetInfo[] = []
     // (2, b0) 查看图片：Q3 case2 → na.k1 图片地址新标签打开
     sheets.push({
-      title: '查看图片',
+      title: $r('app.string.orig_b0'),
       action: (): void => {
         this.tabStore.newTabAt(src, false)
       }
     })
     // (38, a1) 下载图片：Q3 case38 → q8 下载管线（mime image/*）
     sheets.push({
-      title: '下载图片',
+      title: $r('app.string.orig_a1'),
       action: (): void => {
         this.downloadLink(src)
       }
@@ -1680,7 +1680,7 @@ export struct TabWeb {
     // (6, aq) 保存图片：Q3 case6 → La → Ea(str,4) 下载管线存图。
     // 工程下载管线无存图分类，接最近似：同走下载管线
     sheets.push({
-      title: '保存图片',
+      title: $r('app.string.orig_aq'),
       action: (): void => {
         this.downloadLink(src)
       }
@@ -1688,7 +1688,7 @@ export struct TabWeb {
     if (shareable) {
       // (33, ts) 分享图片：Q3 case33 → hb → Ea(str,1) 系统分享
       sheets.push({
-        title: '分享图片',
+        title: $r('app.string.orig_ts'),
         action: (): void => {
           this.shareLink(src)
         }
@@ -1697,7 +1697,7 @@ export struct TabWeb {
     if (src.startsWith('http')) {
       // (7, sw) 以图搜图：Q3 case7 → Qa 12 引擎选择弹窗
       sheets.push({
-        title: '以图搜图',
+        title: $r('app.string.orig_sw'),
         action: (): void => {
           this.showImageSearchMenu(src)
         }
@@ -1706,7 +1706,7 @@ export struct TabWeb {
     if (pageHttp && this.imageAllowedNow()) {
       // (8, ak) 看图模式：Q3 case8 → z8 → y9(db.a)（条件 e1=当前有图）
       sheets.push({
-        title: '看图模式',
+        title: $r('app.string.orig_ak'),
         action: (): void => {
           this.openPictureMode()
         }
@@ -1714,7 +1714,7 @@ export struct TabWeb {
     }
     // (22, ah) 页面信息：Q3 case22 标题/页面链接/选中链接
     sheets.push({
-      title: '页面信息',
+      title: $r('app.string.orig_ah'),
       action: (): void => {
         this.showPageInfo(link)
       }
@@ -1722,7 +1722,7 @@ export struct TabWeb {
     if (pageHttp && this.settings.adBlockOn) {
       // (23, aa) 标记广告：Q3 case23 → C9() 注入元素选择器（条件 b1=广告拦截开启）
       sheets.push({
-        title: '标记广告',
+        title: $r('app.string.mark_ad'),
         action: (): void => {
           try {
             this.tab.controller.runJavaScript(MARK_AD_INJECT_JS)
@@ -1736,7 +1736,7 @@ export struct TabWeb {
       // (29, u) 复制链接文本：Q3 case29（原版取 requestFocusNodeHref 锚文本，
       // ArkWeb 无锚文本源，以当前选中文本近似）
       sheets.push({
-        title: '复制链接文本',
+        title: $r('app.string.orig_u'),
         action: (): void => {
           this.copyText(selection)
         }
@@ -1745,7 +1745,7 @@ export struct TabWeb {
     if (shareable) {
       // (34, si) 扫描二维码：Q3 case34 → Pa → Ea(str,2) 下载后识码
       sheets.push({
-        title: '扫描二维码',
+        title: $r('app.string.scan_qr_code'),
         action: (): void => {
           this.scanQrFromImage(src)
         }
@@ -1754,13 +1754,13 @@ export struct TabWeb {
     if (link !== '') {
       // (3, s) 复制链接 / (31, at) 分享
       sheets.push({
-        title: '复制链接',
+        title: $r('app.string.copy_link'),
         action: (): void => {
           this.copyLink(link)
         }
       })
       sheets.push({
-        title: '分享',
+        title: $r('app.string.share'),
         action: (): void => {
           this.shareLink(link)
         }
@@ -1794,7 +1794,7 @@ export struct TabWeb {
       })
     }
     ActionSheet.show({
-      title: '以图搜图',
+      title: $r('app.string.orig_sw'),
       message: '',
       sheets: sheets
     })
@@ -1812,7 +1812,7 @@ export struct TabWeb {
   // 原版 Q3 case22：AlertDialog 标题 ah「页面信息」，正文 标题：/页面链接：/选中链接：
   private showPageInfo(link: string): void {
     this.getUIContext().showAlertDialog({
-      title: '页面信息',
+      title: $r('app.string.orig_ah'),
       message: `标题：${this.tab.title}\n\n页面链接：${this.tab.url}\n\n选中链接：${link}`,
       primaryButton: {
         value: $r('app.string.confirm'),
@@ -1864,7 +1864,7 @@ export struct TabWeb {
         }
         const value = results[0].originalValue
         this.getUIContext().showAlertDialog({
-          title: '提示',
+          title: $r('app.string.ai_unsaved_title'),
           message: value,
           primaryButton: {
             value: $r('app.string.confirm'),

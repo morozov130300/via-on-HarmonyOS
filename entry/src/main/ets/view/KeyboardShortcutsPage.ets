@@ -39,7 +39,7 @@ export struct KeyboardShortcutsPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '键盘快捷键',
+      title: $r('app.string.orig_m5'),
       onBack: () => {
         this.navPathStack.pop()
       }

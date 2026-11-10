@@ -22,7 +22,7 @@ export struct SettingsNightPage {
   private bindAppBar(): void {
     AppBar.show({
       // 原版 p4.a3：标题 u.P = 夜间模式
-      title: '夜间模式',
+      title: $r('app.string.night_mode'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -70,7 +70,7 @@ export struct SettingsNightPage {
   private toggleForceDark(isOn: boolean): void {
     this.settings.setNightCss(isOn)
     if (isOn && !this.settings.jsEnabled) {
-      this.getUIContext().getPromptAction().showToast({ message: '这将仅在启用 JavaScript 时生效。', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_rs'), duration: TOAST_SHORT })
     }
   }
 

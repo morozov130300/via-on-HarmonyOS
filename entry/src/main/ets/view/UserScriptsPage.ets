@@ -51,9 +51,9 @@ export struct UserScriptsPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '脚本',
+      title: $r('app.string.scripts'),
       rightIcon2: $r('sys.symbol.plus'),
-      rightText: this.anyScriptWithUrl() ? '更新' : '',
+      rightText: this.anyScriptWithUrl() ? $r('app.string.update_btn') : '',
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -69,12 +69,12 @@ export struct UserScriptsPage {
   // U3：添加菜单 [添加脚本/下载脚本/导入脚本]（sa/d1.java:533-540）
   private showAddMenu(): void {
     ActionSheet.show({
-      title: '脚本',
+      title: $r('app.string.scripts'),
       message: '',
       sheets: [
-        { title: '添加脚本', action: (): void => { this.adding = true } },
-        { title: '下载脚本', action: (): void => { this.downloadInputShow = true } },
-        { title: '导入脚本', action: (): void => { this.importScript() } }
+        { title: $r('app.string.add_script'), action: (): void => { this.adding = true } },
+        { title: $r('app.string.orig_l_'), action: (): void => { this.downloadInputShow = true } },
+        { title: $r('app.string.orig_l9'), action: (): void => { this.importScript() } }
       ]
     })
   }
@@ -87,7 +87,7 @@ export struct UserScriptsPage {
           Column() {
             // a6.n(1)：启用脚本（hm）
             Row() {
-              Text('启用脚本')
+              Text($r('app.string.enable_script'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
                 .layoutWeight(1)
@@ -102,7 +102,7 @@ export struct UserScriptsPage {
             // a6.q(2)：自动更新（仅有带源地址脚本时显示，a0l）
             if (this.anyScriptWithUrl()) {
               Row() {
-                Text('自动更新')
+                Text($r('app.string.auto_update'))
                   .fontSize(15)
                   .fontColor($r('app.color.fg'))
                   .layoutWeight(1)
@@ -119,7 +119,7 @@ export struct UserScriptsPage {
               })
             }
             // a6.l：脚本分区标题（tq）
-            Text('脚本')
+            Text($r('app.string.scripts'))
               .fontSize(13)
               .fontColor($r('app.color.fg_secondary'))
               .width('100%')
@@ -242,7 +242,7 @@ export struct UserScriptsPage {
       })
     }
     ActionSheet.show({
-      title: '自动更新',
+      title: $r('app.string.auto_update'),
       message: '',
       sheets: sheets
     })
@@ -254,14 +254,14 @@ export struct UserScriptsPage {
   private showScriptMenu(script: UserScriptRec): void {
     const sheets: SheetInfo[] = []
     sheets.push({
-      title: '编辑',
+      title: $r('app.string.edit'),
       action: (): void => {
         this.editing = script
       }
     })
     if (script.downloadUrl !== '') {
       sheets.push({
-        title: '更新',
+        title: $r('app.string.update_btn'),
         action: (): void => {
           // sa/d1.u4 → l4：长按「更新」无预确认，直接下载（确认在解析后 t2.n 弹窗）
           this.downloadAndInstall(script.downloadUrl, script.id)
@@ -270,7 +270,7 @@ export struct UserScriptsPage {
     }
     if (script.homepageUrl !== '') {
       sheets.push({
-        title: '主页',
+        title: $r('app.string.home_page'),
         action: (): void => {
           this.openHomepage(script)
         }
@@ -278,13 +278,13 @@ export struct UserScriptsPage {
     }
     // P3:4：复制链接无条件显示
     sheets.push({
-      title: '复制链接',
+      title: $r('app.string.copy_link'),
       action: (): void => {
         this.copyLink(script)
       }
     })
     sheets.push({
-      title: '删除',
+      title: $r('app.string.delete'),
       action: (): void => {
         this.confirmDelete(script)
       }
@@ -301,14 +301,14 @@ export struct UserScriptsPage {
     if (script.code === '') {
       this.getUIContext().showAlertDialog({
         title: script.name,
-        message: '该脚本不完整且无法运行，你想要下载完整脚本吗？',
+        message: $r('app.string.orig_ro'),
         primaryButton: {
           value: $r('app.string.cancel'),
           action: () => {
           }
         },
         secondaryButton: {
-          value: '确定',
+          value: $r('app.string.confirm'),
           action: () => {
             // sa/d1.r3 → l4(下载地址, id)：下载并走解析确认流程
             this.downloadAndInstall(script.downloadUrl, script.id)
@@ -329,7 +329,7 @@ export struct UserScriptsPage {
     // T3:4：复制下载链接（pg 已复制链接）
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, script.downloadUrl)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: '已复制链接', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied_link'), duration: TOAST_SHORT })
     }).catch(() => {
     })
   }
@@ -344,7 +344,7 @@ export struct UserScriptsPage {
         }
       },
       secondaryButton: {
-        value: '确定',
+        value: $r('app.string.confirm'),
         action: () => {
           this.settings.removeScript(script.id)
         }
@@ -426,7 +426,7 @@ export struct UserScriptsPage {
         }
       },
       secondaryButton: {
-        value: '确定',
+        value: $r('app.string.confirm'),
         action: () => {
           this.persistScript(parsed, existing, id)
         }
@@ -516,7 +516,7 @@ export struct UserScriptsPage {
       return
     }
     this.getUIContext().showAlertDialog({
-      title: '更新',
+      title: $r('app.string.update_btn'),
       message: targets.length === 1 ? `你确认更新 ${targets[0].name} 吗？`
         : targets.map((s: UserScriptRec): string => s.name).join('\n'),
       primaryButton: {
@@ -525,7 +525,7 @@ export struct UserScriptsPage {
         }
       },
       secondaryButton: {
-        value: '确定',
+        value: $r('app.string.confirm'),
         action: () => {
           this.runUpdateAll(targets)
         }
@@ -583,11 +583,11 @@ struct ScriptDownloadOverlay {
   build() {
     Column() {
       Column({ space: 16 }) {
-        Text('下载脚本')
+        Text($r('app.string.orig_l_'))
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
-        TextInput({ text: this.url, placeholder: '地址' })
+        TextInput({ text: this.url, placeholder: $r('app.string.content_address') })
           .height(40)
           .fontSize(14)
           .backgroundColor($r('app.color.surface'))
@@ -607,7 +607,7 @@ struct ScriptDownloadOverlay {
             .onClick(() => {
               this.onClose()
             })
-          Button('确定')
+          Button($r('app.string.confirm'))
             .fontSize(14)
             .height(36)
             .layoutWeight(1)
@@ -720,12 +720,12 @@ export struct ScriptEditOverlay {
       Column({ space: 12 }) {
         // sa/o.a3 工具栏：标题（a3 编辑 / ba 添加脚本）+ k9 帮助 + ap 保存
         Row() {
-          Text(this.script === null ? $r('app.string.add_script') : '编辑')
+          Text(this.script === null ? $r('app.string.add_script') : $r('app.string.edit'))
             .fontSize(16)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.fg'))
             .layoutWeight(1)
-          Text('帮助')
+          Text($r('app.string.orig_k9'))
             .fontSize(14)
             .fontColor($r('app.color.accent'))
             .padding({ left: 12, right: 4 })
@@ -742,7 +742,7 @@ export struct ScriptEditOverlay {
         }
         .width('100%')
         // sa/o.Z2：等宽代码编辑器（提示 sl 代码 (JavaScript)）
-        TextArea({ text: this.code, placeholder: '代码 (JavaScript)' })
+        TextArea({ text: this.code, placeholder: $r('app.string.orig_sl') })
           .layoutWeight(1)
           .width('100%')
           .fontSize(13)
@@ -777,7 +777,7 @@ export struct ScriptEditOverlay {
   helpDialog() {
     Column() {
       Column({ space: 12 }) {
-        Text('帮助')
+        Text($r('app.string.orig_k9'))
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
@@ -789,7 +789,7 @@ export struct ScriptEditOverlay {
         .align(Alignment.Top)
         .scrollBar(BarState.Auto)
         Row({ space: 12 }) {
-          Button('了解更多')
+          Button($r('app.string.orig_m_'))
             .fontSize(14)
             .height(36)
             .layoutWeight(1)
@@ -799,7 +799,7 @@ export struct ScriptEditOverlay {
               // z8.b0.P：浏览器内打开 Tampermonkey 文档
               TabStore.getInstance().newTabAt('https://www.tampermonkey.net/documentation.php', false)
             })
-          Button('确定')
+          Button($r('app.string.confirm'))
             .fontSize(14)
             .height(36)
             .layoutWeight(1)
@@ -837,16 +837,16 @@ export struct ScriptEditOverlay {
       return
     }
     this.getUIContext().showAlertDialog({
-      title: '提示',
-      message: '修改的内容未保存，是否保存？',
+      title: $r('app.string.ai_unsaved_title'),
+      message: $r('app.string.ai_unsaved_msg'),
       primaryButton: {
-        value: '退出',
+        value: $r('app.string.exit_app'),
         action: () => {
           this.onClose()
         }
       },
       secondaryButton: {
-        value: '保存并退出',
+        value: $r('app.string.ai_save_and_exit'),
         action: () => {
           this.save()
         }
@@ -866,15 +866,15 @@ export struct ScriptEditOverlay {
     const parsed = parseUserScriptMeta(this.code, baseUrl)
     if (parsed === null) {
       this.getUIContext().showAlertDialog({
-        title: '添加 Metadata 块',
-        message: '此脚本没有 Metadata 块所以无法保存。您想要为其添加一个默认的 Metadata 块吗？',
+        title: $r('app.string.orig_yh'),
+        message: $r('app.string.orig_mz'),
         primaryButton: {
           value: $r('app.string.cancel'),
           action: () => {
           }
         },
         secondaryButton: {
-          value: '确定',
+          value: $r('app.string.confirm'),
           action: () => {
             // sa/o.e3：在正文开头插入默认 Metadata 块
             this.code = META_BLOCK_TEMPLATE + this.code

@@ -533,7 +533,7 @@ export struct HistoryPage {
       message = `你确定删除 ${this.selectedIds.length} 个条目吗?`
     }
     AlertDialog.show({
-      title: '删除',
+      title: $r('app.string.delete'),
       message: message,
       primaryButton: {
         value: $r('app.string.cancel'),
@@ -580,7 +580,7 @@ export struct HistoryPage {
   // 分组清除（bb.v.A：删除 visited >= boundary 的条目）
   private confirmClearGroup(group: ClearGroup): void {
     AlertDialog.show({
-      title: '清除浏览历史',
+      title: $r('app.string.clear_history_title'),
       message: `${group.name} (${group.count})`,
       primaryButton: {
         value: $r('app.string.cancel'),

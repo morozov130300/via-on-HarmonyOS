@@ -93,8 +93,8 @@ export struct SiteConfDetailPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '网站设定',
-      rightText: '重置',
+      title: $r('app.string.site_settings'),
+      rightText: $r('app.string.reset'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -488,7 +488,7 @@ export struct SiteConfDetailPage {
       Row() {
         if (this.fontZoom > 0) {
           // w5.k.R(ao 重置) → B3：d0(0)
-          Text('重置')
+          Text($r('app.string.reset'))
             .fontSize(14)
             .fontColor($r('app.color.dialog_action'))
             .textAlign(TextAlign.Center)
@@ -655,7 +655,7 @@ export struct SiteConfDetailPage {
   @Builder
   ResetDialog() {
     Column() {
-      Text('重置网站设定')
+      Text($r('app.string.orig_z3'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -880,7 +880,7 @@ export struct SiteConfDetailPage {
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
       Row() {
-        TextInput({ placeholder: '浏览器标识', text: this.inputValue })
+        TextInput({ placeholder: $r('app.string.browser_ua'), text: this.inputValue })
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .backgroundColor(Color.Transparent)
@@ -952,7 +952,7 @@ export struct DesktopModePage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '电脑模式',
+      title: $r('app.string.pc_mode'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -967,7 +967,7 @@ export struct DesktopModePage {
           Column() {
             // n(1, aj 电脑模式, m())
             Row({ space: 12 }) {
-              Text('电脑模式')
+              Text($r('app.string.pc_mode'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
                 .layoutWeight(1)
@@ -985,7 +985,7 @@ export struct DesktopModePage {
             // a6.e 添加例外网站
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
-              Text('添加例外网站')
+              Text($r('app.string.orig_bc'))
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -1046,7 +1046,7 @@ export struct DesktopModePage {
   GroupHosts() {
     // 第一组：Y8 关闭（desktopMode=2）
     if (this.hostsOf(SITE_MODE_OFF).length > 0) {
-      Text('关闭')
+      Text($r('app.string.close_btn'))
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.accent'))
@@ -1067,7 +1067,7 @@ export struct DesktopModePage {
     }
     // 第二组：z10 ? os 打开 : i4 例外（desktopMode=1）
     if (this.hostsOf(SITE_MODE_ON).length > 0) {
-      Text(this.globalOn() ? '打开' : '例外')
+      Text(this.globalOn() ? $r('app.string.open_action') : $r('app.string.orig_i4'))
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.accent'))
@@ -1134,7 +1134,7 @@ export struct DesktopModePage {
   @Builder
   AddDialog() {
     Column() {
-      Text('添加例外网站')
+      Text($r('app.string.orig_bc'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1143,7 +1143,7 @@ export struct DesktopModePage {
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
       // g1 为特定网站关闭电脑模式。/ g2 为特定网站打开电脑模式。
-      Text(this.globalOn() ? '为特定网站关闭电脑模式。' : '为特定网站打开电脑模式。')
+      Text(this.globalOn() ? $r('app.string.orig_g1') : $r('app.string.orig_g2'))
         .fontSize(14)
         .fontColor($r('app.color.fg_secondary'))
         .width('100%')
@@ -1247,7 +1247,7 @@ export struct DesktopModePage {
           .fill(this.pickChecked === 0 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickChecked === 0 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('打开')
+        Text($r('app.string.open_action'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -1263,7 +1263,7 @@ export struct DesktopModePage {
           .fill(this.pickChecked === 1 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickChecked === 1 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('关闭')
+        Text($r('app.string.close_btn'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -1275,7 +1275,7 @@ export struct DesktopModePage {
         this.pickChecked = 1
       })
       Row() {
-        Text('删除')
+        Text($r('app.string.delete'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)
@@ -1348,7 +1348,7 @@ export struct UaExceptionPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '浏览器标识',
+      title: $r('app.string.browser_ua'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -1363,7 +1363,7 @@ export struct UaExceptionPage {
           Column() {
             // q(1, bh 浏览器标识, 全局 UA 名) → jb/v5.u3：g6.i.g(y7)
             Column() {
-              Text('浏览器标识')
+              Text($r('app.string.browser_ua'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -1383,7 +1383,7 @@ export struct UaExceptionPage {
             // a6.e 添加例外网站（message bi）
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
-              Text('添加例外网站')
+              Text($r('app.string.orig_bc'))
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -1396,7 +1396,7 @@ export struct UaExceptionPage {
             })
             // l(i4 例外) + 站点行（host + UA 副标签）
             if (this.exceptionHosts().length > 0) {
-              Text('例外')
+              Text($r('app.string.orig_i4'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -1531,7 +1531,7 @@ export struct UaExceptionPage {
   @Builder
   AddDialog() {
     Column() {
-      Text('添加例外网站')
+      Text($r('app.string.orig_bc'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1539,7 +1539,7 @@ export struct UaExceptionPage {
         .width('100%')
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
-      Text('为特定网站设置浏览器标识。')
+      Text($r('app.string.orig_bi'))
         .fontSize(14)
         .fontColor($r('app.color.fg_secondary'))
         .width('100%')
@@ -1689,7 +1689,7 @@ export struct UaExceptionPage {
         })
       }, (label: string) => label)
       Row() {
-        Text('删除')
+        Text($r('app.string.delete'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)
@@ -1779,7 +1779,7 @@ export struct UaExceptionPage {
   @Builder
   CustomInputDialog() {
     Column() {
-      Text('自定义')
+      Text($r('app.string.ai_custom_label'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -1788,7 +1788,7 @@ export struct UaExceptionPage {
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
       Row() {
-        TextInput({ placeholder: '浏览器标识', text: this.inputValue })
+        TextInput({ placeholder: $r('app.string.browser_ua'), text: this.inputValue })
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .backgroundColor(Color.Transparent)
@@ -1866,7 +1866,7 @@ export struct ImageSettingPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '图像',
+      title: $r('app.string.orig_kt'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -1881,7 +1881,7 @@ export struct ImageSettingPage {
           Column() {
             // q(1, kt 图像, r3(q(), r()))
             Column() {
-              Text('图像')
+              Text($r('app.string.orig_kt'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -1901,7 +1901,7 @@ export struct ImageSettingPage {
             // a6.e 添加例外网站
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
-              Text('添加例外网站')
+              Text($r('app.string.orig_bc'))
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -1914,7 +1914,7 @@ export struct ImageSettingPage {
             })
             // 第一组：cx 已禁止（imageMode=2）
             if (this.hostsOfMode(SITE_MODE_OFF).length > 0) {
-              Text('已禁止')
+              Text($r('app.string.orig_cx'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -1935,7 +1935,7 @@ export struct ImageSettingPage {
             }
             // 第二组：z10 ? c8 允许 : i4 例外（imageMode=1）
             if (this.hostsOfMode(SITE_MODE_ON).length > 0) {
-              Text(this.globalShown() ? '允许' : '例外')
+              Text(this.globalShown() ? $r('app.string.perm_allow') : $r('app.string.orig_i4'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -2048,7 +2048,7 @@ export struct ImageSettingPage {
   @Builder
   GlobalDialog() {
     Column() {
-      Text('图像')
+      Text($r('app.string.orig_kt'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -2056,7 +2056,7 @@ export struct ImageSettingPage {
         .width('100%')
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
-      ForEach(['有图模式', '无图模式', '仅 Wi-Fi 有图'], (label: string, index: number) => {
+      ForEach([$r('app.string.image_mode'), $r('app.string.no_image_mode'), $r('app.string.image_mode_wifi')], (label: string, index: number) => {
         Row({ space: 24 }) {
           Circle({ width: 16, height: 16 })
             .fill(this.globalChecked === index ? $r('app.color.accent') : Color.Transparent)
@@ -2117,7 +2117,7 @@ export struct ImageSettingPage {
   @Builder
   AddDialog() {
     Column() {
-      Text('添加例外网站')
+      Text($r('app.string.orig_bc'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -2126,7 +2126,7 @@ export struct ImageSettingPage {
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
       // kv 禁止特定网站加载图像。/ ku 允许特定网站显示图像。
-      Text(this.globalShown() ? '禁止特定网站加载图像。' : '允许特定网站显示图像。')
+      Text(this.globalShown() ? $r('app.string.orig_kv') : $r('app.string.orig_ku'))
         .fontSize(14)
         .fontColor($r('app.color.fg_secondary'))
         .width('100%')
@@ -2230,7 +2230,7 @@ export struct ImageSettingPage {
           .fill(this.pickChecked === 0 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickChecked === 0 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('允许')
+        Text($r('app.string.perm_allow'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -2246,7 +2246,7 @@ export struct ImageSettingPage {
           .fill(this.pickChecked === 1 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickChecked === 1 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('禁止')
+        Text($r('app.string.orig_cr'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -2258,7 +2258,7 @@ export struct ImageSettingPage {
         this.pickChecked = 1
       })
       Row() {
-        Text('删除')
+        Text($r('app.string.delete'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)
@@ -2345,7 +2345,7 @@ export struct JavaScriptSettingPage {
                   .fontSize(15)
                   .fontColor($r('app.color.fg'))
                   .maxLines(1)
-                Text(this.settings.jsEnabled ? '允许网页运行 JavaScript' : '已禁止')
+                Text(this.settings.jsEnabled ? $r('app.string.orig_m0') : $r('app.string.orig_cx'))
                   .fontSize(13)
                   .fontColor($r('app.color.fg_secondary'))
                   .maxLines(1)
@@ -2366,7 +2366,7 @@ export struct JavaScriptSettingPage {
             // a6.e 添加例外网站
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
-              Text('添加例外网站')
+              Text($r('app.string.orig_bc'))
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -2379,7 +2379,7 @@ export struct JavaScriptSettingPage {
             })
             // 第一组：cx 已禁止（javaScriptMode=2）
             if (this.hostsOfMode(SITE_MODE_OFF).length > 0) {
-              Text('已禁止')
+              Text($r('app.string.orig_cx'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -2400,7 +2400,7 @@ export struct JavaScriptSettingPage {
             }
             // 第二组：z10 ? c8 允许 : i4 例外（javaScriptMode=1）
             if (this.hostsOfMode(SITE_MODE_ON).length > 0) {
-              Text(this.settings.jsEnabled ? '允许' : '例外')
+              Text(this.settings.jsEnabled ? $r('app.string.perm_allow') : $r('app.string.orig_i4'))
                 .fontSize(12)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('app.color.accent'))
@@ -2501,7 +2501,7 @@ export struct JavaScriptSettingPage {
   @Builder
   AddDialog() {
     Column() {
-      Text('添加例外网站')
+      Text($r('app.string.orig_bc'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -2510,7 +2510,7 @@ export struct JavaScriptSettingPage {
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
       // lz 禁止特定网站运行 JavaScript。/ ly 允许特定网站运行 JavaScript。
-      Text(this.settings.jsEnabled ? '禁止特定网站运行 JavaScript。' : '允许特定网站运行 JavaScript。')
+      Text(this.settings.jsEnabled ? $r('app.string.orig_lz') : $r('app.string.orig_ly'))
         .fontSize(14)
         .fontColor($r('app.color.fg_secondary'))
         .width('100%')
@@ -2614,7 +2614,7 @@ export struct JavaScriptSettingPage {
           .fill(this.pickChecked === 0 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickChecked === 0 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('允许')
+        Text($r('app.string.perm_allow'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -2630,7 +2630,7 @@ export struct JavaScriptSettingPage {
           .fill(this.pickChecked === 1 ? $r('app.color.accent') : Color.Transparent)
           .stroke(this.pickChecked === 1 ? Color.Transparent : $r('app.color.dialog_border'))
           .strokeWidth(2)
-        Text('禁止')
+        Text($r('app.string.orig_cr'))
           .fontSize(14)
           .fontColor($r('app.color.fg'))
           .maxLines(1)
@@ -2642,7 +2642,7 @@ export struct JavaScriptSettingPage {
         this.pickChecked = 1
       })
       Row() {
-        Text('删除')
+        Text($r('app.string.delete'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)

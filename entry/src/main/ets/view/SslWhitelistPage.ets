@@ -76,8 +76,8 @@ export struct SslWhitelistPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '忽略 SSL 证书警告',
-      rightText: '帮助',
+      title: $r('app.string.ignore_ssl_warning'),
+      rightText: $r('app.string.orig_k9'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -176,7 +176,7 @@ export struct SslWhitelistPage {
   @Builder
   HelpDialog() {
     Column() {
-      Text('忽略 SSL 证书警告')
+      Text($r('app.string.ignore_ssl_warning'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))

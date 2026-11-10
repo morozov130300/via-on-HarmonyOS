@@ -223,7 +223,7 @@ export struct BookmarkPickerDialog {
                   UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
                 }
                 Column({ space: 2 }) {
-                  Text(entry.title.trim() === '' ? '无标题' : entry.title)
+                  Text(entry.title.trim() === '' ? $r('app.string.read_aloud_no_title') : entry.title)
                     .fontSize(15)
                     .fontColor($r('app.color.fg'))
                     .maxLines(1)
@@ -258,7 +258,7 @@ export struct BookmarkPickerDialog {
       // 原版无按钮，靠外点/返回键取消；此处给出显式取消入口
       Row() {
         Blank()
-        Text('关闭')
+        Text($r('app.string.close_btn'))
           .fontSize(15)
           .fontColor($r('app.color.accent'))
           .padding({ left: 16, right: 16, top: 10, bottom: 12 })

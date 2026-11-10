@@ -12,7 +12,7 @@ export struct SettingsPrivacyPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '隐私',
+      title: $r('app.string.privacy'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -25,15 +25,15 @@ export struct SettingsPrivacyPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            SettingCheckRow({ rowLabel: '不跟踪', isChecked: this.settings.doNotTrack, onCheckRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: $r('app.string.do_not_track'), isChecked: this.settings.doNotTrack, onCheckRow: (isOn: boolean) => {
               this.settings.setDoNotTrack(isOn)
             } })
-            SettingCheckRow({ rowLabel: '禁用 WebRTC', isChecked: this.settings.disableWebRtc, onCheckRow: (isOn: boolean) => {
+            SettingCheckRow({ rowLabel: $r('app.string.disable_webrtc'), isChecked: this.settings.disableWebRtc, onCheckRow: (isOn: boolean) => {
               this.settings.setDisableWebRtc(isOn)
             } })
             SettingCheckRow({
-              rowLabel: '不出售或分享数据',
-              rowDesc: '请求网站不出售或分享我的数据以保护隐私 (实验性)',
+              rowLabel: $r('app.string.do_not_sell'),
+              rowDesc: $r('app.string.do_not_sell_desc'),
               isChecked: this.settings.doNotSell,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setDoNotSell(isOn)

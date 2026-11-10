@@ -14,8 +14,8 @@ export struct HomeCssPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '自定义 CSS',
-      rightText: '保存',
+      title: $r('app.string.orig_et'),
+      rightText: $r('app.string.save'),
       onBack: () => {
         this.navPathStack.pop()
       },

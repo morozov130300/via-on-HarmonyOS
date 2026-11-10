@@ -18,7 +18,7 @@ export struct SettingsExperimentalPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '实验',
+      title: $r('app.string.orig_ic'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -33,7 +33,7 @@ export struct SettingsExperimentalPage {
           Column() {
             // 原版 y1.k3：皮肤行 → lb.k 皮肤页
             SettingNavRow({
-              rowLabel: '皮肤',
+              rowLabel: $r('app.string.orig_uf'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('skinPage', '', true)
               }
@@ -41,11 +41,11 @@ export struct SettingsExperimentalPage {
             // 原版 y1.j3 case1：模糊效果（w9.d.h 位2）
             Row() {
               Column() {
-                Text('模糊效果')
+                Text($r('app.string.orig_cy'))
                   .fontSize(15)
                   .fontColor($r('app.color.fg'))
                   .maxLines(1)
-                Text('为应用启用模糊效果，部分设备可能不支持')
+                Text($r('app.string.orig_cz'))
                   .fontSize(12)
                   .fontColor($r('app.color.fg_secondary'))
                   .maxLines(2)
@@ -64,7 +64,7 @@ export struct SettingsExperimentalPage {
             .padding({ left: 16, right: 16, top: 13, bottom: 13 })
             // 原版 y1.j3 case3：在设置中显示背景（w9.d.j 位4）+ toast u.tv
             Row() {
-              Text('在设置中显示背景')
+              Text($r('app.string.orig_tu'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
@@ -74,7 +74,7 @@ export struct SettingsExperimentalPage {
                 .onChange((isOn: boolean) => {
                   this.settings.setShowSettingsBackground(isOn)
                   this.getUIContext().getPromptAction()
-                    .showToast({ message: '将在下次打开设置时生效', duration: TOAST_SHORT })
+                    .showToast({ message: $r('app.string.orig_tv'), duration: TOAST_SHORT })
                 })
             }
             .width('100%')

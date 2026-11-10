@@ -13,7 +13,7 @@ export struct SettingsAdBlockPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '广告拦截',
+      title: $r('app.string.ad_block'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -27,34 +27,34 @@ export struct SettingsAdBlockPage {
         Scroll() {
           Column() {
             SettingCheckRow({
-              rowLabel: '广告拦截',
+              rowLabel: $r('app.string.ad_block'),
               // 原版 z7/d.java:45：关→「未启用」(g_)；开→「已拦截 %1$d 个广告，共节省 %2$s」(b6)
               rowDesc: this.settings.adBlockOn
                 ? `已拦截 ${this.settings.adBlockTotal} 个广告，共节省 ${this.formatBytes(this.settings.adBlockSavedBytes)}`
-                : '未启用',
+                : $r('app.string.script_disabled'),
               isChecked: this.settings.adBlockOn,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setAdBlockOn(isOn)
               }
             })
             SettingCheckRow({
-              rowLabel: '启用内建规则',
-              rowDesc: '内建规则仅拦截常见广告',
+              rowLabel: $r('app.string.orig_hj'),
+              rowDesc: $r('app.string.orig_hk'),
               isChecked: this.settings.adBlockBuiltin,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setAdBlockBuiltin(isOn)
               }
             })
             SettingNavRow({
-              rowLabel: '自定义规则',
-              rowDesc: '包括拦截的规则、标记的广告',
+              rowLabel: $r('app.string.custom_rules'),
+              rowDesc: $r('app.string.orig_ew'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('rules', '', true)
               }
             })
             SettingNavRow({
-              rowLabel: '规则订阅',
-              rowDesc: '订阅 Adblock Plus 规则列表',
+              rowLabel: $r('app.string.orig_jf'),
+              rowDesc: $r('app.string.orig_jg'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('ruleSub', '', true)
               }
@@ -62,8 +62,8 @@ export struct SettingsAdBlockPage {
             // 原版 z7/d.java:49-55：r9 fl1 位开关（h.e() = !(第1位)，默认可见）控制第 5 项显隐
             if (RemoteConfig.getInstance().autoExpandSwitchVisible) {
               SettingCheckRow({
-                rowLabel: '自动展开网页全文',
-                rowDesc: '打开网页时自动展开网页中折叠的内容',
+                rowLabel: $r('app.string.orig_ia'),
+                rowDesc: $r('app.string.orig_ib'),
                 isChecked: this.settings.autoExpandFullText,
                 onCheckRow: (isOn: boolean) => {
                   this.settings.setAutoExpandFullText(isOn)

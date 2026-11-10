@@ -24,7 +24,7 @@ export struct UaPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '浏览器标识',
+      title: $r('app.string.browser_ua'),
       rightIcon: $r('sys.symbol.plus'),
       onBack: () => {
         this.navPathStack.pop()
@@ -65,22 +65,22 @@ export struct UaPage {
               })
             }, (entry: CustomUaEntry) => entry.title)
 
-            Text('高级')
+            Text($r('app.string.advanced'))
               .fontSize(13)
               .fontColor($r('app.color.fg_secondary'))
               .width('100%')
               .padding({ left: 16, top: 16, bottom: 6 })
 
             SettingNavRow({
-              rowLabel: '电脑模式下的浏览器标识',
+              rowLabel: $r('app.string.orig_a12'),
               rowValue: this.desktopUaLabel(),
               onTapRow: () => {
                 this.pickDesktopUa()
               }
             })
             SettingCheckRow({
-              rowLabel: '简化浏览器标识',
-              rowDesc: '从浏览器标识中移除设备信息及次要版本信息',
+              rowLabel: $r('app.string.orig_a13'),
+              rowDesc: $r('app.string.orig_a14'),
               isChecked: this.settings.simplifyUa,
               onCheckRow: (isOn: boolean) => {
                 this.settings.setSimplifyUa(isOn)
@@ -199,7 +199,7 @@ export struct UaPage {
   @Builder
   DesktopUaDialog() {
     Column() {
-      Text('电脑模式下的浏览器标识')
+      Text($r('app.string.orig_a12'))
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
@@ -261,13 +261,13 @@ export struct UaPage {
       message: '',
       sheets: [
         {
-          title: '编辑',
+          title: $r('app.string.edit'),
           action: (): void => {
             this.navPathStack.pushPathByName('uaEditPage', entry.title, true)
           }
         },
         {
-          title: '删除',
+          title: $r('app.string.delete'),
           action: (): void => {
             this.removeCustom(entry)
           }

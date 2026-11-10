@@ -17,7 +17,7 @@ export struct SiteSettingsPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '网站设定',
+      title: $r('app.string.site_settings'),
       onBack: () => {
         this.navPathStack.pop()
       }
@@ -32,20 +32,20 @@ export struct SiteSettingsPage {
           Column() {
             // q(1, c0 所有网站) → hb/w6
             SettingNavRow({
-              rowLabel: '所有网站',
+              rowLabel: $r('app.string.all_sites'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('siteAll', '', true)
               }
             })
             // l(R1 内容)
-            Text('内容')
+            Text($r('app.string.ai_content_label'))
               .fontSize(13)
               .fontColor($r('app.color.accent'))
               .width('100%')
               .padding({ left: 16, top: 14, bottom: 4 })
             // q(14, ua 字体大小, "%d%%") → jb/k5
             SettingNavRow({
-              rowLabel: '字体大小',
+              rowLabel: $r('app.string.text_size'),
               rowValue: `${this.settings.textZoom}%`,
               onTapRow: () => {
                 this.navPathStack.pushPathByName('fontSettings', '', true)
@@ -53,7 +53,7 @@ export struct SiteSettingsPage {
             })
             // q(3, bh 浏览器标识, 全局 UA 名) → jb/v5
             SettingNavRow({
-              rowLabel: '浏览器标识',
+              rowLabel: $r('app.string.browser_ua'),
               rowValue: this.uaLabel(),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('uaException', '', true)
@@ -61,15 +61,15 @@ export struct SiteSettingsPage {
             })
             // q(17, aj 电脑模式, l() ? os 打开 : oo 关闭) → jb/r0
             SettingNavRow({
-              rowLabel: '电脑模式',
-              rowValue: this.settings.desktopAllSites === 1 ? '打开' : '关闭',
+              rowLabel: $r('app.string.pc_mode'),
+              rowValue: this.settings.desktopAllSites === 1 ? $r('app.string.open_action') : $r('app.string.close_btn'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('desktopMode', '', true)
               }
             })
             // q(2, kt 图像, l3(q()) / r() → ky) → jb/n1
             SettingNavRow({
-              rowLabel: '图像',
+              rowLabel: $r('app.string.orig_kt'),
               rowValue: this.imageValue(),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('imageSetting', '', true)
@@ -78,7 +78,7 @@ export struct SiteSettingsPage {
             // q(8, lx JavaScript, l3(t())) → jb/y1
             SettingNavRow({
               rowLabel: 'JavaScript',
-              rowValue: this.settings.jsEnabled ? '允许' : '已禁止',
+              rowValue: this.settings.jsEnabled ? $r('app.string.perm_allow') : $r('app.string.orig_cx'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('jsSetting', '', true)
               }
@@ -93,35 +93,35 @@ export struct SiteSettingsPage {
             })
             // q(10, qw 弹出式窗口, h() ? ch 优先询问 : c8 允许) → jb/u3
             SettingNavRow({
-              rowLabel: '弹出式窗口',
-              rowValue: this.settings.popupAskFirst ? '优先询问' : '允许',
+              rowLabel: $r('app.string.orig_qw'),
+              rowValue: this.settings.popupAskFirst ? $r('app.string.orig_ch') : $r('app.string.perm_allow'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('popupSetting', '', true)
               }
             })
             // l(Q1 基本)
-            Text('基本')
+            Text($r('app.string.orig_dg'))
               .fontSize(13)
               .fontColor($r('app.color.accent'))
               .width('100%')
               .padding({ left: 16, top: 14, bottom: 4 })
             // q(12, ct 广告拦截, g() ? os : oo) → jb/i
             SettingNavRow({
-              rowLabel: '广告拦截',
-              rowValue: this.settings.adBlockOn ? '打开' : '关闭',
+              rowLabel: $r('app.string.ad_block'),
+              rowValue: this.settings.adBlockOn ? $r('app.string.open_action') : $r('app.string.close_btn'),
               onTapRow: () => {
                 this.navPathStack.pushPathByName('adBlockException', '', true)
               }
             })
             // l(S1 权限)
-            Text('权限')
+            Text($r('app.string.orig_di'))
               .fontSize(13)
               .fontColor($r('app.color.accent'))
               .width('100%')
               .padding({ left: 16, top: 14, bottom: 4 })
             // q(4, dx 剪贴板, m3(e())) → jb/e0
             SettingNavRow({
-              rowLabel: '剪贴板',
+              rowLabel: $r('app.string.orig_dx'),
               rowValue: this.triStateValue(this.settings.clipboardState),
               onTapRow: () => {
                 this.openPermission('clipboard')
@@ -129,7 +129,7 @@ export struct SiteSettingsPage {
             })
             // q(11, oz 打开应用, m3(f())) → jb/f3
             SettingNavRow({
-              rowLabel: '打开应用',
+              rowLabel: $r('app.string.orig_oz'),
               rowValue: this.triStateValue(this.settings.openAppState),
               onTapRow: () => {
                 this.openPermission('openapp')
@@ -137,54 +137,54 @@ export struct SiteSettingsPage {
             })
             // q(5, mh 位置信息, k3(u())) → jb/j2
             SettingNavRow({
-              rowLabel: '位置信息',
-              rowValue: this.settings.geoAskFirst ? '优先询问' : '已禁止',
+              rowLabel: $r('app.string.orig_mh'),
+              rowValue: this.settings.geoAskFirst ? $r('app.string.orig_ch') : $r('app.string.orig_cx'),
               onTapRow: () => {
                 this.openPermission('geo')
               }
             })
             // q(6, d6 摄像头, k3(i())) → jb/t
             SettingNavRow({
-              rowLabel: '摄像头',
-              rowValue: this.settings.cameraAskFirst ? '优先询问' : '已禁止',
+              rowLabel: $r('app.string.perm_camera_label'),
+              rowValue: this.settings.cameraAskFirst ? $r('app.string.orig_ch') : $r('app.string.orig_cx'),
               onTapRow: () => {
                 this.openPermission('camera')
               }
             })
             // q(7, nn 麦克风, k3(v())) → jb/u2
             SettingNavRow({
-              rowLabel: '麦克风',
-              rowValue: this.settings.micAskFirst ? '优先询问' : '已禁止',
+              rowLabel: $r('app.string.perm_mic_label'),
+              rowValue: this.settings.micAskFirst ? $r('app.string.orig_ch') : $r('app.string.orig_cx'),
               onTapRow: () => {
                 this.openPermission('mic')
               }
             })
             // q(13, q5 页面重定向, k() ? l3(true) : q_) → jb/q3
             SettingNavRow({
-              rowLabel: '页面重定向',
-              rowValue: this.settings.redirectAskFirst ? '重定向到非同源页面前先询问' : '允许',
+              rowLabel: $r('app.string.orig_q5'),
+              rowValue: this.settings.redirectAskFirst ? $r('app.string.orig_q_') : $r('app.string.perm_allow'),
               onTapRow: () => {
                 this.openPermission('redirect')
               }
             })
             // q(15, a1f 振动, l3(E())) → jb/z5
             SettingNavRow({
-              rowLabel: '振动',
-              rowValue: this.settings.vibrateEnabled ? '允许' : '已禁止',
+              rowLabel: $r('app.string.orig_a1f'),
+              rowValue: this.settings.vibrateEnabled ? $r('app.string.perm_allow') : $r('app.string.orig_cx'),
               onTapRow: () => {
                 this.openPermission('vibrate')
               }
             })
             // l(tl 高级)
-            Text('高级')
+            Text($r('app.string.advanced'))
               .fontSize(13)
               .fontColor($r('app.color.accent'))
               .width('100%')
               .padding({ left: 16, top: 14, bottom: 4 })
             // q(16, r4 返回不重载, p() ? os : oo) → jb/c1
             SettingNavRow({
-              rowLabel: '返回不重载',
-              rowValue: this.settings.backReloadEnabled ? '打开' : '关闭',
+              rowLabel: $r('app.string.orig_r4'),
+              rowValue: this.settings.backReloadEnabled ? $r('app.string.open_action') : $r('app.string.close_btn'),
               onTapRow: () => {
                 this.openPermission('backreload')
               }

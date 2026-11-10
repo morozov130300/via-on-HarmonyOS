@@ -34,7 +34,7 @@ export struct FontPage {
 
   private bindAppBar(): void {
     AppBar.show({
-      title: '字体',
+      title: $r('app.string.orig_jn'),
       rightIcon: $r('app.media.uia_ic_add'),
       onBack: () => {
         this.navPathStack.pop()
@@ -92,13 +92,13 @@ export struct FontPage {
       message: '',
       sheets: [
         {
-          title: '编辑',
+          title: $r('app.string.edit'),
           action: (): void => {
             this.renaming = entry
           }
         },
         {
-          title: '删除',
+          title: $r('app.string.delete'),
           action: (): void => {
             this.deleteFont(entry)
           }
@@ -135,7 +135,7 @@ export struct FontPage {
           ForEach(this.entries, (entry: FontEntry) => {
             ListItem() {
               SettingRadioRow({
-                rowLabel: entry.name === '' ? '默认' : entry.name,
+                rowLabel: entry.name === '' ? $r('app.string.ua_default') : entry.name,
                 isSelected: this.settings.uiFont === entry.name,
                 onTapRow: () => {
                   this.selectFont(entry)
@@ -211,7 +211,7 @@ struct FontRenameOverlay {
   build() {
     Column() {
       Column({ space: 16 }) {
-        Text('重命名')
+        Text($r('app.string.rename_download'))
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))

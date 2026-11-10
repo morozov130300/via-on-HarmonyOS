@@ -129,7 +129,7 @@ export struct RulePreviewPage {
   @Builder
   LineDialog() {
     Column({ space: 14 }) {
-      Text('预览')
+      Text($r('app.string.ai_preview'))
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))

@@ -1,4 +1,4 @@
-﻿import { common } from '@kit.AbilityKit'
+import { common } from '@kit.AbilityKit'
 import { wantAgent, WantAgent } from '@kit.AbilityKit'
 import { BusinessError, commonEventManager } from '@kit.BasicServicesKit'
 import { notificationManager } from '@kit.NotificationKit'
