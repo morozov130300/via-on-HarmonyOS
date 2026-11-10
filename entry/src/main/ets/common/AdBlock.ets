@@ -1,7 +1,7 @@
 import { AppSettings } from './Settings'
 import { hostOf } from './SearchEngines'
 
-// ===== 原版 Via 7.4.0 广告拦截引擎完整端口 =====
+// ===== 原版 Uia 7.4.0 广告拦截引擎完整端口 =====
 // w4/d.java 网络规则（类型位掩码/第三方/域名数组/异常位）→ Filter
 // v4/c.java 匹配引擎（hostSet + 5 字符子串 Map + 域名域 Map）→ FilterEngine
 // w4/a.java + v4/b.java 元素隐藏规则与存储 → CosmeticFilter / CosmeticStore
@@ -1210,7 +1210,7 @@ export class AdBlocker {
     return filter
   }
 
-  // x4/a.h()：元素隐藏 CSS（na.E0 的 via_inject_blocker.css 等价）
+  // x4/a.h()：元素隐藏 CSS（na.E0 的 uia_inject_blocker.css 等价）
   cssForPage(pageUrl: string): string {
     if (this.settings === null || !this.settings.adBlockOn) {
       return ''
@@ -1229,8 +1229,8 @@ export class AdBlocker {
       return ''
     }
     const escaped = css.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')
-    return `(function(){var s=document.getElementById('via_inject_blocker');` +
-      `if(!s){s=document.createElement('style');s.id='via_inject_blocker';document.head.appendChild(s);}` +
+    return `(function(){var s=document.getElementById('uia_inject_blocker');` +
+      `if(!s){s=document.createElement('style');s.id='uia_inject_blocker';document.head.appendChild(s);}` +
       `s.textContent=\`${escaped}\`;})();`
   }
 }

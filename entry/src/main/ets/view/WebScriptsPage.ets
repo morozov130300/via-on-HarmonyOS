@@ -25,9 +25,22 @@ export struct WebScriptsPage {
     return TabStore.getInstance().current().url
   }
 
-  // ua.t:202-203：标题 = i0.f(url) 非空 ? z4「作用于 %s 的脚本」 : uc「脚本」
+  // ua.t:202-203：标题 = i0.f(url) 非空 ? z4「作用于 %1$s 的脚本」 : uc「脚本」
+  // 走资源 + getStringSync 保证英文切换生效（原版 R.string 占位符语义）
   private pageTitle(): string {
     const host = hostOf(this.pageUrl())
+    try {
+      const ctx = this.getUIContext().getHostContext()
+      if (ctx !== undefined) {
+        if (host === '') {
+          return ctx.resourceManager.getStringSync($r('app.string.script').id)
+        }
+        const tpl = ctx.resourceManager.getStringSync($r('app.string.scripts_for_host').id)
+        return tpl.replace('%1$s', host).replace('%s', host)
+      }
+    } catch (error) {
+      // 资源不可用时回退中文字面量，保证标题不为空
+    }
     return host !== '' ? `作用于 ${host} 的脚本` : '脚本'
   }
 

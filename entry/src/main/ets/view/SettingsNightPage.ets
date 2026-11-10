@@ -3,7 +3,7 @@ import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { dialogTransition } from '../common/Transitions'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { buildNavSlide } from './PageTransitions'
 
 // 原版夜间模式设置页（hb/p4）：

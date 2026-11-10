@@ -1,7 +1,7 @@
 import { ClosedTabEntry, ClosedTabsStore } from '../common/ClosedTabsStore'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { TabStore } from '../common/TabStore'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { AppIcon } from '../components/AppIcon'
 import { UiInsets } from '../common/Immersive'
 import { buildNavSlide } from './PageTransitions'
@@ -100,7 +100,7 @@ export struct ClosedTabsPage {
   HeaderBar() {
     Row() {
       Stack({ alignContent: Alignment.Center }) {
-        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
+        UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
       }
         .width(44)
         .height(43)
@@ -142,7 +142,7 @@ export struct ClosedTabsPage {
     Row({ space: 12 }) {
       Column() {
         if (this.faviconFailed[item.id] === true) {
-          ViaIcon({ icon: $r('app.media.via_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
+          UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
         } else {
           Image(this.faviconUrl(item.url))
             .width(22)

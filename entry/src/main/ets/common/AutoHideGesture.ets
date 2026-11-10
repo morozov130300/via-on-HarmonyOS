@@ -1,6 +1,6 @@
 /**
  * 竖滑隐藏/显示操作栏手势状态机 —— 1:1 移植原版
- * mark/via/common/widget/GestureTouchEvent.java（Via 7.4.0 反编译）。
+ * mark/uia/common/widget/GestureTouchEvent.java（Uia 7.4.0 反编译）。
  *
  * 原版机制（k6.java:4104 GestureTouchEvent(f2584o0.f2940p, f8())，
  * 触点挂在 WebView onTouch → k6.E(view, motionEvent) → GestureTouchEvent.g()）：

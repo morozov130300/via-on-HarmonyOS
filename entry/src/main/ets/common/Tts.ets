@@ -10,7 +10,8 @@ export const TTS_STATE_SPEAKING: number = 2
 export const TTS_STATE_ERROR: number = 3
 export const TTS_STATE_STOPPED: number = 4
 
-// 鸿蒙引擎语速范围 [0.5, 2]（原版 0.25-5，UI 原样保留，引擎侧截断）
+// 鸿蒙引擎语速范围 [0.5, 2]（平台能力上限，仅引擎侧截断；
+// UI 按原版 j8/p.java 的 14 档 0.25-3.5x 1:1 呈现，不在 UI 层收敛）
 const HARMONY_SPEED_MIN: number = 0.5
 const HARMONY_SPEED_MAX: number = 2.0
 

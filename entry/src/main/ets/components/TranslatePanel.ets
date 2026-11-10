@@ -2,7 +2,7 @@ import { http } from '@kit.NetworkKit'
 import { display, curves, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { i18n } from '@kit.LocalizationKit'
-import { computeDialogWidthVp } from './ViaDialogCard'
+import { computeDialogWidthVp } from './UiaDialogCard'
 import { UiInsets } from '../common/Immersive'
 import { DECELERATE_CURVE } from '../common/Transitions'
 
@@ -699,7 +699,7 @@ export struct TranslatePanel {
                 }
               })
             // u0：有文本 = b8 清除（desc fq「清除文本」），无文本 = bk 退出（desc i9「退出」）
-            Image(this.state.inputText.length > 0 ? $r('app.media.via_ic_stop') : $r('app.media.via_tr_exit'))
+            Image(this.state.inputText.length > 0 ? $r('app.media.uia_ic_stop') : $r('app.media.uia_tr_exit'))
               .width(48)
               .height(48)
               .padding(12)
@@ -745,7 +745,7 @@ export struct TranslatePanel {
                 .onClick(() => {
                   this.state.setMode(2)
                 })
-              Image($r('app.media.via_tr_copy'))
+              Image($r('app.media.uia_tr_copy'))
                 .width(48)
                 .height(48)
                 .padding(12)
@@ -771,7 +771,7 @@ export struct TranslatePanel {
                     this.state.sourceCode = code
                   })
               })
-            Image($r('app.media.via_tr_swap'))
+            Image($r('app.media.uia_tr_swap'))
               .width(48)
               .height(48)
               .padding(9)
@@ -793,7 +793,7 @@ export struct TranslatePanel {
                   })
               })
             // cp 触发：40dp、margin 4dp、padding 9dp、accent tint
-            Image($r('app.media.via_tr_translate'))
+            Image($r('app.media.uia_tr_translate'))
               .width(40)
               .height(40)
               .margin(4)

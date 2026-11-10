@@ -3,10 +3,10 @@ import { buildNavSlide } from './PageTransitions'
 import { SiteSetting, SITE_MODE_DEFAULT, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
 import { dialogTransition } from '../common/Transitions'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { ZoomSlider } from '../components/ZoomSlider'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UA_TABLE, uaByKey } from '../common/UaTable'
 import { hostOf } from '../common/SearchEngines'
 
@@ -984,7 +984,7 @@ export struct DesktopModePage {
             .alignItems(VerticalAlign.Center)
             // a6.e 添加例外网站
             Row({ space: 18 }) {
-              ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
+              UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
               Text('添加例外网站')
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
@@ -1382,7 +1382,7 @@ export struct UaExceptionPage {
             })
             // a6.e 添加例外网站（message bi）
             Row({ space: 18 }) {
-              ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
+              UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
               Text('添加例外网站')
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
@@ -1900,7 +1900,7 @@ export struct ImageSettingPage {
             })
             // a6.e 添加例外网站
             Row({ space: 18 }) {
-              ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
+              UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
               Text('添加例外网站')
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
@@ -2365,7 +2365,7 @@ export struct JavaScriptSettingPage {
             .alignItems(VerticalAlign.Center)
             // a6.e 添加例外网站
             Row({ space: 18 }) {
-              ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
+              UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
               Text('添加例外网站')
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))

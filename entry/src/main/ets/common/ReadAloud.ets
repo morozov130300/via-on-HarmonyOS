@@ -221,9 +221,9 @@ export function hostWithoutPrefix(url: string): string {
 
 // ===== 原版 j8/s + ReadAloudService：通知、连续任务、公共事件 =====
 const NOTIFICATION_ID: number = 2
-const EVENT_PLAY: string = 'via.readaloud.PLAY'
-const EVENT_PAUSE: string = 'via.readaloud.PAUSE'
-const EVENT_STOP: string = 'via.readaloud.STOP'
+const EVENT_PLAY: string = 'uia.readaloud.PLAY'
+const EVENT_PAUSE: string = 'uia.readaloud.PAUSE'
+const EVENT_STOP: string = 'uia.readaloud.STOP'
 
 export class ReadAloudService {
   private static instance: ReadAloudService | null = null

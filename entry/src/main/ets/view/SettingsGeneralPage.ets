@@ -10,7 +10,7 @@ import { uaByKey } from '../common/UaTable'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { buildNavSlide } from './PageTransitions'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { ViaDialogCard, computeDialogWidthVp } from '../components/ViaDialogCard'
+import { UiaDialogCard, computeDialogWidthVp } from '../components/UiaDialogCard'
 
 @ComponentV2
 export struct SettingsGeneralPage {
@@ -494,7 +494,7 @@ export struct SettingsGeneralPage {
 
   private exportBookmarks(): void {
     BackupManager.getInstance().listBookmarksForExport().then((html: string) => {
-      this.saveTextFile('via_bookmarks.html', html)
+      this.saveTextFile('uia_bookmarks.html', html)
     }).catch((error: BusinessError) => {
       console.error(`export bookmarks failed: ${error.message}`)
     })
@@ -934,7 +934,7 @@ export struct SettingsGeneralPage {
   // HarmonyOS 无对应深链，保留引导卡片（w5.k 卡片样式）
   @Builder
   DefaultBrowserGuideDialog() {
-    ViaDialogCard() {
+    UiaDialogCard() {
       Text('设置默认浏览器')
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
@@ -943,7 +943,7 @@ export struct SettingsGeneralPage {
         .width('100%')
         .padding({ top: 8, bottom: 8 })
         .margin({ left: 16, right: 16, bottom: 6 })
-      Text('请在系统"设置-应用-默认应用-浏览器"中将 VIA 设为默认浏览器。')
+      Text('请在系统"设置-应用-默认应用-浏览器"中将 UIA 设为默认浏览器。')
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .lineHeight(21)
@@ -998,7 +998,7 @@ export struct SettingsGeneralPage {
   // 弹窗样式 = 原版 w5.k 卡片
   @Builder
   PasswordVaultGuideDialog() {
-    ViaDialogCard() {
+    UiaDialogCard() {
       Text('密码管理器')
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
@@ -1127,7 +1127,7 @@ export struct SettingsGeneralPage {
 
   @Builder
   RestartConfirmDialog() {
-    ViaDialogCard() {
+    UiaDialogCard() {
       Text('语言')
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
@@ -1469,7 +1469,7 @@ export struct SettingsGeneralPage {
       this.settings.clearSearchHistory()
     }
     if (selected[2]) {
-      AppStorage.setOrCreate('via_undo_close_url', '')
+      AppStorage.setOrCreate('uia_undo_close_url', '')
     }
     if (selected[3]) {
       try {

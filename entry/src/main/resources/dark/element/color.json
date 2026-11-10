@@ -6,23 +6,23 @@
     },
     {
       "name": "page_bg",
-      "value": "#000000"
+      "value": "#1c1b1d"
     },
     {
       "name": "surface",
-      "value": "#1E1E20"
+      "value": "#1c1b1d"
     },
     {
       "name": "fg",
-      "value": "#EAEAEA"
+      "value": "#efefef"
     },
     {
       "name": "fg_secondary",
-      "value": "#8A8A8E"
+      "value": "#9f9f9f"
     },
     {
       "name": "fg_tertiary",
-      "value": "#5A5A5E"
+      "value": "#80808080"
     },
     {
       "name": "accent",
@@ -34,11 +34,11 @@
     },
     {
       "name": "divider",
-      "value": "#2C2C2E"
+      "value": "#30111111"
     },
     {
       "name": "icon",
-      "value": "#CCCCCC"
+      "value": "#c2c2c2"
     },
     {
       "name": "icon_active",
@@ -46,23 +46,23 @@
     },
     {
       "name": "icon_disabled",
-      "value": "#4A4A4E"
+      "value": "#80808080"
     },
     {
       "name": "incognito_bg",
-      "value": "#2A2A2C"
+      "value": "#1c1b1d"
     },
     {
       "name": "incognito_fg",
-      "value": "#EAEAEA"
+      "value": "#ffffff"
     },
     {
       "name": "search_suggestion_bg",
-      "value": "#1E1E20"
+      "value": "#1c1b1d"
     },
     {
       "name": "url_input_panel_bg",
-      "value": "#000000"
+      "value": "#1c1b1d"
     },
     {
       "name": "url_input_panel_bg_translucent",
@@ -86,7 +86,7 @@
     },
     {
       "name": "chip_bg",
-      "value": "#2C2C2E"
+      "value": "#1c1b1d"
     },
     {
       "name": "progress_color",
@@ -130,11 +130,11 @@
     },
     {
       "name": "home_text",
-      "value": "#FAFAFA"
+      "value": "#efefef"
     },
     {
       "name": "search_pill_border",
-      "value": "#AFAFAF"
+      "value": "#9f9f9f"
     },
     {
       "name": "menu_bg",
@@ -154,7 +154,7 @@
     },
     {
       "name": "menu_text",
-      "value": "#EAEAEA"
+      "value": "#efefef"
     },
     {
       "name": "search_toolbar_text",

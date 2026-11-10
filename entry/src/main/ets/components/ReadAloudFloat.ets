@@ -1,7 +1,7 @@
 import { display, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 
-// 原版 mark/via/common/widget/k1：朗读悬浮控件
+// 原版 mark/uia/common/widget/k1：朗读悬浮控件
 // 贴左边缘 accent 圆角胶囊 [0,18,18,0]，三图标 36dp，
 // 垂直拖拽范围 [88dp, 父高-控件高-88dp]，
 // 播放中左图标 3000ms 线性旋转、右图标（停止）隐藏
@@ -106,7 +106,7 @@ export struct ReadAloudFloat {
   build() {
     Row() {
       // 原版 f9670e：面板入口（d1 图标，播放中 3000ms 线性旋转）
-      Image($r('app.media.via_readaloud_spin'))
+      Image($r('app.media.uia_readaloud_spin'))
         .width(36)
         .height(36)
         .margin({ top: 6, bottom: 6 })
@@ -116,7 +116,7 @@ export struct ReadAloudFloat {
           this.onAction(4)
         })
       // 原版 f9671j：播放/暂停（setPlaying 切 cu/cw）
-      Image(this.playing ? $r('app.media.via_readaloud_pause') : $r('app.media.via_readaloud_play'))
+      Image(this.playing ? $r('app.media.uia_readaloud_pause') : $r('app.media.uia_readaloud_play'))
         .width(36)
         .height(36)
         .margin({ top: 7, bottom: 7 })
@@ -126,7 +126,7 @@ export struct ReadAloudFloat {
         })
       // 原版 f9672k：停止（播放中隐藏，desc od=停止朗读）
       if (!this.playing) {
-        Image($r('app.media.via_readaloud_stop'))
+        Image($r('app.media.uia_readaloud_stop'))
           .width(36)
           .height(36)
           .margin({ top: 7, bottom: 7 })

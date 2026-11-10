@@ -2,7 +2,7 @@ import { common } from '@kit.AbilityKit'
 import { SkinStore } from '../common/SkinStore'
 
 @ComponentV2
-export struct ViaIcon {
+export struct UiaIcon {
   @Param @Require icon: Resource
   @Param iconSize: number = 24
   @Param iconColor: ResourceColor = $r('app.color.fg')
@@ -16,14 +16,14 @@ export struct ViaIcon {
   @Param rotateDeg: number = 0
 
   // 等价原版 PorterDuff.SRC_IN 着色：out.rgb = color.rgb * src.alpha，out.a = src.a * color.a
-  // 对纯黑/纯白 alpha 蒙版 PNG（via_menu_* / via_ic_*）均生效
+  // 对纯黑/纯白 alpha 蒙版 PNG（uia_menu_* / uia_ic_*）均生效
   @Computed
   get tintMatrix(): number[] {
     const c: number = this.resolveColor();
     const a: number = ((c >>> 24) & 0xFF) / 255;
-    const r: number = (c >>> 16) & 0xFF;
-    const g: number = (c >>> 8) & 0xFF;
-    const b: number = c & 0xFF;
+    const r: number = ((c >>> 16) & 0xFF) / 255;
+    const g: number = ((c >>> 8) & 0xFF) / 255;
+    const b: number = (c & 0xFF) / 255;
     return [0, 0, 0, r, 0,
       0, 0, 0, g, 0,
       0, 0, 0, b, 0,
@@ -45,7 +45,7 @@ export struct ViaIcon {
       return colorValue as number;
     }
     if (typeof colorValue === 'string') {
-      return ViaIcon.parseHexColor(colorValue as string);
+      return UiaIcon.parseHexColor(colorValue as string);
     }
     try {
       const res: Resource = colorValue as Resource;

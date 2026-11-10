@@ -1,6 +1,6 @@
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { buildNavSlide } from './PageTransitions'
 

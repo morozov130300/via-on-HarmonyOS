@@ -25,7 +25,7 @@ import { TabStore } from '../common/TabStore'
 //   f13929c0 2131755062 → 0x7f100036 → string "as" → values-zh-rCN/strings.xml:57  = 离线页面  → v://offline
 //   f14144r6 2131755431 → 0x7f1001a7 → string "km" → values-zh-rCN/strings.xml:420 = 主页      → v://home
 //   f14109oc 2131755762 → 0x7f1002f2 → string "tk" → values-zh-rCN/strings.xml:749 = 关于      → v://about
-// 页面标题 = u.f13958e1 = 0x7f100072 → string "ce" → values-zh-rCN/strings.xml:116 = Via
+// 页面标题 = u.f13958e1 = 0x7f100072 → string "ce" → values-zh-rCN/strings.xml:116 = Uia
 class CatalogEntry {
   label: string
   cmd: string
@@ -54,10 +54,12 @@ const CATALOG_ENTRIES: CatalogEntry[] = [
   new CatalogEntry('关于', 'v://about', 'settingsAbout')
 ]
 
-// u9/d.g(context,1) 的 .tag.icon 是 CSS 手绘的**标签字形**（7x7 方块 +
-// ::before 旋转 45° 的折角），与具体条目无关 —— catalog.html 的 6 项共用同一个字形。
-// 此处用 Path 复刻该标签轮廓：矩形 + 左侧尖角（标签挂孔朝向）。
-const TAG_GLYPH: string = 'M4 1 L11 1 L11 11 L4 11 L1 6 Z'
+// u9/d.g(context,1) 的 .tag.icon 是 CSS 手绘的**标签字形**：
+//   .tag.icon 本体 = 7x7 方块，border-radius 1px 1px 1px 0，左/上 1px currentColor 描边；
+//   ::before = 旋转 -45° 的折角三角，::after = 2x2 圆点挂孔（u9/d.java:213-215）。
+// 6 项共用同一字形。此处用 Path 在 7x7 viewBox 内 1:1 复刻：右上缺角的标签轮廓 +
+// 左上折角 + 挂孔圆点，描边 1px（currentColor）。
+const TAG_GLYPH: string = 'M6 0 L0 0 L0 7 L7 7 L7 1 Z M0 0 L2 0 L0 2 Z M5 1.5 A1 1 0 1 0 5 1.51 Z'
 
 @ComponentV2
 export struct CatalogPage {

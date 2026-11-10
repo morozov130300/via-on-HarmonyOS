@@ -26,7 +26,7 @@ export struct FindBar {
   private inputController: TextInputController = new TextInputController()
 
   aboutToAppear(): void {
-    // 原版 f8/h.e3()：从 FIND_CACHE 恢复上次查找词（TTL 180 天）
+    // 原版 f8/h.e3()：从 FIND_CACHE 恢复上次查找词（TTL 180 秒，f8/h.java:172）
     this.settings.readFindCache().then((text: string) => {
       if (text !== '') {
         this.query = text

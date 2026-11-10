@@ -1,4 +1,4 @@
-// 定制菜单页：1:1 复刻原版 Via 7.4.0 i8/s（定制菜单 Fragment）
+// 定制菜单页：1:1 复刻原版 Uia 7.4.0 i8/s（定制菜单 Fragment）
 // 结构（原版 i8/s.X1）：单个 5 列 Grid，扁平列表 =
 //   [提示行「按住并拖动即可重新排列条目」(i8/x)] + 当前菜单条目 + [提示行「按住并拖动或点击来添加条目」] + 可添加条目
 // 拖拽（i8/s.b/ItemTouchHelper）：仅菜单条目(m)可拖；落位 x3()；点击（i8/s.g3）：菜单区点击=移到池区首位，
@@ -12,9 +12,9 @@
 //   左下「取消」右下「重置」14sp #6f8de1 minWidth 56dp padding 16dp，
 //   弹窗背景圆角 18dp 描边 1dp #30808080 底色 #ffffff/#1c1b1d、dim 0.4。
 import { AppSettings } from '../common/Settings'
-import { computeDialogWidthVp, dialogTransition } from '../components/ViaDialogCard'
+import { computeDialogWidthVp, dialogTransition } from '../components/UiaDialogCard'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 import { buildNavSlide } from './PageTransitions'
@@ -390,7 +390,7 @@ export struct SettingsMenuPage {
               } else {
                 // i8/o.d + l：Column 上下 padding15 左右5、图标上文字下 2dp 间距、11sp 双行
                 Column({ space: 2 }) {
-                  ViaIcon({
+                  UiaIcon({
                     icon: menuIcon(item.id),
                     iconSize: 24,
                     iconColor: $r('app.color.menu_icon'),

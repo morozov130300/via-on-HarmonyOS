@@ -7,7 +7,7 @@ import { HomePage } from '../components/HomePage'
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { UiInsets } from '../common/Immersive'
 import { buildNavSlide } from './PageTransitions'
 import { picker } from '@kit.CoreFileKit'
@@ -161,18 +161,18 @@ export struct SettingsCustomPage {
 
   private logoParams(): CustomParam[] {
     const params: CustomParam[] = []
-    const logoType = new CustomParam('logo_type', $r('app.media.via_ic_c_logo_text'), 'Logo', KIND_ACTION)
+    const logoType = new CustomParam('logo_type', $r('app.media.uia_ic_c_logo_text'), 'Logo', KIND_ACTION)
     params.push(logoType)
-    params.push(this.dimParam('logo_width', $r('app.media.via_ic_c_fav_width'), '宽度', this.settings.homeLogoWidth))
-    params.push(this.dimParam('logo_height', $r('app.media.via_ic_c_fav_height'), '高度', this.settings.homeLogoHeight))
-    params.push(this.pctParam('logo_corner', $r('app.media.via_ic_c_fav_corner'), '圆角值', this.settings.homeLogoCorner))
+    params.push(this.dimParam('logo_width', $r('app.media.uia_ic_c_fav_width'), '宽度', this.settings.homeLogoWidth))
+    params.push(this.dimParam('logo_height', $r('app.media.uia_ic_c_fav_height'), '高度', this.settings.homeLogoHeight))
+    params.push(this.pctParam('logo_corner', $r('app.media.uia_ic_c_fav_corner'), '圆角值', this.settings.homeLogoCorner))
     if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
-      const font = new CustomParam('logo_font', $r('app.media.via_ic_c_font_size'), '字体大小', KIND_SLIDER)
+      const font = new CustomParam('logo_font', $r('app.media.uia_ic_c_font_size'), '字体大小', KIND_SLIDER)
       font.min = HOME_LOGO_FONT_MIN
       font.max = HOME_LOGO_FONT_MAX
       font.unit = 'px'
       params.push(font)
-      params.push(new CustomParam('logo_style', $r('app.media.via_ic_c_font_style'), '字体风格', KIND_ACTION))
+      params.push(new CustomParam('logo_style', $r('app.media.uia_ic_c_font_style'), '字体风格', KIND_ACTION))
     }
     return params
   }
@@ -196,24 +196,24 @@ export struct SettingsCustomPage {
 
   private searchParams(): CustomParam[] {
     const params: CustomParam[] = []
-    params.push(this.pctParam('pill_corner', $r('app.media.via_ic_c_corner'), '圆角值', this.settings.homePillCorner))
-    params.push(this.pctParam('pill_opacity', $r('app.media.via_ic_c_opacity'), '不透明度', this.settings.homePillOpacity))
-    const stroke = new CustomParam('pill_stroke_w', $r('app.media.via_ic_c_stroke_width'), '描边粗细', KIND_SLIDER)
+    params.push(this.pctParam('pill_corner', $r('app.media.uia_ic_c_corner'), '圆角值', this.settings.homePillCorner))
+    params.push(this.pctParam('pill_opacity', $r('app.media.uia_ic_c_opacity'), '不透明度', this.settings.homePillOpacity))
+    const stroke = new CustomParam('pill_stroke_w', $r('app.media.uia_ic_c_stroke_width'), '描边粗细', KIND_SLIDER)
     stroke.min = 0
     stroke.max = HOME_STROKE_MAX
     stroke.unit = 'px'
     params.push(stroke)
-    params.push(this.pctParam('pill_stroke_o', $r('app.media.via_ic_c_stroke_opacity'), '描边不透明度', this.settings.homePillStrokeOpacity))
-    params.push(new CustomParam('pill_style', $r('app.media.via_ic_c_search_style'), '搜索框样式', KIND_ACTION))
+    params.push(this.pctParam('pill_stroke_o', $r('app.media.uia_ic_c_stroke_opacity'), '描边不透明度', this.settings.homePillStrokeOpacity))
+    params.push(new CustomParam('pill_style', $r('app.media.uia_ic_c_search_style'), '搜索框样式', KIND_ACTION))
     return params
   }
 
   private bgParams(): CustomParam[] {
     const params: CustomParam[] = []
-    params.push(new CustomParam('bg_color', $r('app.media.via_ic_c_opacity'), '背景色', KIND_ACTION))
-    params.push(new CustomParam('bg_image', $r('app.media.via_ic_c_adv_area'), '背景图片', KIND_ACTION))
-    params.push(new CustomParam('theme_color', $r('app.media.via_ic_c_fav_icon_color'), '主题色', KIND_ACTION))
-    const bgOpacity = this.pctParam('bg_opacity', $r('app.media.via_ic_c_opacity'), '不透明度', this.settings.homeBgOpacity)
+    params.push(new CustomParam('bg_color', $r('app.media.uia_ic_c_opacity'), '背景色', KIND_ACTION))
+    params.push(new CustomParam('bg_image', $r('app.media.uia_ic_c_adv_area'), '背景图片', KIND_ACTION))
+    params.push(new CustomParam('theme_color', $r('app.media.uia_ic_c_fav_icon_color'), '主题色', KIND_ACTION))
+    const bgOpacity = this.pctParam('bg_opacity', $r('app.media.uia_ic_c_opacity'), '不透明度', this.settings.homeBgOpacity)
     bgOpacity.max = 80
     params.push(bgOpacity)
     return params
@@ -221,21 +221,21 @@ export struct SettingsCustomPage {
 
   private favParams(): CustomParam[] {
     const params: CustomParam[] = []
-    params.push(this.dimParam('fav_width', $r('app.media.via_ic_c_fav_width'), '宽度', this.settings.homeFavWidth))
-    params.push(this.dimParam('fav_height', $r('app.media.via_ic_c_fav_height'), '高度', this.settings.homeFavHeight))
-    params.push(this.pctParam('fav_corner', $r('app.media.via_ic_c_fav_corner'), '圆角值', this.settings.homeFavCorner))
-    params.push(new CustomParam('fav_icon_style', $r('app.media.via_ic_c_fav_icon_style'), '图标样式', KIND_ACTION))
-    params.push(new CustomParam('fav_shadow', $r('app.media.via_ic_c_fav_icon_color'), '图标色彩', KIND_ACTION))
+    params.push(this.dimParam('fav_width', $r('app.media.uia_ic_c_fav_width'), '宽度', this.settings.homeFavWidth))
+    params.push(this.dimParam('fav_height', $r('app.media.uia_ic_c_fav_height'), '高度', this.settings.homeFavHeight))
+    params.push(this.pctParam('fav_corner', $r('app.media.uia_ic_c_fav_corner'), '圆角值', this.settings.homeFavCorner))
+    params.push(new CustomParam('fav_icon_style', $r('app.media.uia_ic_c_fav_icon_style'), '图标样式', KIND_ACTION))
+    params.push(new CustomParam('fav_shadow', $r('app.media.uia_ic_c_fav_icon_color'), '图标色彩', KIND_ACTION))
     return params
   }
 
   private advParams(): CustomParam[] {
     const params: CustomParam[] = []
-    params.push(new CustomParam('adv_effect', $r('app.media.via_ic_c_adv_effect'), '搜索框效果', KIND_ACTION))
-    params.push(new CustomParam('adv_area', $r('app.media.via_ic_c_adv_area'), '搜索区域', KIND_ACTION))
-    params.push(new CustomParam('adv_css', $r('app.media.via_ic_c_adv_css'), '自定义 CSS', KIND_ACTION))
-    params.push(new CustomParam('adv_clear', $r('app.media.via_ic_c_clear_icon'), '清除图标', KIND_ACTION))
-    params.push(new CustomParam('adv_reset', $r('app.media.via_ic_c_reset'), '重置', KIND_ACTION))
+    params.push(new CustomParam('adv_effect', $r('app.media.uia_ic_c_adv_effect'), '搜索框效果', KIND_ACTION))
+    params.push(new CustomParam('adv_area', $r('app.media.uia_ic_c_adv_area'), '搜索区域', KIND_ACTION))
+    params.push(new CustomParam('adv_css', $r('app.media.uia_ic_c_adv_css'), '自定义 CSS', KIND_ACTION))
+    params.push(new CustomParam('adv_clear', $r('app.media.uia_ic_c_clear_icon'), '清除图标', KIND_ACTION))
+    params.push(new CustomParam('adv_reset', $r('app.media.uia_ic_c_reset'), '重置', KIND_ACTION))
     return params
   }
 
@@ -518,7 +518,7 @@ export struct SettingsCustomPage {
               .borderRadius(6)
               .backgroundColor($r('app.color.surface'))
               .border({ width: 1, color: $r('app.color.fg_tertiary') })
-            ViaIcon({ icon: $r('app.media.via_ic_c_adv_area'), iconSize: 16, iconColor: $r('app.color.fg_secondary') })
+            UiaIcon({ icon: $r('app.media.uia_ic_c_adv_area'), iconSize: 16, iconColor: $r('app.color.fg_secondary') })
             if (this.settings.homeBgImage !== '') {
               Circle({ width: 40, height: 40 })
                 .fill(Color.Transparent)

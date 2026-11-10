@@ -39,46 +39,6 @@
       "supportDimensions": [
         "1*2"
       ]
-    },
-    {
-      "name": "darkSearchWidget",
-      "displayName": "$string:widget_black_solid_name",
-      "description": "$string:widget_black_solid_desc",
-      "src": "./ets/widget/pages/DarkSearchWidgetCard.ets",
-      "uiSyntax": "arkts",
-      "window": {
-        "designWidth": 720,
-        "autoDesignWidth": true
-      },
-      "isDynamic": false,
-      "colorMode": "auto",
-      "isDefault": false,
-      "updateEnabled": false,
-      "defaultDimension": "1*2",
-      "transparencyEnabled": true,
-      "supportDimensions": [
-        "1*2"
-      ]
-    },
-    {
-      "name": "darkTransparentSearchWidget",
-      "displayName": "$string:widget_black_transparent_name",
-      "description": "$string:widget_black_transparent_desc",
-      "src": "./ets/widget/pages/DarkTransparentSearchWidgetCard.ets",
-      "uiSyntax": "arkts",
-      "window": {
-        "designWidth": 720,
-        "autoDesignWidth": true
-      },
-      "isDynamic": false,
-      "colorMode": "auto",
-      "isDefault": false,
-      "updateEnabled": false,
-      "defaultDimension": "1*2",
-      "transparencyEnabled": true,
-      "supportDimensions": [
-        "1*2"
-      ]
     }
   ]
 }

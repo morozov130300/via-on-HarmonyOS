@@ -1,4 +1,4 @@
-// 原版 mark.via.common.widget.w0（+ z8.r3.g + x8.h.n/w）1:1 复刻：
+// 原版 mark.uia.common.widget.w0（+ z8.r3.g + x8.h.n/w）1:1 复刻：
 // - 2dp 圆角轨道：底色 #40808080（color a8），进度部分 accent（x8.h.j）
 // - 12dp accent 圆形滑块（x8.h.w：color accent、圆角 6dp、尺寸 12dp）
 // - setHighlightProgress 圆点：直径 = 滑块宽/3×2 = 8dp（w0.onDraw drawCircle 半径 thumb/3），

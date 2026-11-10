@@ -38,13 +38,13 @@ export class SslWhitelistStore {
     return SslWhitelistStore.instance
   }
 
-  // 复用全局 via_settings 偏好文件（与 AppSettings 同库，保证备份快照覆盖一致性）
+  // 复用全局 uia_settings 偏好文件（与 AppSettings 同库，保证备份快照覆盖一致性）
   async init(context: Context): Promise<void> {
     if (this.store !== null) {
       return
     }
     try {
-      this.store = await preferences.getPreferences(context, 'via_settings')
+      this.store = await preferences.getPreferences(context, 'uia_settings')
       const value = await this.store.get(SSL_MASK_KEY, 0)
       if (typeof value === 'number') {
         this.mask = value

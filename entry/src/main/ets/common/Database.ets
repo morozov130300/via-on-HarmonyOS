@@ -43,7 +43,7 @@ export class BrowserDb {
       return
     }
     const config: relationalStore.StoreConfig = {
-      name: 'via.db',
+      name: 'uia.db',
       securityLevel: relationalStore.SecurityLevel.S1
     }
     this.rdb = await relationalStore.getRdbStore(context, config)

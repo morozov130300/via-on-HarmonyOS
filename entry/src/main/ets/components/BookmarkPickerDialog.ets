@@ -3,7 +3,7 @@ import { display, window } from '@kit.ArkUI'
 import { BookmarkRec, BookmarkFolderRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { dialogTransition } from '../common/Transitions'
-import { ViaIcon } from './ViaIcon'
+import { UiaIcon } from './UiaIcon'
 
 // 原版 a8/k.T1()（a8/k.java:197-206）：
 //   int iMin  = min(g6.y.p(I())*4/5, g6.y.h(I(), 450.0f));   // 宽
@@ -218,9 +218,9 @@ export struct BookmarkPickerDialog {
               Row({ space: 12 }) {
                 // 原版 cb/a 行：文件夹用文件夹图标（x7.o.f13721e0），书签用站点 favicon
                 if (entry.isFolder) {
-                  ViaIcon({ icon: $r('app.media.via_ic_bookmark'), iconSize: 22, iconColor: $r('app.color.fg') })
+                  UiaIcon({ icon: $r('app.media.uia_ic_bookmark'), iconSize: 22, iconColor: $r('app.color.fg') })
                 } else {
-                  ViaIcon({ icon: $r('app.media.via_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
+                  UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
                 }
                 Column({ space: 2 }) {
                   Text(entry.title.trim() === '' ? '无标题' : entry.title)

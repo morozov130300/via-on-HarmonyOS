@@ -2,7 +2,7 @@ import { HistoryRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { AppIcon } from '../components/AppIcon'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { UiInsets } from '../common/Immersive'
@@ -171,7 +171,7 @@ export struct HistoryPage {
       }
       Column() {
         if (this.faviconFailed[item.id] === true) {
-          ViaIcon({ icon: $r('app.media.via_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
+          UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
         } else {
           Image(this.faviconUrl(item.url))
             .width(22)

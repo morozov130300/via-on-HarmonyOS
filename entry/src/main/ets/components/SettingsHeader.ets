@@ -1,4 +1,4 @@
-import { ViaIcon } from './ViaIcon'
+import { UiaIcon } from './UiaIcon'
 import { UiInsets } from '../common/Immersive'
 
 @ComponentV2
@@ -25,7 +25,7 @@ export struct SettingsHeader {
     Column() {
       Row() {
         Stack({ alignContent: Alignment.Center }) {
-          ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+          UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
         }
           .width(48)
           .height(52)
@@ -50,7 +50,7 @@ export struct SettingsHeader {
 
         if (this.rightIcon2 !== null) {
           Stack({ alignContent: Alignment.Center }) {
-            ViaIcon({ icon: this.rightIcon2, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+            UiaIcon({ icon: this.rightIcon2, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
           }
             .width(48)
             .height(52)
@@ -75,7 +75,7 @@ export struct SettingsHeader {
         }
         if (this.rightIcon !== null) {
           Stack({ alignContent: Alignment.Center }) {
-            ViaIcon({ icon: this.rightIcon, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+            UiaIcon({ icon: this.rightIcon, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
           }
             .width(48)
             .height(52)

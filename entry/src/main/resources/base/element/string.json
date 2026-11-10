@@ -1911,6 +1911,10 @@
     {
       "name": "translate_exit",
       "value": "退出"
+    },
+    {
+      "name": "scripts_for_host",
+      "value": "作用于 %1$s 的脚本"
     }
   ]
 }

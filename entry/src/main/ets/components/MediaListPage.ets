@@ -3,7 +3,7 @@ import { DownloadCoordinator } from '../common/Downloads'
 import { AppSettings } from '../common/Settings'
 import { common, Want } from '@kit.AbilityKit'
 import { SettingsHeader } from './SettingsHeader'
-import { ViaIcon } from './ViaIcon'
+import { UiaIcon } from './UiaIcon'
 
 @ComponentV2
 export struct MediaListPage {
@@ -36,7 +36,7 @@ export struct MediaListPage {
 
       if (this.mediaUrls.length === 0) {
         Column({ space: 10 }) {
-          ViaIcon({ icon: $r('app.media.via_ic_download'), iconSize: 40, iconColor: $r('app.color.fg_tertiary') })
+          UiaIcon({ icon: $r('app.media.uia_ic_download'), iconSize: 40, iconColor: $r('app.color.fg_tertiary') })
           Text('该网站不支持资源嗅探')
             .fontSize(14)
             .fontColor($r('app.color.fg_secondary'))
@@ -74,7 +74,7 @@ export struct MediaListPage {
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
 
-                ViaIcon({ icon: $r('app.media.via_ic_download'), iconSize: 20, iconColor: $r('app.color.icon') })
+                UiaIcon({ icon: $r('app.media.uia_ic_download'), iconSize: 20, iconColor: $r('app.color.icon') })
                   .width(36)
                   .height(36)
                   .onClick(() => {
@@ -146,7 +146,7 @@ export struct MediaListPage {
   }
 
   private download(url: string): void {
-    // 原版媒体下载与链接下载同走确认弹层（mark/via/download/m.java）
+    // 原版媒体下载与链接下载同走确认弹层（mark/uia/download/m.java）
     DownloadCoordinator.getInstance().requestUrlDownload(url, '', '')
   }
 

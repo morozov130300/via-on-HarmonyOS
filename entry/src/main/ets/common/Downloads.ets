@@ -6,7 +6,7 @@ import { DownloadRec } from './Types'
 import { DownloadEngine } from './DownloadEngine'
 import { DownloadNotifier } from './DownloadNotifier'
 
-// 原版 mark/via/download/m.java：下载前确认弹层（可编辑文件名 + 文件大小 + 取消/下载）
+// 原版 mark/uia/download/m.java：下载前确认弹层（可编辑文件名 + 文件大小 + 取消/下载）
 export const DOWNLOAD_CONFIRM_EVENT_ID: number = 10003
 
 interface PendingWebDownload {
@@ -189,7 +189,7 @@ export class DownloadCoordinator {
       })
   }
 
-  // ===== 原版下载状态机（mark/via/download/c）：暂停/继续/取消/重新下载 =====
+  // ===== 原版下载状态机（mark/uia/download/c）：暂停/继续/取消/重新下载 =====
   // 网页内下载与下载链接统一走自研引擎（state>0）；state=0 旧记录无运行态
 
   pauseDownload(rec: DownloadRec): void {

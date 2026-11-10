@@ -2,7 +2,7 @@ import { http } from '@kit.NetworkKit'
 import { bundleManager } from '@kit.AbilityKit'
 
 // 原版 y8/h.k()：play flavor 更新配置地址（c0.i() 为 play 时取 latest_play.json）
-const UPDATE_CONFIG_URL: string = 'https://res.viayoo.com/v1/latest_play.json'
+const UPDATE_CONFIG_URL: string = 'https://res.uiayoo.com/v1/latest_play.json'
 // 原版 y8/h.a.i()：version > 20260920 才视为有效下发
 const MIN_EFFECTIVE_VERSION: number = 20260920
 

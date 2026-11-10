@@ -1154,7 +1154,7 @@
     },
     {
       "name": "image_mode_wifi",
-      "value": "Show images only via Wi-Fi"
+      "value": "Show images only over Wi-Fi"
     },
     {
       "name": "report_reason_distracting",
@@ -1911,6 +1911,10 @@
     {
       "name": "translate_exit",
       "value": "Exit"
+    },
+    {
+      "name": "scripts_for_host",
+      "value": "Scripts for %1$s"
     }
   ]
 }

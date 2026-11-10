@@ -11,7 +11,7 @@ import { SettingRadioRow } from '../components/SettingRows'
 // 列表 = 首项默认（u.fd「默认」）+ mb.b 皮肤库（skins 目录，按修改时间降序）；
 // 单击 i3 → t3：写 skin 键 + 弹「皮肤已变更」确认框（u.uc/u.mb/u.I2 重启应用/R.string.cancel）→ 确认 z8.f.k 冷重启；
 // 长按非默认 k3 → 删除确认框（u.x「删除」/u.g3「你确定删除 %1$s 吗？」）→ g3：删目录，删中当前则 t3("")；
-// appbar 右侧 + 按钮（drawable ay / via_ic_add）→ 文件选择器（application/zip），失败 toast u.E7「加载皮肤失败」
+// appbar 右侧 + 按钮（drawable ay / uia_ic_add）→ 文件选择器（application/zip），失败 toast u.E7「加载皮肤失败」
 @ComponentV2
 export struct SkinPage {
   private settings: AppSettings = AppSettings.getInstance()
@@ -34,7 +34,7 @@ export struct SkinPage {
   private bindAppBar(): void {
     AppBar.show({
       title: '皮肤',
-      rightIcon: $r('app.media.via_ic_add'),
+      rightIcon: $r('app.media.uia_ic_add'),
       onBack: () => {
         this.navPathStack.pop()
       },

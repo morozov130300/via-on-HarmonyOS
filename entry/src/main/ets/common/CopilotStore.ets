@@ -547,7 +547,7 @@ export class CopilotStore {
   // 库中已有数据则跳过对应部分，不删除任何旧偏好
   private async migrateLegacy(context: Context): Promise<void> {
     try {
-      const prefs = await preferences.getPreferences(context, 'via_settings')
+      const prefs = await preferences.getPreferences(context, 'uia_settings')
       const existingSuggestions = await this.suggestions()
       if (existingSuggestions.length === 0) {
         const raw = await prefs.get('aiPrompts', '[]')

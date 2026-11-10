@@ -8,7 +8,7 @@ import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { detectBarcode, scanBarcode } from '@kit.ScanKit'
 import { fileIo } from '@kit.CoreFileKit'
 import { TabItem, globMatches, parseJsonArray, SiteSetting, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
-import { computeDialogWidthVp } from './ViaDialogCard'
+import { computeDialogWidthVp } from './UiaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker, buildBlockedPageHtml, TYPE_ALL_MASK, TYPE_DOCUMENT } from '../common/AdBlock'
@@ -25,8 +25,8 @@ import { VideoOverlayState } from './VideoPlayerOverlay'
 import { TranslateState } from './TranslatePanel'
 import { MARK_AD_INJECT_JS } from './MenuSheet'
 import { AppIcon } from './AppIcon'
-// 原版横滑指示层图标（via_ic_back / via_ic_forward，rotate180 复用）
-import { ViaIcon } from './ViaIcon'
+// 原版横滑指示层图标（uia_ic_back / uia_ic_forward，rotate180 复用）
+import { UiaIcon } from './UiaIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 // 原版 hb/g4 + w9/k.G2()：ignoredsslwarning 位掩码（SSL 证书警告忽略白名单）
@@ -43,16 +43,16 @@ const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
 ])
 
 // 原版 i6/r.java 用户脚本桥 1:1：runAt 1=文档开始/2=DOMContentLoaded/4=load，
-// 经 window.via.postMessage({action:101,runAt,from}) 回传主线程分发
+// 经 window.uia.postMessage({action:101,runAt,from}) 回传主线程分发
 const USER_SCRIPT_BRIDGE_JS: string = '(function(){' +
-  'var e=function(r){try{window.via.postMessage(JSON.stringify({action:101,runAt:r,from:location.href}))}catch(x){}};' +
+  'var e=function(r){try{window.uia.postMessage(JSON.stringify({action:101,runAt:r,from:location.href}))}catch(x){}};' +
   'new MutationObserver(function(){e(1);this.disconnect()}).observe(document.documentElement,{childList:true,subtree:true});' +
   'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){e(2)})}else{e(2)}' +
   'if(document.readyState==="complete"){e(4)}else{window.addEventListener("load",function(){e(4)})}' +
   '})()'
 
-// 原版 c8/ta.a 1:1：@font-face ViaCustomFont + body 字体族 CSS（排除图标），__PATH__ 运行时替换
-const CUSTOM_FONT_JS: string = '(function(){var i=\'via_custom_font\';var f=\'@font-face{font-family:ViaCustomFont;font-display:swap;src:url("__PATH__")}body,body :not(.bi):not(.bx):not(.bxr):not(.docon):not(.fa):not(.fab):not(.fad):not(.fal):not(.far):not(.fas):not(.glyphicon):not(.icon):not(.la):not(.las):not(.material-icons):not(.material-icons-outlined):not(.material-icons-round):not(.material-icons-sharp):not(.material-icons-two-tone):not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp):not(.md):not(.typcn):not(.uni-btn-icon):not(.uni-icons):not(ion-icon):not(mat-icon):not(maticon):not(mdui-icon):not(i[data-feather]):not(span[data-feather]):not(i[class^="ri-"]):not(span[class^="ri-"]):not([class*="fa-"]):not([class*="mce-i-"]):not([class*=FONT]):not([class*=Font]):not([class*=ICON]):not([class*=Icon]):not([class*=arrow]):not([class*=font]):not([class*=icon]):not([class*=player]){font-family:ViaCustomFont,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important}\';var s=document.getElementById(i);if(s){s.innerHTML=f}else{s=document.createElement(\'style\');s.id=i;s.type=\'text/css\';s.innerHTML=f;document.head.appendChild(s)}})();'
+// 原版 c8/ta.a 1:1：@font-face UiaCustomFont + body 字体族 CSS（排除图标），__PATH__ 运行时替换
+const CUSTOM_FONT_JS: string = '(function(){var i=\'uia_custom_font\';var f=\'@font-face{font-family:UiaCustomFont;font-display:swap;src:url("__PATH__")}body,body :not(.bi):not(.bx):not(.bxr):not(.docon):not(.fa):not(.fab):not(.fad):not(.fal):not(.far):not(.fas):not(.glyphicon):not(.icon):not(.la):not(.las):not(.material-icons):not(.material-icons-outlined):not(.material-icons-round):not(.material-icons-sharp):not(.material-icons-two-tone):not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp):not(.md):not(.typcn):not(.uni-btn-icon):not(.uni-icons):not(ion-icon):not(mat-icon):not(maticon):not(mdui-icon):not(i[data-feather]):not(span[data-feather]):not(i[class^="ri-"]):not(span[class^="ri-"]):not([class*="fa-"]):not([class*="mce-i-"]):not([class*=FONT]):not([class*=Font]):not([class*=ICON]):not([class*=Icon]):not([class*=arrow]):not([class*=font]):not([class*=icon]):not([class*=player]){font-family:UiaCustomFont,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important}\';var s=document.getElementById(i);if(s){s.innerHTML=f}else{s=document.createElement(\'style\');s.id=i;s.type=\'text/css\';s.innerHTML=f;document.head.appendChild(s)}})();'
 
 interface ScriptRunMsg {
   action: number
@@ -62,9 +62,9 @@ interface ScriptRunMsg {
 
 // 划词菜单自定义项 id（过滤系统 TRANSLATE 项后追加）：
 // 搜索=划词搜索（k6.C → Ua(str,false,true)）、查找=页内查找（k6.C → ob）、翻译=划词翻译面板
-const EDIT_MENU_ID_VIA_SEARCH: string = 'via_search'
-const EDIT_MENU_ID_VIA_FIND: string = 'via_find'
-const EDIT_MENU_ID_VIA_TRANSLATE: string = 'via_translate'
+const EDIT_MENU_ID_UIA_SEARCH: string = 'uia_search'
+const EDIT_MENU_ID_UIA_FIND: string = 'uia_find'
+const EDIT_MENU_ID_UIA_TRANSLATE: string = 'uia_translate'
 
 // 原版 k6.Qa（k6.java:5651）以图搜图引擎表：12 引擎名称与 URL 模板 1:1（k6.k6 分发）
 class ImageSearchEngine {
@@ -108,8 +108,8 @@ const PICTURE_MODE_JS: string =
   '0==d?alert("无图片"):(a.push(\'<script>var viewer = new Viewer(document.getElementById("images"), {toolbar: {zoomIn: true, zoomOut: true, oneToOne: true, reset: true, prev: true, next: true, rotateLeft: true\'),a.push("},});\\x3c/script>"),a.push("</body></html>"),b=window.open(""),' +
   'b.document.write(a.join("")),b.focus())})();'
 
-// window.via 桥对象（k6:1487 postMessage 通道）
-class ViaBridge {
+// window.uia 桥对象（k6:1487 postMessage 通道）
+class UiaBridge {
   handler: (msg: string) => void = (): void => {
   }
 
@@ -127,8 +127,8 @@ export struct TabWeb {
   private tabStore: TabStore = TabStore.getInstance()
   @Local privacyScripts: Array<ScriptItem> = []
   private schemeHandler: webview.WebSchemeHandler = new webview.WebSchemeHandler()
-  private viaBridge: ViaBridge = new ViaBridge()
-  // 原版 o5/a：window.via_gm GM_* 分派桥（每 tab 一实例，宿主回调 1:1 k6.s）
+  private uiaBridge: UiaBridge = new UiaBridge()
+  // 原版 o5/a：window.uia_gm GM_* 分派桥（每 tab 一实例，宿主回调 1:1 k6.s）
   private gmBridge: GmBridge = new GmBridge()
   // 原版 Shell.dispatchKeyEvent → k6.n8：Web 获焦时按键先经宿主分发再进网页（onInterceptKeyEvent 等价层）
   @Param onPcKey: (event: KeyEvent) => boolean = (_event: KeyEvent): boolean => false
@@ -143,14 +143,14 @@ export struct TabWeb {
   // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
-  // —— 原版 GestureTouchEvent 横滑前进/后退（mark/via/common/widget/GestureTouchEvent.java 对齐）——
+  // —— 原版 GestureTouchEvent 横滑前进/后退（mark/uia/common/widget/GestureTouchEvent.java 对齐）——
   // ★ 载体：原版 c8/k6.java:4104 把状态机绑在「独立指示视图」f2584o0.f2940p（c8/y7.java:136
   //   的 ImageView，72dp 宽 × 60dp 高、四边 20dp 内边距、圆角白底 drawable b_、
   //   elevation 12dp、CENTER_VERTICAL + alignParentLeft；marginStart = -73dp 初始藏于左侧屏外）。
   //   m()（377-388）对**该 ImageView** setTranslationX，e()（248）对**该 ImageView**
   //   ALPHA 1→0；网页视图 WebView 全程不动、不透明度不变。
   //   早期实现把 translate/opacity 挂在 Web 上（整页跟着动），与原版不符，此处改为独立指示层。
-  //   指示图标：i10==1 后退 → drawable b2（via_ic_back）、i10==2 前进 → a3（rotate180 的 b2）。
+  //   指示图标：i10==1 后退 → drawable b2（uia_ic_back）、i10==2 前进 → a3（rotate180 的 b2）。
   // 原版 y7.f()（70-77）setVisibility(INVISIBLE=4)：指示层无手势时不可见
   @Local swipeIndicatorVisible: boolean = false
   @Local swipeIndicatorShift: number = 0
@@ -184,8 +184,8 @@ export struct TabWeb {
   private geoPageOrigin: string = ''
 
   aboutToAppear(): void {
-    this.viaBridge.handler = (msg: string): void => {
-      this.onViaMessage(msg)
+    this.uiaBridge.handler = (msg: string): void => {
+      this.onUiaMessage(msg)
     }
     // k6.s 宿主回调接线
     this.gmBridge.onSetClipboard = (data: string, type: string): void => {
@@ -256,15 +256,15 @@ export struct TabWeb {
     }
     result.push({
       content: $r('app.string.search'),
-      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH)
+      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_SEARCH)
     })
     result.push({
       content: '查找',
-      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND)
+      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_FIND)
     })
     result.push({
       content: $r('app.string.translate'),
-      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE)
+      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_TRANSLATE)
     })
     return result
   }
@@ -301,13 +301,13 @@ export struct TabWeb {
   }
 
   private onEditMenuItemClick(menuItem: TextMenuItem, range: TextRange): boolean {
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_SEARCH))) {
       this.fetchSelection((text: string): void => {
         this.searchSelection(text)
       })
       return true
     }
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_FIND))) {
       // 原版 k6.C id=f4824g → ob(str)：页内查找（预填划词）。
       // ArkTS FindBar 无法从本组件拉起，直接以同一 searchAllAsync 管线执行查找
       this.fetchSelection((text: string): void => {
@@ -319,7 +319,7 @@ export struct TabWeb {
       })
       return true
     }
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_TRANSLATE))) {
       this.fetchSelection((text: string): void => {
         TranslateState.getInstance().open(text)
       })
@@ -345,10 +345,10 @@ export struct TabWeb {
         .darkMode(this.settings.nightCss ? WebDarkMode.On : WebDarkMode.Off)
         .forceDarkAccess(this.settings.nightCss)
         .runJavaScriptOnDocumentStart(this.privacyScripts)
-        // 原版 k6:1487 registerJavaScriptProxy：window.via 桥
+        // 原版 k6:1487 registerJavaScriptProxy：window.uia 桥
         .javaScriptProxy({
-          object: this.viaBridge,
-          name: 'via',
+          object: this.uiaBridge,
+          name: 'uia',
           methodList: ['postMessage'],
           controller: this.tab.controller
         })
@@ -391,13 +391,13 @@ export struct TabWeb {
         .onControllerAttached(() => {
           this.setupSchemeHandler()
           this.applyAdvancedSettings()
-          // 原版 k6:1487 registerJavaScriptProxy 之外的第二个桥：window.via_gm（o5/a.call）
-          // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，via_gm 走 controller 注册
+          // 原版 k6:1487 registerJavaScriptProxy 之外的第二个桥：window.uia_gm（o5/a.call）
+          // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，uia_gm 走 controller 注册
           try {
-            this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'via_gm', ['call'])
+            this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'uia_gm', ['call'])
             this.tab.controller.refresh()
           } catch (error) {
-            console.error('register via_gm proxy failed')
+            console.error('register uia_gm proxy failed')
           }
           if (this.tab.initialUrl !== '') {
             try {
@@ -451,7 +451,7 @@ export struct TabWeb {
         // 原版 C9「标记广告」回传通道：注入的选择器经 console 回传广告域名，
         // 命中后加入自定义拦截规则并刷新页面
         .onConsole((event: OnConsoleEvent) => {
-          const prefix = 'via_mark_ad:'
+          const prefix = 'uia_mark_ad:'
           const msg: string = event.message.getMessage()
           if (msg.indexOf(prefix) === 0) {
             const domain = msg.substring(prefix.length).trim().toLowerCase()
@@ -775,12 +775,12 @@ export struct TabWeb {
       //   .y(g6.f.d(x7.n.f13700s))   → marginStart = dimen "ah" = -73dp（初始完全藏于左侧屏外）
       //   .d(x7.o.N1)                → background = drawable "b_"（96x96 圆角底色，见下 tint）
       //   y7.f()（70-77）：setVisibility(INVISIBLE=4)、setColorFilter(-1 白)、API21+ elevation 12dp
-      // 图标：i10==1 后退用 drawable b2（via_ic_back），i10==2 前进用 a3（= rotate180 的 b2）
+      // 图标：i10==1 后退用 drawable b2（uia_ic_back），i10==2 前进用 a3（= rotate180 的 b2）
       // 位移由 m()/o() 驱动：m() 开局 setTranslationX(f9565t)，o() 每次 +dx*0.8 并限幅 ±f9563r
       if (this.settings.swipeSwitchTab && this.swipeIndicatorVisible) {
         Row() {
-          ViaIcon({
-            icon: this.swipeIndicatorForward ? $r('app.media.via_ic_forward') : $r('app.media.via_ic_back'),
+          UiaIcon({
+            icon: this.swipeIndicatorForward ? $r('app.media.uia_ic_forward') : $r('app.media.uia_ic_back'),
             iconSize: 24,
             iconColor: '#FFFFFF'
           })
@@ -1373,7 +1373,7 @@ export struct TabWeb {
     this.swipeIndicatorVisible = false
   }
 
-  // 松手（GestureTouchEvent.h → e()）：mark/via/common/widget/GestureTouchEvent.java:239-255
+  // 松手（GestureTouchEvent.h → e()）：mark/uia/common/widget/GestureTouchEvent.java:239-255
   //   int iAbs = |f9564s|（已滑位移）；int i10 = f9563r（阈值 = 宽度*4/5）
   //   未过阈值：fAbs = |位移| / 阈值，TRANSLATION_X 回到 f9565t（复位基准）
   //   过阈值：  ALPHA 1→0，fAbs = 1.0f；★同一语句块内立即调 h(位移<=0 ? 2 : 1) 触发导航
@@ -1846,7 +1846,7 @@ export struct TabWeb {
     }).then((resp: http.HttpResponse) => {
       client.destroy()
       const data = resp.result instanceof ArrayBuffer ? resp.result : new ArrayBuffer(0)
-      const path = `${context.cacheDir}/via_qr_image`
+      const path = `${context.cacheDir}/uia_qr_image`
       const file = fileIo.openSync(path,
         fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
       fileIo.writeSync(file.fd, data)
@@ -1899,7 +1899,7 @@ export struct TabWeb {
   }
 
   private downloadLink(link: string): void {
-    // 原版下载链接与网页下载同走确认弹层（mark/via/download/m.java）
+    // 原版下载链接与网页下载同走确认弹层（mark/uia/download/m.java）
     const pageUa = this.settings.uaForHost(hostOf(this.tab.url)) ?? ''
     DownloadCoordinator.getInstance().requestUrlDownload(link, this.tab.url, pageUa)
   }
@@ -1921,9 +1921,9 @@ export struct TabWeb {
     })
   }
 
-  // 原版 na.E0()：元素隐藏 CSS（via_inject_blocker.css）
+  // 原版 na.E0()：元素隐藏 CSS（uia_inject_blocker.css）
   // 原版 k6.Ja(i10=1):4573：b1(url) 命中 wlb 白名单（youku/iqiyi/mgtv/qq）时
-  // 跳过 m8.b.b（via_inject_blocker.css 注入豁免），视频站不被元素隐藏 CSS 干扰
+  // 跳过 m8.b.b（uia_inject_blocker.css 注入豁免），视频站不被元素隐藏 CSS 干扰
   private injectBlockerCss(pageUrl: string): void {
     if (RemoteConfig.getInstance().isInWlb(pageUrl)) {
       return
@@ -2008,7 +2008,7 @@ export struct TabWeb {
       if (!this.settings.readerAuto) {
         return
       }
-      // 原版 w.i state 5：用户已确认自动进入（localStorage.__via_reader_enabled__）
+      // 原版 w.i state 5：用户已确认自动进入（localStorage.__uia_reader_enabled__）
       return Reader.checkState(this.tab).then((state: number) => {
         if (state === 5) {
           // 原版 Q4 state 5 → B8()：wld 命中 → g6.n.q(O1)「不支持该网站」，不进入阅读
@@ -2199,8 +2199,8 @@ export struct TabWeb {
     return mime !== '' ? mime : 'text/html'
   }
 
-  // k6:1487-1512：window.via.postMessage action 101 → 主线程分发注入
-  private onViaMessage(msg: string): void {
+  // k6:1487-1512：window.uia.postMessage action 101 → 主线程分发注入
+  private onUiaMessage(msg: string): void {
     try {
       const parsed = JSON.parse(msg) as ScriptRunMsg
       if (parsed.action === 101) {
