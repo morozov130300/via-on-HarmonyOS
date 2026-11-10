@@ -765,10 +765,6 @@
       "value": "高级"
     },
     {
-      "name": "script",
-      "value": "脚本"
-    },
-    {
       "name": "sync",
       "value": "同步"
     },
@@ -1035,22 +1031,6 @@
     {
       "name": "widget_white_transparent_desc",
       "value": "透明底 + 白色描边"
-    },
-    {
-      "name": "widget_black_solid_name",
-      "value": "Uia · 黑色实心"
-    },
-    {
-      "name": "widget_black_solid_desc",
-      "value": "深色搜索框"
-    },
-    {
-      "name": "widget_black_transparent_name",
-      "value": "Uia · 黑色透明"
-    },
-    {
-      "name": "widget_black_transparent_desc",
-      "value": "透明底 + 深色描边"
     },
     {
       "name": "shortcut_scan_qr",

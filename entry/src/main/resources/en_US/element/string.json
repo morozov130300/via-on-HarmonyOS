@@ -765,10 +765,6 @@
       "value": "Advanced"
     },
     {
-      "name": "script",
-      "value": "Scripts"
-    },
-    {
       "name": "sync",
       "value": "Sync"
     },
@@ -1035,22 +1031,6 @@
     {
       "name": "widget_white_transparent_desc",
       "value": "Transparent with white border"
-    },
-    {
-      "name": "widget_black_solid_name",
-      "value": "Uia · Black solid"
-    },
-    {
-      "name": "widget_black_solid_desc",
-      "value": "Dark search box"
-    },
-    {
-      "name": "widget_black_transparent_name",
-      "value": "Uia · Black transparent"
-    },
-    {
-      "name": "widget_black_transparent_desc",
-      "value": "Transparent with dark border"
     },
     {
       "name": "shortcut_scan_qr",
