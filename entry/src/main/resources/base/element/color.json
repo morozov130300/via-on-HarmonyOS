@@ -219,6 +219,26 @@
     {
       "name": "translate_divider",
       "value": "#30EEEEEE"
+    },
+    {
+      "name": "hc_4c6fff",
+      "value": "#4C6FFF"
+    },
+    {
+      "name": "hc_8a8a8e",
+      "value": "#8A8A8E"
+    },
+    {
+      "name": "hc_40808080",
+      "value": "#40808080"
+    },
+    {
+      "name": "hc_33000000",
+      "value": "#33000000"
+    },
+    {
+      "name": "hc_fafafa",
+      "value": "#FAFAFA"
     }
   ]
 }
