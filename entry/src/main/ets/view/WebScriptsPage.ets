@@ -33,15 +33,15 @@ export struct WebScriptsPage {
       const ctx = this.getUIContext().getHostContext()
       if (ctx !== undefined) {
         if (host === '') {
-          return ctx.resourceManager.getStringSync($r('app.string.script').id)
+          return ctx.resourceManager.getStringSync($r('app.string.scripts').id)
         }
         const tpl = ctx.resourceManager.getStringSync($r('app.string.scripts_for_host').id)
         return tpl.replace('%1$s', host).replace('%s', host)
       }
     } catch (error) {
-      // 资源不可用时回退中文字面量，保证标题不为空
+      // 资源不可用时回退：优先用已有 scripts 键，仍失败则返回 host 本身，避免中文硬编码
     }
-    return host !== '' ? `作用于 ${host} 的脚本` : '脚本'
+    return host !== '' ? host : ''
   }
 
   // ua.y c0.C(url)（p5.G）：匹配当前网址的脚本列表（id>=0，不筛启用位）
