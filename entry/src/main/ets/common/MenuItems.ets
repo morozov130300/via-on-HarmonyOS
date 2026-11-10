@@ -1,5 +1,5 @@
 // 菜单条目共享定义：定制菜单编辑页与播放端 MenuSheet 两侧共用同一套 id/图标/文案。
-// 默认顺序按原版 Via 7.4.0 反编译结果对齐（w9/k.java t0() 默认数组，z8.c0.f() 在本包恒为 true）：
+// 默认顺序按原版 Uia 7.4.0 反编译结果对齐（w9/k.java t0() 默认数组，z8.c0.f() 在本包恒为 true）：
 // 默认 30 项（1..20 + 25,34,33,39,30,28,23,29,41,35，其中下标 28 由 31→41 替换）=
 // 夜间模式/书签/历史/下载/隐身 + 分享/添加书签/电脑模式/工具箱/设置 +
 // 页内查找/保存/离线网页/翻译/源码 + 全屏/有图模式/资源嗅探/浏览器标识/网络日志 +
@@ -173,90 +173,90 @@ export function menuSkinIconName(id: string): string {
   }
 }
 
-// 图标为原版 Via 7.4.0 APK 反解资源（resources.arsc drawable → r/j/<name>.png，
-// 原样拷贝至 media/via_menu_<id>.png，未做任何压缩/裁剪/转码）
+// 图标为原版 Uia 7.4.0 APK 反解资源（resources.arsc drawable → r/j/<name>.png，
+// 原样拷贝至 media/uia_menu_<id>.png，未做任何压缩/裁剪/转码）
 export function menuIcon(id: string): Resource {
   switch (id) {
     case 'night_mode':
-      return $r('app.media.via_menu_night_mode')
+      return $r('app.media.uia_menu_night_mode')
     case 'bookmarks':
-      return $r('app.media.via_menu_bookmarks')
+      return $r('app.media.uia_menu_bookmarks')
     case 'history':
-      return $r('app.media.via_menu_history')
+      return $r('app.media.uia_menu_history')
     case 'downloads':
-      return $r('app.media.via_menu_downloads')
+      return $r('app.media.uia_menu_downloads')
     case 'incognito':
-      return $r('app.media.via_menu_incognito')
+      return $r('app.media.uia_menu_incognito')
     case 'share':
-      return $r('app.media.via_menu_share')
+      return $r('app.media.uia_menu_share')
     case 'add_bookmark':
-      return $r('app.media.via_menu_add_bookmark')
+      return $r('app.media.uia_menu_add_bookmark')
     case 'pc_mode':
-      return $r('app.media.via_menu_pc_mode')
+      return $r('app.media.uia_menu_pc_mode')
     case 'save':
-      return $r('app.media.via_menu_save')
+      return $r('app.media.uia_menu_save')
     case 'toolbox':
-      return $r('app.media.via_menu_toolbox')
+      return $r('app.media.uia_menu_toolbox')
     case 'settings':
-      return $r('app.media.via_menu_settings')
+      return $r('app.media.uia_menu_settings')
     case 'find':
-      return $r('app.media.via_menu_find')
+      return $r('app.media.uia_menu_find')
     case 'offline':
-      return $r('app.media.via_menu_offline')
+      return $r('app.media.uia_menu_offline')
     case 'translate':
-      return $r('app.media.via_menu_translate')
+      return $r('app.media.uia_menu_translate')
     case 'view_source':
-      return $r('app.media.via_menu_view_source')
+      return $r('app.media.uia_menu_view_source')
     case 'fullscreen':
-      return $r('app.media.via_menu_fullscreen')
+      return $r('app.media.uia_menu_fullscreen')
     case 'image_mode':
-      return $r('app.media.via_menu_image_mode')
+      return $r('app.media.uia_menu_image_mode')
     case 'res_sniffer':
-      return $r('app.media.via_menu_res_sniffer')
+      return $r('app.media.uia_menu_res_sniffer')
     case 'ua':
-      return $r('app.media.via_menu_ua')
+      return $r('app.media.uia_menu_ua')
     case 'netlog':
-      return $r('app.media.via_menu_netlog')
+      return $r('app.media.uia_menu_netlog')
     case 'scan_qr':
-      return $r('app.media.via_menu_scan_qr')
+      return $r('app.media.uia_menu_scan_qr')
     case 'add_to_desktop':
-      return $r('app.media.via_menu_add_to_desktop')
+      return $r('app.media.uia_menu_add_to_desktop')
     case 'read_aloud':
-      return $r('app.media.via_menu_read_aloud')
+      return $r('app.media.uia_menu_read_aloud')
     case 'ai':
-      return $r('app.media.via_menu_ai')
+      return $r('app.media.uia_menu_ai')
     case 'screen_orientation':
-      return $r('app.media.via_menu_screen_orientation')
+      return $r('app.media.uia_menu_screen_orientation')
     case 'adblock':
-      return $r('app.media.via_menu_adblock')
+      return $r('app.media.uia_menu_adblock')
     case 'mark_ad':
-      return $r('app.media.via_menu_mark_ad')
+      return $r('app.media.uia_menu_mark_ad')
     case 'font_size':
-      return $r('app.media.via_menu_font_size')
+      return $r('app.media.uia_menu_font_size')
     case 'report_site':
-      return $r('app.media.via_menu_report_site')
+      return $r('app.media.uia_menu_report_site')
     case 'customize_menu':
-      return $r('app.media.via_menu_customize_menu')
+      return $r('app.media.uia_menu_customize_menu')
     case 'refresh_page':
-      return $r('app.media.via_menu_refresh_page')
+      return $r('app.media.uia_menu_refresh_page')
     case 'site_settings':
-      return $r('app.media.via_menu_site_settings')
+      return $r('app.media.uia_menu_site_settings')
     case 'script':
-      return $r('app.media.via_menu_script')
+      return $r('app.media.uia_menu_script')
     case 'clear_data':
-      return $r('app.media.via_menu_clear_data')
+      return $r('app.media.uia_menu_clear_data')
     case 'print':
-      return $r('app.media.via_menu_print')
+      return $r('app.media.uia_menu_print')
     case 'reading_mode':
-      return $r('app.media.via_menu_reading_mode')
+      return $r('app.media.uia_menu_reading_mode')
     case 'open_with':
-      return $r('app.media.via_menu_open_with')
+      return $r('app.media.uia_menu_open_with')
     case 'game_mode':
-      return $r('app.media.via_menu_game_mode')
+      return $r('app.media.uia_menu_game_mode')
     case 'add_home_fav':
-      return $r('app.media.via_menu_add_home_fav')
+      return $r('app.media.uia_menu_add_home_fav')
     default:
-      return $r('app.media.via_menu_settings')
+      return $r('app.media.uia_menu_settings')
   }
 }
 

@@ -21,7 +21,7 @@ export struct SettingsAiProvidersPage {
   private bindAppBar(): void {
     AppBar.show({
       title: $r('app.string.ai_provider'),
-      rightIcon: $r('app.media.via_ic_add'),
+      rightIcon: $r('app.media.uia_ic_add'),
       onRight: () => {
         this.pickNew()
       },

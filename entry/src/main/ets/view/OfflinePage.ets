@@ -1,6 +1,6 @@
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { AppIcon } from '../components/AppIcon'
 import { TabStore } from '../common/TabStore'
 import { ZipStoreWriter } from '../common/ZipWriter'
@@ -528,7 +528,7 @@ export struct OfflinePage {
         .width(48)
         .height(48)
         .fill($r('app.color.accent'))
-      Image(entry.isPdf ? $r('app.media.via_offline_glyph_pdf') : $r('app.media.via_offline_glyph_web'))
+      Image(entry.isPdf ? $r('app.media.uia_offline_glyph_pdf') : $r('app.media.uia_offline_glyph_web'))
         .width(32)
         .height(32)
         .objectFit(ImageFit.Contain)

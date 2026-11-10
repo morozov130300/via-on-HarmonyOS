@@ -242,7 +242,7 @@ export class ProxyManager {
     return true
   }
 
-  // 原版 mark/via/Shell 启动时机：应用启动读 config → enabled 则启动代理
+  // 原版 mark/uia/Shell 启动时机：应用启动读 config → enabled 则启动代理
   applyOnStartup(context: Context): void {
     const config = this.getConfig(context)
     if (config.enabled) {

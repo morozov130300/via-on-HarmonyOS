@@ -17,8 +17,8 @@ import {
   normalizeUrl,
   engineKeyFromId
 } from '../common/SearchEngines'
-import { ViaIcon } from './ViaIcon'
-import { computeDialogWidthVp } from './ViaDialogCard'
+import { UiaIcon } from './UiaIcon'
+import { computeDialogWidthVp } from './UiaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 
 // 原版 tb/k0.C1：输入行高 = 图标槽 = 建议行图标 = dimen bi(48dp)
@@ -617,7 +617,7 @@ export struct SearchOverlay {
   InputBar() {
     Row() {
       // 1) 引擎选择（f12387t0）：drawable de / ic_search，点弹引擎单选
-      this.IconSlot($r('app.media.via_ic_url_engine'), $r('app.string.search_engine'), () => {
+      this.IconSlot($r('app.media.uia_ic_url_engine'), $r('app.string.search_engine'), () => {
         this.openEngineDialog()
       })
       // 2) 引擎名 chip（f12388u0 / k0.u0）：仅命中引擎快捷词（K0≠0）时显示；
@@ -662,7 +662,7 @@ export struct SearchOverlay {
       // 「切换引擎」(:527-530) 时复位。
       // 注意：不能走 applyShortcutQualification('')——那条路会清 K0。
       if (this.inputText.length > 0) {
-        this.IconSlot($r('app.media.via_ic_url_clear'), $r('app.string.url_input_clear_text'), () => {
+        this.IconSlot($r('app.media.uia_ic_url_clear'), $r('app.string.url_input_clear_text'), () => {
           // 标记「本次置空来自清空按钮」，供 applyShortcutQualification 判定不清 K0。
           // 若 TextInput 的程序化置空不触发 onChange，旗标会在 300ms 后自动失效，
           // 不会污染之后的「回删到空」判定。
@@ -676,13 +676,13 @@ export struct SearchOverlay {
         })
       }
       // 5) 展开文本（f12386s0）：drawable bl / ic_expand_text → tb/w0 全屏编辑器
-      this.IconSlot($r('app.media.via_ic_url_expand'), $r('app.string.url_input_expand_text'), () => {
+      this.IconSlot($r('app.media.uia_ic_url_expand'), $r('app.string.url_input_expand_text'), () => {
         this.expandDraft = this.inputText
         this.showExpandEditor = true
       })
       // 6) 前往（f12389v0）：原版 k0.t3 → drawable j0 = a3（b2 旋转 180°，箭头朝右），
-      // 与工具栏前进按钮同一画法：via_ic_back + rotateDeg 180（k6 前进分支同款）
-      this.IconSlot($r('app.media.via_ic_back'), $r('app.string.search'), (): void => {
+      // 与工具栏前进按钮同一画法：uia_ic_back + rotateDeg 180（k6 前进分支同款）
+      this.IconSlot($r('app.media.uia_ic_back'), $r('app.string.search'), (): void => {
         this.commit(this.inputText)
       }, 180)
     }
@@ -697,7 +697,7 @@ export struct SearchOverlay {
   @Builder
   IconSlot(icon: Resource, desc: Resource, action: () => void, rotateDeg: number = 0) {
     Stack() {
-      ViaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint'),
+      UiaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint'),
         rotateDeg: rotateDeg })
     }
     .width(URL_BAR_HEIGHT)
@@ -813,7 +813,7 @@ export struct SearchOverlay {
     Row() {
       // 左图标：按 ka/a.d() 类型 —— 收藏1(bt)/书签2(b5)/标签页4(dw)/历史8,32(c_)/其它(de)
       Stack() {
-        ViaIcon({ icon: this.suggestIcon(row.type), iconSize: URL_ICON_SIZE,
+        UiaIcon({ icon: this.suggestIcon(row.type), iconSize: URL_ICON_SIZE,
           iconColor: $r('app.color.url_input_icon_tint') })
       }
       .width(URL_BAR_HEIGHT)
@@ -839,7 +839,7 @@ export struct SearchOverlay {
       .layoutWeight(1)
       // 右箭头：填入文本（a.q()），贴底布局时旋转 -90°
       Stack() {
-        ViaIcon({ icon: $r('app.media.via_ic_sug_fill'), iconSize: URL_ICON_SIZE,
+        UiaIcon({ icon: $r('app.media.uia_ic_sug_fill'), iconSize: URL_ICON_SIZE,
           iconColor: $r('app.color.url_input_icon_tint') })
           .rotate({ angle: this.barAtTop ? 0 : -90 })
       }
@@ -868,7 +868,7 @@ export struct SearchOverlay {
       action()
     })
     // 原版 k0.e3：长按 type32 搜索历史行 → 清除搜索历史确认弹窗
-    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+    .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
       if (row.type === 32) {
         this.confirmClearHistory()
       }
@@ -877,18 +877,18 @@ export struct SearchOverlay {
 
   private suggestIcon(type: number): Resource {
     if (type === 1) {
-      return $r('app.media.via_ic_sug_bt')
+      return $r('app.media.uia_ic_sug_bt')
     }
     if (type === 2) {
-      return $r('app.media.via_ic_sug_b5')
+      return $r('app.media.uia_ic_sug_b5')
     }
     if (type === 4) {
-      return $r('app.media.via_ic_sug_dw')
+      return $r('app.media.uia_ic_sug_dw')
     }
     if (type === 8 || type === 32) {
-      return $r('app.media.via_ic_sug_c_')
+      return $r('app.media.uia_ic_sug_c_')
     }
-    return $r('app.media.via_ic_sug_de')
+    return $r('app.media.uia_ic_sug_de')
   }
 
   // 原版 a.q()：把建议文本填入 EditText 并把光标移到末尾
@@ -927,7 +927,7 @@ export struct SearchOverlay {
       return
     }
     if (row.type === 4) {
-      // 切换到该标签页（原版 VIA-SWITCH-TAB）
+      // 切换到该标签页（原版 UIA-SWITCH-TAB）
       if (row.tabIndex >= 0 && row.tabIndex < this.tabStore.tabs.length) {
         this.tabStore.switchTo(row.tabIndex)
         this.onClose()
@@ -1087,12 +1087,12 @@ export struct SearchOverlay {
       .layoutWeight(1)
       Row() {
         // 收起（w0.d3：drawable A/ic_collapse_text）
-        this.IconSlot($r('app.media.via_ic_url_collapse'), $r('app.string.url_input_collapse_text'), () => {
+        this.IconSlot($r('app.media.uia_ic_url_collapse'), $r('app.string.url_input_collapse_text'), () => {
           this.applyExpandDraft(false)
         })
         Blank()
         // 前往（w0.c3：drawable j0 = a3，b2 旋转 180°，箭头朝右；同工具栏前进画法）
-        this.IconSlot($r('app.media.via_ic_back'), $r('app.string.search'), (): void => {
+        this.IconSlot($r('app.media.uia_ic_back'), $r('app.string.search'), (): void => {
           this.applyExpandDraft(true)
         }, 180)
       }

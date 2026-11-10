@@ -6,15 +6,15 @@ import { UpdateChecker, UpdateConfig } from '../common/UpdateChecker'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 
-const CONTACT_QQ_GROUP_URL: string = 'http://viayoo.com/contact/qqgroup/'
-const CONTACT_WECHAT_URL: string = 'http://viayoo.com/contact/wechat/'
+const CONTACT_QQ_GROUP_URL: string = 'http://uiayoo.com/contact/qqgroup/'
+const CONTACT_WECHAT_URL: string = 'http://uiayoo.com/contact/wechat/'
 // 原版 hb/d.j3 case 5：z8.c0.i()=false → telegram-zh（c0.e()=true 恒显示该行）
-const CONTACT_TELEGRAM_URL: string = 'http://viayoo.com/contact/telegram-zh/'
-const TERMS_OF_USE_URL: string = 'https://viayoo.com/zh-cn/docs/terms-of-use.html'
-const PRIVACY_POLICY_URL: string = 'https://viayoo.com/zh-cn/docs/privacy-policy.html'
+const CONTACT_TELEGRAM_URL: string = 'http://uiayoo.com/contact/telegram-zh/'
+const TERMS_OF_USE_URL: string = 'https://uiayoo.com/zh-cn/docs/terms-of-use.html'
+const PRIVACY_POLICY_URL: string = 'https://uiayoo.com/zh-cn/docs/privacy-policy.html'
 const CONTACT_EMAIL: string = 'yafengtu@gmail.com'
-// 原版 hb/d.java j3 case 4（q(4, x7.u.f13963e6 = string k_「协助翻译」）→ k3("https://github.com/tuyafeng/Via")
-const HELP_TRANSLATE_URL: string = 'https://github.com/tuyafeng/Via'
+// 原版 hb/d.java j3 case 4（q(4, x7.u.f13963e6 = string k_「协助翻译」）→ k3("https://github.com/tuyafeng/Uia")
+const HELP_TRANSLATE_URL: string = 'https://github.com/tuyafeng/Uia'
 
 @ComponentV2
 export struct SettingsAboutPage {
@@ -38,7 +38,7 @@ export struct SettingsAboutPage {
         AppBarSpacer()
         Scroll() {
         Column() {
-          // 原版 ib/e.d() + hb/d.X1：头部 = 应用图标(60dp, drawable cy) + Via(16sp 加粗,
+          // 原版 ib/e.d() + hb/d.X1：头部 = 应用图标(60dp, drawable cy) + Uia(16sp 加粗,
           // dimen a8, attr ac 色) + 版本号(14sp, dimen a_, attr ac 色, condensed)；
           // 版本点击 → g6.n.m 弹窗(标题=版本号, 内容=slogan, 确定按钮)；
           // 图标点击 → 检查更新(n0)，图标长按 → SHOW_DEV_UI(安卓专属, 不移植)

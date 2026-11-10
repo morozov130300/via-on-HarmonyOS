@@ -4,7 +4,7 @@ import { AiEngine, AiChatResult, ChatMsgIn } from '../common/AiEngine'
 import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 
 // 原版 a9/r0：AI 服务商编辑页
 // 字段：名称(hint 标题)/地址/API 密钥 + 「打开 API 密钥生成和管理页面」链接 +
@@ -347,7 +347,7 @@ export struct SettingsAiProviderEditPage {
                 })
               // 原版 i3：加号按钮（48×40，icon 22）
               Stack({ alignContent: Alignment.Center }) {
-                ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 22, iconColor: $r('app.color.fg') })
+                UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 22, iconColor: $r('app.color.fg') })
               }
                 .width(48)
                 .height(40)
@@ -367,7 +367,7 @@ export struct SettingsAiProviderEditPage {
                   .maxLines(1)
                   .layoutWeight(1)
                 Stack({ alignContent: Alignment.Center }) {
-                  ViaIcon({ icon: $r('app.media.via_ic_cancel'), iconSize: 14, iconColor: $r('app.color.fg_secondary') })
+                  UiaIcon({ icon: $r('app.media.uia_ic_cancel'), iconSize: 14, iconColor: $r('app.color.fg_secondary') })
                 }
                   .width(40)
                   .height(40)

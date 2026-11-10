@@ -1326,7 +1326,7 @@ export class DownloadEngine {
     }
   }
 
-  // mark/via/download/i1.h：目标文件已存在时，扩展名前自动加 `_+时间戳hex` 后缀（1:1 冲突处理）
+  // mark/uia/download/i1.h：目标文件已存在时，扩展名前自动加 `_+时间戳hex` 后缀（1:1 冲突处理）
   private conflictFreeName(fileName: string): string {
     try {
       if (!fileIo.accessSync(`${this.saveDir}/${fileName}`)) {

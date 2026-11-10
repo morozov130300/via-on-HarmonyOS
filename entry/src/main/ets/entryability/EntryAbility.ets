@@ -9,7 +9,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { systemShare } from '@kit.ShareKit';
 import { preferences } from '@kit.ArkData';
 import { AppSettings } from '../common/Settings';
-import { VIA_CMD_EVENT_ID } from '../common/DeepLink';
+import { UIA_CMD_EVENT_ID } from '../common/DeepLink';
 import { BrowserDb } from '../common/Database';
 import { applyImmersiveWindow } from '../common/Immersive';
 import { initReaderContext } from '../common/Reader';
@@ -34,7 +34,7 @@ interface EntryUrl {
   external: boolean;
 }
 
-// 原版 AndroidManifest Shell NDEF_DISCOVERED intent-filter（scheme http/https/via）
+// 原版 AndroidManifest Shell NDEF_DISCOVERED intent-filter（scheme http/https/uia）
 const NFC_TAG_FOUND_ACTION = 'ohos.nfc.tag.action.TAG_FOUND';
 
 // NFC Forum TS NDEF 1.0 URI 记录前缀码表（URI Record Type Definition 章节）
@@ -55,9 +55,9 @@ function ndefBytesToString(bytes: number[]): string {
   return text;
 }
 
-// 仅接受原版 intent-filter 声明的 scheme：http/https/via
+// 仅接受原版 intent-filter 声明的 scheme：http/https/uia
 function isNfcHandledUri(uri: string): boolean {
-  return uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('via://');
+  return uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('uia://');
 }
 
 // 解析 NDEF 消息中的 URI 记录（TNF well-known=1 + RTD 'U'=0x55，payload[0] 为前缀码）
@@ -85,7 +85,7 @@ function parseNdefUriRecords(records: tag.NdefRecord[]): string {
   return '';
 }
 
-// Via 可在新标签 file:// 打开的下载文件类型（文本/图片/音视频/PDF/HTML；
+// Uia 可在新标签 file:// 打开的下载文件类型（文本/图片/音视频/PDF/HTML；
 // ArkWeb(Chromium) 原生渲染，pdf 由 TabWeb 拦截进内嵌查看器）
 const DOWNLOAD_PREVIEWABLE_EXT: string[] = [
   'html', 'htm', 'xhtml', 'txt', 'text', 'log', 'json', 'xml', 'css', 'js', 'md', 'csv',
@@ -104,28 +104,28 @@ function isPreviewableDownloadFile(path: string): boolean {
   return DOWNLOAD_PREVIEWABLE_EXT.indexOf(ext) >= 0
 }
 
-// 原版 Trampoline → Shell 深链解析：b0.A() 的 VIEW 分支（uri 直传）+ via:// 内部命令（z8/b0.Q）
+// 原版 Trampoline → Shell 深链解析：b0.A() 的 VIEW 分支（uri 直传）+ uia:// 内部命令（z8/b0.Q）
 function extractEntryUrl(want: Want): EntryUrl {
   const params = want.parameters
   if (params !== undefined) {
-    const viaUrl = params['viaUrl']
-    if (typeof viaUrl === 'string' && viaUrl !== '') {
-      return { url: viaUrl, external: false }
+    const uiaUrl = params['uiaUrl']
+    if (typeof uiaUrl === 'string' && uiaUrl !== '') {
+      return { url: uiaUrl, external: false }
     }
-    // 原版 Trampoline action（mark.via.SEARCH/HISTORY/BOOKMARK/SCAN → k6.u()）：
+    // 原版 Trampoline action（mark.uia.SEARCH/HISTORY/BOOKMARK/SCAN → k6.u()）：
     // 鸿蒙侧由服务卡片（FormLink router）与静态快捷方式（shortcuts_config wants parameters）
-    // 以 viaCmd = via:// 命令字符串触发，走既有 via:// 内部命令通道
-    const viaCmd = params['viaCmd']
-    if (typeof viaCmd === 'string' && viaCmd !== '') {
-      AppStorage.setOrCreate('via_internal_cmd', viaCmd)
+    // 以 uiaCmd = uia:// 命令字符串触发，走既有 uia:// 内部命令通道
+    const uiaCmd = params['uiaCmd']
+    if (typeof uiaCmd === 'string' && uiaCmd !== '') {
+      AppStorage.setOrCreate('uia_internal_cmd', uiaCmd)
       return { url: '', external: false }
     }
   }
   const uri = want.uri
   if (typeof uri === 'string' && uri !== '') {
-    // 原版 k6.u()：via://→v:// 内部命令协议（z8/w2 + z8/b0.Q 全量命令表），不是网页 URL
-    if (uri.startsWith('via://')) {
-      AppStorage.setOrCreate('via_internal_cmd', uri)
+    // 原版 k6.u()：uia://→v:// 内部命令协议（z8/w2 + z8/b0.Q 全量命令表），不是网页 URL
+    if (uri.startsWith('uia://')) {
+      AppStorage.setOrCreate('uia_internal_cmd', uri)
       return { url: '', external: false }
     }
     return { url: uri, external: true }
@@ -139,17 +139,17 @@ export default class EntryAbility extends UIAbility {
     initReaderContext(this.context);
     // GM_* 用户脚本运行时存储（o5 变量库 / p5 require 缓存目录）
     initGmRuntime(this.context);
-    // 自研下载引擎：恢复 90/95 状态任务并调度（原版 mark/via/Shell d() DownloadManagerImpl）
+    // 自研下载引擎：恢复 90/95 状态任务并调度（原版 mark/uia/Shell d() DownloadManagerImpl）
     DownloadEngine.getInstance().init(this.context);
-    // 原版 mark/via/download/d.g()：通知渠道（鸿蒙：通知授权 + downloadTemplate 支持查询）
+    // 原版 mark/uia/download/d.g()：通知渠道（鸿蒙：通知授权 + downloadTemplate 支持查询）
     DownloadNotifier.getInstance().init(this.context);
     // 原版 DownloadReceiver：通知栏暂停/恢复按钮 → 引擎
     this.subscribeDownloadActions();
-    // 原版 mark/via/Shell.h0()→d0()：启动时抓取 r9 远程配置（60s 节流 + 文件缓存），
+    // 原版 mark/uia/Shell.h0()→d0()：启动时抓取 r9 远程配置（60s 节流 + 文件缓存），
     // 应用到 RemoteConfig 单例（Shell.java:156 k.q().t(new i(list))）；失败静默降级默认值
     RemoteConfig.getInstance().load(this.context).catch(() => {
     });
-    // 原版 mark/via/Shell 启动时机：读 proxy config → enabled 则启动应用级代理
+    // 原版 mark/uia/Shell 启动时机：读 proxy config → enabled 则启动应用级代理
     ProxyManager.getInstance().applyOnStartup(this.context);
     // NFC 前台分发注册所需 ElementName（原版无前台分发，仅 NDEF_DISCOVERED 后台匹配；
     // 鸿蒙侧按 NFC 标签读写开发指南在 onForeground/onBackground 注册/注销）
@@ -164,9 +164,9 @@ export default class EntryAbility extends UIAbility {
     if (!this.handleNfcWant(want, true)) {
       const entry = extractEntryUrl(want)
       if (entry.url !== '') {
-        AppStorage.setOrCreate('via_launch_url', entry.url)
-        AppStorage.setOrCreate('via_launch_external', entry.external)
-        AppStorage.setOrCreate('via_shared_text', false)
+        AppStorage.setOrCreate('uia_launch_url', entry.url)
+        AppStorage.setOrCreate('uia_launch_external', entry.external)
+        AppStorage.setOrCreate('uia_shared_text', false)
       }
     }
     // 原版 Trampoline filter#3：ACTION_SEND text/plain 分享接收（b0.A ACTION_SEND → i0.v）
@@ -181,9 +181,9 @@ export default class EntryAbility extends UIAbility {
       this.applyClearOnExit();
     });
     if (!this.openDownloadedFileFromWant(want)) {
-      if (want.parameters?.['viaOpenPage'] === 'downloads') {
+      if (want.parameters?.['uiaOpenPage'] === 'downloads') {
         // 冷启动时 Index 尚未订阅 emitter，用 AppStorage 标志兜底
-        AppStorage.setOrCreate('via_open_downloads', true)
+        AppStorage.setOrCreate('uia_open_downloads', true)
         emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
       }
     }
@@ -237,21 +237,21 @@ export default class EntryAbility extends UIAbility {
         )
       }
     }
-    // 热启动 via:// 内部命令：通知 Index 立即消费 AppStorage 'via_internal_cmd'
-    const pendingCmd = AppStorage.get<string>('via_internal_cmd') ?? ''
+    // 热启动 uia:// 内部命令：通知 Index 立即消费 AppStorage 'uia_internal_cmd'
+    const pendingCmd = AppStorage.get<string>('uia_internal_cmd') ?? ''
     if (pendingCmd !== '') {
-      emitter.emit({ eventId: VIA_CMD_EVENT_ID }, { data: {} })
+      emitter.emit({ eventId: UIA_CMD_EVENT_ID }, { data: {} })
     }
     // 原版 Shell onNewIntent → k6.c0 → b0.H：SEND 分享文本接收
     this.handleSharedText(want, false)
     if (!this.openDownloadedFileFromWant(want)) {
-      if (want.parameters?.['viaOpenPage'] === 'downloads') {
+      if (want.parameters?.['uiaOpenPage'] === 'downloads') {
         emitter.emit({ eventId: OPEN_DOWNLOADS_EVENT_ID }, { data: {} })
       }
     }
   }
 
-  // 下载完成通知点击（viaOpenFile 参数）：校验路径位于下载目录内（防路径篡改越权）、
+  // 下载完成通知点击（uiaOpenFile 参数）：校验路径位于下载目录内（防路径篡改越权）、
   // 文件存在且为可预览类型 → 新标签 file:// 打开（OfflinePage/查看源码同款 newTabAt 管线）；
   // 校验不通过返回 false，由调用方回退下载页
   private openDownloadedFileFromWant(want: Want): boolean {
@@ -259,7 +259,7 @@ export default class EntryAbility extends UIAbility {
     if (params === undefined) {
       return false
     }
-    const rawPath = params['viaOpenFile']
+    const rawPath = params['uiaOpenFile']
     if (typeof rawPath !== 'string' || rawPath === '') {
       return false
     }
@@ -302,9 +302,9 @@ export default class EntryAbility extends UIAbility {
         return
       }
       if (cold) {
-        AppStorage.setOrCreate('via_launch_url', trimmed)
-        AppStorage.setOrCreate('via_launch_external', false)
-        AppStorage.setOrCreate('via_shared_text', true)
+        AppStorage.setOrCreate('uia_launch_url', trimmed)
+        AppStorage.setOrCreate('uia_launch_external', false)
+        AppStorage.setOrCreate('uia_shared_text', true)
       } else {
         emitter.emit(
           { eventId: EXTERNAL_LINK_EVENT_ID },
@@ -383,22 +383,22 @@ export default class EntryAbility extends UIAbility {
     });
   }
 
-  // 原版 b0.A() VIEW 分支同款出口：网页 URL 走深链管线，via:// 走内部命令通道
+  // 原版 b0.A() VIEW 分支同款出口：网页 URL 走深链管线，uia:// 走内部命令通道
   private dispatchNfcUri(uri: string, cold: boolean): void {
     if (uri === '') {
       return;
     }
-    if (uri.startsWith('via://')) {
-      AppStorage.setOrCreate('via_internal_cmd', uri);
+    if (uri.startsWith('uia://')) {
+      AppStorage.setOrCreate('uia_internal_cmd', uri);
       if (!cold) {
-        emitter.emit({ eventId: VIA_CMD_EVENT_ID }, { data: {} });
+        emitter.emit({ eventId: UIA_CMD_EVENT_ID }, { data: {} });
       }
       return;
     }
     if (cold) {
-      AppStorage.setOrCreate('via_launch_url', uri);
-      AppStorage.setOrCreate('via_launch_external', true);
-      AppStorage.setOrCreate('via_shared_text', false);
+      AppStorage.setOrCreate('uia_launch_url', uri);
+      AppStorage.setOrCreate('uia_launch_external', true);
+      AppStorage.setOrCreate('uia_shared_text', false);
     } else {
       emitter.emit(
         { eventId: EXTERNAL_LINK_EVENT_ID },
@@ -440,7 +440,9 @@ export default class EntryAbility extends UIAbility {
     try {
       const win = windowStage.getMainWindowSync();
       AppStorage.setOrCreate('mainWindow', win);
-      applyImmersiveWindow(win, true);
+      // 原版 k6.i9():7384 启动即按设置复位系统栏（l3.n(...,false)）。
+      // 此处读 AppSettings 的 showStatusBar，避免 showStatusBar=false 时启动瞬态闪烁。
+      applyImmersiveWindow(win, AppSettings.getInstance().showStatusBar);
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to setup immersive window. Cause: %{public}s', JSON.stringify(err));
     }
@@ -497,7 +499,7 @@ export default class EntryAbility extends UIAbility {
   // 缓存位 1 勾选、或距 lastcleantime ≥432000000ms（h0.c:83 兜底）时清缓存并更新 lastcleantime
   // （w9/k.C1()/Y()，键 lastcleantime，默认当前时间）
   private applyClearOnExit(): void {
-    preferences.getPreferences(this.context, 'via_settings').then((store: preferences.Preferences): void => {
+    preferences.getPreferences(this.context, 'uia_settings').then((store: preferences.Preferences): void => {
       try {
         const settings = AppSettings.getInstance();
         const mask = settings.clearOnExit;

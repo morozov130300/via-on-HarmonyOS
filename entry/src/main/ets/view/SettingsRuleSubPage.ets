@@ -6,7 +6,7 @@ import { AdBlocker } from '../common/AdBlock'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 
 const AUTO_UPDATE_DAYS: number[] = [0, 1, 3, 7, 15]
 const AUTO_UPDATE_LABELS: string[] = ['从不', '每天', '每 3 天', '每周', '每 15 天']

@@ -38,10 +38,10 @@ import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit
 import { util } from '@kit.ArkTS'
 import { scanBarcode } from '@kit.ScanKit'
 import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
-import { parseViaDeepLink, ViaCmdKind, VIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
+import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
 import { AutoHideGesture, AutoHideHost } from '../common/AutoHideGesture'
 
@@ -56,9 +56,9 @@ const EXTERNAL_LINK_EVENT_ID = 10002
 const OPEN_DOWNLOADS_EVENT_ID = 10003
 // 原版 k6.i9() 双击返回显式退出 → m0.r0()（z8/h0.c 退出清除）：退出清除仅在显式退出时执行
 const EXIT_CLEAR_EVENT_ID = 10005
-// 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 via-reader-body）
+// 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 uia-reader-body）
 const READ_ALOUD_EXTRACT_JS: string =
-  '(function(){try{var e=document.getElementsByClassName("via-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
+  '(function(){try{var e=document.getElementsByClassName("uia-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
 // 保存网页降级序列化：canvas 转 img data URL（跨域污染 catch 跳过）+ outerHTML
 const SAVE_PAGE_SERIALIZE_JS: string =
   '(function(){try{var cs=document.querySelectorAll("canvas");' +
@@ -132,7 +132,7 @@ struct Index {
   @Local exitHintTime: number = 0
   // 游戏模式双击返回退出计时
   @Local gameModeBackTime: number = 0
-  // 下载确认弹层（原版 mark/via/download/m.java）
+  // 下载确认弹层（原版 mark/uia/download/m.java）
   @Local downloadConfirm: PendingDownloadUi | null = null
   // 保存网页弹窗（原版 k6.m0：标题/输入/保存为 PDF 复选框）
   @Local showSavePage: boolean = false
@@ -285,9 +285,9 @@ struct Index {
     }
     emitter.on({ eventId: SHORTCUT_URL_EVENT_ID }, (event: emitter.EventData) => {
       const data = event.data as Record<string, Object>
-      const viaUrl = data['viaUrl']
-      if (typeof viaUrl === 'string' && viaUrl !== '') {
-        this.tabStore.navigate(viaUrl)
+      const uiaUrl = data['uiaUrl']
+      if (typeof uiaUrl === 'string' && uiaUrl !== '') {
+        this.tabStore.navigate(uiaUrl)
       }
     })
     emitter.on({ eventId: EXTERNAL_LINK_EVENT_ID }, (event: emitter.EventData) => {
@@ -303,8 +303,8 @@ struct Index {
         this.openExternalLink(linkUrl, external !== false)
       }
     })
-    // 热启动 via:// 内部命令（EntryAbility.onNewEntry → AppStorage 'via_internal_cmd'）
-    emitter.on({ eventId: VIA_CMD_EVENT_ID }, () => {
+    // 热启动 uia:// 内部命令（EntryAbility.onNewEntry → AppStorage 'uia_internal_cmd'）
+    emitter.on({ eventId: UIA_CMD_EVENT_ID }, () => {
       this.handleInternalCmd()
     })
     emitter.on({ eventId: DOWNLOAD_CONFIRM_EVENT_ID }, (event: emitter.EventData) => {
@@ -336,7 +336,7 @@ struct Index {
         pageUa
       )
     })
-    // 主页模式=书签：新标签打开书签页（原版 via://bookmark）
+    // 主页模式=书签：新标签打开书签页（原版 uia://bookmark）
     emitter.on({ eventId: OPEN_BOOKMARKS_EVENT_ID }, () => {
       this.openPage('bookmarks')
     })
@@ -365,7 +365,7 @@ struct Index {
     this.settings.persistAdBlockTotal()
   }
 
-  // 原版 k6.u() + z8/w2 + z8/b0.Q()：via://(v://) 内部命令全量分发（深链/Trampoline 入口）
+  // 原版 k6.u() + z8/w2 + z8/b0.Q()：uia://(v://) 内部命令全量分发（深链/Trampoline 入口）
   // 原版 W9() → a8.k.o3()：打开书签快捷选择对话框（菜单长按书签 / 工具栏动作 30）。
   // 与「书签管理页」不同：这是从当前页快速挑一个书签在新标签打开的对话框。
   @Local showBookmarkPicker: boolean = false
@@ -437,18 +437,18 @@ struct Index {
   }
 
   private handleInternalCmd(): void {
-    const raw = AppStorage.get<string>('via_internal_cmd') ?? ''
+    const raw = AppStorage.get<string>('uia_internal_cmd') ?? ''
     if (raw === '') {
       return
     }
-    AppStorage.setOrCreate('via_internal_cmd', '')
-    const cmd = parseViaDeepLink(raw)
+    AppStorage.setOrCreate('uia_internal_cmd', '')
+    const cmd = parseUiaDeepLink(raw)
     if (cmd === null) {
       return
     }
     switch (cmd.kind) {
       // k6.u 8657：v://bookmarks[/?folder=&folderName=] → 书签页；folder 有值时进对应文件夹
-      case ViaCmdKind.BOOKMARKS:
+      case UiaCmdKind.BOOKMARKS:
         if (cmd.folder !== '' && !Number.isNaN(Number(cmd.folder))) {
           this.openBookmarksAtFolder(Number(cmd.folder), cmd.folderName)
         } else {
@@ -456,31 +456,31 @@ struct Index {
         }
         break
       // k6.u 8641：v://history → fa() 历史页
-      case ViaCmdKind.HISTORY:
+      case UiaCmdKind.HISTORY:
         this.openPage('history')
         break
       // k6.u 8649：v://downloader → ca() 下载页
-      case ViaCmdKind.DOWNLOADER:
+      case UiaCmdKind.DOWNLOADER:
         this.openPage('downloads')
         break
       // k6.u 8628：v://skins → lb.k 皮肤页
-      case ViaCmdKind.SKINS:
+      case UiaCmdKind.SKINS:
         this.openPage('skinPage')
         break
       // z8/b0.Q "log" → s1(6)：log.html → netLog
-      case ViaCmdKind.LOG:
+      case UiaCmdKind.LOG:
         this.openPage('netLog')
         break
       // z8/b0.Q "offline" → s1(7)：save.html 离线页面
-      case ViaCmdKind.OFFLINE:
+      case UiaCmdKind.OFFLINE:
         this.openPage('offlinePage')
         break
       // z8/b0.Q "about" → s1(4)：about.html → 关于
-      case ViaCmdKind.ABOUT:
+      case UiaCmdKind.ABOUT:
         this.openPage('settingsAbout')
         break
       // z8/b0.Q "home" → V0()：回主页
-      case ViaCmdKind.HOME:
+      case UiaCmdKind.HOME:
         if (!this.tabStore.current().isHomePage()) {
           this.tabStore.gotoHome()
         } else {
@@ -490,7 +490,7 @@ struct Index {
         }
         break
       // k6.u 8632：v://search 空 q → na() 打开搜索；带 q → Ta(q,true) 默认引擎搜索
-      case ViaCmdKind.SEARCH:
+      case UiaCmdKind.SEARCH:
         if (cmd.query === '') {
           this.searchInitialText = ''
           this.showSearch = true
@@ -500,15 +500,15 @@ struct Index {
         }
         break
       // k6.u 8653：v://readaloud → ha() 朗读当前页
-      case ViaCmdKind.READ_ALOUD:
+      case UiaCmdKind.READ_ALOUD:
         this.startReadAloud()
         break
       // k6.u 8577：history:// → s1(3) 历史页
-      case ViaCmdKind.HISTORY_URI:
+      case UiaCmdKind.HISTORY_URI:
         this.openPage('history')
         break
       // k6.u 8567：folder://X → Z9(解码X) 按名称定位书签文件夹后进入（找不到落根目录）
-      case ViaCmdKind.FOLDER: {
+      case UiaCmdKind.FOLDER: {
         let folderId = 0
         let folderTitle = ''
         try {
@@ -540,39 +540,39 @@ struct Index {
       //    p()（i6/i0.java:347-356）判前 11 字符是否为 javascript:，**明确阻止**。
       // 早期实现无条件 navigate，既能被 javascript: 注入（error/jump），
       // 也与原版「非 http(s) 不跳」不符。
-      case ViaCmdKind.BLOCKER_JUMP:
-      case ViaCmdKind.ERROR_JUMP: {
+      case UiaCmdKind.BLOCKER_JUMP:
+      case UiaCmdKind.ERROR_JUMP: {
         // DeepLink 解析层已按各自守卫过滤（isStrictHttp / isJavaScriptUrl），
-        // 此处再兜一层，避免将来有人绕过 parseViaDeepLink 直接构造 cmd
+        // 此处再兜一层，避免将来有人绕过 parseUiaDeepLink 直接构造 cmd
         const jumpUrl: string = cmd.url
         if (jumpUrl === '' || isJavaScriptUrl(jumpUrl)) {
           break
         }
-        if (cmd.kind === ViaCmdKind.BLOCKER_JUMP && !isStrictHttp(jumpUrl)) {
+        if (cmd.kind === UiaCmdKind.BLOCKER_JUMP && !isStrictHttp(jumpUrl)) {
           break
         }
         this.tabStore.navigate(jumpUrl)
         break
       }
       // k6.u 8624：v://scanner → ga() 扫码（与菜单「扫描二维码」同一管线）
-      case ViaCmdKind.SCANNER:
+      case UiaCmdKind.SCANNER:
         this.startScan()
         break
       // k6.u 8669：v://translator/translate?text= → Eb(text) 翻译文本弹窗（f8.w0）
-      case ViaCmdKind.TRANSLATE_TEXT:
+      case UiaCmdKind.TRANSLATE_TEXT:
         TranslateState.getInstance().open(cmd.text)
         break
       // k6.u 8682：v://tabs/restore?ids=&selected= → F1(ids, selected) 按 id 恢复标签并选中
-      case ViaCmdKind.TABS_RESTORE:
+      case UiaCmdKind.TABS_RESTORE:
         this.tabStore.restoreByIds(cmd.ids, cmd.selected)
         break
       // z8/b0.Q() 默认 id5 → u9/d.java:129 catalog.html：站点目录页（6 入口）
-      case ViaCmdKind.CATALOG:
+      case UiaCmdKind.CATALOG:
         this.openPage('catalog')
         break
       // 原版 k6.u 8582-8588：thunder:// / qqdl:// / flashget:// → z8.b0.D 解出直链后
       //   mb(new e.b().j(直链).k(L1).c("attachment").d(-1).b()) 走下载管线
-      case ViaCmdKind.SCHEME_DOWNLOAD: {
+      case UiaCmdKind.SCHEME_DOWNLOAD: {
         const link: string = cmd.url
         if (link !== '') {
           let pageUa = ''
@@ -587,12 +587,12 @@ struct Index {
       }
       // 原版 k6.u 8589-8591：baidubox:// 系列 → 直接 return true（什么都不做）；
       // thunder/qqdl/flashget 解出空直链时同样已消费
-      case ViaCmdKind.SCHEME_IGNORED:
+      case UiaCmdKind.SCHEME_IGNORED:
         break
       // 原版 k6.u 8592-8596：file:// 且扩展名 pdf → g6.i.h(za.g.class, pdfPath)
       // PdfViewerPage 的 param 是沙箱文件路径（同 TabWeb.openPdfPreview 的
       // 「去 file:// 前缀 + decodeURIComponent」换算），不是 URI
-      case ViaCmdKind.SCHEME_PDF: {
+      case UiaCmdKind.SCHEME_PDF: {
         let pdfPath: string = cmd.url.substring('file://'.length)
         try {
           pdfPath = decodeURIComponent(pdfPath)
@@ -611,11 +611,11 @@ struct Index {
 
   // 原版 restoreclosedtabs=2：启动时优先询问是否恢复未关闭标签
   private askPendingRestore(): void {
-    const pending = AppStorage.get<string>('via_pending_restore_tabs') ?? ''
+    const pending = AppStorage.get<string>('uia_pending_restore_tabs') ?? ''
     if (pending === '') {
       return
     }
-    AppStorage.setOrCreate('via_pending_restore_tabs', '')
+    AppStorage.setOrCreate('uia_pending_restore_tabs', '')
     this.getUIContext().showAlertDialog({
       message: $r('app.string.restore_session_ask'),
       primaryButton: {
@@ -664,18 +664,18 @@ struct Index {
     await this.tabStore.init(this.settings)
     this.handleInternalCmd()
     this.askPendingRestore()
-    if (AppStorage.get<boolean>('via_open_downloads') === true) {
-      AppStorage.setOrCreate('via_open_downloads', false)
+    if (AppStorage.get<boolean>('uia_open_downloads') === true) {
+      AppStorage.setOrCreate('uia_open_downloads', false)
       this.openPage('downloads')
     }
     this.ready = true
-    const launchUrl = AppStorage.get<string>('via_launch_url') ?? ''
+    const launchUrl = AppStorage.get<string>('uia_launch_url') ?? ''
     if (launchUrl !== '') {
-      AppStorage.setOrCreate('via_launch_url', '')
-      const launchExternal = AppStorage.get<boolean>('via_launch_external') ?? false
-      AppStorage.setOrCreate('via_launch_external', false)
-      const launchSharedText = AppStorage.get<boolean>('via_shared_text') ?? false
-      AppStorage.setOrCreate('via_shared_text', false)
+      AppStorage.setOrCreate('uia_launch_url', '')
+      const launchExternal = AppStorage.get<boolean>('uia_launch_external') ?? false
+      AppStorage.setOrCreate('uia_launch_external', false)
+      const launchSharedText = AppStorage.get<boolean>('uia_shared_text') ?? false
+      AppStorage.setOrCreate('uia_shared_text', false)
       if (launchSharedText) {
         this.openReceivedText(launchUrl)
       } else {
@@ -702,15 +702,15 @@ struct Index {
   // 原版 k6.u()（8562-8687）本身就是所有 URL 的入口：先判 v:// 内部命令，
   // 不匹配再走 8581-8597 的特殊 scheme（thunder/qqdl/flashget 下载、baidubox 忽略、
   // file://*.pdf 内置查看器），最后才 V9() 交给系统 Intent。
-  // 因此外部入口必须先尝试 parseViaDeepLink，命中即按命令处理，未命中才开标签。
+  // 因此外部入口必须先尝试 parseUiaDeepLink，命中即按命令处理，未命中才开标签。
   private openExternalLink(url: string, external: boolean): void {
-    const cmd = parseViaDeepLink(url)
+    const cmd = parseUiaDeepLink(url)
     if (cmd === null) {
       // 非 v://、非特殊 scheme → 原版 V9()/普通网页：开标签
       this.tabStore.navigate(url)
       return
     }
-    if (cmd.kind === ViaCmdKind.SCHEME_DOWNLOAD) {
+    if (cmd.kind === UiaCmdKind.SCHEME_DOWNLOAD) {
       let pageUa = ''
       try {
         pageUa = this.tabStore.current().controller.getUserAgent()
@@ -720,16 +720,16 @@ struct Index {
       this.downloads.requestUrlDownload(cmd.url, '', pageUa, '')
       return
     }
-    if (cmd.kind === ViaCmdKind.SCHEME_IGNORED) {
+    if (cmd.kind === UiaCmdKind.SCHEME_IGNORED) {
       return
     }
-    if (cmd.kind === ViaCmdKind.SCHEME_PDF) {
+    if (cmd.kind === UiaCmdKind.SCHEME_PDF) {
       this.openPdfViewer(cmd.url)
       return
     }
     // 其余 v:// 内部命令（含未知 → CATALOG、NONE → 无动作）统一交给同一分发器，
     // 绝不再把 v://xxx 当网页 URL 塞进标签（原版 k6.u 对这些分支一律 return true）
-    AppStorage.setOrCreate('via_internal_cmd', url)
+    AppStorage.setOrCreate('uia_internal_cmd', url)
     this.handleInternalCmd()
   }
 
@@ -889,7 +889,7 @@ struct Index {
     return true
   }
 
-  // ===== 原版 PC 键盘快捷键（mark/via/Shell.dispatchKeyEvent → c8/k6.n8 → L9/M9）=====
+  // ===== 原版 PC 键盘快捷键（mark/uia/Shell.dispatchKeyEvent → c8/k6.n8 → L9/M9）=====
 
   // 原版 k6.n8：宿主按键分发入口（onInterceptKeyEvent / onKeyEvent 双通道共用）
   private handlePcKey(event: KeyEvent): boolean {
@@ -1344,9 +1344,9 @@ struct Index {
 
   // 原版 k6.h 粘贴项：剪贴板文本经 AppStorage 传递后带入搜索输入框
   private addressTapInitialText(): string {
-    const paste = AppStorage.get<string>('via_paste_url') ?? ''
+    const paste = AppStorage.get<string>('uia_paste_url') ?? ''
     if (paste !== '') {
-      AppStorage.setOrCreate('via_paste_url', '')
+      AppStorage.setOrCreate('uia_paste_url', '')
       return paste
     }
     const tab = this.tabStore.current()
@@ -1363,7 +1363,7 @@ struct Index {
   //   return (!this.Z0 || this.W0 == 0) ? iMin
   //        : Math.min(iMin - g6.y.h(I(), 96.0f), g6.y.h(I(), 384.0f));  // 大屏且非布局0
   // Z0 = g6.y.E(context)（k6.java:8398）：screenLayout 为 LARGE/XLARGE 且对角线 >= 7 英寸。
-  // 鸿蒙侧等价判据：窗口短边 vp >= 600（ViaDialogCard 同口径的大屏分界）。
+  // 鸿蒙侧等价判据：窗口短边 vp >= 600（UiaDialogCard 同口径的大屏分界）。
   private largeScreenByShortSide(): boolean {
     const shortVp: number = this.windowShortSideVp()
     return shortVp >= 600
@@ -1413,13 +1413,13 @@ struct Index {
   }
 
   // 打开菜单前把尺寸参数发布给 MenuSheet（MenuSheet 不在本域，取用端由主控接线）：
-  //   AppStorage 'via_menu_size_vp'     : number  菜单可用边长（原版 N8()）
-  //   AppStorage 'via_menu_side_gap_vp' : number  贴边距（原版 i10）
-  //   AppStorage 'via_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
+  //   AppStorage 'uia_menu_size_vp'     : number  菜单可用边长（原版 N8()）
+  //   AppStorage 'uia_menu_side_gap_vp' : number  贴边距（原版 i10）
+  //   AppStorage 'uia_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
   private publishMenuMetrics(): void {
-    AppStorage.setOrCreate('via_menu_size_vp', this.menuAvailableSizeVp())
-    AppStorage.setOrCreate('via_menu_side_gap_vp', this.menuSideGapVp())
-    AppStorage.setOrCreate('via_menu_layout', this.effectiveLayout())
+    AppStorage.setOrCreate('uia_menu_size_vp', this.menuAvailableSizeVp())
+    AppStorage.setOrCreate('uia_menu_side_gap_vp', this.menuSideGapVp())
+    AppStorage.setOrCreate('uia_menu_layout', this.effectiveLayout())
   }
 
   private bottomBg(): ResourceColor {
@@ -1961,7 +1961,7 @@ struct Index {
   @Builder
   FabButton() {
     Stack() {
-      Image(this.fabDirFlag === 0 ? $r('app.media.via_ic_menu') : $r('app.media.via_fab_arrow_back'))
+      Image(this.fabDirFlag === 0 ? $r('app.media.uia_ic_menu') : $r('app.media.uia_fab_arrow_back'))
         .width(22)
         .height(22)
         .fillColor('#61000000')
@@ -2330,7 +2330,7 @@ struct Index {
                 return
               }
               try {
-                const path = `${context.cacheDir}/via_view_source.html`
+                const path = `${context.cacheDir}/uia_view_source.html`
                 const file = fileIo.openSync(path,
                   fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
                 fileIo.writeSync(file.fd, result)
@@ -2404,13 +2404,13 @@ struct Index {
                         this.showSearch = true
                       },
                       onLogoTap: () => {
-                        // 原版 logo 点击 via.cmd(257)→ja(true)→aa(null)：打开书签管理页（RecordContainerFragment 标签 1）
+                        // 原版 logo 点击 uia.cmd(257)→ja(true)→aa(null)：打开书签管理页（RecordContainerFragment 标签 1）
                         this.openPage('bookmarks')
                       },
                       onAutoHideTouch: (action: number, x: number, y: number): void => {
                         this.autoHideGesture.onTouch(action, x, y)
                       },
-                      // 原版 isGestureDisabled → via.cmd(515)：工具栏隐藏时禁用主页下拉搜索
+                      // 原版 isGestureDisabled → uia.cmd(515)：工具栏隐藏时禁用主页下拉搜索
                       gestureEnabledQuery: (): boolean => this.toolbarShown || this.fabVisible
                     })
                   }
@@ -3130,7 +3130,7 @@ struct Index {
   // 原版 k6.m0：复选框初始态 = w9.a.p()
   private loadSaveAsPdfPref(): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
+    preferences.getPreferences(context, 'uia_settings').then((store: preferences.Preferences) => {
       this.saveAsPdf = store.getSync('save_as_pdf', false) as boolean
     }).catch((error: BusinessError) => {
       console.error(`load save_as_pdf failed: ${error.message}`)
@@ -3140,7 +3140,7 @@ struct Index {
   // 原版 k6.e5：勾选态变化时持久化 w9.a.I
   private persistSaveAsPdf(value: boolean): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
+    preferences.getPreferences(context, 'uia_settings').then((store: preferences.Preferences) => {
       store.put('save_as_pdf', value).then(() => {
         store.flush()
       }).catch((error: BusinessError) => {
@@ -3279,7 +3279,7 @@ struct Index {
   }
 }
 
-// 下载确认弹层数据（原版 k6.mb → mark/via/download/m.java）
+// 下载确认弹层数据（原版 k6.mb → mark/uia/download/m.java）
 class PendingDownloadUi {
   kind: string = 'web'
   guid: string = ''

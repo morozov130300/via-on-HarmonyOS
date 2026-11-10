@@ -23,7 +23,7 @@ export class WebDavClient {
     while (base.endsWith('/')) {
       base = base.substring(0, base.length - 1)
     }
-    return `${base}/via_backup.json`
+    return `${base}/uia_backup.json`
   }
 
   private authHeader(): string {

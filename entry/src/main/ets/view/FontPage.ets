@@ -6,12 +6,12 @@ import { FontEntry, FontStore } from '../common/FontStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { SettingRadioRow } from '../components/SettingRows'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 
 // 原版 hb/j2.java：「字体」页
 // 列表 = s9.d 字体库（首项默认 fd「默认」，其余文件名字母排序），单击选中（B3 → w9.l.o 写 uifont）；
 // 长按非默认项 → 菜单 [编辑 a3（A3 重命名弹窗，输入默认为去扩展名文件名）/删除 x]；
-// appbar 右侧 + 按钮（drawable ay / via_ic_add）→ 文件选择器（font/ttf,otf,woff,woff2，≤50MB），
+// appbar 右侧 + 按钮（drawable ay / uia_ic_add）→ 文件选择器（font/ttf,otf,woff,woff2，≤50MB），
 // 失败 toast a08「添加字体失败，错误码：%1$d」
 @ComponentV2
 export struct FontPage {
@@ -34,7 +34,7 @@ export struct FontPage {
   private bindAppBar(): void {
     AppBar.show({
       title: '字体',
-      rightIcon: $r('app.media.via_ic_add'),
+      rightIcon: $r('app.media.uia_ic_add'),
       onBack: () => {
         this.navPathStack.pop()
       },

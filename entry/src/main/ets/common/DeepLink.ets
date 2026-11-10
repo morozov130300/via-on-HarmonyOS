@@ -1,10 +1,10 @@
 import { util } from '@kit.ArkTS'
 
-// 原版 via://(v://) 深链内部命令协议解析 —— 1:1 移植 z8/w2.java + z8/b0.Q() + k6.u() 分发顺序。
+// 原版 uia://(v://) 深链内部命令协议解析 —— 1:1 移植 z8/w2.java + z8/b0.Q() + k6.u() 分发顺序。
 // 入口链路：原版 Trampoline/Search → Shell → k6.c0 → na.l("intentTab") → b0.A/b0.Q → k6.u()；
-// 鸿蒙侧：EntryAbility.extractEntryUrl（via scheme want）→ AppStorage/emitter → Index.handleInternalCmd。
+// 鸿蒙侧：EntryAbility.extractEntryUrl（uia scheme want）→ AppStorage/emitter → Index.handleInternalCmd。
 
-export const VIA_CMD_EVENT_ID = 10004
+export const UIA_CMD_EVENT_ID = 10004
 
 // 原版命令 → 动作对照（k6.u() 各分支）：
 // folder://X → k6.u 8567：书签文件夹（主页型 2/11 时 s1，否则 Z9）
@@ -26,7 +26,7 @@ export const VIA_CMD_EVENT_ID = 10004
 //   file:// 且扩展名 pdf → g6.i.h(za.g.class, pdfPath) 内置 PDF 查看器
 //   其余 → V9(str)（外部 Intent / 应用内跳转）
 // 其余 v://xxx → b0.Q()：home→V0()、log→s1(6)、offline→s1(7)、about→s1(4)、未知→s1(5 catalog)
-export enum ViaCmdKind {
+export enum UiaCmdKind {
   NONE = 0,
   FOLDER = 1,
   HISTORY_URI = 2,
@@ -55,8 +55,8 @@ export enum ViaCmdKind {
   SCHEME_PDF = 21
 }
 
-export class ViaDeepLink {
-  kind: ViaCmdKind = ViaCmdKind.NONE
+export class UiaDeepLink {
+  kind: UiaCmdKind = UiaCmdKind.NONE
   url: string = ''
   query: string = ''
   text: string = ''
@@ -231,47 +231,47 @@ export function decodeDownloadScheme(raw: string): string {
 //  8589 baidubox:// / baiduboxapp:// / baiduboxlite:// → return true（什么都不做）
 //  8592 file:// 且 i0.c() == "pdf" → g6.i.h(za.g.class, pdfPath)
 //  8594 其余 → V9(str)（外部 Intent，鸿蒙侧由系统 want 打开，本命令表不处理）
-function parseSpecialScheme(text: string): ViaDeepLink | null {
-  const result: ViaDeepLink = new ViaDeepLink()
+function parseSpecialScheme(text: string): UiaDeepLink | null {
+  const result: UiaDeepLink = new UiaDeepLink()
   if (text.startsWith('thunder://') || text.startsWith('qqdl://') || text.startsWith('flashget://')) {
     const link: string = decodeDownloadScheme(text)
     if (link === '') {
       // 原版：直链为空时仍 return true（已消费），只是不发起下载
-      result.kind = ViaCmdKind.SCHEME_IGNORED
+      result.kind = UiaCmdKind.SCHEME_IGNORED
       return result
     }
-    result.kind = ViaCmdKind.SCHEME_DOWNLOAD
+    result.kind = UiaCmdKind.SCHEME_DOWNLOAD
     result.url = link
     return result
   }
   if (text.startsWith('baidubox://') || text.startsWith('baiduboxapp://') ||
     text.startsWith('baiduboxlite://')) {
-    result.kind = ViaCmdKind.SCHEME_IGNORED
+    result.kind = UiaCmdKind.SCHEME_IGNORED
     return result
   }
   if (text.startsWith('file://') && urlExtension(text) === 'pdf') {
-    result.kind = ViaCmdKind.SCHEME_PDF
+    result.kind = UiaCmdKind.SCHEME_PDF
     result.url = text
     return result
   }
   return null
 }
 
-// via:// → v://（k6.u 8564：前 6 位忽略大小写匹配即替换）
-export function parseViaDeepLink(raw: string): ViaDeepLink | null {
+// uia:// → v://（k6.u 8564：前 6 位忽略大小写匹配即替换）
+export function parseUiaDeepLink(raw: string): UiaDeepLink | null {
   let text: string = raw
-  if (text.length >= 6 && 'via://'.toLowerCase() === text.substring(0, 6).toLowerCase()) {
+  if (text.length >= 6 && 'uia://'.toLowerCase() === text.substring(0, 6).toLowerCase()) {
     text = 'v://' + text.substring(6)
   }
-  const result: ViaDeepLink = new ViaDeepLink()
+  const result: UiaDeepLink = new UiaDeepLink()
   // k6.u() 分发顺序 1:1
   if (hasPrefix(text, 'folder://')) {
-    result.kind = ViaCmdKind.FOLDER
+    result.kind = UiaCmdKind.FOLDER
     result.url = text.substring(9)
     return result
   }
   if (hasPrefix(text, 'history://')) {
-    result.kind = ViaCmdKind.HISTORY_URI
+    result.kind = UiaCmdKind.HISTORY_URI
     return result
   }
   // 原版 k6.u() 8581：先问 w2.z(str)（是否 v://）。非 v:// 才进入下面的
@@ -290,7 +290,7 @@ export function parseViaDeepLink(raw: string): ViaDeepLink | null {
   if (hasPrefix(text, 'v://blocker/jump?url=')) {
     const jump: string = urlDecode(text.substring(21))
     if (isStrictHttp(jump)) {
-      result.kind = ViaCmdKind.BLOCKER_JUMP
+      result.kind = UiaCmdKind.BLOCKER_JUMP
       result.url = jump
     }
     return result
@@ -305,44 +305,44 @@ export function parseViaDeepLink(raw: string): ViaDeepLink | null {
     }
     const jump: string = urlDecode(text.substring(19, end))
     if (jump !== '' && !isJavaScriptUrl(jump)) {
-      result.kind = ViaCmdKind.ERROR_JUMP
+      result.kind = UiaCmdKind.ERROR_JUMP
       result.url = jump
     }
     return result
   }
   if (hasPrefixSep(text, 'v://scanner')) {
-    result.kind = ViaCmdKind.SCANNER
+    result.kind = UiaCmdKind.SCANNER
     return result
   }
   if (hasPrefixSep(text, 'v://skins')) {
-    result.kind = ViaCmdKind.SKINS
+    result.kind = UiaCmdKind.SKINS
     return result
   }
   if (hasPrefixSep(text, 'v://search')) {
-    result.kind = ViaCmdKind.SEARCH
+    result.kind = UiaCmdKind.SEARCH
     result.query = extractQuery(text)
     return result
   }
   if (hasPrefixSep(text, 'v://history')) {
-    result.kind = ViaCmdKind.HISTORY
+    result.kind = UiaCmdKind.HISTORY
     return result
   }
   if (hasPrefixSep(text, 'v://downloader')) {
-    result.kind = ViaCmdKind.DOWNLOADER
+    result.kind = UiaCmdKind.DOWNLOADER
     return result
   }
   if (hasPrefixSep(text, 'v://readaloud')) {
-    result.kind = ViaCmdKind.READ_ALOUD
+    result.kind = UiaCmdKind.READ_ALOUD
     return result
   }
   if (hasPrefixSep(text, 'v://bookmarks')) {
-    result.kind = ViaCmdKind.BOOKMARKS
+    result.kind = UiaCmdKind.BOOKMARKS
     result.folder = extractFolder(text)
     result.folderName = extractFolderName(text)
     return result
   }
   if (hasPrefix(text, 'v://translator/translate?text=')) {
-    result.kind = ViaCmdKind.TRANSLATE_TEXT
+    result.kind = UiaCmdKind.TRANSLATE_TEXT
     let end: number = text.indexOf('&', 30)
     if (end < 0) {
       end = text.length
@@ -366,7 +366,7 @@ export function parseViaDeepLink(raw: string): ViaDeepLink | null {
       idsText = text.substring(idsStart, selectedIdx)
       result.selected = text.substring(selectedIdx + '&selected='.length)
     }
-    result.kind = ViaCmdKind.TABS_RESTORE
+    result.kind = UiaCmdKind.TABS_RESTORE
     result.ids = idsText.split(',')
     return result
   }
@@ -380,16 +380,16 @@ export function parseViaDeepLink(raw: string): ViaDeepLink | null {
   }
   const segment: string = text.substring(4, segEnd)
   if (segment === 'home') {
-    result.kind = ViaCmdKind.HOME
+    result.kind = UiaCmdKind.HOME
   } else if (segment === 'log') {
-    result.kind = ViaCmdKind.LOG
+    result.kind = UiaCmdKind.LOG
   } else if (segment === 'offline') {
-    result.kind = ViaCmdKind.OFFLINE
+    result.kind = UiaCmdKind.OFFLINE
   } else if (segment === 'about') {
-    result.kind = ViaCmdKind.ABOUT
+    result.kind = UiaCmdKind.ABOUT
   } else {
     // 原版默认 id 5 → catalog.html（站点目录页）
-    result.kind = ViaCmdKind.CATALOG
+    result.kind = UiaCmdKind.CATALOG
   }
   return result
 }

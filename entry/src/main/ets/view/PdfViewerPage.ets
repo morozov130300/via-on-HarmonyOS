@@ -3,7 +3,7 @@ import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 import { buildNavSlide } from './PageTransitions'
 
-// 原版 za/g + mark/via/common/widget/PdfViewer 的鸿蒙等价实现：
+// 原版 za/g + mark/uia/common/widget/PdfViewer 的鸿蒙等价实现：
 // PDF Kit PdfView 组件承担 PdfRenderer 自绘渲染（分页/缩放/翻页），
 // 页码指示器 1:1 复刻 za/g.Z2：12sp 文本、圆角背景、左上 12dp 边距、
 // 触发显示 120ms 渐入、2000ms 无操作后 220ms 渐隐（g3/h3/i3）
@@ -118,7 +118,7 @@ export struct PdfViewerView {
             isContinuous: true,
             showScroll: true
           })
-            .id('via_pdf_view')
+            .id('uia_pdf_view')
             .width('100%')
             .height('100%')
         }

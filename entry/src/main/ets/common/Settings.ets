@@ -33,7 +33,7 @@ export const UA_MODE_CUSTOM: number = 3
 export const PC_UA: string = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 export const MOBILE_UA: string = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
 
-const SNAPSHOT_TS_KEY: string = 'via_snapshot_ts'
+const SNAPSHOT_TS_KEY: string = 'uia_snapshot_ts'
 const SYNC_KEYS: string[] = [
   'engineKey', 'customEngineTemplate', 'customEngines', 'searchsuggestion', 'adBlockOn', 'textZoom', 'nightMode2', 'nightFilter', 'nightCss',
   'uaMode', 'customUa', 'noImage', 'homepageMode', 'homeUrl',
@@ -374,7 +374,7 @@ export class AppSettings {
     try {
       this.appContext = context.getApplicationContext() as common.ApplicationContext
       this.abilityContext = context as common.UIAbilityContext
-      this.store = await preferences.getPreferences(context, 'via_settings')
+      this.store = await preferences.getPreferences(context, 'uia_settings')
       const db = BrowserDb.getInstance()
       const remote = await this.parseRemoteSnapshot()
       if (remote !== null) {
@@ -2519,7 +2519,8 @@ export class AppSettings {
     return await this.readNumber('tabsSnapshotIndex', 0)
   }
 
-  // 原版 f8/h.f3()：FIND_CACHE 缓存页内查找词，TTL 180 天
+  // 原版 f8/h.f3()：FIND_CACHE 缓存页内查找词，TTL 180 秒（f8/h.java:172 .f(180)
+  //   + v5/b.java:61 elapsedRealtime()/1000 + 180，秒量纲）
   saveFindCache(text: string): void {
     this.flushKey('findCachedText', text)
     this.flushKey('findCachedTs', Date.now())
@@ -2527,7 +2528,7 @@ export class AppSettings {
 
   async readFindCache(): Promise<string> {
     const ts = await this.readNumber('findCachedTs', 0)
-    if (ts === 0 || Date.now() - ts > 180 * 24 * 3600 * 1000) {
+    if (ts === 0 || Date.now() - ts > 180 * 1000) {
       return ''
     }
     return await this.readString('findCachedText', '')

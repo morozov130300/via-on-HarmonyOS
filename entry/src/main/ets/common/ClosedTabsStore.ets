@@ -71,7 +71,7 @@ export class ClosedSingleResult {
 // 10005 已被 EXIT_CLEAR_EVENT_ID 占用，取 10006
 export const OPEN_CLOSED_TABS_EVENT_ID: number = 10006
 
-const PREF_NAME: string = 'via_closed_tabs'
+const PREF_NAME: string = 'uia_closed_tabs'
 const KEY_ENTRIES: string = 'entries'
 // 异常退出标记（原版 na.e.d：RESTORED_TABS 崩溃快照存在检测的等价实现）。
 // EntryAbility 退出时 markCleanQuit() 写 true；TabStore.init 读取后置回 false——

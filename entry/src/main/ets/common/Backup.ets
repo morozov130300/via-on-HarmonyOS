@@ -58,7 +58,7 @@ function isIntegerString(s: string): boolean {
   return /^[+-]?\d+$/.test(s)
 }
 
-// 原版 mark.via.data.backup2.ZipBackupManager 全量导出/还原 1:1 移植
+// 原版 mark.uia.data.backup2.ZipBackupManager 全量导出/还原 1:1 移植
 // （全部原版方法已亲自核实）：
 // - ZipBackupManager.b（:116-204）：条目顺序 info.enc → bookmarks.html →
 //   favorites.txt → icons.zip → history.txt → tabs.txt → settings.txt(+附件)
@@ -324,7 +324,8 @@ export class BackupManager {
     if (password !== null && uuid !== null && (flags & BackupManager.EXPORT_BIT_PASSWORDS) !== 0) {
       // z8/w0.j：PBKDF2WithHmacSHA1(password, salt=UTF-8(uuid), 10000, 256bit)
       const key = BackupCrypto.pbkdf2Sha1(password, BackupCrypto.utf8Encode(uuid), 10000, 32)
-      // 本工程密码库为空（用户拍板保留 bit32）：仅 CSV 表头
+      // 用户拍板豁免：本工程无密码数据，勾选 bit32 时导出不含密码条目，
+      // 仅写 CSV 表头以维持安卓端 pass.enc 格式可解析（真互通）
       const csv = 'name,url,username,password,note\n'
       const enc = await BackupCrypto.aesCbcEncrypt(key, BackupCrypto.utf8Encode(csv))
       writer.addBytes('pass.enc', enc)

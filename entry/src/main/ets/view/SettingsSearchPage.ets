@@ -5,7 +5,7 @@ import { SEARCH_ENGINES, SearchEngineDef, getBuiltinEngines } from '../common/Se
 import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { buildNavSlide } from './PageTransitions'
 
 class SuggestItem {

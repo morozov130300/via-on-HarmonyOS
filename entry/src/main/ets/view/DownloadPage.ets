@@ -11,7 +11,7 @@ import {
   DL_STATE_WAIT_NET
 } from '../common/DownloadNotifier'
 import { AppIcon } from '../components/AppIcon'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { filePreview } from '@kit.PreviewKit'
@@ -81,24 +81,24 @@ function categoryOf(item: DownloadRec): number {
 function categoryIconOf(item: DownloadRec): Resource {
   const mime = item.mime
   if (mime.startsWith('audio/')) {
-    return $r('app.media.via_dl_audio')
+    return $r('app.media.uia_dl_audio')
   }
   if (mime.startsWith('video/')) {
-    return $r('app.media.via_dl_video')
+    return $r('app.media.uia_dl_video')
   }
   if (mime.startsWith('image/')) {
-    return $r('app.media.via_dl_image')
+    return $r('app.media.uia_dl_image')
   }
   if (mime === 'application/vnd.android.package-archive') {
-    return $r('app.media.via_dl_apk')
+    return $r('app.media.uia_dl_apk')
   }
   if (mime.startsWith('text/') || mime.includes('document') || mime === 'application/pdf') {
-    return $r('app.media.via_dl_doc')
+    return $r('app.media.uia_dl_doc')
   }
   if (mime.includes('zip') || mime.includes('compress')) {
-    return $r('app.media.via_dl_archive')
+    return $r('app.media.uia_dl_archive')
   }
-  return $r('app.media.via_dl_other')
+  return $r('app.media.uia_dl_other')
 }
 
 function fileNameFromUrl(url: string): string {
@@ -899,7 +899,7 @@ export struct DownloadPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
       if (!this.editMode && !stateIsCompleted(item.state)) {
-        Image(stateIsActive(item.state) ? $r('app.media.via_dl_pause') : $r('app.media.via_dl_resume'))
+        Image(stateIsActive(item.state) ? $r('app.media.uia_dl_pause') : $r('app.media.uia_dl_resume'))
           .width(22)
           .height(22)
           .objectFit(ImageFit.Contain)

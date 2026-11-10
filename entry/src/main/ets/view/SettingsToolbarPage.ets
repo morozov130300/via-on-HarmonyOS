@@ -1,9 +1,9 @@
 import { AppSettings } from '../common/Settings'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { buildNavSlide } from './PageTransitions'
 
 const LAYOUT_TRADITIONAL: number = 0
@@ -214,11 +214,11 @@ export struct SettingsToolbarPage {
 
       // 原版 g0.i()：地址槽未填充时宽度 0，五个图标槽各 weight 1
       Row() {
-        this.PreviewSlot('back', $r('app.media.via_ic_back'), 0)
-        this.PreviewSlot('forward', $r('app.media.via_ic_back'), 180)
-        this.PreviewSlot('home', $r('app.media.via_ic_home'), 0)
+        this.PreviewSlot('back', $r('app.media.uia_ic_back'), 0)
+        this.PreviewSlot('forward', $r('app.media.uia_ic_back'), 180)
+        this.PreviewSlot('home', $r('app.media.uia_ic_home'), 0)
         this.PreviewTabsSlot()
-        this.PreviewSlot('menu', $r('app.media.via_ic_menu'), 0)
+        this.PreviewSlot('menu', $r('app.media.uia_ic_menu'), 0)
       }
       .width('100%')
       .height(ROW_H)
@@ -239,7 +239,7 @@ export struct SettingsToolbarPage {
   @Builder
   PreviewSlot(target: string, icon: Resource, rotate: number) {
     Column() {
-      ViaIcon({
+      UiaIcon({
         icon: icon,
         iconSize: 22,
         iconColor: $r('app.color.accent'),
@@ -253,7 +253,7 @@ export struct SettingsToolbarPage {
     .onClick(() => {
       this.openActionPicker(target)
     })
-    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+    .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
       this.openActionPicker(target)
     }))
   }
@@ -262,7 +262,7 @@ export struct SettingsToolbarPage {
   @Builder
   PreviewTabsSlot() {
     Stack() {
-      ViaIcon({ icon: $r('app.media.via_ic_tabs'), iconSize: 22, iconColor: $r('app.color.accent') })
+      UiaIcon({ icon: $r('app.media.uia_ic_tabs'), iconSize: 22, iconColor: $r('app.color.accent') })
       Text('1')
         .fontSize(11)
         .fontWeight(FontWeight.Bold)
@@ -275,7 +275,7 @@ export struct SettingsToolbarPage {
     .onClick(() => {
       this.openActionPicker('tab')
     })
-    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+    .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
       this.openActionPicker('tab')
     }))
   }

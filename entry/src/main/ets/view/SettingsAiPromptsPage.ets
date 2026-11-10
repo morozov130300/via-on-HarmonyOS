@@ -20,7 +20,7 @@ export struct SettingsAiPromptsPage {
     AppBar.show({
       title: $r('app.string.ai_prompts'),
       // 原版 z.b(1,1,ic_add,「新建」)：右上角加号 → 弹类型选择（系统提示词/消息模板）
-      rightIcon: $r('app.media.via_ic_add'),
+      rightIcon: $r('app.media.uia_ic_add'),
       onRight: () => {
         this.pickNewType()
       },

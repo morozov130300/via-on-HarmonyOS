@@ -2,7 +2,7 @@ import { AppSettings } from '../common/Settings'
 import { SslWhitelistStore } from '../common/SslWhitelist'
 import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -134,7 +134,7 @@ export struct SettingsAdvancedPage {
   //   if (w9.l.G2() != 0) { g6.i.g(this, g4.class); }   ← 掩码非 0 直接进白名单页 hb/g4
   //   else { w5.k.l(I()).d0(Yf 忽略 SSL 证书警告).I(n_ 正文).w(Zf, false).M(true)
   //          .V(ok, z.g3).N(cancel, null).f0(); }
-  // 掩码读工程已持久化的 ignoredsslwarning（SslWhitelistStore.mask，与 Settings.ets 同库 via_settings）
+  // 掩码读工程已持久化的 ignoredsslwarning（SslWhitelistStore.mask，与 Settings.ets 同库 uia_settings）
   private onSslRowTap(): void {
     const context = getContext(this) as common.Context
     this.sslStore.init(context).then(() => {

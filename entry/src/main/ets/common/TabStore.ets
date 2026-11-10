@@ -4,7 +4,7 @@ import { ClosedTabsStore, ClosedBatchResult, ClosedSingleResult } from './Closed
 import { emitter } from '@kit.BasicServicesKit'
 
 const BLANK_URL: string = 'about:blank'
-// 主页模式=书签：新标签打开书签页（原版 via://bookmark）
+// 主页模式=书签：新标签打开书签页（原版 uia://bookmark）
 export const OPEN_BOOKMARKS_EVENT_ID: number = 10004
 
 @ObservedV2
@@ -46,8 +46,8 @@ export class TabStore {
     if (settings.restoreTabsMode === 2) {
       const saved = await settings.readTabsSnapshot()
       if (saved.length > 0) {
-        AppStorage.setOrCreate('via_pending_restore_tabs', JSON.stringify(saved))
-        AppStorage.setOrCreate('via_pending_restore_index', await settings.readTabsSnapshotIndex())
+        AppStorage.setOrCreate('uia_pending_restore_tabs', JSON.stringify(saved))
+        AppStorage.setOrCreate('uia_pending_restore_index', await settings.readTabsSnapshotIndex())
       }
       return
     }

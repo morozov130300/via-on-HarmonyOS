@@ -36,9 +36,9 @@ async function runScriptsAutoUpdate(context: common.Context): Promise<void> {
   if (autoUpdateRunning) {
     return
   }
-  // AppSettings.init 在 Index.ets 加载后才执行，这里等待其完成（via_settings 同一实例，
+  // AppSettings.init 在 Index.ets 加载后才执行，这里等待其完成（uia_settings 同一实例，
   // 原始 JSON 已空 ⇔ 已加载完成或本就无脚本，两者都可直接走 AppSettings 内存态）
-  const settingsStore = await preferences.getPreferences(context, 'via_settings')
+  const settingsStore = await preferences.getPreferences(context, 'uia_settings')
   const ready = await waitSettingsLoaded(settingsStore)
   if (!ready) {
     return

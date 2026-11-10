@@ -3,7 +3,7 @@ import { UA_TABLE, UaDef, uaByKey, CustomUaEntry } from '../common/UaTable'
 import { SettingNavRow, SettingRadioRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { BusinessError } from '@kit.BasicServicesKit'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { buildNavSlide } from './PageTransitions'
 import { dialogTransition } from '../common/Transitions'
 

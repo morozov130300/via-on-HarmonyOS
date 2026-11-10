@@ -7,15 +7,15 @@ import { fileIo } from '@kit.CoreFileKit'
 // 原版 r9 包（远程配置）1:1 移植：
 //   a=ConfigSource 接口、b=空实现、c=FeatureToggle、d=解析、i=List 查询实现、
 //   j=抓取器、k=单例（17 键）、f=URL 常量、g=入口、h=fl1 位开关
-// 抓取编排在原版 mark/via/Shell.java:54-57（R()）、应用在 Shell.java:156（k.q().t(new i(list))）
+// 抓取编排在原版 mark/uia/Shell.java:54-57（R()）、应用在 Shell.java:156（k.q().t(new i(list))）
 
 // r9/f.java + z8/c0.f()（本包恒 true，即中国区）→ 唯一生效 URL；海外分支 us-c 保留 1:1 定义
-const FEATURE_API_URL_CN: string = 'https://c.viayoo.com/api/frontend'
-const FEATURE_API_URL_GLOBAL: string = 'https://us-c.viayoo.com/api/frontend'
+const FEATURE_API_URL_CN: string = 'https://c.uiayoo.com/api/frontend'
+const FEATURE_API_URL_GLOBAL: string = 'https://us-c.uiayoo.com/api/frontend'
 // Shell.java:56 Authorization token 原样
 const FEATURE_API_TOKEN: string = 'default:production.5ae8018a613c7b4ef6297b23aaf7d5d18d16cac9a6636ae20d378aa2'
 // r9/j.java:114 User-Agent 原样
-const FEATURE_API_UA: string = 'Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Via/7.4.0.beta'
+const FEATURE_API_UA: string = 'Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Uia/7.4.0.beta'
 // r9/j.java:56 距上次抓取超 60000ms 才重新 POST
 const FETCH_INTERVAL_MS: number = 60000
 // r9/j.java:53 缓存文件 <filesDir>/features；w9/e.java SharedPreferences "features"（uid/last_fetched）

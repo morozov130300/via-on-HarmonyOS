@@ -91,7 +91,7 @@
             "uris": [
               { "scheme": "http" },
               { "scheme": "https" },
-              { "scheme": "via" }
+              { "scheme": "uia" }
             ]
           },
           {
@@ -106,7 +106,7 @@
             ]
           },
           {
-            // 原版 AndroidManifest NDEF_DISCOVERED（http/https/via）：NFC 碰一碰打开网址
+            // 原版 AndroidManifest NDEF_DISCOVERED（http/https/uia）：NFC 碰一碰打开网址
             // actions 必须为 "ohos.nfc.tag.action.TAG_FOUND"，后台匹配 NDEF 技术类型标签
             "actions": [
               "ohos.nfc.tag.action.TAG_FOUND"

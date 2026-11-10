@@ -47,7 +47,7 @@ export { dialogTransition }
 // 原版 w5.k 弹窗卡片（layout u.xml + drawable t/u + theme n）：
 // 圆角 18dp、纯白/深色底、1dp 描边 #30808080、上下 12dp 留白
 @Component
-export struct ViaDialogCard {
+export struct UiaDialogCard {
   @BuilderParam content: () => void
   private cardWidth: number = 0
 

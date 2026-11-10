@@ -50,10 +50,10 @@ function gmCall4(secret: string, fn: string, name: string, argsJson: string | nu
   return `window.${fn}(JSON.stringify({secret:'${secret}', name:'${name}', 'arguments':${args}}), '${secret}')`
 }
 
-// j0.h()：window.<fn> 绑定到 via_gm.call（缺失时回退 window.prompt）
+// j0.h()：window.<fn> 绑定到 uia_gm.call（缺失时回退 window.prompt）
 function gmBindNativeJs(fn: string): string {
-  return `if(!window.${fn}) {const nativePrompt = window.via_gm && window.via_gm.call ? ` +
-    `window.via_gm.call.bind(window.via_gm) : window.prompt;` +
+  return `if(!window.${fn}) {const nativePrompt = window.uia_gm && window.uia_gm.call ? ` +
+    `window.uia_gm.call.bind(window.uia_gm) : window.prompt;` +
     `Object.defineProperty(window, '${fn}', {value: nativePrompt,writable: false,configurable: false,enumerable: true});}`
 }
 
@@ -84,10 +84,10 @@ function gmFnJs(name: string, params: string | null, body: string | null): strin
 // j0.d()：假 Tampermonkey（greasyfork 等脚本站注入）
 export function gmFakeTampermonkeyJs(secret: string): string {
   const fn = gmSanitizeIdent('NP_' + secret)
-  return `(function () {let key = 'via-fake-tampermonkey';if (window[key]) {return;};` +
+  return `(function () {let key = 'uia-fake-tampermonkey';if (window[key]) {return;};` +
     `${gmBindNativeJs(fn)}` +
     `try {window[key] = true;window.external.Tampermonkey = {` +
-    `getVersion: function(e) {e({version:'4.5.1', id: 'Via'});},` +
+    `getVersion: function(e) {e({version:'4.5.1', id: 'Uia'});},` +
     `openOptions: function(e, t) {${gmCall4(secret, fn, 'openOptions', '{name: e, namespace: t}')};},` +
     `isInstalled: function(e, t, n) {var v = ${gmCall4(secret, fn, 'isInstalled', '{name: e, namespace: t}')};` +
     `if(v === 'undefined') { return; };try {v = JSON.parse(v);} catch(e) {};n(v);}}} catch (err) {}})();`
@@ -1274,7 +1274,7 @@ export class GmHttpRequest {
   }
 }
 
-// ===================== o5/a.java 分派桥（window.via_gm.call） =====================
+// ===================== o5/a.java 分派桥（window.uia_gm.call） =====================
 
 export class GmBridge {
   private store: GmValueStore = GmValueStore.getInstance()
@@ -1527,7 +1527,7 @@ export class GmBridge {
       }
       scriptJson += '}'
     }
-    return `{"scriptHandler":"Via","version":"2.0.0","scriptWillUpdate":false,"script":${scriptJson}}`
+    return `{"scriptHandler":"Uia","version":"2.0.0","scriptWillUpdate":false,"script":${scriptJson}}`
   }
 }
 

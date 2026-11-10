@@ -3,7 +3,7 @@ import { wantAgent, WantAgent, common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { DownloadRec } from './Types'
 
-// ===== 原版 mark/via/download/d.java 通知栏 1:1 移植 =====
+// ===== 原版 mark/uia/download/d.java 通知栏 1:1 移植 =====
 // 状态码判定（g5.b，避免与 DownloadEngine 循环依赖，此处按原版复制）
 export const DL_STATE_PAUSED: number = 80
 export const DL_STATE_WAIT_NET: number = 95
@@ -29,8 +29,8 @@ function stateIsActive(state: number): boolean {
 }
 
 // 通知按钮公共事件（原版 DownloadReceiver PAUSE/RESUME）
-export const DL_ACTION_PAUSE: string = 'via.download.action.pause'
-export const DL_ACTION_RESUME: string = 'via.download.action.resume'
+export const DL_ACTION_PAUSE: string = 'uia.download.action.pause'
+export const DL_ACTION_RESUME: string = 'uia.download.action.resume'
 
 // z8.b0.w()：字节数格式化（B/KB/MB/GB，%.1f）
 export function dlSizeText(bytes: number): string {
@@ -227,7 +227,7 @@ export class DownloadNotifier {
     // d：文本组装
     let text: ResourceStr
     if (completed) {
-      // mark/via/download/d.java:223 P3：完成通知文本仅「下载完成」（文件名在标题）
+      // mark/uia/download/d.java:223 P3：完成通知文本仅「下载完成」（文件名在标题）
       text = $r('app.string.download_finished')
     } else if (failed) {
       text = rec.errorMessage !== '' ?
@@ -251,11 +251,11 @@ export class DownloadNotifier {
         }
       }
     }
-    // 点击通知体：完成态 → 拉起应用带 viaOpenFile 路径参数（EntryAbility 校验后
+    // 点击通知体：完成态 → 拉起应用带 uiaOpenFile 路径参数（EntryAbility 校验后
     // 新标签 file:// 打开，不可预览类型回退下载页）；进行中/失败 → 回下载页（现状）
     const tapParams: Record<string, Object> = completed
-      ? { 'viaOpenPage': 'downloads', 'viaOpenFile': rec.path }
-      : { 'viaOpenPage': 'downloads' }
+      ? { 'uiaOpenPage': 'downloads', 'uiaOpenFile': rec.path }
+      : { 'uiaOpenPage': 'downloads' }
     const tapInfo: wantAgent.WantAgentInfo = {
       wants: [{
         deviceId: '',

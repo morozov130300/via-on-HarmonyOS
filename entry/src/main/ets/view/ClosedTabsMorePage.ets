@@ -1,5 +1,5 @@
 import { AppSettings } from '../common/Settings'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { AppIcon } from '../components/AppIcon'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { UiInsets } from '../common/Immersive'
@@ -100,7 +100,7 @@ export struct ClosedTabsMorePage {
   HeaderBar() {
     Row() {
       Stack({ alignContent: Alignment.Center }) {
-        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
+        UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
       }
         .width(44)
         .height(43)

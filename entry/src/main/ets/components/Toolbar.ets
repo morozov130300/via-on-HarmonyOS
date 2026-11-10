@@ -2,7 +2,7 @@ import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import { AddressBar } from './AddressBar'
-import { ViaIcon } from './ViaIcon'
+import { UiaIcon } from './UiaIcon'
 import { BEZIER_0202_CURVE } from '../common/Transitions'
 
 const BAR_HEIGHT: number = 48
@@ -350,18 +350,18 @@ export struct Toolbar {
         .padding({ left: 12, right: 0 })
       }
       if (this.showNavButtons('back')) {
-        this.ToolButton('back', $r('app.media.via_ic_back'), this.tab.canBack, () => {
+        this.ToolButton('back', $r('app.media.uia_ic_back'), this.tab.canBack, () => {
           this.onBack()
         })
       }
       if (this.showNavButtons('forward')) {
         // 原版前进 = drawable/a3.xml：<rotate drawable=@drawable/b2 180°>
-        this.ToolButton('forward', $r('app.media.via_ic_back'), this.tab.canForward, () => {
+        this.ToolButton('forward', $r('app.media.uia_ic_back'), this.tab.canForward, () => {
           this.onForward()
         }, 180)
       }
       if (!this.hidden('home')) {
-        this.ToolButton('home', $r('app.media.via_ic_home'), true, () => {
+        this.ToolButton('home', $r('app.media.uia_ic_home'), true, () => {
           this.onHome()
         })
       }
@@ -369,7 +369,7 @@ export struct Toolbar {
         // 原版 g0.h()：栈叠图标 + 加粗标签数叠加（>99 显示 :)）；隐身时 g0.l 置 alpha 0.15
         // 图标与数字色 = setAccentColor 三分支（k6.Z7）：夜间 #9F9F9F / 亮背景 #232323 / 其余白
         Stack() {
-          ViaIcon({ icon: $r('app.media.via_ic_tabs'), iconSize: ICON_SIZE, iconColor: this.toolbarIconColor() })
+          UiaIcon({ icon: $r('app.media.uia_ic_tabs'), iconSize: ICON_SIZE, iconColor: this.toolbarIconColor() })
           Text(this.swipePreviewText())
             .fontSize(11)
             .fontWeight(FontWeight.Bold)
@@ -380,7 +380,7 @@ export struct Toolbar {
         .height('100%')
         .alignContent(Alignment.Center)
         .opacity(this.tab.incognito || this.swipePreviewCur >= 0 ? 0.15 : 1)
-        // 原版 mark/via/common/widget/g0.java:181-185 g0.j()：
+        // 原版 mark/uia/common/widget/g0.java:181-185 g0.j()：
         //   ObjectAnimator.ofFloat(标签栈 f9648m, "translationY", 0f, -0.3f*height, 0f)
         //   .setDuration(280L) + setInterpolator(x8.h.b()) 即 PathInterpolator(0.2,0.2,0.8,0.8)。
         // 单条 280ms 三关键帧动画（关键帧 0 / 0.5 / 1），作用对象只是标签栈本身，不是整条工具栏。
@@ -406,12 +406,12 @@ export struct Toolbar {
           this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, frames)
           this.onTabs()
         })
-        .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+        .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
           this.longPressAction(this.keyOf('tabs'))
         }))
       }
       if (!this.hidden('menu')) {
-        this.ToolButton('menu', $r('app.media.via_ic_menu'), true, () => {
+        this.ToolButton('menu', $r('app.media.uia_ic_menu'), true, () => {
           this.onMenu()
         })
       }
@@ -456,7 +456,7 @@ export struct Toolbar {
   ToolButton(id: string, icon: Resource, enabled: boolean, action: () => void, rotate: number = 0) {
     Column() {
       // 原版 g0.setAccentColor（k6.Z7 三分支）：工具栏图标着色随背景明暗
-      ViaIcon({
+      UiaIcon({
         icon: icon,
         iconSize: ICON_SIZE,
         iconColor: this.toolbarIconColor(),
@@ -468,7 +468,7 @@ export struct Toolbar {
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     // 原版 g0.g()：图标 ImageView 无禁用态灰化，不可后退时仍为 accent 原色（k6 点击分支自行判断）
-    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+    .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
       this.longPressAction(this.keyOf(id))
     }))
     .onClick(() => {

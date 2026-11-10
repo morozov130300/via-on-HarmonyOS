@@ -32,7 +32,7 @@ export interface SettingsExportState {
 // - z8/b4.java b()（预设 UA id：0 默认 / -1..-8）
 // - z8/c0.java f() 恒 true → searchtoolbardisabled 默认 "-1,-10"、appflag 默认含 1024
 // - w9/p.java（webflag 位布局，默认 96495261）、w9/a.java（appflag 默认 1250）、
-//   w9/o.java（webflag2 仅 bit1 = 自定义 UA 兼容规整，k.java:393 → b4.c 第 7 参）
+//   w9/o.java（webflag2 仅 bit0 = 自定义 UA 兼容规整，k.java:393 → b4.c 第 7 参）
 // - m9/l.d（:249-286）：filters 行遍历全部订阅（url 恒写、title?/enabled? 仅非空/true，
 //   规则文件存在时 path/size/lastUpdated 并打包文件；path = "filters-" + m9/l.i(title)
 //   + z8/v0.g(url) 小写 md5hex + ".txt"）；custom 仅打包 filters-custom.txt 文件不写行
@@ -137,7 +137,8 @@ export class BackupSettings {
     // bit256 流量节省 / bit2048 电脑模式 / bit4096 允许调试网页 / bit65536 不出售 /
     // bit268435456 广告拦截总开关（置反，w9/p.i0/k） / bit536870912 禁用 WebRTC
     let webflag = 96495261
-    webflag = BackupSettings.bit(webflag, 1, s.adBlockOn)
+    // 原版 w9/p.java:88 I()/ :123 g() 的 bit0 是另一开关，不由本工程设置驱动；
+    // 广告拦截只由 bit268435456 表达（w9/p.java D()/i0()，置反语义）。
     webflag = BackupSettings.bit(webflag, 268435456, !s.adBlockOn)
     webflag = BackupSettings.bit(webflag, 8, s.jsEnabled)
     webflag = BackupSettings.bit(webflag, 16, !s.noImage)
@@ -937,7 +938,7 @@ export class BackupSettings {
         kv['doNotSell'] = (webflag & 65536) !== 0
         kv['disableWebRtc'] = (webflag & 536870912) !== 0
       }
-      // webflag2（w9/o）：bit1 = 自定义 UA 兼容规整
+      // webflag2（w9/o）：bit0 = 自定义 UA 兼容规整
       if (typeof st['webflag2'] === 'number') {
         const webflag2 = st['webflag2'] as number
         kv['simplifyUa'] = (webflag2 & 1) !== 0

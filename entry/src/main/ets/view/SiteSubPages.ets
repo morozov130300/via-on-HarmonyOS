@@ -4,10 +4,10 @@ import { SiteSetting, SITE_MODE_DEFAULT, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_
 import { dialogTransition } from '../common/Transitions'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { ZoomSlider } from '../components/ZoomSlider'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { hostOf } from '../common/SearchEngines'
 
 // 原版 z8/f.c() zh：字体缩放预览诗
@@ -425,7 +425,7 @@ export struct FontSizePage {
 
             // a6.e 添加例外网站（a6.f：18dp 图标 + drawablePadding 18 + 14sp 文字，pad 16/20）
             Row({ space: 18 }) {
-              ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
+              UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
               Text('添加例外网站')
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))
@@ -781,7 +781,7 @@ export struct PermissionPage {
             if (this.permShape(this.pageKind) !== PERM_SHAPE_SINGLE) {
               // a6.e 添加例外网站（lb.b + Rd 加号图标）
               Row({ space: 18 }) {
-                ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
+                UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
                 Text('添加例外网站')
                   .fontSize(14)
                   .fontColor($r('app.color.fg'))
@@ -1804,7 +1804,7 @@ export struct AdBlockExceptionPage {
             .alignItems(VerticalAlign.Center)
             // a6.e 添加例外网站
             Row({ space: 18 }) {
-              ViaIcon({ icon: $r('app.media.via_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
+              UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
               Text('添加例外网站')
                 .fontSize(14)
                 .fontColor($r('app.color.fg'))

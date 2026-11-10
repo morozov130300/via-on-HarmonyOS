@@ -1,12 +1,12 @@
 import { BookmarkRec, BookmarkFolderRec, HomeFavRec } from '../common/Types'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { dialogTransition, dimTransition } from '../common/Transitions'
 import { buildNavSlide } from './PageTransitions'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { BackupManager } from '../common/Backup'
 import { parseBookmarksHtml } from '../common/BookmarkHtml'
-import { ViaIcon } from '../components/ViaIcon'
+import { UiaIcon } from '../components/UiaIcon'
 import { AppIcon } from '../components/AppIcon'
 import { UiInsets } from '../common/Immersive'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
@@ -29,9 +29,9 @@ import { preferences } from '@kit.ArkData'
 //   书签 Z3 = 前 5 项 + 复制链接(s)/分享(at)（e0.Z3/Y3）
 // - 视图 h0.r：0=紧凑 / 1=细节（第二行显示主机名/文件夹内条目数，h0.w）
 // - HTML 导入 K3 → 计数提示 d4「%1$d 个书签已导入」/「无法导入」；导出 I3 →
-//   「Via_书签_yyyyMMdd.html」→ g8 提示「书签备份到：%1$s」，0 书签提示「没有书签~」（e0.a4/b4）
+//   「Uia_书签_yyyyMMdd.html」→ g8 提示「书签备份到：%1$s」，0 书签提示「没有书签~」（e0.a4/b4）
 
-const UI_PREF_NAME: string = 'via_bookmark_ui'
+const UI_PREF_NAME: string = 'uia_bookmark_ui'
 const KEY_SORT_MODE: string = 'bookmarkSortMode'
 const KEY_DETAIL_MODE: string = 'bookmarkDetailMode'
 
@@ -263,7 +263,7 @@ export struct BookmarkPage {
       }
       Column() {
         if (this.faviconFailed[`b${item.id}`] === true) {
-          ViaIcon({ icon: $r('app.media.via_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
+          UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
         } else {
           Image(this.faviconUrl(item.url))
             .width(22)
@@ -1043,7 +1043,7 @@ export struct BookmarkPage {
     })
   }
 
-  // I3：建「Via_书签_yyyyMMdd.html」→ 写 HTML → a4：0 书签 toast「没有书签~」，
+  // I3：建「Uia_书签_yyyyMMdd.html」→ 写 HTML → a4：0 书签 toast「没有书签~」，
   // 否则弹「提示 / 书签备份到：%1$s」
   private exportBookmarksHtml(): void {
     const context = this.getUIContext().getHostContext()
@@ -1294,7 +1294,7 @@ export struct BookmarkPage {
   HeaderBar() {
     Row() {
       Stack({ alignContent: Alignment.Center }) {
-        ViaIcon({ icon: $r('app.media.via_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
+        UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
       }
         .width(44)
         .height(43)

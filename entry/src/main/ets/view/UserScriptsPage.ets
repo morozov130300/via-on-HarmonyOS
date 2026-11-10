@@ -9,7 +9,7 @@ import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { buildNavSlide } from './PageTransitions'
 
 // 原版 x7/j 数组 j + strings o4/i2/i1/i3/i0（sa/d1.java:315）
@@ -644,14 +644,14 @@ struct ScriptDownloadOverlay {
 // 保存解析失败 → yh/mz 询问添加默认 Metadata 块（e3：在正文开头插入）；未保存关闭 → g6/nt
 // 确认（sa 保存并退出 / i9 退出）；帮助弹窗 u3 HTML + m_ 了解更多（Tampermonkey 文档）
 const SCRIPT_TEMPLATE: string = '// ==UserScript==\n// @name         New Userscript\n' +
-  '// @namespace    https://viayoo.com/\n// @version      0.1\n' +
+  '// @namespace    https://uiayoo.com/\n// @version      0.1\n' +
   '// @description  try to take over the world!\n// @author       You\n' +
   '// @run-at       document-end\n// @match        https://*/*\n// @grant        none\n' +
   '// ==/UserScript==\n\n(function() {\n    \'use strict\';\n\n    // Your code here...\n})();'
 
 // sa/o.e3：解析失败时插入正文开头的默认 Metadata 块（与原版逐字一致）
 const META_BLOCK_TEMPLATE: string = '// ==UserScript==\n// @name         New Userscript\n' +
-  '// @namespace    https://viayoo.com/\n// @version      0.1\n' +
+  '// @namespace    https://uiayoo.com/\n// @version      0.1\n' +
   '// @description  try to take over the world!\n// @author       You\n' +
   '// @run-at       document-end\n// @match        https://*/*\n// @grant        none\n// ==/UserScript==\n\n'
 
@@ -691,7 +691,7 @@ function randomToken(length: number): string {
 function newScriptTemplate(url: string): string {
   const validUrl = url.startsWith('http://') || url.startsWith('https://')
   let template = validUrl ? SCRIPT_TEMPLATE.replace('https://*/*', url) : SCRIPT_TEMPLATE
-  return template.replace('https://viayoo.com/', 'https://viayoo.com/' + randomToken(6))
+  return template.replace('https://uiayoo.com/', 'https://uiayoo.com/' + randomToken(6))
 }
 
 @ComponentV2

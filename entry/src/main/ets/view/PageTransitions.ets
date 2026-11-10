@@ -1,6 +1,6 @@
-// 设置子页 / 记录页 的左右推入转场 —— 1:1 复刻原版 Via 7.4.0
+// 设置子页 / 记录页 的左右推入转场 —— 1:1 复刻原版 Uia 7.4.0
 //
-// 原版依据（反编译产物 D:\Uia\via_v7.4.0反编译产物）：
+// 原版依据（Uia 工程内的原版反编译产物）：
 //   g6/i.java:67  g6.i.f(...) 内：
 //     fragmentManager.q().x(true).v(x7.i.f13638c, x7.i.f13639d, x7.i.f13640e, x7.i.f13641f)
 //   即 FragmentTransaction.setCustomAnimations(enter, exit, popEnter, popExit)：

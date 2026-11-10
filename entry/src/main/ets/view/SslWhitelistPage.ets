@@ -5,7 +5,7 @@ import { SslWhitelistStore, SSL_BIT_UNTRUSTED, SSL_BIT_DATE_INVALID, SSL_BIT_EXP
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { BusinessError } from '@kit.BasicServicesKit'
-import { computeDialogWidthVp } from '../components/ViaDialogCard'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 
 // 原版 hb/g4：忽略 SSL 证书警告页（1:1）
@@ -56,7 +56,7 @@ export struct SslWhitelistPage {
   aboutToAppear(): void {
     const context = getContext(this) as common.Context
     this.store.init(context)
-    preferences.getPreferences(context, 'via_settings').then((p: preferences.Preferences) => {
+    preferences.getPreferences(context, 'uia_settings').then((p: preferences.Preferences) => {
       this.prefs = p
     }).catch((error: BusinessError) => {
       console.error(`ssl whitelist page open prefs failed: ${error.message}`)

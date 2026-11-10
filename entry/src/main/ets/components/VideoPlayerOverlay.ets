@@ -679,12 +679,12 @@ export struct VideoPlayerOverlay {
         if (this.state.centerVisible) {
           Row({ space: 8 }) {
             if (this.state.centerIcon === CENTER_ICON_BRIGHTNESS) {
-              Image($r('app.media.via_ic_video_brightness'))
+              Image($r('app.media.uia_ic_video_brightness'))
                 .width(24)
                 .height(24)
                 .fillColor('#FFFFFF')
             } else if (this.state.centerIcon === CENTER_ICON_VOLUME) {
-              Image($r('app.media.via_ic_video_volume'))
+              Image($r('app.media.uia_ic_video_volume'))
                 .width(24)
                 .height(24)
                 .fillColor('#FFFFFF')
@@ -723,8 +723,8 @@ export struct VideoPlayerOverlay {
             if (this.state.showLock) {
               Row() {
                 Image(this.state.locked
-                  ? $r('app.media.via_ic_video_lock')
-                  : $r('app.media.via_ic_video_unlock'))
+                  ? $r('app.media.uia_ic_video_lock')
+                  : $r('app.media.uia_ic_video_unlock'))
                   .width(20)
                   .height(20)
                   .fillColor('#FFFFFF')
@@ -742,7 +742,7 @@ export struct VideoPlayerOverlay {
             }
             if (this.state.showRotate) {
               Row() {
-                Image($r('app.media.via_ic_video_rotate'))
+                Image($r('app.media.uia_ic_video_rotate'))
                   .width(20)
                   .height(20)
                   .fillColor('#FFFFFF')
@@ -797,10 +797,11 @@ export struct VideoPlayerOverlay {
     })
   }
 
-  // 原版 v.g：方向菜单（110dp 宽列表：自动/横屏/竖屏/跟随系统）
+  // 原版 arrays.xml array/h（jk/py/q0/pz）：跟随系统 | 自动 | 竖屏 | 横屏
+  // 菜单索引必须与 videoorientation 的 0..3 同序（w9/k.m(int)）
   private showOrientationMenu(): void {
     this.state.cancelHideTimer()
-    const items: string[] = ['自动', '横屏', '竖屏', '跟随系统']
+    const items: string[] = ['跟随系统', '自动', '竖屏', '横屏']
     const sheets: Array<SheetInfo> = items.map((item: string, index: number): SheetInfo => {
       return {
         title: item,
