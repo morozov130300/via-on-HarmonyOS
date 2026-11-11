@@ -15,13 +15,13 @@ export class TabStore {
   // 原版隐身为全局会话模型（k6.cb()/n0.m2().s()）：true 时菜单显示「退出隐身浏览」
   @Trace sessionIncognito: boolean = false
   private nextTabId: number = 1
-  // 原版 na.f2721v / na.f2720u：最近一次关闭标签的 URL 与代次。
+  // 原版 na.f2721v：最近一次关闭标签的 URL。
   //   W0() = 「刚关过标签且 URL 非空」→ 前进到底时可重开（k6.W7 → na.W0）
-  //   U0() = 重开该标签（k6.V8 → na.U0，取 URL 建新标签并 u++）
-  //   s0() = 作废（关闭无关页/新页面打开时 u++ 并清空，防误重开）
-  // 代次 u 只在「与记录同一代」的关闭事件里写 f2721v（na.java:382），保证只记最后一次
+  //   U0() = 重开该标签（k6.V8 → na.U0，取 URL 建新标签）
+  //   s0() = 作废（成功前进 / 新页面落定后清空，防误重开）
+  // 原版的代次字段 f2720u 只用于异步回调防乱序（na.java:382）；本端关闭流程是同步的，
+  // 直接覆盖即为「最后一次关闭生效」，故不引入代次。
   private lastClosedUrl: string = ''
-  private closeGeneration: number = 0
 
   private constructor() {
     this.tabs.push(new TabItem(this.nextTabId, false))
@@ -209,7 +209,6 @@ export class TabStore {
       return false
     }
     this.lastClosedUrl = ''
-    this.closeGeneration = this.closeGeneration + 1
     const store = ClosedTabsStore.getInstance()
     const ids: string[] = []
     for (let i = store.entries.length - 1; i >= 0; i--) {
@@ -226,12 +225,10 @@ export class TabStore {
   // 原版 na.s0()：作废最近关闭记录（新页面打开 / 已成功前进，避免误重开）
   invalidateLastClosed(): void {
     this.lastClosedUrl = ''
-    this.closeGeneration = this.closeGeneration + 1
   }
 
-  // 原版 na.K1 → na.f0：记录最近一次关闭的标签（代次对齐后才写入，等价「最后一次关闭生效」）
+  // 原版 na.K1 → na.f0：记录最近一次关闭的标签
   private noteLastClosedUrl(url: string): void {
-    this.closeGeneration = this.closeGeneration + 1
     if (url !== '') {
       this.lastClosedUrl = url
     }
