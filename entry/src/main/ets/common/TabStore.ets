@@ -15,6 +15,13 @@ export class TabStore {
   // 原版隐身为全局会话模型（k6.cb()/n0.m2().s()）：true 时菜单显示「退出隐身浏览」
   @Trace sessionIncognito: boolean = false
   private nextTabId: number = 1
+  // 原版 na.f2721v / na.f2720u：最近一次关闭标签的 URL 与代次。
+  //   W0() = 「刚关过标签且 URL 非空」→ 前进到底时可重开（k6.W7 → na.W0）
+  //   U0() = 重开该标签（k6.V8 → na.U0，取 URL 建新标签并 u++）
+  //   s0() = 作废（关闭无关页/新页面打开时 u++ 并清空，防误重开）
+  // 代次 u 只在「与记录同一代」的关闭事件里写 f2721v（na.java:382），保证只记最后一次
+  private lastClosedUrl: string = ''
+  private closeGeneration: number = 0
 
   private constructor() {
     this.tabs.push(new TabItem(this.nextTabId, false))
@@ -161,6 +168,134 @@ export class TabStore {
     return this.tabs[this.currentIndex]
   }
 
+  // 原版 r4/d.j()/n()：可后退/可前进**每次实时查询 WebView**，不读缓存标志位。
+  // 缓存值只在 onPageBegin/onPageEnd 更新，同文档导航（pushState/锚点/replaceState）不触发这两个回调，
+  // 用缓存值会导致单页应用里按钮与横滑「该亮不亮、点了没反应」。
+  canGoBack(tab: TabItem): boolean {
+    try {
+      return tab.controller.accessBackward()
+    } catch (error) {
+      return tab.canBack
+    }
+  }
+
+  canGoForward(tab: TabItem): boolean {
+    try {
+      return tab.controller.accessForward()
+    } catch (error) {
+      return tab.canForward
+    }
+  }
+
+  // 原版 k6.V7()：右滑后退可用 = 可后退 || 当前不是主页（退到底会关标签，仍算有动作）
+  canNavigateBack(tab: TabItem): boolean {
+    return this.canGoBack(tab) || !tab.isHomePage()
+  }
+
+  // 原版 k6.W7()：左滑前进可用 = 可前进 || 有最近关闭的标签可重开（na.W0）
+  canNavigateForward(tab: TabItem): boolean {
+    return this.canGoForward(tab) || this.hasLastClosed()
+  }
+
+  // 原版 na.W0()：最近关闭标签记录存在
+  hasLastClosed(): boolean {
+    return this.lastClosedUrl !== ''
+  }
+
+  // 原版 na.U0()：前进到底时重开最近关闭的标签（F1 按 URL 恢复并选中），随后清记录
+  reopenLastClosed(): boolean {
+    const url: string = this.lastClosedUrl
+    if (url === '') {
+      return false
+    }
+    this.lastClosedUrl = ''
+    this.closeGeneration = this.closeGeneration + 1
+    const store = ClosedTabsStore.getInstance()
+    const ids: string[] = []
+    for (let i = store.entries.length - 1; i >= 0; i--) {
+      if (store.entries[i].url === url) {
+        ids.push(store.entries[i].id)
+        break
+      }
+    }
+    store.removeByIds(ids)
+    this.newTabAt(url, false)
+    return true
+  }
+
+  // 原版 na.s0()：作废最近关闭记录（新页面打开 / 已成功前进，避免误重开）
+  invalidateLastClosed(): void {
+    this.lastClosedUrl = ''
+    this.closeGeneration = this.closeGeneration + 1
+  }
+
+  // 原版 na.K1 → na.f0：记录最近一次关闭的标签（代次对齐后才写入，等价「最后一次关闭生效」）
+  private noteLastClosedUrl(url: string): void {
+    this.closeGeneration = this.closeGeneration + 1
+    if (url !== '') {
+      this.lastClosedUrl = url
+    }
+  }
+
+  // 原版 k6.U8()（k6.java:5970-5986）：
+  //   可后退 → 加载中先 stopLoading 再 goBack；
+  //   不可后退 → 主页/内部页则什么都不做，否则关闭当前标签（na.B0）。
+  goBack(tab: TabItem): boolean {
+    if (this.canGoBack(tab)) {
+      // q() = progress < 100 → s() = stopLoading
+      if (tab.progress < 100) {
+        try {
+          tab.controller.stop()
+        } catch (error) {
+          console.error('stop before back failed')
+        }
+      }
+      try {
+        tab.controller.backward()
+        return true
+      } catch (error) {
+        console.error('backward failed')
+        return false
+      }
+    }
+    if (tab.isHomePage()) {
+      return false
+    }
+    let index = this.currentIndex
+    for (let i = 0; i < this.tabs.length; i++) {
+      if (this.tabs[i].id === tab.id) {
+        index = i
+        break
+      }
+    }
+    this.closeTab(index)
+    return true
+  }
+
+  // 原版 k6.V8()（k6.java:6088-6101）：
+  //   不可前进 → 重开最近关闭的标签（na.U0）；可前进 → 加载中先 stopLoading 再 goForward，
+  //   前进成功后作废「最近关闭」记录（na.s0，避免后续误重开）。
+  goForward(tab: TabItem): boolean {
+    if (!this.canGoForward(tab)) {
+      return this.reopenLastClosed()
+    }
+    if (tab.progress < 100) {
+      try {
+        tab.controller.stop()
+      } catch (error) {
+        console.error('stop before forward failed')
+      }
+    }
+    try {
+      tab.controller.forward()
+    } catch (error) {
+      console.error('forward failed')
+      return false
+    }
+    this.invalidateLastClosed()
+    return true
+  }
+
   newTab(incognito: boolean): boolean {
     const tab = new TabItem(this.nextTabId, incognito)
     this.nextTabId = this.nextTabId + 1
@@ -199,6 +334,8 @@ export class TabStore {
     if (tab.incognito || tab.isHomePage() || tab.url === '') {
       return null
     }
+    // 原版 na.K1 → na.f0：关闭成功才记「最近关闭」，供前进到底重开（na.U0/W0）
+    this.noteLastClosedUrl(tab.url)
     const entry = ClosedTabsStore.getInstance().add(tab.url, tab.title)
     if (entry === null) {
       return null
@@ -244,6 +381,8 @@ export class TabStore {
       }
       const entry = ClosedTabsStore.getInstance().add(removed[i].url, removed[i].title)
       if (entry !== null) {
+        // 原版 j8 逐项走 K1 → f0，同样刷新「最近关闭」记录
+        this.noteLastClosedUrl(entry.url)
         urls.push(entry.url)
         titles.push(entry.title)
       }

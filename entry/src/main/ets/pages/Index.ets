@@ -849,33 +849,26 @@ struct Index {
       return true
     }
     const tab = this.tabStore.current()
-    // 原版隐身会话（f2583n1）：可后退则后退，多标签开标签面板，否则结束会话
+    // 原版隐身会话（f2583n1，k6.java:4483-4494）：可后退则后退，多标签关当前标签，否则结束会话
     if (this.tabStore.sessionIncognito && tab.incognito) {
-      if (tab.canBack) {
-        try {
-          tab.controller.backward()
-        } catch (error) {
-          console.error('backward failed')
-        }
+      if (this.tabStore.canGoBack(tab)) {
+        this.tabStore.goBack(tab)
         return true
       }
       if (this.tabStore.tabs.length > 1) {
-        this.showTabPanel = true
+        this.tabStore.closeTab(this.tabStore.currentIndex)
         return true
       }
       this.tabStore.exitIncognitoSession(false)
       return true
     }
+    // 原版 k6.I9（4460-4507）：非主页 → U8（可退则退，不可退关标签）；
+    // 主页 → 多标签关标签，否则 1500ms 内双击退出
     if (!tab.isHomePage()) {
-      // 原版 U8：可后退则后退；不可后退且非主页 → 关闭当前标签（f2580m0.B0()）
-      if (tab.canBack) {
-        try {
-          tab.controller.backward()
-        } catch (error) {
-          console.error('backward failed')
-        }
-        return true
-      }
+      this.tabStore.goBack(tab)
+      return true
+    }
+    if (this.tabStore.tabs.length > 1) {
       this.tabStore.closeTab(this.tabStore.currentIndex)
       return true
     }
@@ -1179,14 +1172,7 @@ struct Index {
     if (!this.pcMainScene()) {
       return
     }
-    const tab = this.tabStore.current()
-    if (tab.canBack) {
-      try {
-        tab.controller.backward()
-      } catch (error) {
-        console.error('backward failed')
-      }
-    }
+    this.tabStore.goBack(this.tabStore.current())
   }
 
   // 原版 ra(13)=V8：网页前进
@@ -1194,14 +1180,7 @@ struct Index {
     if (!this.pcMainScene()) {
       return
     }
-    const tab = this.tabStore.current()
-    if (tab.canForward) {
-      try {
-        tab.controller.forward()
-      } catch (error) {
-        console.error('forward failed')
-      }
-    }
+    this.tabStore.goForward(this.tabStore.current())
   }
 
   // 原版 tb()：打开菜单（k6.java:8547-8558 —— 先算 N8() 宽与 i10 贴边距）
@@ -1670,23 +1649,11 @@ struct Index {
       action = this.settings.fabdownaction
     }
     if (action === 12) {
-      const tab = this.tabStore.current()
-      if (tab.canBack) {
-        try {
-          tab.controller.backward()
-        } catch (error) {
-          console.error('fab backward failed')
-        }
-      }
+      // 原版 ra(12) → U8
+      this.tabStore.goBack(this.tabStore.current())
     } else if (action === 13) {
-      const tab = this.tabStore.current()
-      if (tab.canForward) {
-        try {
-          tab.controller.forward()
-        } catch (error) {
-          console.error('fab forward failed')
-        }
-      }
+      // 原版 ra(13) → V8
+      this.tabStore.goForward(this.tabStore.current())
     } else if (action === 23) {
       try {
         this.tabStore.current().controller.runJavaScript('window.scrollBy(0, -window.innerHeight)')
@@ -2221,24 +2188,13 @@ struct Index {
         this.openPage('siteSettings')
       },
       onBack: () => {
-        const tab = this.tabStore.current()
-        if (tab.canBack) {
-          try {
-            tab.controller.backward()
-          } catch (error) {
-            console.error('backward failed')
-          }
-        }
+        // 原版 k6.U8()：可后退则后退（加载中先 stop），否则非主页 → 关当前标签。
+        // 每次点击实时查询 accessBackward()，不读 onPageBegin/onPageEnd 更新的缓存值。
+        this.tabStore.goBack(this.tabStore.current())
       },
       onForward: () => {
-        const tab = this.tabStore.current()
-        if (tab.canForward) {
-          try {
-            tab.controller.forward()
-          } catch (error) {
-            console.error('forward failed')
-          }
-        }
+        // 原版 k6.V8()：可前进则前进，否则重开最近关闭的标签（na.U0）
+        this.tabStore.goForward(this.tabStore.current())
       },
       onHome: () => {
         if (!this.tabStore.current().isHomePage()) {
