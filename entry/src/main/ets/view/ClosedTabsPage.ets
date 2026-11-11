@@ -1,6 +1,7 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { ClosedTabEntry, ClosedTabsStore } from '../common/ClosedTabsStore'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { TabStore } from '../common/TabStore'
 import { UiaIcon } from '../components/UiaIcon'
 import { AppIcon } from '../components/AppIcon'
@@ -300,39 +301,29 @@ export struct ClosedTabsPage {
         Text($r('app.string.reset_default_msg'))
           .fontSize(14)
           .fontColor($r('app.color.fg_secondary'))
-        Row({ space: 12 }) {
-          Button($r('app.string.cancel'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.showClearConfirm = false
-            })
-          Button($r('app.string.confirm'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.showClearConfirm = false
-              this.store.clear()
-              this.reload()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.showClearConfirm = false
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.showClearConfirm = false
+            this.store.clear()
+            this.reload()
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(16)
-      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.showClearConfirm = false
     })

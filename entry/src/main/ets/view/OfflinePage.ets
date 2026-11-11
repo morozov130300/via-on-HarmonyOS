@@ -2,6 +2,7 @@ import { TOAST_SHORT } from '../common/ToastDuration'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { AppIcon } from '../components/AppIcon'
 import { TabStore } from '../common/TabStore'
 import { ZipStoreWriter } from '../common/ZipWriter'
@@ -453,7 +454,7 @@ export struct OfflinePage {
   DeleteDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.delete'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -464,32 +465,22 @@ export struct OfflinePage {
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .width('100%')
-      Row({ space: 10 }) {
-        Button($r('app.string.cancel'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.showDelete = false
-          })
-        Button($r('app.string.confirm'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .fontColor($r('app.color.on_accent'))
-          .onClick(() => {
-            this.applyDelete()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.showDelete = false
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.applyDelete()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(16)
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
   }
 
   // 原版 eb.Y2/e3：导出成功对话框（g6 提示 + ii 导出数据到：%s + 确定单键）
@@ -497,7 +488,7 @@ export struct OfflinePage {
   ExportDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.ai_unsaved_title'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -505,20 +496,19 @@ export struct OfflinePage {
         .fontSize(14)
         .fontColor($r('app.color.fg'))
         .width('100%')
-      Button($r('app.string.confirm'))
-        .fontSize(14)
-        .height(38)
-        .width('100%')
-        .backgroundColor($r('app.color.accent'))
-        .fontColor($r('app.color.on_accent'))
-        .onClick(() => {
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
           this.showExportDialog = false
-        })
+        } })
+      }
+      .width('100%')
     }
     .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(16)
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
   }
 
   // 原版 eb.l：条目图标 = ae/ag（48dp 圆形 accent 底 + 32dp c_/de 字形）
@@ -716,7 +706,7 @@ export struct OfflinePage {
           .width('100%')
           .height('100%')
           .justifyContent(FlexAlign.Center)
-          .backgroundColor('rgba(0,0,0,0.5)')
+          .backgroundColor('rgba(0,0,0,0.4)')
           .onClick(() => {
             this.showDelete = false
           })
@@ -728,7 +718,7 @@ export struct OfflinePage {
           .width('100%')
           .height('100%')
           .justifyContent(FlexAlign.Center)
-          .backgroundColor('rgba(0,0,0,0.5)')
+          .backgroundColor('rgba(0,0,0,0.4)')
           .onClick(() => {
             this.showExportDialog = false
           })

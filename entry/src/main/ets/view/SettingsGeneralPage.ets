@@ -12,6 +12,7 @@ import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { buildNavSlide } from './PageTransitions'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { UiaDialogCard, computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 
 @ComponentV2
 export struct SettingsGeneralPage {
@@ -430,26 +431,14 @@ export struct SettingsGeneralPage {
         this.ClearOnExitItem(label, index)
       }, (label: string) => label)
       Row() {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closeClearOnExitDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.saveClearOnExit()
-            this.closeClearOnExitDialog()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeClearOnExitDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.saveClearOnExit()
+          this.closeClearOnExitDialog()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
@@ -772,25 +761,13 @@ export struct SettingsGeneralPage {
         this.ExportDataItem(label, index)
       }, (label: string) => label)
       Row() {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closeExportDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.confirmExport()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeExportDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.confirmExport()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
@@ -841,25 +818,13 @@ export struct SettingsGeneralPage {
       .margin({ left: 16, right: 12, top: 8 })
       .border({ width: { bottom: 1 }, color: $r('app.color.dialog_border') })
       Row() {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closePasswordDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.confirmExportPassword()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closePasswordDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.confirmExportPassword()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
@@ -951,16 +916,10 @@ export struct SettingsGeneralPage {
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
       Row() {
-        Blank()
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closeDefaultBrowserGuideDialog()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.closeDefaultBrowserGuideDialog()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
@@ -1015,16 +974,10 @@ export struct SettingsGeneralPage {
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
       Row() {
-        Blank()
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closePasswordVaultGuideDialog()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.closePasswordVaultGuideDialog()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
@@ -1144,26 +1097,14 @@ export struct SettingsGeneralPage {
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 8 })
       Row() {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closeRestartConfirmDialog()
-          })
-        Text($r('app.string.orig_er'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closeRestartConfirmDialog()
-            this.restartApp()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeRestartConfirmDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.orig_er'), onAction: () => {
+          this.closeRestartConfirmDialog()
+          this.restartApp()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
@@ -1250,31 +1191,19 @@ export struct SettingsGeneralPage {
       .margin({ top: 8 })
       .border({ width: { bottom: 1 }, color: $r('app.color.dialog_border') })
       Row() {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closeHomeUrlDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            const url = this.homeUrlInput.trim()
-            // 原版 c4.E3：需含 :// 才保存
-            if (url.includes('://')) {
-              this.settings.setHomeUrl(url)
-              this.settings.setHomepageMode(1)
-            }
-            this.closeHomeUrlDialog()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeHomeUrlDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          const url = this.homeUrlInput.trim()
+          // 原版 c4.E3：需含 :// 才保存
+          if (url.includes('://')) {
+            this.settings.setHomeUrl(url)
+            this.settings.setHomepageMode(1)
+          }
+          this.closeHomeUrlDialog()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })
@@ -1401,26 +1330,14 @@ export struct SettingsGeneralPage {
         this.ClearDataItem(label, index)
       }, (label: string) => label)
       Row() {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.closeClearDataDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.dialog_action'))
-          .textAlign(TextAlign.Center)
-          .constraintSize({ minWidth: 56 })
-          .padding(16)
-          .onClick(() => {
-            this.applyClearData()
-            this.closeClearDataDialog()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeClearDataDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.applyClearData()
+          this.closeClearDataDialog()
+        } })
       }
       .width('100%')
       .margin({ left: 16, right: 16, top: 12 })

@@ -1,6 +1,7 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { BookmarkRec, BookmarkFolderRec, HomeFavRec } from '../common/Types'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { dialogTransition, dimTransition } from '../common/Transitions'
 import { buildNavSlide } from './PageTransitions'
 import { BrowserDb } from '../common/Database'
@@ -358,14 +359,15 @@ export struct BookmarkPage {
           .fontColor($r('app.color.fg'))
       }
       .padding(24)
-      .borderRadius(14)
-      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.35)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
   }
 
@@ -1483,38 +1485,28 @@ struct BookmarkEditOverlay {
             })
         }
         .alignItems(HorizontalAlign.Start)
-        Row({ space: 12 }) {
-          Button($r('app.string.cancel'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.onClose()
-            })
-          Button($r('app.string.save'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.save()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.onClose()
+          } })
+          UiaDialogButton({ label: $r('app.string.save'), onAction: () => {
+            this.save()
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(16)
-      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.onClose()
@@ -1578,38 +1570,28 @@ struct NewFolderOverlay {
           .onChange((value: string) => {
             this.name = value
           })
-        Row({ space: 12 }) {
-          Button($r('app.string.cancel'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.onClose()
-            })
-          Button($r('app.string.save'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.save()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.onClose()
+          } })
+          UiaDialogButton({ label: $r('app.string.save'), onAction: () => {
+            this.save()
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(16)
-      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.onClose()
@@ -1720,26 +1702,25 @@ struct FolderPickerOverlay {
         .height(260)
         .borderRadius(8)
         .backgroundColor($r('app.color.surface'))
-        Button($r('app.string.cancel'))
-          .fontSize(14)
-          .height(36)
-          .width('100%')
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
             this.onClose()
-          })
+          } })
+        }
+        .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(16)
-      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.onClose()

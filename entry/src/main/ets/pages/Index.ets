@@ -43,6 +43,7 @@ import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScr
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
 import { AutoHideGesture, AutoHideHost } from '../common/AutoHideGesture'
 
@@ -2581,7 +2582,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor('rgba(0,0,0,0.2)')
+        .backgroundColor('rgba(0,0,0,0.4)')
         .transition(dimTransition(240))
         .onClick(() => {
           this.showBookmarkPicker = false
@@ -3302,37 +3303,27 @@ struct DownloadConfirmOverlay {
               this.copyUrl()
             })
         }
-        Row({ space: 12 }) {
-          Button($r('app.string.cancel'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.cancel()
-            })
-          Button($r('app.string.download_btn'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.confirm()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.cancel()
+          } })
+          UiaDialogButton({ label: $r('app.string.download_btn'), onAction: () => {
+            this.confirm()
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(16)
-      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.cancel()
     })
@@ -3419,37 +3410,27 @@ struct SavePageDialog {
             .fontColor($r('app.color.fg'))
         }
         .width('100%')
-        Row({ space: 12 }) {
-          Button($r('app.string.cancel'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.onCancel()
-            })
-          Button($r('app.string.confirm'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.onConfirm(this.name, this.pdf)
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.onCancel()
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.onConfirm(this.name, this.pdf)
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(16)
-      .backgroundColor($r('app.color.page_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.onCancel()
     })

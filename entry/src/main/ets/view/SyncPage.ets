@@ -9,6 +9,7 @@ import { WebDavClient } from '../common/WebDav'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 
 const CLOUD_SPACE_LINK: string = 'hicloud://cloudDrive/getInfo?path=MainActivity'
 
@@ -207,7 +208,7 @@ export struct SyncPage {
   FieldDialog(fieldKey: string) {
     Column({ space: 16 }) {
       Text(this.fieldTitle(fieldKey))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
       TextInput({
         placeholder: fieldKey === 'webdav_url' ? 'https://example.com/dav' : '',
@@ -219,28 +220,23 @@ export struct SyncPage {
         .onChange((value: string) => {
           this.fieldDraft = value
         })
-      Row({ space: 12 }) {
-        Button($r('app.string.cancel'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.closeFieldDialog()
-          })
-        Button($r('app.string.confirm'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .onClick(() => {
-            this.saveField(fieldKey)
-            this.closeFieldDialog()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeFieldDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.saveField(fieldKey)
+          this.closeFieldDialog()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 

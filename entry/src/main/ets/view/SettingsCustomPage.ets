@@ -9,6 +9,7 @@ import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
 import { UiaIcon } from '../components/UiaIcon'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { UiInsets } from '../common/Immersive'
 import { buildNavSlide } from './PageTransitions'
 import { picker } from '@kit.CoreFileKit'
@@ -610,8 +611,8 @@ export struct SettingsCustomPage {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text('Logo')
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 18, top: 16, bottom: 6 })
@@ -643,14 +644,14 @@ export struct SettingsCustomPage {
       }
       .width('46%')
       .constraintSize({ minWidth: 220 })
-      .borderRadius(14)
-      .backgroundColor($r('app.color.menu_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
       .padding({ top: 4, bottom: 8 })
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.35)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.logoDialogShow = false
     })
@@ -675,40 +676,34 @@ export struct SettingsCustomPage {
           .onChange((value: string) => {
             this.textDraft = value
           })
-        Row({ space: 24 }) {
-          Blank()
-          Text($r('app.string.cancel'))
-            .fontSize(14)
-            .fontColor($r('app.color.accent'))
-            .onClick(() => {
-              this.textKind = ''
-            })
-          Text($r('app.string.confirm'))
-            .fontSize(14)
-            .fontColor($r('app.color.accent'))
-            .onClick(() => {
-              if (this.textKind === 'html') {
-                this.settings.setHomeLogoHtml(this.textDraft)
-                this.settings.setHomeLogoType(3)
-              } else {
-                this.settings.setHomeLogoText(this.textDraft)
-                this.settings.setHomeLogoType(2)
-              }
-              this.textKind = ''
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.textKind = ''
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            if (this.textKind === 'html') {
+              this.settings.setHomeLogoHtml(this.textDraft)
+              this.settings.setHomeLogoType(3)
+            } else {
+              this.settings.setHomeLogoText(this.textDraft)
+              this.settings.setHomeLogoType(2)
+            }
+            this.textKind = ''
+          } })
         }
         .width('100%')
       }
       .width('60%')
       .constraintSize({ minWidth: 280 })
       .padding(16)
-      .borderRadius(14)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.35)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.textKind = ''
     })
@@ -727,41 +722,35 @@ export struct SettingsCustomPage {
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
-        Row({ space: 24 }) {
-          Blank()
-          Text($r('app.string.cancel'))
-            .fontSize(14)
-            .fontColor($r('app.color.accent'))
-            .onClick(() => {
-              this.confirmKind = ''
-            })
-          Text($r('app.string.confirm'))
-            .fontSize(14)
-            .fontColor($r('app.color.accent'))
-            .onClick(() => {
-              if (this.confirmKind === 'clear') {
-                this.settings.bumpIconEpoch()
-                this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: TOAST_SHORT })
-              } else {
-                this.settings.resetHomeStyle()
-              }
-              this.confirmKind = ''
-              this.activeSlider = ''
-              this.paletteKey = ''
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.confirmKind = ''
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            if (this.confirmKind === 'clear') {
+              this.settings.bumpIconEpoch()
+              this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: TOAST_SHORT })
+            } else {
+              this.settings.resetHomeStyle()
+            }
+            this.confirmKind = ''
+            this.activeSlider = ''
+            this.paletteKey = ''
+          } })
         }
         .width('100%')
       }
       .width('52%')
       .constraintSize({ minWidth: 260 })
       .padding(16)
-      .borderRadius(14)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.35)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.confirmKind = ''
     })

@@ -11,6 +11,7 @@ import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { buildNavSlide } from './PageTransitions'
 
 // 原版 x7/j 数组 j + strings o4/i2/i1/i3/i0（sa/d1.java:315）
@@ -597,42 +598,32 @@ struct ScriptDownloadOverlay {
           .onChange((value: string) => {
             this.url = value
           })
-        Row({ space: 12 }) {
-          Button($r('app.string.cancel'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.onClose()
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            const url = this.url.trim()
+            if (url === '') {
               this.onClose()
-            })
-          Button($r('app.string.confirm'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              const url = this.url.trim()
-              if (url === '') {
-                this.onClose()
-                return
-              }
-              this.onConfirm(url)
-            })
+              return
+            }
+            this.onConfirm(url)
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .backgroundColor($r('app.color.page_bg'))
-      .borderRadius(16)
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.onClose()
     })
@@ -758,15 +749,16 @@ export struct ScriptEditOverlay {
       .width('90%')
       .height('92%')
       .padding(20)
-      .backgroundColor($r('app.color.page_bg'))
-      .borderRadius(16)
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
       if (this.helpShow) {
         this.helpDialog()
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.requestClose()
     })
@@ -788,38 +780,28 @@ export struct ScriptEditOverlay {
         }
         .align(Alignment.Top)
         .scrollBar(BarState.Auto)
-        Row({ space: 12 }) {
-          Button($r('app.string.orig_m_'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              // z8.b0.P：浏览器内打开 Tampermonkey 文档
-              TabStore.getInstance().newTabAt('https://www.tampermonkey.net/documentation.php', false)
-            })
-          Button($r('app.string.confirm'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.helpShow = false
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.orig_m_'), onAction: () => {
+            // z8.b0.P：浏览器内打开 Tampermonkey 文档
+            TabStore.getInstance().newTabAt('https://www.tampermonkey.net/documentation.php', false)
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.helpShow = false
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .backgroundColor($r('app.color.page_bg'))
-      .borderRadius(16)
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .backgroundColor($r('app.color.dialog_bg'))
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.helpShow = false
     })

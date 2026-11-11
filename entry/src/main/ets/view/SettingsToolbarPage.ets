@@ -298,7 +298,7 @@ export struct SettingsToolbarPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.2)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.pickerDialogId = dialogId
     }).catch(() => {
@@ -483,7 +483,7 @@ export struct SettingsToolbarPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.2)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.assignDialogId(dialogKind, dialogId)
     }).catch(() => {
