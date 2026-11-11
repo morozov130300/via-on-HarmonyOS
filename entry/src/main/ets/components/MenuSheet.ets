@@ -18,6 +18,7 @@ import { scriptPatternMatches } from '../common/ScriptMatch'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
 import { UiaIcon } from './UiaIcon'
+import { UiaDialogButton } from './UiaDialogButton'
 import { ZoomSlider } from './ZoomSlider'
 import { TranslateState } from './TranslatePanel'
 import { computeDialogWidthVp } from './UiaDialogCard'
@@ -249,8 +250,8 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text($r('app.string.browser_ua'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -304,14 +305,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showUaDialog = false
@@ -738,7 +739,7 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 10 }) {
         Text($r('app.string.clear_data'))
-          .fontSize(17)
+          .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
@@ -758,38 +759,29 @@ export struct MenuSheet {
             this.clearDataSelection[index] = !this.clearDataSelection[index]
           })
         }, (label: string) => label)
-        Row({ space: 24 }) {
-          Blank()
-          Text($r('app.string.cancel'))
-            .fontSize(15)
-            .fontColor($r('app.color.fg_secondary'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.showClearDataDialog = false
-            })
-          Text($r('app.string.confirm'))
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.accent'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.applyClearData()
-              this.showClearDataDialog = false
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.showClearDataDialog = false
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.applyClearData()
+            this.showClearDataDialog = false
+          } })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showClearDataDialog = false
@@ -822,8 +814,8 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text($r('app.string.orig_bf'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -835,14 +827,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showDlManagerDialog = false
@@ -881,8 +873,8 @@ export struct MenuSheet {
       Column() {
         // 原版弹窗标题 = kt「图像」（k6.O9 case17 d0(x7.u.f14235y6)），非「有图模式」
         Text($r('app.string.orig_kt'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -896,14 +888,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showImageModeDialog = false
@@ -935,7 +927,7 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 10 }) {
         Text($r('app.string.report_site'))
-          .fontSize(17)
+          .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
@@ -957,37 +949,28 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.reportRemarks = value
           })
-        Row({ space: 24 }) {
-          Blank()
-          Text($r('app.string.cancel'))
-            .fontSize(15)
-            .fontColor($r('app.color.fg_secondary'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.showReportDialog = false
-            })
-          Text($r('app.string.confirm'))
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.accent'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.submitReport()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.showReportDialog = false
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.submitReport()
+          } })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showReportDialog = false
@@ -1018,8 +1001,8 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text($r('app.string.screen_orientation'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -1034,14 +1017,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showOrientationDialog = false
@@ -1073,7 +1056,7 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 12 }) {
         Text($r('app.string.add_home_fav'))
-          .fontSize(17)
+          .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
@@ -1101,37 +1084,28 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addHomeFavUrl = value
           })
-        Row({ space: 24 }) {
-          Blank()
-          Text($r('app.string.cancel'))
-            .fontSize(15)
-            .fontColor($r('app.color.fg_secondary'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.showAddHomeFavDialog = false
-            })
-          Text($r('app.string.confirm'))
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.accent'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.submitAddHomeFav()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.showAddHomeFavDialog = false
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.submitAddHomeFav()
+          } })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showAddHomeFavDialog = false
@@ -1149,8 +1123,8 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text($r('app.string.translate'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -1180,14 +1154,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showTranslateMenuDialog = false
@@ -1213,7 +1187,7 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 12 }) {
         Text($r('app.string.add_bookmark'))
-          .fontSize(17)
+          .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
@@ -1241,37 +1215,28 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addBookmarkUrl = value
           })
-        Row({ space: 24 }) {
-          Blank()
-          Text($r('app.string.cancel'))
-            .fontSize(15)
-            .fontColor($r('app.color.fg_secondary'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.showAddBookmarkDialog = false
-            })
-          Text($r('app.string.confirm'))
-            .fontSize(15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.accent'))
-            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.submitAddBookmark()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.showAddBookmarkDialog = false
+          } })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.submitAddBookmark()
+          } })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+      .borderRadius(18)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showAddBookmarkDialog = false

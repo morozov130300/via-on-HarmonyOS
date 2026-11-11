@@ -13,6 +13,7 @@ import {
 } from '../common/DownloadNotifier'
 import { AppIcon } from '../components/AppIcon'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { filePreview } from '@kit.PreviewKit'
@@ -649,7 +650,7 @@ export struct DownloadPage {
   NewDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.new_download'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -665,39 +666,29 @@ export struct DownloadPage {
         .onChange((text: string) => {
           this.newName = text
         })
-      Row({ space: 10 }) {
-        Button($r('app.string.cancel'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.showNew = false
-          })
-        Button($r('app.string.new_download_download'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .fontColor($r('app.color.on_accent'))
-          .onClick(() => {
-            this.applyNewDownload()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.showNew = false
+        } })
+        UiaDialogButton({ label: $r('app.string.new_download_download'), onAction: () => {
+          this.applyNewDownload()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(16)
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
   }
 
   @Builder
   RenameDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.rename_download'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -707,39 +698,29 @@ export struct DownloadPage {
         .onChange((text: string) => {
           this.renameText = text
         })
-      Row({ space: 10 }) {
-        Button($r('app.string.cancel'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.showRename = false
-          })
-        Button($r('app.string.confirm'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .fontColor($r('app.color.on_accent'))
-          .onClick(() => {
-            this.applyRename()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.showRename = false
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.applyRename()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(16)
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
   }
 
   @Builder
   DeleteDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.delete'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -760,32 +741,22 @@ export struct DownloadPage {
           .fontColor($r('app.color.fg'))
       }
       .width('100%')
-      Row({ space: 10 }) {
-        Button($r('app.string.cancel'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.showDelete = false
-          })
-        Button($r('app.string.confirm'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .fontColor($r('app.color.on_accent'))
-          .onClick(() => {
-            this.applyDeleteConfirm()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.showDelete = false
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.applyDeleteConfirm()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(16)
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
   }
 
   // 原版 b1.y4：二维码结果（URL→打开，否则→复制文本）
@@ -793,7 +764,7 @@ export struct DownloadPage {
   QrDialog() {
     Column({ space: 14 }) {
       Text(this.qrRec !== null ? dlTitleOf(this.qrRec) : '')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -803,24 +774,15 @@ export struct DownloadPage {
         .width('100%')
         .maxLines(6)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Row({ space: 10 }) {
-        Button($r('app.string.cancel'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.showQr = false
-          })
-        Button(this.qrText.startsWith('http://') || this.qrText.startsWith('https://') ?
-          $r('app.string.open_action') : $r('app.string.copy_text'))
-          .fontSize(14)
-          .height(38)
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .fontColor($r('app.color.on_accent'))
-          .onClick(() => {
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.showQr = false
+        } })
+        UiaDialogButton({
+          label: this.qrText.startsWith('http://') || this.qrText.startsWith('https://') ?
+            $r('app.string.open_action') : $r('app.string.copy_text'),
+          onAction: () => {
             if (this.qrText.startsWith('http://') || this.qrText.startsWith('https://')) {
               const context = this.getUIContext().getHostContext() as common.UIAbilityContext
               try {
@@ -832,14 +794,16 @@ export struct DownloadPage {
               this.copyText(this.qrText, $r('app.string.copied'))
             }
             this.showQr = false
-          })
+          }
+        })
       }
       .width('100%')
     }
     .width('100%')
     .padding(20)
     .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(16)
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
   }
 
   @Builder
@@ -1071,7 +1035,7 @@ export struct DownloadPage {
           .width('100%')
           .height('100%')
           .justifyContent(FlexAlign.Center)
-          .backgroundColor('rgba(0,0,0,0.5)')
+          .backgroundColor('rgba(0,0,0,0.4)')
           .onClick(() => {
             this.showNew = false
             this.showRename = false

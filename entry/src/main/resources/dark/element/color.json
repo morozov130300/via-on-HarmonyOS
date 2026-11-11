@@ -227,6 +227,10 @@
     {
       "name": "hc_fafafa",
       "value": "#FAFAFA"
+    },
+    {
+      "name": "dialog_btn_pressed",
+      "value": "#30808080"
     }
   ]
 }

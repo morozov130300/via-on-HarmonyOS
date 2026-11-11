@@ -4,6 +4,7 @@ import { RuleSubManager } from '../common/RuleSubscriptions'
 import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 
 // 原版 z7/v0：规则订阅预览页——标题=订阅名（空回退 am「预览」），
 // 规则行列表，点击行弹单行「预览」对话框（g6.n.l(W, line)）
@@ -110,7 +111,7 @@ export struct RulePreviewPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.lineDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -130,7 +131,7 @@ export struct RulePreviewPage {
   LineDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.ai_preview'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -139,22 +140,19 @@ export struct RulePreviewPage {
         .fontColor($r('app.color.fg'))
         .width('100%')
       Row() {
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.accent'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .onClick(() => {
-            this.closeLineDialog()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.closeLineDialog()
+        } })
       }
       .width('100%')
       .margin({ top: 4 })
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
   }
 }
 

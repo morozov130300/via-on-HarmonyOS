@@ -8,6 +8,7 @@ import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { SettingRadioRow } from '../components/SettingRows'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 
 // 原版 hb/j2.java：「字体」页
 // 列表 = s9.d 字体库（首项默认 fd「默认」，其余文件名字母排序），单击选中（B3 → w9.l.o 写 uifont）；
@@ -224,38 +225,28 @@ struct FontRenameOverlay {
           .onChange((value: string) => {
             this.text = value
           })
-        Row({ space: 12 }) {
-          Button($r('app.string.cancel'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.surface'))
-            .fontColor($r('app.color.fg'))
-            .onClick(() => {
-              this.onClose()
-            })
+        Row() {
+          Blank().layoutWeight(1)
+          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+            this.onClose()
+          } })
           // 原版 j2.A3（hb/j2.java:222）重命名弹窗确认钮 = R.string.ok「确定」，非 done「完成」
-          Button($r('app.string.confirm'))
-            .fontSize(14)
-            .height(36)
-            .layoutWeight(1)
-            .backgroundColor($r('app.color.accent'))
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.confirm()
-            })
+          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+            this.confirm()
+          } })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .backgroundColor($r('app.color.page_bg'))
-      .borderRadius(16)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.5)')
+    .backgroundColor('rgba(0,0,0,0.4)')
     .onClick(() => {
       this.onClose()
     })

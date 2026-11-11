@@ -177,9 +177,9 @@ export struct SettingsNightPage {
     .width('100%')
     .constraintSize({ maxHeight: 320 })
     .padding({ left: 24, right: 24, top: 16, bottom: 16 })
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(12)
-    .shadow({ radius: 24, color: 'rgba(0,0,0,0.35)', offsetY: 4 })
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 }

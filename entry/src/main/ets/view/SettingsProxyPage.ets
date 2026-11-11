@@ -5,6 +5,7 @@ import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 
 // 原版 hb/h5.java：Proxy 设置页（原版该页文案无中文翻译，英文 1:1 保留）
 // Enable proxy 开关 / Proxy url 行（点击弹输入） / Reverse bypass rules 开关（d() 为 false 时禁用）
@@ -201,7 +202,7 @@ export struct SettingsProxyPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.urlDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -229,7 +230,7 @@ export struct SettingsProxyPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.addDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -258,7 +259,7 @@ export struct SettingsProxyPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.editDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -296,7 +297,7 @@ export struct SettingsProxyPage {
   UrlDialog() {
     Column({ space: 14 }) {
       Text('Proxy url')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -308,35 +309,27 @@ export struct SettingsProxyPage {
         .onChange((value: string) => {
           this.urlInput = value
         })
-      Row({ space: 24 }) {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            this.closeUrlDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            const context = this.getUIContext().getHostContext()
-            if (context !== undefined) {
-              this.manager.getConfig(context).proxyUrl = this.urlInput.trim()
-            }
-            this.syncFromConfig()
-            this.closeUrlDialog()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeUrlDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          const context = this.getUIContext().getHostContext()
+          if (context !== undefined) {
+            this.manager.getConfig(context).proxyUrl = this.urlInput.trim()
+          }
+          this.syncFromConfig()
+          this.closeUrlDialog()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -344,7 +337,7 @@ export struct SettingsProxyPage {
   AddRuleDialog() {
     Column({ space: 14 }) {
       Text(this.reverse ? 'Add proxy rule' : 'Add bypass rule')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -356,35 +349,27 @@ export struct SettingsProxyPage {
         .onChange((value: string) => {
           this.addInput = value
         })
-      Row({ space: 24 }) {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            this.closeAddDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            const context = this.getUIContext().getHostContext()
-            if (context !== undefined) {
-              this.manager.getConfig(context).addRule(this.addInput.trim())
-            }
-            this.syncFromConfig()
-            this.closeAddDialog()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeAddDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          const context = this.getUIContext().getHostContext()
+          if (context !== undefined) {
+            this.manager.getConfig(context).addRule(this.addInput.trim())
+          }
+          this.syncFromConfig()
+          this.closeAddDialog()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -392,7 +377,7 @@ export struct SettingsProxyPage {
   EditRuleDialog() {
     Column({ space: 14 }) {
       Text(this.reverse ? 'Edit proxy rule' : 'Edit bypass rule')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -404,50 +389,38 @@ export struct SettingsProxyPage {
         .onChange((value: string) => {
           this.editInput = value
         })
-      Row({ space: 24 }) {
-        // 原版 h5.q3 中立按钮 x7.u.f14215x = Delete/删除
-        Text($r('app.string.delete'))
-          .fontSize(15)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            const context = this.getUIContext().getHostContext()
-            if (context !== undefined) {
-              this.manager.getConfig(context).removeRule(this.editRuleKey)
-            }
-            this.syncFromConfig()
-            this.closeEditDialog()
-          })
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            this.closeEditDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            const context = this.getUIContext().getHostContext()
-            if (context !== undefined) {
-              const config = this.manager.getConfig(context)
-              config.removeRule(this.editRuleKey)
-              config.addRule(this.editInput.trim())
-            }
-            this.syncFromConfig()
-            this.closeEditDialog()
-          })
+      Row() {
+        // 原版 h5.q3 中立按钮 x7.u.f14215x = Delete/删除（w5.k 三键：中立在最左、Space 推右两键）
+        UiaDialogButton({ label: $r('app.string.delete'), onAction: () => {
+          const context = this.getUIContext().getHostContext()
+          if (context !== undefined) {
+            this.manager.getConfig(context).removeRule(this.editRuleKey)
+          }
+          this.syncFromConfig()
+          this.closeEditDialog()
+        } })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeEditDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          const context = this.getUIContext().getHostContext()
+          if (context !== undefined) {
+            const config = this.manager.getConfig(context)
+            config.removeRule(this.editRuleKey)
+            config.addRule(this.editInput.trim())
+          }
+          this.syncFromConfig()
+          this.closeEditDialog()
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 }

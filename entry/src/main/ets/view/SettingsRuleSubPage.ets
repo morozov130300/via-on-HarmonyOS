@@ -8,6 +8,7 @@ import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 
 const AUTO_UPDATE_DAYS: number[] = [0, 1, 3, 7, 15]
 const AUTO_UPDATE_LABELS: string[] = ['从不', '每天', '每 3 天', '每周', '每 15 天']
@@ -410,7 +411,7 @@ export struct SettingsRuleSubPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.addDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -461,7 +462,7 @@ export struct SettingsRuleSubPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.editDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -481,7 +482,7 @@ export struct SettingsRuleSubPage {
   AddSubDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.orig_b8'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -493,34 +494,26 @@ export struct SettingsRuleSubPage {
         .onChange((value: string) => {
           this.newUrl = value
         })
-      Row({ space: 24 }) {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeAddDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          const url = this.newUrl.trim()
+          if (this.applyUrl(url)) {
+            this.settings.addRuleSub(this.hostOf(url), url)
             this.closeAddDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            const url = this.newUrl.trim()
-            if (this.applyUrl(url)) {
-              this.settings.addRuleSub(this.hostOf(url), url)
-              this.closeAddDialog()
-            }
-          })
+          }
+        } })
       }
       .width('100%')
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -528,7 +521,7 @@ export struct SettingsRuleSubPage {
   EditSubDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.orig_hd'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -540,52 +533,44 @@ export struct SettingsRuleSubPage {
         .onChange((value: string) => {
           this.editUrl = value
         })
-      Row({ space: 24 }) {
-        Blank()
-        Text($r('app.string.cancel'))
-          .fontSize(15)
-          .fontColor($r('app.color.fg_secondary'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            this.closeEditDialog()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.accent'))
-          .padding({ left: 8, right: 8, top: 10, bottom: 10 })
-          .onClick(() => {
-            const url = this.editUrl.trim()
-            const sub = this.settings.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === this.editKey)
-            const others: RuleSubEntry[] = this.settings.ruleSubscriptions.filter((s: RuleSubEntry): boolean => s.key !== this.editKey)
-            let dup = false
-            for (let i = 0; i < others.length; i++) {
-              if (others[i].url === url) {
-                dup = true
-              }
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeEditDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          const url = this.editUrl.trim()
+          const sub = this.settings.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === this.editKey)
+          const others: RuleSubEntry[] = this.settings.ruleSubscriptions.filter((s: RuleSubEntry): boolean => s.key !== this.editKey)
+          let dup = false
+          for (let i = 0; i < others.length; i++) {
+            if (others[i].url === url) {
+              dup = true
             }
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-              this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0z'), duration: TOAST_SHORT })
-              return
-            }
-            if (dup) {
-              this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_jd'), duration: TOAST_SHORT })
-              return
-            }
-            if (sub !== undefined) {
-              sub.url = url
-              this.settings.saveRuleSubs()
-              this.reloadBlocker()
-            }
-            this.closeEditDialog()
-          })
+          }
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0z'), duration: TOAST_SHORT })
+            return
+          }
+          if (dup) {
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_jd'), duration: TOAST_SHORT })
+            return
+          }
+          if (sub !== undefined) {
+            sub.url = url
+            this.settings.saveRuleSubs()
+            this.reloadBlocker()
+          }
+          this.closeEditDialog()
+        } })
       }
       .width('100%')
     }
       .width('100%')
       .padding(24)
-      .backgroundColor($r('app.color.menu_bg'))
-      .borderRadius(16)
+      .backgroundColor($r('app.color.dialog_bg'))
+      .borderRadius(18)
+      .border({ width: 1, color: $r('app.color.dialog_border') })
       .transition(dialogTransition())
   }
 }

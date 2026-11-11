@@ -6,6 +6,7 @@ import { buildNavSlide } from './PageTransitions'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 
 @ComponentV2
 export struct RulesPage {
@@ -143,7 +144,7 @@ export struct RulesPage {
       backgroundColor: Color.Transparent,
       autoCancel: true,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.helpDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -183,7 +184,7 @@ export struct RulesPage {
       backgroundColor: Color.Transparent,
       autoCancel: false,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.unsavedDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -210,7 +211,7 @@ export struct RulesPage {
       backgroundColor: Color.Transparent,
       autoCancel: false,
       alignment: DialogAlignment.Center,
-      maskColor: 'rgba(0,0,0,0.5)'
+      maskColor: 'rgba(0,0,0,0.4)'
     }).then((dialogId: number) => {
       this.invalidDialogId = dialogId
     }).catch((error: BusinessError) => {
@@ -230,7 +231,7 @@ export struct RulesPage {
   UnsavedDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.ai_unsaved_title'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -239,34 +240,26 @@ export struct RulesPage {
         .fontColor($r('app.color.fg'))
         .width('100%')
       Row() {
-        Text($r('app.string.ai_save_and_exit'))
-          .fontSize(14)
-          .fontColor($r('app.color.accent'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .onClick(() => {
-            this.closeUnsaved()
-            // 原版 sa → w3：保存 + 非法行校验 + 退出
-            this.validateSaveExit()
-          })
-        Text($r('app.string.exit_app'))
-          .fontSize(14)
-          .fontColor($r('app.color.accent'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .onClick(() => {
-            this.closeUnsaved()
-            // 原版 i9 → runnable：不保存直接退出
-            this.navPathStack.pop()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.ai_save_and_exit'), onAction: () => {
+          this.closeUnsaved()
+          // 原版 sa → w3：保存 + 非法行校验 + 退出
+          this.validateSaveExit()
+        } })
+        UiaDialogButton({ label: $r('app.string.exit_app'), onAction: () => {
+          this.closeUnsaved()
+          // 原版 i9 → runnable：不保存直接退出
+          this.navPathStack.pop()
+        } })
       }
       .width('100%')
       .margin({ top: 4 })
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -274,7 +267,7 @@ export struct RulesPage {
   InvalidDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.orig_z_'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -283,23 +276,20 @@ export struct RulesPage {
         .fontColor($r('app.color.fg'))
         .width('100%')
       Row() {
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.accent'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .onClick(() => {
-            this.closeInvalid()
-            this.navPathStack.pop()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.closeInvalid()
+          this.navPathStack.pop()
+        } })
       }
       .width('100%')
       .margin({ top: 4 })
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -307,7 +297,7 @@ export struct RulesPage {
   HelpDialog() {
     Column({ space: 14 }) {
       Text($r('app.string.orig_k9'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
         .width('100%')
@@ -328,27 +318,22 @@ export struct RulesPage {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
       Row() {
-        Text($r('app.string.orig_m_'))
-          .fontSize(14)
-          .fontColor($r('app.color.accent'))
-          .layoutWeight(1)
-          .onClick(() => {
-            this.openHelpDoc()
-          })
-        Text($r('app.string.confirm'))
-          .fontSize(14)
-          .fontColor($r('app.color.accent'))
-          .onClick(() => {
-            this.closeHelp()
-          })
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.orig_m_'), onAction: () => {
+          this.openHelpDoc()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.closeHelp()
+        } })
       }
       .width('100%')
       .margin({ top: 4 })
     }
     .width('100%')
     .padding(24)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 }

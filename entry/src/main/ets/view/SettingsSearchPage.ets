@@ -6,6 +6,7 @@ import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogButton } from '../components/UiaDialogButton'
 import { buildNavSlide } from './PageTransitions'
 
 class SuggestItem {
@@ -195,7 +196,7 @@ export struct SettingsSearchPage {
   SuggestDialog() {
     Column({ space: 12 }) {
       Text($r('app.string.search_suggestion'))
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
       Text($r('app.string.orig_ni'))
@@ -219,29 +220,24 @@ export struct SettingsSearchPage {
           this.suggestChecks[index] = !this.suggestChecks[index]
         })
       }, (item: SuggestItem) => item.label)
-      Row({ space: 12 }) {
-        Button($r('app.string.cancel'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.closeSuggestDialog()
-          })
-        Button($r('app.string.confirm'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .onClick(() => {
-            this.applySuggest()
-            this.closeSuggestDialog()
-          })
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeSuggestDialog()
+        } })
+        UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+          this.applySuggest()
+          this.closeSuggestDialog()
+        } })
       }
       .width('100%')
       .margin({ top: 4 })
     }
     .width('100%')
     .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
@@ -292,7 +288,7 @@ export struct SettingsSearchPage {
   CustomEngineDialog() {
     Column({ space: 14 }) {
       Text('自定义搜索引擎')
-        .fontSize(17)
+        .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.fg'))
       Text('用 %s 代表搜索词，例如：https://example.com/search?q=%s')
@@ -312,20 +308,15 @@ export struct SettingsSearchPage {
         .onChange((value: string) => {
           this.engineTemplateInput = value
         })
-      Row({ space: 12 }) {
-        Button($r('app.string.cancel'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .onClick(() => {
-            this.closeEngineDialog()
-          })
-        Button($r('app.string.confirm'))
-          .layoutWeight(1)
-          .backgroundColor($r('app.color.accent'))
-          .enabled(this.engineTemplateInput.includes('%s'))
-          .opacity(this.engineTemplateInput.includes('%s') ? 1 : 0.4)
-          .onClick(() => {
+      Row() {
+        Blank().layoutWeight(1)
+        UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+          this.closeEngineDialog()
+        } })
+        UiaDialogButton({
+          label: $r('app.string.confirm'),
+          actionEnabled: this.engineTemplateInput.includes('%s'),
+          onAction: () => {
             const template = this.engineTemplateInput.trim()
             if (!template.includes('%s')) {
               return
@@ -335,14 +326,16 @@ export struct SettingsSearchPage {
             // 原版：新增后自动选中新引擎（列表末尾）
             this.settings.setEngineKey(`custom:${newId}`)
             this.closeEngineDialog()
-          })
+          }
+        })
       }
       .width('100%')
     }
     .width('100%')
     .padding(20)
-    .backgroundColor($r('app.color.menu_bg'))
-    .borderRadius(16)
+    .backgroundColor($r('app.color.dialog_bg'))
+    .borderRadius(18)
+    .border({ width: 1, color: $r('app.color.dialog_border') })
     .transition(dialogTransition())
   }
 
