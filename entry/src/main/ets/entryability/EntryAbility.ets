@@ -19,6 +19,7 @@ import { ProxyManager } from '../common/ProxyConfig';
 import { DownloadEngine } from '../common/DownloadEngine';
 import { DownloadNotifier, DL_ACTION_PAUSE, DL_ACTION_RESUME } from '../common/DownloadNotifier';
 import { TabStore } from '../common/TabStore';
+import { ClosedTabsStore } from '../common/ClosedTabsStore';
 import { webview } from '@kit.ArkWeb';
 import { fileIo } from '@kit.CoreFileKit';
 
@@ -452,6 +453,9 @@ export default class EntryAbility extends UIAbility {
   onWindowStageDestroy(): void {
     // Main window is destroyed, release UI related resources
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');
+    // 原版 na.e（正常退出标记）：本次正常销毁写 clean 标记，下次启动读到缺失即判崩溃恢复。
+    // onBackground/onWindowStageDestroy 双保险（进程被杀时 onBackground 是最后回调）。
+    ClosedTabsStore.getInstance().markCleanQuit();
   }
 
   onForeground(): void {

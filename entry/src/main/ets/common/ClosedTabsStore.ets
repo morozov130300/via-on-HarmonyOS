@@ -205,6 +205,27 @@ export class ClosedTabsStore {
     this.persist()
   }
 
+  // na.a.e(list)（138-155）：备份导入批量入库，按 URL 去重（同 URL 旧条目移除后追加新条目）
+  addAllDedup(items: ClosedTabEntry[]): void {
+    let changed = false
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.url === '') {
+        continue
+      }
+      for (let j = this.entries.length - 1; j >= 0; j--) {
+        if (this.entries[j].url === item.url) {
+          this.entries.splice(j, 1)
+        }
+      }
+      this.entries.push(new ClosedTabEntry(this.nextId(), item.url, item.title, item.time))
+      changed = true
+    }
+    if (changed) {
+      this.persist()
+    }
+  }
+
   // na.h.b(str, limit)：url/title 模糊搜索（ic 页搜索框）
   search(query: string, limit: number): ClosedTabEntry[] {
     const keyword = query.trim().toLowerCase()

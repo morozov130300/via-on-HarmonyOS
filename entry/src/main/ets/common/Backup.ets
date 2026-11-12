@@ -5,6 +5,7 @@ import { BrowserDb } from './Database'
 import { AppSettings, SavedTab } from './Settings'
 import { BackupSettings } from './BackupSettings'
 import { TabStore } from './TabStore'
+import { ClosedTabsStore, ClosedTabEntry } from './ClosedTabsStore'
 import { ZipStoreWriter } from './ZipWriter'
 import { BackupCrypto } from './BackupCrypto'
 import { BookmarkRec, BookmarkFolderRec } from './Types'
@@ -287,19 +288,20 @@ export class BackupManager {
       }
     }
 
-    // ---- tabs.txt（m9/m.a：跳过隐身/空/空白页）----
+    // ---- tabs.txt（m9/m.a：数据源 = 最近关闭标签库 na.h.g()，非当前打开标签）----
     if ((flags & BackupManager.EXPORT_BIT_TABS) !== 0) {
-      const tabs = TabStore.getInstance().tabs
+      await ClosedTabsStore.getInstance().ensureInit()
+      const closed = ClosedTabsStore.getInstance().entries
       let tabsText = ''
-      for (let i = 0; i < tabs.length; i++) {
-        const tab = tabs[i]
-        if (tab.incognito || tab.url === '' || tab.url === 'about:blank') {
+      for (let i = 0; i < closed.length; i++) {
+        const entry = closed[i]
+        if (entry.url === '' || entry.url === 'about:blank') {
           continue
         }
         const obj: Record<string, Object> = {}
-        obj['title'] = tab.title
-        obj['url'] = tab.url
-        obj['updated_at'] = Date.now()
+        obj['title'] = entry.title
+        obj['url'] = entry.url
+        obj['updated_at'] = entry.time
         tabsText += JSON.stringify(obj) + '\n'
       }
       if (tabsText !== '') {
@@ -553,7 +555,13 @@ export class BackupManager {
           }
         }
         if (saved.length > 0) {
-          TabStore.getInstance().restoreBackupTabs(saved)
+          // m9/m.b：解析后 na.h.e(list) 入最近关闭标签库（按 URL 去重），非当前标签
+          const closedItems: ClosedTabEntry[] = []
+          for (let i = 0; i < saved.length; i++) {
+            closedItems.push(new ClosedTabEntry('', saved[i].url, saved[i].title, Date.now()))
+          }
+          await ClosedTabsStore.getInstance().ensureInit()
+          ClosedTabsStore.getInstance().addAllDedup(closedItems)
         }
       }
 
