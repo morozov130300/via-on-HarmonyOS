@@ -11,7 +11,7 @@
         "autoDesignWidth": true
       },
       "isDynamic": false,
-      "colorMode": "auto",
+      "colorMode": "light",
       "isDefault": true,
       "updateEnabled": false,
       "defaultDimension": "1*2",
@@ -31,7 +31,7 @@
         "autoDesignWidth": true
       },
       "isDynamic": false,
-      "colorMode": "auto",
+      "colorMode": "dark",
       "isDefault": false,
       "updateEnabled": false,
       "defaultDimension": "1*2",
@@ -51,7 +51,7 @@
         "autoDesignWidth": true
       },
       "isDynamic": false,
-      "colorMode": "auto",
+      "colorMode": "dark",
       "isDefault": false,
       "updateEnabled": false,
       "defaultDimension": "1*2",
@@ -71,7 +71,7 @@
         "autoDesignWidth": true
       },
       "isDynamic": false,
-      "colorMode": "auto",
+      "colorMode": "light",
       "isDefault": false,
       "updateEnabled": false,
       "defaultDimension": "1*2",
