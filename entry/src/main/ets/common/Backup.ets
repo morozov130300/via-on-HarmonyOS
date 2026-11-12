@@ -101,6 +101,10 @@ export class BackupManager {
       entry['title'] = item.title
       entry['url'] = item.url
       entry['created'] = item.created
+      entry['folder'] = item.folder
+      entry['folderId'] = item.folderId
+      entry['ordering'] = item.ordering
+      entry['updatedAt'] = item.updatedAt
       bookmarkPayload.push(entry)
     }
     const historyPayload: Record<string, Object>[] = []
@@ -123,32 +127,48 @@ export class BackupManager {
     return JSON.stringify(backup)
   }
 
+  // 豁免项12：云备份(JSON)恢复必须是合并语义——书签按 url replaceBookmarkByUrl
+  //（云端覆盖同 url、本地独有保留），历史按 url 去重追加（addHistoryWithTime 同款
+  // delete+insert 语义），文件夹结构保留；禁止清空重插完全按云端推翻本地数据。
   async applyBackupJson(raw: string): Promise<void> {
     const parsed = JSON.parse(raw) as Record<string, Object>
     const db = BrowserDb.getInstance()
     const bookmarkRaw = parsed['bookmarks']
     if (Array.isArray(bookmarkRaw)) {
-      await db.clearBookmarks()
       const items = bookmarkRaw as Object[]
       for (let i = 0; i < items.length; i++) {
         const element = items[i] as Record<string, Object>
         const title = element['title']
         const url = element['url']
         if (typeof title === 'string' && typeof url === 'string' && url !== '') {
-          await db.addBookmark(title, url)
+          const rec = new BookmarkRec()
+          rec.title = title
+          rec.url = url
+          const folder = element['folder']
+          rec.folder = typeof folder === 'string' ? folder : ''
+          const folderId = element['folderId']
+          rec.folderId = typeof folderId === 'number' ? folderId : 0
+          const ordering = element['ordering']
+          rec.ordering = typeof ordering === 'number' ? ordering : 0
+          const created = element['created']
+          rec.created = typeof created === 'number' ? created : Math.floor(Date.now() / 1000)
+          const updatedAt = element['updatedAt']
+          rec.updatedAt = typeof updatedAt === 'number' ? updatedAt : rec.created
+          rec.id = -1
+          await db.replaceBookmarkByUrl(rec)
         }
       }
     }
     const historyRaw = parsed['history']
     if (Array.isArray(historyRaw)) {
-      await db.clearHistory()
       const items = historyRaw as Object[]
       for (let i = 0; i < items.length; i++) {
         const element = items[i] as Record<string, Object>
         const title = element['title']
         const url = element['url']
         if (typeof title === 'string' && typeof url === 'string' && url !== '') {
-          await db.addHistory(title, url)
+          const visited = element['visited']
+          await db.addHistoryWithTime(title, url, typeof visited === 'number' ? visited : Math.floor(Date.now() / 1000))
         }
       }
     }
