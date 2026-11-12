@@ -1321,7 +1321,7 @@ export struct MenuSheet {
     }
     // 关闭的标签页
     if (selected[2]) {
-      AppStorage.setOrCreate('via_undo_close_url', '')
+      AppStorage.setOrCreate('uia_undo_close_url', '')
     }
     // 网页存储
     if (selected[3]) {
@@ -1628,7 +1628,7 @@ export struct MenuSheet {
         bundleName: context.abilityInfo.bundleName,
         moduleName: 'entry',
         abilityName: 'EntryAbility',
-        parameters: { 'viaUrl': tab.url }
+        parameters: { 'uiaUrl': tab.url }
       }
       const label = tab.title.trim() !== '' ? tab.title.trim() : hostOf(tab.url)
       const iconPath = `${context.filesDir}/via_shortcut_icon.png`
