@@ -3,7 +3,7 @@ import { pasteboard } from '@kit.BasicServicesKit'
 import { common, Want } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
 import { TabStore } from '../common/TabStore'
-import { UpdateChecker, UpdateConfig } from '../common/UpdateChecker'
+import { UpdateChecker } from '../common/UpdateChecker'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 
@@ -207,44 +207,11 @@ export struct SettingsAboutPage {
   }
 
   // 原版关于页「检查更新」：y8/h.k() 拉取配置 → y8/h.h() 流程；
-  // config 无效或已是最新 → toast m9「已是最新版本」；
-  // 有更新 → 弹窗（o8「新版本可用」+ changelog）。
-  // APK 下载/MD5/安装为豁免项不移植，「更新」按钮改为跳转华为应用市场本应用详情页
+  // 豁免项11：检查更新直接拉起华为应用市场本应用详情页——
+  // 市场内自会显示是否有新版本并提供更新入口，本地不再连原版服务器比对版本 JSON。
   private checkUpdate(): void {
-    UpdateChecker.fetchLatestConfig().then((config: UpdateConfig | null) => {
-      if (config === null || !UpdateChecker.isUpdateAvailable(config)) {
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.latest_version'), duration: TOAST_SHORT })
-        return
-      }
-      this.getUIContext().showAlertDialog({
-        title: $r('app.string.new_version_available'),
-        message: config.changelog,
-        primaryButton: {
-          value: $r('app.string.cancel'),
-          action: () => {
-          }
-        },
-        secondaryButton: {
-          value: $r('app.string.update_btn'),
-          action: () => {
-            this.openAppGalleryDetail()
-          }
-        }
-      })
-    })
-  }
-
-  // Deep Linking 拉起应用市场本应用详情页（ohos.want.action.appdetail +
-  // store://appgallery.huawei.com/app/detail?id=<bundleName>，见 AppGallery Kit 文档）
-  private openAppGalleryDetail(): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-    const want: Want = {
-      action: 'ohos.want.action.appdetail',
-      uri: `store://appgallery.huawei.com/app/detail?id=${context.abilityInfo.bundleName}`
-    }
-    context.startAbility(want).catch(() => {
-      console.error('open appgallery detail failed')
-    })
+    UpdateChecker.openAppGalleryDetail(context)
   }
 }
 

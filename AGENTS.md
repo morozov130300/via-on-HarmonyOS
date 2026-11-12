@@ -2,6 +2,8 @@
 
 **⚠️ 本文件就是记忆文件！所有需要写入记忆的内容一律写入本文件！**
 
+**⚠️ 记忆文件写作规范（永久生效）**：记忆内容一律用抽象表述，**严禁写具体举例、括号补充的历史细节**（如具体废弃路径、具体存档目录、具体报错案例等）。只写规则本身，不写案例。
+
 ## ⚠️⚠️⚠️ 全量修复任务禁止停下（最高优先级，用户强制要求写入，永久生效）！！！
 
 **！！！！！！当用户下达「全量/全部修正」类指令后：！！！！！！**
@@ -62,7 +64,7 @@
 
 **禁止事项：**
 - ❌ 禁止删除、移动、重命名本产物目录及其中文件
-- ❌ 禁止把反编译产物再放到 C 盘/Temp 等工作区外位置（历史遗留的 `C:\Users\JiHuanyu\AppData\Local\Temp\deveco\jadx_out、jadx_res、jadx_k6` 已废弃，一律以工作区产物为准，禁止再引用）
+- ❌ 禁止把反编译产物再放到工作区外的位置（C 盘/Temp 等），一律以工作区产物为准
 - ❌ 禁止重复反编译：需要时直接读本产物；确需重新反编译必须先问用户
 
 ## ⚠️ 无效果改动强制回滚（最高优先级）
@@ -224,7 +226,7 @@
 
 ### ⚠️ 交付物禁止擅自落盘
 
-**！！！！！！所有！！！！！！** 更新日志、简介、说明文字等交付物**只输出到对话**，未经用户明确指令**严禁写成任何文件**（包括 .workbuddy/memory/ 下的存档）。存哪里由用户说了算，擅自落盘视为违反「用户让做的才做」。
+**！！！！！！所有！！！！！！** 更新日志、简介、说明文字等交付物**只输出到对话**，未经用户明确指令**严禁写成任何文件**。存哪里由用户说了算，擅自落盘视为违反「用户让做的才做」。
 
 ## 项目信息
 
@@ -248,119 +250,39 @@
 - ❌ **严禁把通用知识当成本项目事实**（例如断言"有源码/无源码"前必须先看工作区里到底有什么）
 - ✅ **先 `read`/`glob` 项目目录，再说话**
 
-# ⚠️ 已拍板的移植决策（2026-11-01，用户确认，所有智能体必须遵守）
+# ⚠️ 已拍板的豁免项与勘误（用户确认，所有智能体必须遵守）
 
-以下功能无法 1:1 逆向原版（鸿蒙端缺对应子系统），用户已选定方案：
+## 豁免项：用户明确要求偏离原版 Via 7.4.0 的功能（永久生效，禁止「改回原版」）
 
-1. **密码管理器**：保持现状——点击后弹系统密码保险箱说明框，不建原版五项子页面（提示保存密码/保存的密码/不保存密码的网站/导入CSV/导出密码）。
-2. **导出数据「保存的密码」项（原版 bit32）**：保留选项；勾选后导出空密码库（无密码数据时导出不含密码条目）。
-3. **备份 ZIP「设置」位（settings.txt）**：必须建立安卓键名(w9.l)→鸿蒙键名(SYNC_KEYS)映射表，导出翻译成安卓键名、导入反向映射，实现与安卓端真互通。
-4. **搜索工具栏**（原版搜索设置第三项、地址栏下方搜索引擎快捷栏）：完整移植——功能+设置子页一起做。
+后续智能体发现「与原版不一致」时**禁止擅自改回**：
 
-其余差异（搜索建议浮动卡片、通用设置紧凑弹窗、AI设置行、阅读模式副标题/预览卡、夜间滤镜弹窗、主页定制卡片化、网站设定顺序、菜单动画参数等）一律按原工程 1:1 移植，不得以"做不到"为由跳过。
+1. **传统布局(0)禁止做横屏映射**：`effectiveLayout()` 只对**非传统**布局做横屏映射；传统布局直接返回 0，不看屏幕物理方向。传统布局必须保持上下两行。
+2. **两栏收起联动隐藏系统状态栏/导航栏**：顶栏+底栏两栏收起落定时同步隐藏系统状态栏与导航栏，恢复时还原（仍尊重相关设置）。
+3. **云备份**：功能不要求与原版一致。
+4. **密码管理器**：点击后弹系统密码保险箱说明框，不建原版子页面。
+5. **导出数据「保存的密码」项**：保留选项；勾选后导出空密码库。
+6. **备份 ZIP「设置」位**：建立安卓键名→鸿蒙键名映射表，导出翻译成安卓键名、导入反向映射，实现与安卓端真互通。
+7. **搜索工具栏**：完整移植——功能+设置子页一起做。
+8. **NavDestination 转场曲线**：API 仅收 Curve 枚举，58 个子页 220ms 转场用 `Curve.EaseInOut` 近似（时长/位移精确，曲线轻微偏差）。
+9. **字符名/标识符一律保持 uia（法律原因）**：本工程所有字符名/标识符一律用 uia，禁止以「与原版 1:1」为由改回 via 字面。修复方向一律是把 via 侧改成 uia 侧。仅与安卓端数据互通的载荷字段名（互通格式）不受此条约束，按原版键名走。域名属外部服务地址，也不在此范畴。
+10. **远程功能开关（云控）用原版域名与服务**：RemoteConfig 恢复原版域名（viayoo.com），拉取原版服务端的 FeatureToggle 值；禁止因更名把该域名改掉。
+11. **检查更新用华为应用市场官方接口**：UpdateChecker 不再使用 Via 原作者服务器，改走应用市场官方能力查询本应用更新；禁止连原版服务器拉版本 JSON。
 
-## ⚠️ 刻意偏离原版的豁免项（用户拍板，永久生效，禁止「改回原版」）
+## 项目长期事实
 
-0. **传统布局(0)禁止做横屏映射**（2026-11-12 用户拍板）：
-   - 原版事实：`c8/k6.java Ya()`（6414-6418）在 `C1==2`（设备物理横屏）时把布局 0→1、3→2。PC/平板屏幕物理上就是横向，`display.Orientation` 恒为 LANDSCAPE，导致用户选「传统布局」也被静默改写成布局1（地址栏与按钮挤成一行、整条贴顶）。
-   - 用户决定：**传统布局必须保持传统**——上下两行（地址栏一行、工具栏一行），禁止因屏幕方向被改写成嵌入式布局。理由：这是 PC 端主力布局，静默改写等于用户设置失效。
-   - 实现：`Index.ets` 的 `effectiveLayout()` 只对**非传统**布局做横屏映射；`layout === LAYOUT_TRADITIONAL` 时直接返回 0，不看 `physicalLandscape`。
+- **包名现为 `cn.edu.whut.uia`**（签名 Profile 绑定此 bundleName，不要再改回 via——改回会签名不匹配、无法编译打包）
+- **AGC 教训**：AGC 包名不可改 ≠ 需要新建应用。改应用名称只需改显示名，不得顺手改包名、不得新建应用。
+- **外部网络服务用途（提问用户时必须写明用途，勿只报域名/常量名）**：检查更新走版本 JSON 比对（手动触发，不自动下载安装）；远端功能开关下发（静默抓取，失败用内置默认值）。域名错=请求到不了服务端，功能失效。
+- **待用户真机确认项**：记录页容器（点 logo 进容器、三标签横滑、各入口默认标签、返回不弹容器）；搜索面板贴顶；菜单月亮图标夜间着色；全部动画观感；线条搜索框边框方向；滑轨拖动图标不闪烁。
 
-以下项目是**用户明确要求偏离原版 Via 7.4.0** 的，逆向确认过原版行为，但按用户决定不做 1:1；后续智能体发现「与原版不一致」时**禁止擅自改回**：
+## 勘误（历史误报，勿再改）
 
-1. **两栏收起联动隐藏系统状态栏/导航栏**（2026-11-08 用户拍板）：
-   - 原版事实：`c8/k6.java db()`（6969-6993）只位移 `f2586p0/f2604y0/f2600w0/f2588q0` 四个视图，全仓库 `z8/l3.n(window, true)` 仅由菜单「全屏」项 `ab(fullscreen)`（6742-6750）触发；**原版上滑隐藏操作栏不隐藏系统状态栏**。
-   - 用户决定：只要顶栏+底栏两栏收起（自动隐藏落定），就同步隐藏系统状态栏与导航栏；两栏恢复显示时还原（仍尊重 `showStatusBar=false`/`fullScreen=true` 设置）。理由：鸿蒙端系统状态栏常显会与铺满的网页内容形成「网页在下、状态栏在上」的重叠。
-   - 实现：`Index.ets` 的 `syncSystemBarsForToolbar()` 在 `finishToolbarsState()` 联动；`systemBarsVisible` (@Local) 驱动 `effectiveInsetTop/Bottom` 归零；`@Monitor('settings.showStatusBar','settings.fullScreen')` 处理设置变更。
-2. **云备份**：功能不要求与原版一致（唯一例外，见上文「一切操作必须先逆向原版」）。
-3. **密码管理器/导出密码位/备份 settings.txt 映射/搜索工具栏**：见上节 1–4 项，均为用户已选方案，非 1:1。
-4. **NavDestination 转场曲线**（API 限制，非用户拍板但属已知豁免）：`NavDestinationTransition.curve` 仅收 `Curve` 枚举（nav_destination.d.ts:565），ICurve 传不进 → 58 个子页 220ms 转场用 `Curve.EaseInOut` 近似 AOSP accelerate_decelerate（时长/位移精确，曲线轻微偏差）。
-5. **字符名/标识符一律保持 uia（2026-11-12 用户拍板，法律原因）**：
-   - 原版事实：原版 Via 的 JS 桥名（`window.via`/`via_gm`）、阅读模式类名（`via-reader-body`/`__via_reader__`）、AppStorage 键、preferences 库名、深链协议（`via://`）等字面名均含 via。
-   - 用户决定：**因法律原因，本工程所有字符名/标识符一律用 uia，禁止改回 via 字面**。排查报告中所有「uia_↔via_ 契约错配」类差异，修复方向一律是**把 via 侧改成 uia 侧**（统一到 uia），而不是原版的 via；禁止任何智能体以「与原版 1:1」为由把桥名/类名/键名改回 via。
-   - 修复口径：两侧统一为 uia 后，功能即恢复（错配的本质是两侧不一致，不是「必须是 via」）。仅 backup/settings.txt 等**与安卓端数据互通**的载荷字段名（w9 键名）不受此条约束——互通格式按原版键名走，属数据格式而非代码标识符。
-
----
-
-# 📌 当前状态清单（每完成一项实时更新，禁止留成「待定」）
-
-**当前任务：记录页对齐原版三标签容器（2026-11-12，已完成编译，待真机确认）**
-
-### 记录页容器化（已完成）
-- [x] **逆向确认**：原版点主页 logo（`i6/o.java:24` → `k6.java:1409 cmd(257)` → `ja(true)` → `aa(null)` → `bb/i.java:6739`）打开的是 **`bb.i` RecordContainerFragment = 顶栏 z + TabLayout 三标签（书签/历史/离线页面）+ ViewPager2 可横滑容器页**，`n3(true,page)` 的 page 决定默认标签（1=书签 2=历史 3=离线页面）；logo/工具栏7→page1、工具栏8/菜单历史/`v://history`→page2、菜单case13→page3
-- [x] TabLayout 规格（`com/tuyafeng/support/widget/TabLayout.java`）：指示器透明（`bb/i.f3:141 setIndicatorColor(0)`）、文字三态 textColorPrimary（选中全色/未选中 α150）、14sp sans-serif-medium 非加粗、allCaps=false、tab 左右 padding 12dp、宽自适应、底 padding 2px
-- [x] 顶栏 z 规格：返回键=drawable b2（`x7.o.f13759r=0x7f080022`）+「向上导航」（`x7.u.C8=o1`）、高 54dp 底 2px 分割线（`z.java:262-267`）、返回=activity.onBackPressed（`z.java:47-58`）
-- [x] 新增 [RecordContainerPage.ets](entry/src/main/ets/view/RecordContainerPage.ets)：Tabs 三 TabContent 复刻容器（横滑 animationDuration 0）、`bookmarks`/`history`/`offlinePage` 三路由共用、默认标签由 `ctx.pathInfo.name` 决定（等价三个 n3(true,page) 调用点）
-- [x] [BookmarkPage.ets](entry/src/main/ets/view/BookmarkPage.ets)/[HistoryPage.ets](entry/src/main/ets/view/HistoryPage.ets)/[OfflinePage.ets](entry/src/main/ets/view/OfflinePage.ets) 去 NavDestination 包壳改容器子页；删除书签页假三标签头（1297-1339 旧 HeaderBar）；返回拦截按原版 `W()/l()` 语义（多选退出→清搜索→回上级文件夹→容器 pop）经 [RecordTypes.ets](entry/src/main/ets/view/RecordTypes.ets) RecordBackController 注入
-- [x] 深链 `v://bookmarks?folder=` 经 @Param folderParamId/folderParamName + @Monitor 透传 BookmarkPage（=cb.e0.T3）；HistoryPage closedTabs / OfflinePage pdfViewer 经容器路由栈 pushPage
-- [x] `devecocli check arkts` 130 文件 0 error；`devecocli build` BUILD SUCCESSFUL，HAP 内 abc 含 RecordContainerPage
-- [x] 提交：`5d7b540`（含并行手改收尾）、`6a8e092`（via:// 归一 v:// 分发），已推送
-- [ ] **待用户真机确认**：点 logo 进容器页、三标签横滑、各入口默认标签、多选/文件夹层级返回不弹容器
-
-**上一任务：应用更名为 Uia（2026-11-09，已完成并编译通过）**
-
-### 应用更名 Uia（已完成）
-- [x] **包名现为 `cn.edu.whut.uia`**（2026-11-12 更正：签名 Profile 调试Debug.p7b/发布Release.p7b 内绑定的 bundleName 均为 cn.edu.whut.uia，AGC 当前应用实体即 uia 包名；更早「保持 cn.edu.whut.via」的决策因 Profile 无法复用而作废。包名属 AGC 注册标识，不受豁免项5「字符名」范畴约束，也不要再改回 via——改回会导致签名不匹配、无法编译打包）
-- [x] 应用名/模块名/卡片名/描述 `Via` → `Uia`（`AppScope` + `entry` 的 `base`/`en_US` 资源共 26 处）
-- [x] 界面文案同步：关于页标题、站点目录页标题、广告规则帮助、用户脚本 GM_* 说明
-- [x] 主页默认 Logo 文字 `VIA` → `UIA`（`Settings.ets` 4 处：字段默认值 / 读取回退 / 置空回退 / 重置主页）
-- [x] 导出文件名前缀 `Via_` → `Uia_`（备份 ZIP、书签 HTML）
-- [x] AGC 原应用 `cn.edu.whut.via`（appId `6917619994375829712`）语言项 appName/简介/更新说明改为 Uia，复用其原有调试/发布 Profile 与 `READ_PASTEBOARD` ACL（免重新审批）
-- [x] 工程目录 `D:\via` → `D:\Uia`，同步 AGENTS.md / Transitions.ets / PageTransitions.ets 内绝对路径
-- [x] 清理 `.hvigor`/`build`/`entry/build` 旧路径缓存后全量构建 BUILD SUCCESSFUL；HAP 校验 bundle=cn.edu.whut.via、资源索引 26 处 Uia / 0 处 Via
-- [x] 提交并推送：`ae2e42c`（更名）、`68ff635`（目录更名后的路径同步）
-- ⚠️ **教训（勿重犯）**：AGC 包名不可改 ≠ 需要新建应用。用户只说「应用名称改成 Uia」时，只需改显示名，**不得顺手改包名、不得新建应用**——新建会在 AGC 留下删不掉的重复应用
-
-**上一任务：全量未对齐审核与修复（2026-11-08，已完成编译，待真机确认）**
-
-### 本轮修复（全量审核后）
-- [x] **A1 自动隐藏进度语义反相**（high）：`AutoHideGesture.drag()` 的 `show = progress() > 0` 改为 `<= 0`。原版 `k6.db()` 中 `f2591r1` **0=显示 / 1=隐藏**，`GestureTouchEvent.d():222-223` 为 `z10 = m() <= 0`。此前拖到隐藏反而结算为显示。
-- [x] **A2 竖滑绝对坐标**：`TabWeb` 改用 `fingerList[0].globalX/globalY`（对齐原版 `getRawX/getRawY`），此前喂相对 offset 导致 down 恒 (0,0)。
-- [x] **D1 退出清除时机**：原版 `k6.i9()` 唯一调用点在 `k6.java:6261`（`X1`/`onViewCreated` = **启动时**），已从「双击返回才执行」改为启动时执行（`EntryAbility.onWindowStageCreate`），双击返回保留为超集。
-- [x] **E4 SSL 白名单三重断链**：设置页按 `hb/z.k3()` 分支跳页、白名单页即时 flush、`TabWeb` 消费 6 位掩码（原版 `e8/h0.v()`）。
-- [x] **E5 语言切换**：`i18n.System.setAppPreferredLanguage()`（原版 `Shell.attachBaseContext` → `z8/t1`）。
-- [x] **E6 英文资源**：新增 `resources/en_US`，478 键与 base 完全一致。
-- [x] **B1/B2/B3/B5 菜单**：广告拦截长按改 `settingsAdBlock`（原版 `z7.d`）、下载长按补「下载管理」弹窗（`A0()`）、书签长按/工具栏动作 30 改弹书签快捷选择对话框（`a8/k`）、菜单格长按 400ms。
-- [x] **C1-C4 地址栏/搜索**：多 URL 单条改后台打开、URL 补 5/4 字符回退、左图标前置关面板（`k6.d9()`）、清空按钮不复位引擎选中（`tb/k0.U2()`）。
-- [x] **D3/D4 跳转守卫**：blocker/jump 严格 http(s)、error/jump 排除 `javascript:`（原版 `i6/i0.p()`，安全）。
-- [x] **E1/E2/E3 设置行**：导出数据补摘要、撤销提示补副标题、外置视频播放器行加回。
-- [x] **D7/D8/D9**：GM timeout 平台上限注释、@resource 新鲜度按原版字面语义、备份 `updater_scripts` 互通。
-- [x] **G1/G2/G3 仓库卫生**：26 个诊断临时文件移出版本库并删除、`.gitignore` 补规则。
-- [x] **E7 版本号**：`app.json5` → `7.4.0.beta` / `20260920`。
-- [x] **D5 非 v:// 特殊 scheme**：thunder/qqdl/flashget 经 `z8.b0.D` 解直链走分块下载（base64 解码去首尾 2 字符）、baidubox 系忽略、`file://*.pdf` 进内置查看器（原版 `k6.u:8581-8597`）。
-- [x] **D6 catalog 站点目录页**：新建 `view/CatalogPage.ets`（6 入口共用同一个 CSS 手绘标签字形，`u9/d.g` 的 `.tag.icon`；「主页」是动作不入路由栈）+ 路由注册。
-- [x] **外部入口统一走 k6.u 分发**：`openExternalLink` 重构——原版 `z8/b0.A() VIEW` 分支 → `k6.c0` → `k6.u()`，所有外部 URL 先过内部命令分发器，不匹配才开标签。此前无条件 navigate 会把 `v://xxx` 当网页塞进标签。
-- [x] **跳转守卫收敛到解析层**：`DeepLink` 新增 `isStrictHttp()`（=i6/i0.s）与 `isJavaScriptUrl()`（=i6/i0.p），blocker/error jump 在解析层过滤；TabWeb 复用消除三处重复实现。
-- [x] **A3 横滑指示层**：横滑位移/淡出从整个 Web 改为独立指示层（原版 `c8/y7.java f2940p`：60×72dp、20dp 内边距、初始 -73dp 屏外），网页本体不动。
-- [x] **B3 打开方式**：书签对话框按原版 `k6.Ua()`（5994-6023）——当前标签存在时由**当前标签**加载，仅无标签才新开；承载层收敛到 Index（删 MenuSheet 并行份）。
-- [x] **C3 d9() 接线**：`closeTopPanelsForLeftIcon()` 按 onBackPress 弹层优先级实现，两处 AddressBar 注入 `onTryClosePanels`。
-- [x] **B4 菜单宽限/贴顶贴底**：`Index` 侧 `menuAvailableSizeVp()`（=原版 `N8()`，大屏非布局0 时 `min(短边-96, 384)`）+ `menuSideGapVp()`（布局1→48/其余→80）经 AppStorage 发布；`MenuSheet` 容器按 `via_menu_layout` 切 `Alignment.Top/Bottom` 并消费宽度上限（`constraintSize maxWidth`）。
-- [x] `devecocli check arkts`：123 文件 0 error；`devecocli build`：BUILD SUCCESSFUL。
-- [x] 提交并推送：`4e64549`/`df3e552`/`1176680`/`5321c6a`/`4e1778e`/`b3e1ed9`（含你手动补的 AGENTS.md 行为准则三条）。
-
-### ⚠️ 本轮勘误（历史清单误报，勿再改）
-- 资源图标显隐 **150ms 是正确的**（原版 `n0.java:297,304`）；历史「改 200ms」是错的。
-- `logoRadius` 用 **max 是正确的**（`r8/d.java:133` 用 max、`:124` 收藏用 min，当前 1:1）；历史「改 min」是误报。
-- **书签页没有「粘贴并打开」**（`cb/e0.java` 无 clipboard/paste）。
-- **历史页没有侧滑删除**（`db/n.java` 无 ItemTouchHelper/swipe）。
-- **印尼语语言码是 `id`**（`oa/a.java:115` → `Name.MARK` = `id`）。
-- **PowerShell 控制台中文乱码不是文件问题**（文件是正确 UTF-8，全仓扫描 0 命中）；**禁止任何智能体去「修乱码」**。
-- **videoplayer 键语义**：原版**空串/null = 系统分享**（`k6.U7:5952` 里空走系统 Intent，`hb/c4.java:690` C0[0] 键就是空串），**非空 = 播放器包名**（`setPackage` 直投）。**原版没有「站内播放」选项**——工程值 `'builtin'` 是本工程扩展。此前把 '' 当「内置播放器」、'share' 当「系统分享」是错的，已修正。
-- **重命名类弹窗确认钮 = R.string.ok「确定」**（如 `hb/j2.A3:222`），不是 done「完成」。done（`x7.u.K3`）只用于多选模式的完成按钮（`cb/e0`、`eb/s`、`b1`、`a8/b2` 等）。
-
-**上一任务：动画全量对齐原版 Via 7.4.0（已完成，待真机确认）**
-
-- [x] 逆向确认：`k6.oa()` → `tb/k0.C3()` uiflags bit0 → 布局0/1 顶栏贴屏幕顶部、布局2/3 贴底部；`Y2()` 对顶栏应用窗口 insets padding
-- [x] 修复 [Index.ets](entry/src/main/ets/pages/Index.ets) showSearch 块：整屏 `Column` + `justifyContent(Start/End)` 承载 SearchOverlay，替代旧的 `Row().padding(top: insets.top+48)`（旧写法被根 Stack 默认垂直居中，输入框落到屏幕中部 y≈1202）
-- [x] 补水平 `justifyContent(FlexAlign.Center)` + 贴顶/贴底 insets padding
-- [x] ArkTS 0 error → 编译 → 覆盖安装 → 启动 Smoke PASS
-- [x] 本轮其它已完成：工具栏图标/标签数三分支着色（`k6.Z7` 夜间 #9F9F9F / 亮背景 #232323 / 其余白）、删除菜单按钮方形 `stateStyles` 按压底色、设置行高度对齐 `a6/o.java`、定制页通查（Logo 参数条/收藏范围/背景三态/夜间图标着色/输入框圆角）、搜索面板顶栏与建议行 1:1 复刻 `tb/k0`、ViaIcon 矩阵回滚（用户否决）
-- [x] **动画全量对齐（commit 6786ed4，65 文件）**：
-  - 解码原版 `res/anim a~n.xml`（在 `via_v7.4.0待移植安卓版解包内容禁止修改\r\a\`）+ styles/integers/fractions，重写 `common/Transitions.ets`：弹窗 anim/a|b 240ms（alpha 线性+translate/scale bounce）、菜单 anim/k|n|m|l 160ms（alpha 线性+accelerate）、页面 anim/f~i 220ms accelerate_decelerate（进场 +100%→0、让位 -30%）
-  - 关键纠错：k6.oa/tb.k0 的 Fragment 事务实为 `.v(anim_c, anim_j, anim_j, anim_d)`（j=alpha 1→1 无动画，d=240 线性淡出）；anim/b 只属于 style k 弹窗退场
-  - 曲线判据（AOSP 源码核实）：ObjectAnimator/ViewPropertyAnimator 未设插值器均默认 **AccelerateDecelerate**（ViewPropertyAnimator 内部沿用 ValueAnimator 默认，不是 Decelerate）；窗口动画 XML 无 interpolator 属性为 **Linear**；ArkUI animation() 默认 EaseInOut，全部显式指定
-  - 组件逐点：Toolbar 抖动 g0.j() 280ms bezier 三关键帧(keyframeAnimateTo、作用对象=标签栈)、AddressBar 脉冲 n0.q() 1200ms 1↔1.15↔1(keyframeAnimateTo)+资源图标 translationX、TabPanel 高度 f8/l0.p3() 350ms 三值 ValueAnimator(customCurve 复合)且初始化无动画、TabWeb 侧滑 AccelerateDecelerate+同步导航、HomePage 对齐 i6/o.java 注入 CSS(140ms ease、opacity 1-a/98、隐藏分支无过渡)、HomeFavEditor 补 g6.y.X 抖动(24dp/280ms/×2 反转)、Snackbar f6.i.c() 180ms Decelerate、SettingsMenuPage 宫格 DefaultItemAnimator move 250ms、Index 进度条去过渡(w 直接 setVisibility)、AI 面板接菜单窗口动画、夜间滤镜 opacity 0.2→1 300ms accelerate、Tabs 切换 animationDuration 0、SettingRows 去自造补间(状态选择器直切)
-  - 新增 `view/PageTransitions.ets`（buildNavSlide）接入全部 58 个 NavDestination 左右推入转场
-- [ ] **待用户真机确认**：搜索面板是否贴在屏幕顶部（传统布局）、菜单月亮图标夜间着色、三条横线无背景块、以及本轮全部动画观感
-- [ ] **已知 API 限制（勿重复尝试）**：`NavDestinationTransition.curve` 仅收 `Curve` 枚举（nav_destination.d.ts:565），ICurve 传不进 → 58 个子页 220ms 转场用 Curve.EaseInOut 近似 accelerate_decelerate（时长/位移精确，曲线轻微偏差）
-- ⚠️ 全局规则（已写入 `~/.dsh/AGENTS.md`）：严禁未经当次指示主动操作设备（aa start/点击/滑动）；编辑文件必须用 edit/write 工具，禁止 PowerShell 写文件（GBK 乱码）
+- 资源图标显隐 150ms 是正确的，勿改 200ms。
+- `logoRadius` 用 max 是正确的，勿改 min。
+- 书签页没有「粘贴并打开」。
+- 历史页没有侧滑删除。
+- 印尼语语言码是 `id`。
+- PowerShell 控制台中文乱码不是文件问题，禁止去「修乱码」。
+- videoplayer 键语义：空串/null = 系统分享，非空 = 播放器包名；原版没有「站内播放」选项。
+- 重命名类弹窗确认钮用 ok「确定」，不用 done「完成」；done 只用于多选模式的完成按钮。
+- 全局规则：严禁未经当次指示主动操作设备；编辑文件必须用 edit/write 工具，禁止 PowerShell 写文件（GBK 乱码）。
