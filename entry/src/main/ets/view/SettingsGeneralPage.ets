@@ -540,12 +540,32 @@ export struct SettingsGeneralPage {
           isZip = idx >= 0 && idx + 4 === uri.length
         }
         if (isZip) {
-          // 原版 s3：.zip 走 ZipBackupManager 还原
+          // 原版 s3：.zip 走 ZipBackupManager 还原；返回 SKIPPED（含 pass.enc 未给密码）时弹密码框重试
           const context = this.getUIContext().getHostContext()
           if (context === undefined) {
             return
           }
-          BackupManager.getInstance().restoreFromZipBackup(uri, context).then(() => {
+          BackupManager.getInstance().restoreFromZipBackup(uri, context).then((result: number) => {
+            if (result === BackupManager.RESTORE_SKIPPED) {
+              this.importRetryUri = uri
+              this.passwordInput = ''
+              this.getUIContext().getPromptAction().openCustomDialog({
+                width: computeDialogWidthVp(),
+                builder: (): void => {
+                  this.PasswordDialog()
+                },
+                isModal: true,
+                backgroundColor: Color.Transparent,
+                autoCancel: true,
+                alignment: DialogAlignment.Center,
+                maskColor: 'rgba(0,0,0,0.4)'
+              }).then((dialogId: number) => {
+                this.passwordDialogId = dialogId
+              }).catch(() => {
+                console.error('open import password dialog failed')
+              })
+              return
+            }
             this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_done'), duration: TOAST_SHORT })
           }).catch((error: BusinessError) => {
             console.error(`import zip backup failed: ${error.message}`)
@@ -580,6 +600,8 @@ export struct SettingsGeneralPage {
   private exportDialogId: number = -1
   // 导出密码弹窗（hb/c4.F4）
   private pendingExportFlags: number = 0
+  // 导入 ZIP 含 pass.enc 时的重试 URI（密码弹窗复用：有值=导入模式，-1=导出模式）
+  private importRetryUri: string = ''
   private passwordInput: string = ''
   private passwordDialogId: number = -1
 
@@ -664,6 +686,27 @@ export struct SettingsGeneralPage {
   // 原版 c4.G0：输入为空时使用默认密码 "3_=cZHGxZ#FZgZA@"
   private confirmExportPassword(): void {
     const password = this.passwordInput === '' ? '3_=cZHGxZ#FZgZA@' : this.passwordInput
+    // 导入模式：有 importRetryUri 时用密码重试 ZIP 还原（pass.enc 解密）
+    if (this.importRetryUri !== '') {
+      const uri = this.importRetryUri
+      this.importRetryUri = ''
+      this.closePasswordDialog()
+      const context = this.getUIContext().getHostContext()
+      if (context === undefined) {
+        return
+      }
+      BackupManager.getInstance().restoreFromZipBackup(uri, context, password).then((result: number) => {
+        this.getUIContext().getPromptAction().showToast({
+          message: result === BackupManager.RESTORE_FAILED
+            ? $r('app.string.import_failed') : $r('app.string.import_done'),
+          duration: TOAST_SHORT
+        })
+      }).catch((error: BusinessError) => {
+        console.error(`retry import zip failed: ${error.message}`)
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.import_failed'), duration: TOAST_SHORT })
+      })
+      return
+    }
     const flags = this.pendingExportFlags
     this.closePasswordDialog()
     this.doExport(flags, password)
