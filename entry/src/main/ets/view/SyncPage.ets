@@ -1,4 +1,4 @@
-import { TOAST_SHORT } from '../common/ToastDuration'
+import { TOAST_SHORT, TOAST_MEDIUM } from '../common/ToastDuration'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
@@ -284,6 +284,11 @@ export struct SyncPage {
     }).catch((error: BusinessError) => {
       this.working = false
       console.error(`webdav backup failed: ${error.message}`)
+      // 远端备份比本地新：拒绝覆盖（新者胜），提示先从云端恢复
+      if (`${error.message}`.indexOf('webdav remote newer') >= 0) {
+        this.getUIContext().getPromptAction().showToast({ message: '云端备份比本地新，请先恢复云端再备份', duration: TOAST_MEDIUM })
+        return
+      }
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.backup_failed'), duration: TOAST_SHORT })
     })
   }

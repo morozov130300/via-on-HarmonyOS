@@ -459,8 +459,15 @@ function writeFolderLevel(folders: BookmarkFolderRec[], bookmarks: BookmarkRec[]
   for (let i = 0; i < folders.length; i++) {
     const f = folders[i]
     if (f.parentId === parentId) {
-      // z8/p.m：文件夹行（本工程文件夹无 updated 列，LAST_MODIFIED 恒不写）
-      out += pad + '<DT><H3 ADD_DATE="' + Math.floor(f.created / 1000) + '">' + escapeText(f.title) + '</H3>\n'
+      // z8/p.m（214-228）：文件夹行 ADD_DATE + updated 有效且不等时追加 LAST_MODIFIED（秒级）
+      const createdSec = Math.floor(f.created / 1000)
+      const updatedSec = Math.floor(f.updatedAt / 1000)
+      let folderLine = pad + '<DT><H3 ADD_DATE="' + createdSec + '"'
+      if (f.updatedAt > 0 && updatedSec !== createdSec) {
+        folderLine += ' LAST_MODIFIED="' + updatedSec + '"'
+      }
+      folderLine += '>' + escapeText(f.title) + '</H3>\n'
+      out += folderLine
       out += pad + '<DL><p>\n'
       out += writeFolderLevel(folders, bookmarks, f.id, indent + 1)
       out += pad + '</DL><p>\n'
@@ -481,6 +488,7 @@ export function buildBookmarksHtml(folders: BookmarkFolderRec[], bookmarks: Book
     '     It will be read and overwritten.\n     DO NOT EDIT! -->\n' +
     '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n' +
     '<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n'
+  // z8/p.r（453-465）：folders 按 o9.a.c()（ordering）、bookmarks 按 o9.b.d()（ordering）升序
   const sortedFolders = folders.slice().sort((a: BookmarkFolderRec, b: BookmarkFolderRec) => a.ordering - b.ordering)
   const sortedBookmarks = bookmarks.slice().sort((a: BookmarkRec, b: BookmarkRec) => a.ordering - b.ordering)
   out += writeFolderLevel(sortedFolders, sortedBookmarks, 0, 1)

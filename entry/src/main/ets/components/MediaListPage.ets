@@ -1,5 +1,6 @@
 import { hostOf } from '../common/SearchEngines'
 import { DownloadCoordinator } from '../common/Downloads'
+import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import { common, Want } from '@kit.AbilityKit'
 import { SettingsHeader } from './SettingsHeader'
@@ -146,8 +147,17 @@ export struct MediaListPage {
   }
 
   private download(url: string): void {
-    // 原版媒体下载与链接下载同走确认弹层（mark/via/download/m.java）
-    DownloadCoordinator.getInstance().requestUrlDownload(url, '', '')
+    // 原版媒体下载与链接下载同走确认弹层（mark/via/download/m.java）；
+    // 带 Referer 与页面 UA 保证登录态/防盗链资源可下载（与其他下载调用点一致）
+    let referer = ''
+    let pageUa = ''
+    try {
+      const current = TabStore.getInstance().current()
+      referer = current.url
+      pageUa = current.controller.getUserAgent()
+    } catch (error) {
+    }
+    DownloadCoordinator.getInstance().requestUrlDownload(url, referer, pageUa)
   }
 
   private mediaName(url: string): string {

@@ -5,7 +5,7 @@ const SQL_CREATE_BOOKMARKS: string = 'CREATE TABLE IF NOT EXISTS bookmarks ' +
   '(id INTEGER PRIMARY KEY, title TEXT, url TEXT, folder TEXT, created INTEGER)'
 // 原版 bookmark_folders 表（o9/g.java:29-30）
 const SQL_CREATE_BOOKMARK_FOLDERS: string = 'CREATE TABLE IF NOT EXISTS bookmark_folders ' +
-  '(id INTEGER PRIMARY KEY, title TEXT, parent_id INTEGER DEFAULT 0, ordering INTEGER DEFAULT 0, created INTEGER)'
+  '(id INTEGER PRIMARY KEY, title TEXT, parent_id INTEGER DEFAULT 0, ordering INTEGER DEFAULT 0, created INTEGER, updated_at INTEGER DEFAULT 0)'
 const SQL_CREATE_HISTORY: string = 'CREATE TABLE IF NOT EXISTS history ' +
   '(id INTEGER PRIMARY KEY, title TEXT, url TEXT, visited INTEGER)'
 const SQL_CREATE_DOWNLOADS: string = 'CREATE TABLE IF NOT EXISTS downloads ' +
@@ -87,6 +87,7 @@ export class BrowserDb {
     await this.addColumnIfMissing('bookmarks', 'folder_id', 'INTEGER DEFAULT 0')
     // 原版 bookmark_items.last_updated_at（o9/g.java:28）
     await this.addColumnIfMissing('bookmarks', 'updated_at', 'INTEGER DEFAULT 0')
+await this.addColumnIfMissing('bookmark_folders', 'updated_at', 'INTEGER DEFAULT 0')
     // 原版 bookmark_items.ordering（o9/g.java:28）：文件夹内排序；老数据按 created 排名回填
     const addedOrdering = await this.addColumnIfMissing('bookmarks', 'ordering', 'INTEGER DEFAULT 0')
     if (addedOrdering) {
@@ -380,6 +381,7 @@ export class BrowserDb {
       rec.parentId = resultSet.getDouble(resultSet.getColumnIndex('parent_id'))
       rec.ordering = resultSet.getDouble(resultSet.getColumnIndex('ordering'))
       rec.created = resultSet.getDouble(resultSet.getColumnIndex('created'))
+      rec.updatedAt = resultSet.getDouble(resultSet.getColumnIndex('updated_at'))
       result.push(rec)
     }
     resultSet.close()
@@ -395,7 +397,8 @@ export class BrowserDb {
       'title': title,
       'parent_id': parentId,
       'ordering': 0,
-      'created': Date.now()
+      'created': Date.now(),
+      'updated_at': Date.now()
     }
     return await this.rdb.insert('bookmark_folders', bucket)
   }
@@ -405,7 +408,8 @@ export class BrowserDb {
       return
     }
     const bucket: relationalStore.ValuesBucket = {
-      'title': title
+      'title': title,
+      'updated_at': Date.now()
     }
     const predicates = new relationalStore.RdbPredicates('bookmark_folders')
     predicates.equalTo('id', id)

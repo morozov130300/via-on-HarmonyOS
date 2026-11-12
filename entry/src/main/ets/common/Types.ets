@@ -138,6 +138,8 @@ export class BookmarkFolderRec {
   parentId: number
   ordering: number
   created: number
+  // 原版 o9/a.f()（f10475f lastModified）：z8/p.m 输出 LAST_MODIFIED 用
+  updatedAt: number
 
   constructor() {
     this.id = -1
@@ -145,6 +147,7 @@ export class BookmarkFolderRec {
     this.parentId = 0
     this.ordering = 0
     this.created = 0
+    this.updatedAt = 0
   }
 
   static fromJson(obj: Record<string, Object>): BookmarkFolderRec | null {

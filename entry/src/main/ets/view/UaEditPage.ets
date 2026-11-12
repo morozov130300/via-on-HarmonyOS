@@ -1,6 +1,6 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { AppSettings } from '../common/Settings'
-import { CustomUaEntry } from '../common/UaTable'
+import { CustomUaEntry, cleanUaInput } from '../common/UaTable'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 
@@ -145,7 +145,8 @@ export struct UaEditPage {
 
   private save(): void {
     const title = this.titleInput.trim()
-    const ua = this.uaInput.trim()
+    // 原版 z8/b4.g：[\t\n\r]+ → 空格 + trim（保存前归一化）
+    const ua = cleanUaInput(this.uaInput)
     if (title === '') {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_yj'), duration: TOAST_SHORT })
       return
