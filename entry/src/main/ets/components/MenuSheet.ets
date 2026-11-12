@@ -21,7 +21,7 @@ import { ZoomSlider } from './ZoomSlider'
 import { TranslateState } from './TranslatePanel'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
-import { dialogTransition, menuTransition, dimTransition } from '../common/Transitions'
+import { dialogTransition, menuTransition, menuTransitionTop, dimTransition } from '../common/Transitions'
 
 export const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translator__){window.__via_translator__.showBanner(true);return;}`
   + `window.googleTranslateElementInit=function(){if(!window.__via_translator__){window.__via_translator__=new google.translate.TranslateElement({autoDisplay:false,floatPosition:0,multilanguagePage:true,includedLanguages:"af,sq,am,ar,hy,az,eu,be,bn,bs,bg,ca,ceb,ny,zh-CN,zh-TW,co,hr,cs,da,nl,en,eo,et,tl,fi,fr,fy,gl,ka,de,el,gu,ht,ha,haw,he,hi,hmn,hu,is,id,ga,it,ja,jv,kn,kk,km,ky,ko,ku,lo,la,lv,lt,lb,mk,mg,ms,ml,mt,mi,mr,mn,my,ne,no,ps,fa,pl,pt,pa,ro,ru,sr,st,sd,si,sk,sl,so,sm,es,su,sw,sv,tg,ta,te,th,tr,uk,ur,uz,vi,cy,xh,yi,yo,zu",pageLanguage:"auto"});}`
@@ -206,7 +206,9 @@ export struct MenuSheet {
       .padding({ top: 8, bottom: 6 })
       .backgroundColor($r('app.color.menu_bg'))
       .shadow({ radius: 24, color: 'rgba(0,0,0,0.4)', offsetY: 4 })
-      .transition(menuTransition())
+      // 原版按 gravity 选窗口动画：style r（gravity 含 80，贴底）→ anim/k|n；
+      // style q（gravity 含 48，贴顶）→ anim/m|l。两者位移方向相反，必须分支。
+      .transition(this.menuLayout() === 1 ? menuTransitionTop() : menuTransition())
 
       if (this.showUaDialog) {
         this.UaDialog()

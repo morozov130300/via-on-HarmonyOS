@@ -73,9 +73,14 @@ export function dialogTransition(): TransitionEffect {
       .animation({ duration: 240, curve: BOUNCE_CURVE }))
 }
 
-// 底部菜单（i8.k.T1：gravity 含 80 → style r）：
-//   anim/k 进场：alpha 0→1（线性）+ translateY -120px→0（accelerate），integer/d=160
-//   anim/n 退场：alpha 1→0（线性）+ translateY 0→-120px（accelerate），integer/d=160
+// 底部菜单（i8/k.T1：gravity 含 80 → style r，进场 @anim/k、退场 @anim/n）：
+//   原版解码值（resources/res/anim/k.xml、n.xml，integer/d=160，插值器 accelerate 0x010a0005）：
+//     anim/k 进场：alpha 0→1；translate fromYDelta=-120.0 → toYDelta=0
+//     anim/n 退场：alpha 1→0；translate fromYDelta=0 → toYDelta=-120.0
+// ★ ArkUI 的 TransitionEffect.translate(t) 表示「组件在过渡两端的偏移量」：
+//   插入时是起始偏移、删除时是结束偏移。故进场传 -120（从上方滑入），退场也必须传 -120
+//   （滑向 -120 再消失）。旧实现让进场/退场都传 -slide，退场等于「从 -120 跳回 0 再淡出」，
+//   方向与原版相反——这就是菜单弹出/收起动画看起来反了的原因。
 export function menuTransition(): TransitionEffect {
   const slide = animPxToVp(120)
   const enter = TransitionEffect.OPACITY.animation({ duration: 160, curve: Curve.Linear })
@@ -87,9 +92,10 @@ export function menuTransition(): TransitionEffect {
   return TransitionEffect.asymmetric(enter, exit)
 }
 
-// 顶部菜单（gravity 含 48 → style q）：
-//   anim/m 进场：alpha 0→1（线性）+ translateY +120px→0（accelerate），integer/d=160
-//   anim/l 退场：alpha 1→0（线性）+ translateY 0→+120px（accelerate），integer/d=160
+// 顶部菜单（gravity 含 48 → style q，进场 @anim/m、退场 @anim/l）：
+//   原版解码值：
+//     anim/m 进场：alpha 0→1；translate fromYDelta=+120.0 → toYDelta=0（从下方滑入）
+//     anim/l 退场：alpha 1→0；translate fromYDelta=0 → toYDelta=+120.0（向下滑出）
 export function menuTransitionTop(): TransitionEffect {
   const slide = animPxToVp(120)
   const enter = TransitionEffect.OPACITY.animation({ duration: 160, curve: Curve.Linear })
