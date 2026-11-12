@@ -1453,14 +1453,17 @@ struct Index {
     }
   }
 
-  // 原版 Ya()：横屏时布局 0→1、3→2（k6.java:6414-6418，判据为设备物理方向 C1==2）
+  // 原版 Ya()：横屏时布局 0→1、3→2（k6.java:6414-6418，判据为设备物理方向 C1==2）。
+  // ★ 用户拍板的偏离项（2026-11-12，见 AGENTS.md 豁免项 0）：传统布局(0) 禁止做横屏映射。
+  //   PC/平板屏幕物理上恒为横向，display.Orientation 永远是 LANDSCAPE，若照原版映射，
+  //   用户选「传统布局」会被静默改写成布局1（地址栏与按钮挤成一行、整条贴顶），设置等于失效。
   private effectiveLayout(): number {
     const layout = this.settings.appLayout
+    if (layout === LAYOUT_TRADITIONAL) {
+      return LAYOUT_TRADITIONAL
+    }
     if (!this.physicalLandscape) {
       return layout
-    }
-    if (layout === LAYOUT_TRADITIONAL) {
-      return LAYOUT_TOOLBAR_TOP
     }
     if (layout === LAYOUT_DOUBLE) {
       return LAYOUT_TOOLBAR_BOTTOM
