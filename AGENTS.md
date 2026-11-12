@@ -309,6 +309,10 @@
 2. **云备份**：功能不要求与原版一致（唯一例外，见上文「一切操作必须先逆向原版」）。
 3. **密码管理器/导出密码位/备份 settings.txt 映射/搜索工具栏**：见上节 1–4 项，均为用户已选方案，非 1:1。
 4. **NavDestination 转场曲线**（API 限制，非用户拍板但属已知豁免）：`NavDestinationTransition.curve` 仅收 `Curve` 枚举（nav_destination.d.ts:565），ICurve 传不进 → 58 个子页 220ms 转场用 `Curve.EaseInOut` 近似 AOSP accelerate_decelerate（时长/位移精确，曲线轻微偏差）。
+5. **字符名/标识符一律保持 uia（2026-11-12 用户拍板，法律原因）**：
+   - 原版事实：原版 Via 的 JS 桥名（`window.via`/`via_gm`）、阅读模式类名（`via-reader-body`/`__via_reader__`）、AppStorage 键、preferences 库名、深链协议（`via://`）等字面名均含 via。
+   - 用户决定：**因法律原因，本工程所有字符名/标识符一律用 uia，禁止改回 via 字面**。排查报告中所有「uia_↔via_ 契约错配」类差异，修复方向一律是**把 via 侧改成 uia 侧**（统一到 uia），而不是原版的 via；禁止任何智能体以「与原版 1:1」为由把桥名/类名/键名改回 via。
+   - 修复口径：两侧统一为 uia 后，功能即恢复（错配的本质是两侧不一致，不是「必须是 via」）。仅 backup/settings.txt 等**与安卓端数据互通**的载荷字段名（w9 键名）不受此条约束——互通格式按原版键名走，属数据格式而非代码标识符。
 
 ---
 
