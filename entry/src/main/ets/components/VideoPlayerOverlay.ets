@@ -713,7 +713,7 @@ export struct VideoPlayerOverlay {
               .width(40)
               .height(40)
               .borderRadius(20)
-              .backgroundColor($r('app.color.hc_33000000'))
+              .backgroundColor('#33000000')
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
               .onClick(() => {
@@ -732,10 +732,10 @@ export struct VideoPlayerOverlay {
               .width(40)
               .height(40)
               .borderRadius(20)
-              .backgroundColor($r('app.color.hc_33000000'))
+              .backgroundColor('#33000000')
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
-              .accessibilityText(this.state.locked ? $r('app.string.orig_a0b') : $r('app.string.orig_ml'))
+              .accessibilityText(this.state.locked ? '解锁' : '锁定')
               .onClick(() => {
                 this.state.toggleLock()
               })
@@ -750,10 +750,10 @@ export struct VideoPlayerOverlay {
               .width(40)
               .height(40)
               .borderRadius(20)
-              .backgroundColor($r('app.color.hc_33000000'))
+              .backgroundColor('#33000000')
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
-              .accessibilityText($r('app.string.screen_orientation'))
+              .accessibilityText('屏幕方向')
               .onClick(() => {
                 this.showOrientationMenu()
               })
@@ -797,11 +797,10 @@ export struct VideoPlayerOverlay {
     })
   }
 
-  // 原版 arrays.xml array/h（jk/py/q0/pz）：跟随系统 | 自动 | 竖屏 | 横屏
-  // 菜单索引必须与 videoorientation 的 0..3 同序（w9/k.m(int)）
+  // 原版 v.g：方向菜单（110dp 宽列表：自动/横屏/竖屏/跟随系统）
   private showOrientationMenu(): void {
     this.state.cancelHideTimer()
-    const items: string[] = ['跟随系统', '自动', '竖屏', '横屏']
+    const items: string[] = ['自动', '横屏', '竖屏', '跟随系统']
     const sheets: Array<SheetInfo> = items.map((item: string, index: number): SheetInfo => {
       return {
         title: item,

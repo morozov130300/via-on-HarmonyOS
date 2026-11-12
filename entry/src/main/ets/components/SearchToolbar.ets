@@ -8,7 +8,7 @@ import { pasteboard } from '@kit.BasicServicesKit'
 import { i18n } from '@kit.LocalizationKit'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 
-// 原版 mark/uia/common/widget/m（k6.n9 构建传入 n9、k4 主题着色、k6.b 点击回调）：
+// 原版 mark/via/common/widget/m（k6.n9 构建传入 n9、k4 主题着色、k6.b 点击回调）：
 // 地址栏下方搜索工具栏，高 40dp 的横向列表；chips 与尾部「+」钮同列表滚动（m.h 把 footer
 // append 进 RecyclerView 列表）。ItemDecoration x(6dp,4dp)：所有 item 上下 6dp、左右 4dp，
 // List 水平 padding 12dp（clipToPadding=false）→ 首内容距边 16dp、间隔 8dp。

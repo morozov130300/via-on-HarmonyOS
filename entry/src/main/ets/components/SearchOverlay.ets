@@ -17,8 +17,8 @@ import {
   normalizeUrl,
   engineKeyFromId
 } from '../common/SearchEngines'
-import { UiaIcon } from './UiaIcon'
-import { computeDialogWidthVp } from './UiaDialogCard'
+import { ViaIcon } from './ViaIcon'
+import { computeDialogWidthVp } from './ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 
 // 原版 tb/k0.C1：输入行高 = 图标槽 = 建议行图标 = dimen bi(48dp)
@@ -681,7 +681,7 @@ export struct SearchOverlay {
         this.showExpandEditor = true
       })
       // 6) 前往（f12389v0）：原版 k0.t3 → drawable j0 = a3（b2 旋转 180°，箭头朝右），
-      // 与工具栏前进按钮同一画法：uia_ic_back + rotateDeg 180（k6 前进分支同款）
+      // 与工具栏前进按钮同一画法：via_ic_back + rotateDeg 180（k6 前进分支同款）
       this.IconSlot($r('app.media.uia_ic_back'), $r('app.string.search'), (): void => {
         this.commit(this.inputText)
       }, 180)
@@ -697,7 +697,7 @@ export struct SearchOverlay {
   @Builder
   IconSlot(icon: Resource, desc: Resource, action: () => void, rotateDeg: number = 0) {
     Stack() {
-      UiaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint'),
+      ViaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint'),
         rotateDeg: rotateDeg })
     }
     .width(URL_BAR_HEIGHT)
@@ -813,7 +813,7 @@ export struct SearchOverlay {
     Row() {
       // 左图标：按 ka/a.d() 类型 —— 收藏1(bt)/书签2(b5)/标签页4(dw)/历史8,32(c_)/其它(de)
       Stack() {
-        UiaIcon({ icon: this.suggestIcon(row.type), iconSize: URL_ICON_SIZE,
+        ViaIcon({ icon: this.suggestIcon(row.type), iconSize: URL_ICON_SIZE,
           iconColor: $r('app.color.url_input_icon_tint') })
       }
       .width(URL_BAR_HEIGHT)
@@ -839,7 +839,7 @@ export struct SearchOverlay {
       .layoutWeight(1)
       // 右箭头：填入文本（a.q()），贴底布局时旋转 -90°
       Stack() {
-        UiaIcon({ icon: $r('app.media.uia_ic_sug_fill'), iconSize: URL_ICON_SIZE,
+        ViaIcon({ icon: $r('app.media.uia_ic_sug_fill'), iconSize: URL_ICON_SIZE,
           iconColor: $r('app.color.url_input_icon_tint') })
           .rotate({ angle: this.barAtTop ? 0 : -90 })
       }
@@ -868,7 +868,7 @@ export struct SearchOverlay {
       action()
     })
     // 原版 k0.e3：长按 type32 搜索历史行 → 清除搜索历史确认弹窗
-    .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
       if (row.type === 32) {
         this.confirmClearHistory()
       }
@@ -927,7 +927,7 @@ export struct SearchOverlay {
       return
     }
     if (row.type === 4) {
-      // 切换到该标签页（原版 UIA-SWITCH-TAB）
+      // 切换到该标签页（原版 VIA-SWITCH-TAB）
       if (row.tabIndex >= 0 && row.tabIndex < this.tabStore.tabs.length) {
         this.tabStore.switchTo(row.tabIndex)
         this.onClose()

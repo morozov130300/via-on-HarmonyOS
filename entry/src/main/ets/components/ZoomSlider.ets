@@ -1,4 +1,4 @@
-// 原版 mark.uia.common.widget.w0（+ z8.r3.g + x8.h.n/w）1:1 复刻：
+// 原版 mark.via.common.widget.w0（+ z8.r3.g + x8.h.n/w）1:1 复刻：
 // - 2dp 圆角轨道：底色 #40808080（color a8），进度部分 accent（x8.h.j）
 // - 12dp accent 圆形滑块（x8.h.w：color accent、圆角 6dp、尺寸 12dp）
 // - setHighlightProgress 圆点：直径 = 滑块宽/3×2 = 8dp（w0.onDraw drawCircle 半径 thumb/3），
@@ -62,7 +62,7 @@ export struct ZoomSlider {
         .width('100%')
         .height(2)
         .borderRadius(1)
-        .backgroundColor($r('app.color.hc_40808080'))
+        .backgroundColor('#40808080')
       // 进度（accent）
       Column()
         .width(this.pct(this.dragZoom))
@@ -72,7 +72,7 @@ export struct ZoomSlider {
       // highlight 圆点（w0.onDraw）
       if (this.highlightZoom >= 50 && this.highlightZoom <= 200) {
         Circle({ width: 8, height: 8 })
-          .fill(this.highlightZoom <= this.dragZoom ? $r('app.color.accent') : $r('app.color.hc_40808080'))
+          .fill(this.highlightZoom <= this.dragZoom ? $r('app.color.accent') : '#40808080')
           .position({ x: this.pct(this.highlightZoom), y: '50%' })
           .markAnchor({ x: 4, y: 4 })
       }

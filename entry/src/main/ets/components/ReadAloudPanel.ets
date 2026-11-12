@@ -1,4 +1,3 @@
-import { TOAST_SHORT } from '../common/ToastDuration'
 import { display } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common, Want } from '@kit.AbilityKit'
@@ -73,10 +72,9 @@ export struct ReadAloudPanel {
     this.panelH = panelHeightVp()
     // 原版 X1：注册监听并初始化控制条
     this.controller.addListener(this.listener)
-    // 原版 j8/p.java:394 setMax(13)、:396 progress=(speed/0.25)-1 → 14 档 0.25~3.5x
-    // 已存超界值按原版 clamp 到 [0.25, 3.5] 后显示
-    const speed = Math.max(0.25, Math.min(3.5, this.settings.readAloudSpeed))
-    this.sliderValue = Math.round(speed / 0.25) - 1
+    // 朗读语速收敛 0.5x-2.0x：已存超界值显示 clamp 后的值
+    const speed = Math.max(0.5, Math.min(2.0, this.settings.readAloudSpeed))
+    this.sliderValue = Math.round((speed - 0.5) / 0.25)
     this.speedText = `${speed.toFixed(2)}x`
     this.refresh()
   }
@@ -222,7 +220,7 @@ export struct ReadAloudPanel {
   private showOperationFailedToast(): void {
     this.getUIContext().getPromptAction().showToast({
       message: $r('app.string.read_aloud_operation_failed'),
-      duration: TOAST_SHORT
+      duration: 1500
     })
   }
 
@@ -232,13 +230,13 @@ export struct ReadAloudPanel {
   }
 
   private onSliderChange(value: number): void {
-    const speed = (value + 1) * 0.25
+    const speed = 0.5 + value * 0.25
     this.speedText = `${speed.toFixed(2)}x`
   }
 
   // 原版 SeekBar.onStopTrackingTouch
   private onSliderDone(value: number): void {
-    const speed = (value + 1) * 0.25
+    const speed = 0.5 + value * 0.25
     this.settings.setReadAloudSpeed(speed)
     this.engine.setSpeed(speed)
     this.onSpeedChanged(speed)
@@ -258,7 +256,7 @@ export struct ReadAloudPanel {
     pasteboard.getSystemPasteboard().setData(data)
     this.getUIContext().getPromptAction().showToast({
       message: $r('app.string.read_aloud_copy_done'),
-      duration: TOAST_SHORT
+      duration: 1500
     })
   }
 
@@ -362,7 +360,7 @@ export struct ReadAloudPanel {
                 })
             } else {
               // dk(E0)：语速滑条（0.5x-2.0x，步长 0.25，索引 0-6）
-              Slider({ value: this.sliderValue, min: 0, max: 13, step: 1, style: SliderStyle.OutSet })
+              Slider({ value: this.sliderValue, min: 0, max: 6, step: 1, style: SliderStyle.OutSet })
                 .layoutWeight(4)
                 .height(48)
                 .onChange((value: number, mode: SliderChangeMode) => {

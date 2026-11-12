@@ -2,12 +2,12 @@ import { TabItem } from '../common/Types'
 import { pasteboard, emitter } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
-import { UiaIcon } from './UiaIcon'
+import { ViaIcon } from './ViaIcon'
 import { hostOf, getBuiltinEngines, isUrlLike } from '../common/SearchEngines'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
 import { BusinessError } from '@kit.BasicServicesKit'
-import { computeDialogWidthVp } from './UiaDialogCard'
+import { computeDialogWidthVp } from './ViaDialogCard'
 import { BEZIER_0202_CURVE, dialogTransition } from '../common/Transitions'
 
 const BAR_HEIGHT: number = 48
@@ -90,7 +90,7 @@ export struct AddressBar {
   private pulseEventId: number = 30001
 
   aboutToAppear(): void {
-    // 原版 mark/uia/common/widget/n0.java:208-222 q()：
+    // 原版 mark/via/common/widget/n0.java:208-222 q()：
     //   ValueAnimator.ofFloat(1.0f, 1.15f, 1.0f)；setInterpolator(x8.h.b()) 即
     //   PathInterpolator(0.2,0.2,0.8,0.8)；setDuration(1200L)；作用属性 = 左图标 scaleX/scaleY；
     //   addListener 的 onAnimationCancel 把 scale 复位为 1.0。
@@ -299,7 +299,7 @@ export struct AddressBar {
       pasteboard.getSystemPasteboard().getData().then((data: pasteboard.PasteData) => {
         const text = data.getPrimaryText().trim()
         if (text !== '') {
-          AppStorage.setOrCreate('uia_paste_url', text)
+          AppStorage.setOrCreate('via_paste_url', text)
           this.onAddressTap()
         }
       }).catch(() => {})
@@ -410,7 +410,7 @@ export struct AddressBar {
     }
     // 原版确定钮 oy「打开全部」（k6.T5）：逐个新标签打开，最后一个前台
     sheets.push({
-      title: $r('app.string.orig_oy'),
+      title: '打开全部',
       action: (): void => {
         for (let i = 0; i < urls.length; i++) {
           this.tabStore.newTabAt(urls[i], i < urls.length - 1)
@@ -418,7 +418,7 @@ export struct AddressBar {
       }
     })
     ActionSheet.show({
-      title: $r('app.string.ai_unsaved_title'),
+      title: '提示',
       message: text,
       sheets: sheets
     })
@@ -454,7 +454,7 @@ export struct AddressBar {
   build() {
     Row() {
       Stack() {
-        UiaIcon({ icon: this.leftIcon(), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
+        ViaIcon({ icon: this.leftIcon(), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
           .scale({ x: this.pulseScale, y: this.pulseScale })
           .accessibilityText(this.readerHint
             ? $r('app.string.open_reader_mode') : $r('app.string.site_info'))
@@ -478,7 +478,7 @@ export struct AddressBar {
         }
       })
       // 原版 k6.h：左图标长按 → 搜索引擎单选对话框（sp=搜索引擎，选中写 searchengine）
-      .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+      .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
         this.openEngineDialog()
       }))
 
@@ -510,18 +510,18 @@ export struct AddressBar {
           }
         })
         // 原版标题长按 → 复制/粘贴/粘贴并前往（k6.h.onLongClick）
-        .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+        .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
           this.showTitleMenu = true
         }))
 
       // 原版 n0.m()：资源嗅探图标 f9707j 位于标题与右图标之间；t() 渐隐渐显
-      // （mark/uia/common/widget/n0.java:292-311 t(boolean,boolean)：
+      // （mark/via/common/widget/n0.java:292-311 t(boolean,boolean)：
       //   隐藏 → translationX 0→图标宽、alpha 1→0、150ms、e(x8.h.b())；
       //   显示 → translationX 图标宽→0、alpha 0→1、150ms、e(x8.h.b())；
       //   图标宽 = LinearLayout.LayoutParams(g6.f.d(ctx, x7.n.E))，E=0x7f070052=dimen bi=48dp）
       if (this.tab.sniffedMedia.length > 0) {
         Stack() {
-          UiaIcon({ icon: $r('app.media.uia_ic_resource'), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
+          ViaIcon({ icon: $r('app.media.uia_ic_resource'), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
         }
         .width(ICON_SLOT)
         .height('100%')
@@ -537,7 +537,7 @@ export struct AddressBar {
       }
 
       Stack() {
-        UiaIcon({ icon: this.actionIcon(), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
+        ViaIcon({ icon: this.actionIcon(), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
       }
       .width(ICON_SLOT)
       .height('100%')
