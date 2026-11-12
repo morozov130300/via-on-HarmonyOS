@@ -509,7 +509,7 @@ export default class EntryAbility extends UIAbility {
   // 缓存位 1 勾选、或距 lastcleantime ≥432000000ms（h0.c:83 兜底）时清缓存并更新 lastcleantime
   // （w9/k.C1()/Y()，键 lastcleantime，默认当前时间）
   private applyClearOnExit(): void {
-    preferences.getPreferences(this.context, 'uia_settings').then((store: preferences.Preferences): void => {
+    preferences.getPreferences(this.context, 'uia_settings').then(async (store: preferences.Preferences): Promise<void> => {
       try {
         const settings = AppSettings.getInstance();
         const mask = settings.clearOnExit;
@@ -533,6 +533,11 @@ export default class EntryAbility extends UIAbility {
           store.flush();
         }
         const db = BrowserDb.getInstance();
+        if ((mask & 64) !== 0) {
+          // 原版 h0.c bit64 → e0(hVar)：清「关闭的标签页」栈（na.h.h()）
+          await ClosedTabsStore.getInstance().ensureInit();
+          ClosedTabsStore.getInstance().clear();
+        }
         if ((mask & 4) !== 0) {
           db.clearHistory().catch(() => {
           });
