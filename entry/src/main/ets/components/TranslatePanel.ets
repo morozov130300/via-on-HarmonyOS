@@ -1,9 +1,8 @@
-import { TOAST_SHORT } from '../common/ToastDuration'
 import { http } from '@kit.NetworkKit'
 import { display, curves, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { i18n } from '@kit.LocalizationKit'
-import { computeDialogWidthVp } from './UiaDialogCard'
+import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets } from '../common/Immersive'
 import { DECELERATE_CURVE } from '../common/Transitions'
 
@@ -607,7 +606,7 @@ export struct TranslatePanel {
     pasteboard.getSystemPasteboard().setData(data)
     this.getUIContext().getPromptAction().showToast({
       message: $r('app.string.copied'),
-      duration: TOAST_SHORT
+      duration: 1500
     })
   }
 

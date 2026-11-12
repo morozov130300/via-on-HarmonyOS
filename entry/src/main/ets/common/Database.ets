@@ -47,13 +47,14 @@ export class BrowserDb {
       securityLevel: relationalStore.SecurityLevel.S1
     }
     this.rdb = await relationalStore.getRdbStore(context, config)
-    await this.migrateLegacyTables()
+    // 新安装必须先建基础表，再检查旧结构与补列；否则空库 ALTER TABLE 会中断启动。
     await this.rdb.executeSql(SQL_CREATE_BOOKMARKS)
     await this.rdb.executeSql(SQL_CREATE_BOOKMARK_FOLDERS)
     await this.rdb.executeSql(SQL_CREATE_HISTORY)
     await this.rdb.executeSql(SQL_CREATE_DOWNLOADS)
     await this.rdb.executeSql(SQL_CREATE_SETTINGS)
     await this.rdb.executeSql(SQL_CREATE_HOME_FAVS)
+    await this.migrateLegacyTables()
     try {
       const distributedConfig: relationalStore.DistributedConfig = {
         autoSync: true

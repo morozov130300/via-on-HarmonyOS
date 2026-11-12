@@ -3,7 +3,7 @@ import { display, window } from '@kit.ArkUI'
 import { BookmarkRec, BookmarkFolderRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { dialogTransition } from '../common/Transitions'
-import { UiaIcon } from './UiaIcon'
+import { ViaIcon } from './ViaIcon'
 
 // 原版 a8/k.T1()（a8/k.java:197-206）：
 //   int iMin  = min(g6.y.p(I())*4/5, g6.y.h(I(), 450.0f));   // 宽
@@ -218,12 +218,12 @@ export struct BookmarkPickerDialog {
               Row({ space: 12 }) {
                 // 原版 cb/a 行：文件夹用文件夹图标（x7.o.f13721e0），书签用站点 favicon
                 if (entry.isFolder) {
-                  UiaIcon({ icon: $r('app.media.uia_ic_bookmark'), iconSize: 22, iconColor: $r('app.color.fg') })
+                  ViaIcon({ icon: $r('app.media.uia_ic_bookmark'), iconSize: 22, iconColor: $r('app.color.fg') })
                 } else {
-                  UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
+                  ViaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: $r('app.color.fg') })
                 }
                 Column({ space: 2 }) {
-                  Text(entry.title.trim() === '' ? $r('app.string.read_aloud_no_title') : entry.title)
+                  Text(entry.title.trim() === '' ? '无标题' : entry.title)
                     .fontSize(15)
                     .fontColor($r('app.color.fg'))
                     .maxLines(1)
@@ -258,7 +258,7 @@ export struct BookmarkPickerDialog {
       // 原版无按钮，靠外点/返回键取消；此处给出显式取消入口
       Row() {
         Blank()
-        Text($r('app.string.close_btn'))
+        Text('关闭')
           .fontSize(15)
           .fontColor($r('app.color.accent'))
           .padding({ left: 16, right: 16, top: 10, bottom: 12 })

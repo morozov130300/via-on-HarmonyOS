@@ -1,4 +1,3 @@
-import { TOAST_SHORT, TOAST_MEDIUM, TOAST_LONG } from '../common/ToastDuration'
 import { i18n } from '@kit.LocalizationKit'
 ﻿import { common, Want } from '@kit.AbilityKit'
 import { print, BusinessError } from '@kit.BasicServicesKit'
@@ -17,20 +16,19 @@ import { RemoteConfig } from '../common/RemoteConfig'
 import { scriptPatternMatches } from '../common/ScriptMatch'
 import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { CustomUaEntry } from '../common/UaTable'
-import { UiaIcon } from './UiaIcon'
-import { UiaDialogButton } from './UiaDialogButton'
+import { ViaIcon } from './ViaIcon'
 import { ZoomSlider } from './ZoomSlider'
 import { TranslateState } from './TranslatePanel'
-import { computeDialogWidthVp } from './UiaDialogCard'
+import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { dialogTransition, menuTransition, dimTransition } from '../common/Transitions'
 
-export const TRANSLATE_INJECT_JS: string = `(function(){if(window.__uia_translator__){window.__uia_translator__.showBanner(true);return;}`
-  + `window.googleTranslateElementInit=function(){if(!window.__uia_translator__){window.__uia_translator__=new google.translate.TranslateElement({autoDisplay:false,floatPosition:0,multilanguagePage:true,includedLanguages:"af,sq,am,ar,hy,az,eu,be,bn,bs,bg,ca,ceb,ny,zh-CN,zh-TW,co,hr,cs,da,nl,en,eo,et,tl,fi,fr,fy,gl,ka,de,el,gu,ht,ha,haw,he,hi,hmn,hu,is,id,ga,it,ja,jv,kn,kk,km,ky,ko,ku,lo,la,lv,lt,lb,mk,mg,ms,ml,mt,mi,mr,mn,my,ne,no,ps,fa,pl,pt,pa,ro,ru,sr,st,sd,si,sk,sl,so,sm,es,su,sw,sv,tg,ta,te,th,tr,uk,ur,uz,vi,cy,xh,yi,yo,zu",pageLanguage:"auto"});}`
-  + `window.__uia_translator__.showBanner(true);};`
+export const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translator__){window.__via_translator__.showBanner(true);return;}`
+  + `window.googleTranslateElementInit=function(){if(!window.__via_translator__){window.__via_translator__=new google.translate.TranslateElement({autoDisplay:false,floatPosition:0,multilanguagePage:true,includedLanguages:"af,sq,am,ar,hy,az,eu,be,bn,bs,bg,ca,ceb,ny,zh-CN,zh-TW,co,hr,cs,da,nl,en,eo,et,tl,fi,fr,fy,gl,ka,de,el,gu,ht,ha,haw,he,hi,hmn,hu,is,id,ga,it,ja,jv,kn,kk,km,ky,ko,ku,lo,la,lv,lt,lb,mk,mg,ms,ml,mt,mi,mr,mn,my,ne,no,ps,fa,pl,pt,pa,ro,ru,sr,st,sd,si,sk,sl,so,sm,es,su,sw,sv,tg,ta,te,th,tr,uk,ur,uz,vi,cy,xh,yi,yo,zu",pageLanguage:"auto"});}`
+  + `window.__via_translator__.showBanner(true);};`
   + `var s=document.createElement("script");s.src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";document.getElementsByTagName("head")[0].appendChild(s);`
   + `document.addEventListener("securitypolicyviolation",function onCsp(e){document.removeEventListener("securitypolicyviolation",onCsp);`
-  + `var id="uia-translate-bridge";var t=document.getElementById(id);`
+  + `var id="via-translate-bridge";var t=document.getElementById(id);`
   + `if(t){if(typeof translate!=="undefined"){if("zh-CN"!==translate.to){translate.changeLanguage("zh-CN");}}else{var n=document.createElement("script");n.id=id;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t);}}`
   + `else{t=document.createElement("script");t.id=id;t.src="https://fastly.jsdelivr.net/gh/xnx3/translate@v3.14.0/translate.js/translate.min.js";`
   + `t.onload=function(){translate.selectLanguageTag.show=false;translate.service.use("client.edge");translate.changeLanguage("zh-CN");};document.head.appendChild(t);}});})();`
@@ -71,14 +69,14 @@ const CLEAR_DATA_ITEMS: string[] = [
 const CLEAR_DATA_BITS: number[] = [1, 4, 64, 8, 16, 32]
 
 // 原版 h2.java：举报网站上报接口与鉴权（Bearer Token 与 7.4.0 抓包一致）
-const REPORT_ENDPOINT: string = 'https://ra.uiayoo.com/report_abuse'
+const REPORT_ENDPOINT: string = 'https://ra.viayoo.com/report_abuse'
 const REPORT_TOKEN: string = 'Bearer tk_o4s4ghe1tqu60mj0ljy5im762ebrr'
 
 // 原版 C9「标记广告」：注入元素选择器，点击广告元素后经 console 通道
 // （TabWeb.onConsole）回传资源域名，加入自定义拦截规则并刷新。
 // 图片长按菜单「标记广告」项（k6.Q3 case23 → C9()）复用同一注入脚本
-export const MARK_AD_INJECT_JS: string = `(function(){if(window.__uia_mark_ad__){return;}`
-  + `window.__uia_mark_ad__=true;var prev=null;`
+export const MARK_AD_INJECT_JS: string = `(function(){if(window.__via_mark_ad__){return;}`
+  + `window.__via_mark_ad__=true;var prev=null;`
   + `function host(u){try{var h=new URL(u,location.href).hostname;return h&&h!==location.hostname?h:'';}catch(e){return '';}}`
   + `function findUrl(el){var c=[el.getAttribute('src'),el.getAttribute('data-src'),el.getAttribute('href')];`
   + `var bg=getComputedStyle(el).backgroundImage;if(bg&&bg.indexOf('url(')>=0){c.push(bg.replace(/^.*url\\(["']?/,'').replace(/["']?\\).*$/,''));}`
@@ -86,7 +84,7 @@ export const MARK_AD_INJECT_JS: string = `(function(){if(window.__uia_mark_ad__)
   + `for(var i=0;i<c.length;i++){if(c[i]){var h=host(c[i]);if(h){return h;}}}return '';}`
   + `document.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();`
   + `if(prev){prev.style.outline='';}prev=e.target;prev.style.outline='2px solid #f00';`
-  + `var h=findUrl(prev);if(h){console.log('uia_mark_ad:'+h);}},true);})();`
+  + `var h=findUrl(prev);if(h){console.log('via_mark_ad:'+h);}},true);})();`
 
 @ComponentV2
 export struct MenuSheet {
@@ -164,15 +162,15 @@ export struct MenuSheet {
   }
 
   // 原版 k6.java:8558：`int i10 = this.W0 == 1 ? 48 : 80;`（布局1=工具栏在上 → gravity 48 贴顶，
-  // 其余 80 贴底）——菜单容器按布局切 Top/Bottom，由 Index 经 AppStorage 'uia_menu_layout' 提供。
+  // 其余 80 贴底）——菜单容器按布局切 Top/Bottom，由 Index 经 AppStorage 'via_menu_layout' 提供。
   private menuLayout(): number {
-    return AppStorage.get<number>('uia_menu_layout') ?? 0
+    return AppStorage.get<number>('via_menu_layout') ?? 0
   }
 
   // 原版 N8()（k6.java:5072-5078）：菜单宽 = min(容器宽,容器高)；大屏非布局0 时
-  //   min(短边-96dp, 384dp)。由 Index 经 AppStorage 'uia_menu_size_vp' 提供（含 384dp 宽限）。
+  //   min(短边-96dp, 384dp)。由 Index 经 AppStorage 'via_menu_size_vp' 提供（含 384dp 宽限）。
   private menuWidthVp(): number {
-    const size: number = AppStorage.get<number>('uia_menu_size_vp') ?? 0
+    const size: number = AppStorage.get<number>('via_menu_size_vp') ?? 0
     return size > 0 ? size - 24 : 0  // 减去容器左右 margin 12+12
   }
 
@@ -250,8 +248,8 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text($r('app.string.browser_ua'))
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -260,8 +258,8 @@ export struct MenuSheet {
             ForEach(UA_CHOICES, (choice: UaChoice) => {
               Row({ space: 14 }) {
                 Circle({ width: 18, height: 18 })
-                  .fill(this.settings.uaKey === choice.key ? $r('app.color.hc_4c6fff') : Color.Transparent)
-                  .stroke(this.settings.uaKey === choice.key ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
+                  .fill(this.settings.uaKey === choice.key ? '#4C6FFF' : Color.Transparent)
+                  .stroke(this.settings.uaKey === choice.key ? '#4C6FFF' : '#8A8A8E')
                   .strokeWidth(1.5)
                 Text(choice.label)
                   .fontSize(15)
@@ -279,9 +277,9 @@ export struct MenuSheet {
               Row({ space: 14 }) {
                 Circle({ width: 18, height: 18 })
                   .fill(this.settings.uaKey === 'custom' && this.settings.customUa === entry.ua
-                    ? $r('app.color.hc_4c6fff') : Color.Transparent)
+                    ? '#4C6FFF' : Color.Transparent)
                   .stroke(this.settings.uaKey === 'custom' && this.settings.customUa === entry.ua
-                    ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
+                    ? '#4C6FFF' : '#8A8A8E')
                   .strokeWidth(1.5)
                 Text(entry.title)
                   .fontSize(15)
@@ -305,14 +303,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showUaDialog = false
@@ -614,7 +612,7 @@ export struct MenuSheet {
           console.error('refresh after script enable failed')
         }
       }
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_so'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: '脚本已启用', duration: 1500 })
       return
     }
     if (!wouldRun) {
@@ -709,7 +707,7 @@ export struct MenuSheet {
         })
           .margin({ left: 16, right: 16, bottom: 16 })
         if (this.fontSiteMode) {
-          Text($r('app.string.orig_ou'))
+          Text('仅对当前网站生效')
             .fontSize(12)
             .fontColor($r('app.color.fg_secondary'))
             .width('100%')
@@ -739,7 +737,7 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 10 }) {
         Text($r('app.string.clear_data'))
-          .fontSize(16)
+          .fontSize(17)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
@@ -759,29 +757,38 @@ export struct MenuSheet {
             this.clearDataSelection[index] = !this.clearDataSelection[index]
           })
         }, (label: string) => label)
-        Row() {
-          Blank().layoutWeight(1)
-          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
-            this.showClearDataDialog = false
-          } })
-          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
-            this.applyClearData()
-            this.showClearDataDialog = false
-          } })
+        Row({ space: 24 }) {
+          Blank()
+          Text($r('app.string.cancel'))
+            .fontSize(15)
+            .fontColor($r('app.color.fg_secondary'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.showClearDataDialog = false
+            })
+          Text($r('app.string.confirm'))
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.accent'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.applyClearData()
+              this.showClearDataDialog = false
+            })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showClearDataDialog = false
@@ -813,9 +820,9 @@ export struct MenuSheet {
   DlManagerDialog() {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
-        Text($r('app.string.orig_bf'))
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
+        Text('下载管理')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -827,14 +834,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showDlManagerDialog = false
@@ -845,8 +852,8 @@ export struct MenuSheet {
   DlManagerRow(label: string, value: string) {
     Row({ space: 14 }) {
       Circle({ width: 18, height: 18 })
-        .fill(this.settings.dlManager === value ? $r('app.color.hc_4c6fff') : Color.Transparent)
-        .stroke(this.settings.dlManager === value ? $r('app.color.hc_4c6fff') : $r('app.color.fg_secondary'))
+        .fill(this.settings.dlManager === value ? '#4C6FFF' : Color.Transparent)
+        .stroke(this.settings.dlManager === value ? '#4C6FFF' : $r('app.color.fg_secondary'))
         .strokeWidth(1)
       Text(label)
         .fontSize(15)
@@ -862,7 +869,7 @@ export struct MenuSheet {
       this.showDlManagerDialog = false
       this.onClose()
       this.getUIContext().getPromptAction().showToast({
-        message: `已设置 下载管理 为 ${label}`, duration: TOAST_SHORT
+        message: `已设置 下载管理 为 ${label}`, duration: 1500
       })
     })
   }
@@ -872,9 +879,9 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         // 原版弹窗标题 = kt「图像」（k6.O9 case17 d0(x7.u.f14235y6)），非「有图模式」
-        Text($r('app.string.orig_kt'))
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
+        Text('图像')
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -888,14 +895,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showImageModeDialog = false
@@ -906,8 +913,8 @@ export struct MenuSheet {
   ImageModeRow(index: number, label: Resource) {
     Row({ space: 14 }) {
       Circle({ width: 18, height: 18 })
-        .fill(this.imageModeIndex() === index ? $r('app.color.hc_4c6fff') : Color.Transparent)
-        .stroke(this.imageModeIndex() === index ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
+        .fill(this.imageModeIndex() === index ? '#4C6FFF' : Color.Transparent)
+        .stroke(this.imageModeIndex() === index ? '#4C6FFF' : '#8A8A8E')
         .strokeWidth(1.5)
       Text(label)
         .fontSize(15)
@@ -927,7 +934,7 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 10 }) {
         Text($r('app.string.report_site'))
-          .fontSize(16)
+          .fontSize(17)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
@@ -949,28 +956,37 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.reportRemarks = value
           })
-        Row() {
-          Blank().layoutWeight(1)
-          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
-            this.showReportDialog = false
-          } })
-          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
-            this.submitReport()
-          } })
+        Row({ space: 24 }) {
+          Blank()
+          Text($r('app.string.cancel'))
+            .fontSize(15)
+            .fontColor($r('app.color.fg_secondary'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.showReportDialog = false
+            })
+          Text($r('app.string.confirm'))
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.accent'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.submitReport()
+            })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showReportDialog = false
@@ -1001,8 +1017,8 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text($r('app.string.screen_orientation'))
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
@@ -1017,14 +1033,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showOrientationDialog = false
@@ -1035,8 +1051,8 @@ export struct MenuSheet {
   OrientationRow(index: number, label: Resource) {
     Row({ space: 14 }) {
       Circle({ width: 18, height: 18 })
-        .fill(this.orientationIndex === index ? $r('app.color.hc_4c6fff') : Color.Transparent)
-        .stroke(this.orientationIndex === index ? $r('app.color.hc_4c6fff') : $r('app.color.hc_8a8a8e'))
+        .fill(this.orientationIndex === index ? '#4C6FFF' : Color.Transparent)
+        .stroke(this.orientationIndex === index ? '#4C6FFF' : '#8A8A8E')
         .strokeWidth(1.5)
       Text(label)
         .fontSize(15)
@@ -1056,11 +1072,11 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 12 }) {
         Text($r('app.string.add_home_fav'))
-          .fontSize(16)
+          .fontSize(17)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
-        Text($r('app.string.content_title'))
+        Text('标题')
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1072,7 +1088,7 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addHomeFavTitle = value
           })
-        Text($r('app.string.address_label'))
+        Text('网址')
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1084,28 +1100,37 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addHomeFavUrl = value
           })
-        Row() {
-          Blank().layoutWeight(1)
-          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
-            this.showAddHomeFavDialog = false
-          } })
-          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
-            this.submitAddHomeFav()
-          } })
+        Row({ space: 24 }) {
+          Blank()
+          Text($r('app.string.cancel'))
+            .fontSize(15)
+            .fontColor($r('app.color.fg_secondary'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.showAddHomeFavDialog = false
+            })
+          Text($r('app.string.confirm'))
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.accent'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.submitAddHomeFav()
+            })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showAddHomeFavDialog = false
@@ -1123,14 +1148,14 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column() {
         Text($r('app.string.translate'))
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
+          .fontSize(17)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.fg'))
           .width('100%')
           .padding({ left: 20, top: 18, bottom: 8 })
         Column() {
           this.TranslateMenuRow('微软翻译', (): void => {
-            this.translateUiaEdgeJs()
+            this.translateViaEdgeJs()
           })
           this.TranslateMenuRow('百度翻译', (): void => {
             this.translateBaiduPage()
@@ -1138,7 +1163,7 @@ export struct MenuSheet {
           this.TranslateMenuRow('谷歌页内翻译', (): void => {
             this.translatePage()
             this.showTranslateMenuDialog = false
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.read_aloud_wait'), duration: TOAST_SHORT })
+            this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
           })
           this.TranslateMenuRow('谷歌翻译', (): void => {
             this.translateGooglePage()
@@ -1154,14 +1179,14 @@ export struct MenuSheet {
       }
       .width('100%')
       .constraintSize({ maxHeight: '70%' })
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showTranslateMenuDialog = false
@@ -1187,11 +1212,11 @@ export struct MenuSheet {
     Stack({ alignContent: Alignment.Center }) {
       Column({ space: 12 }) {
         Text($r('app.string.add_bookmark'))
-          .fontSize(16)
+          .fontSize(17)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.fg'))
           .width('100%')
-        Text($r('app.string.content_title'))
+        Text('标题')
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1203,7 +1228,7 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addBookmarkTitle = value
           })
-        Text($r('app.string.address_label'))
+        Text('网址')
           .fontSize(13)
           .fontColor($r('app.color.fg_secondary'))
           .width('100%')
@@ -1215,28 +1240,37 @@ export struct MenuSheet {
           .onChange((value: string) => {
             this.addBookmarkUrl = value
           })
-        Row() {
-          Blank().layoutWeight(1)
-          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
-            this.showAddBookmarkDialog = false
-          } })
-          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
-            this.submitAddBookmark()
-          } })
+        Row({ space: 24 }) {
+          Blank()
+          Text($r('app.string.cancel'))
+            .fontSize(15)
+            .fontColor($r('app.color.fg_secondary'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.showAddBookmarkDialog = false
+            })
+          Text($r('app.string.confirm'))
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.accent'))
+            .padding({ left: 8, right: 8, top: 10, bottom: 10 })
+            .onClick(() => {
+              this.submitAddBookmark()
+            })
         }
         .width('100%')
         .margin({ top: 6 })
       }
       .width('100%')
       .padding(24)
-      .borderRadius(18)
-      .backgroundColor($r('app.color.dialog_bg'))
-      .border({ width: 1, color: $r('app.color.dialog_border') })
+      .borderRadius(20)
+      .backgroundColor($r('app.color.menu_bg'))
+      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
       .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.2)')
     .transition(dimTransition(240))
     .onClick(() => {
       this.showAddBookmarkDialog = false
@@ -1282,7 +1316,7 @@ export struct MenuSheet {
     }
     // 关闭的标签页
     if (selected[2]) {
-      AppStorage.setOrCreate('uia_undo_close_url', '')
+      AppStorage.setOrCreate('via_undo_close_url', '')
     }
     // 网页存储
     if (selected[3]) {
@@ -1311,7 +1345,7 @@ export struct MenuSheet {
       }
     }
     this.settings.setClearData2(flags)
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.cleared'), duration: 1500 })
   }
 
   private clearAppCache(): void {
@@ -1462,7 +1496,7 @@ export struct MenuSheet {
       case 'mark_ad':
         this.markAd()
         break
-      // 原版 Q7→s3：举报网站（POST ra.uiayoo.com）
+      // 原版 Q7→s3：举报网站（POST ra.viayoo.com）
       case 'report_site':
         this.openReportDialog()
         break
@@ -1492,7 +1526,7 @@ export struct MenuSheet {
         if (this.tabStore.current().isHomePage()) {
           this.homePageGuard()
         } else {
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: TOAST_SHORT })
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.feature_wip'), duration: 1500 })
         }
         break
     }
@@ -1506,7 +1540,7 @@ export struct MenuSheet {
       Row({ space: 4 }) {
         ForEach(this.chunk(this.mainItemIds(), 10), (_: string[], index: number) => {
           Circle({ width: 4, height: 4 })
-            .fill(index === this.pageIndex ? $r('app.color.accent') : $r('app.color.hc_40808080'))
+            .fill(index === this.pageIndex ? $r('app.color.accent') : '#40808080')
         }, (_: string[], index: number) => `dot_${index}`)
       }
       .width('100%')
@@ -1520,7 +1554,7 @@ export struct MenuSheet {
     iconColor: ResourceColor = $r('app.color.menu_icon'), labelOverride: ResourceStr | null = null,
     labelColor: ResourceColor | null = null, accessibilityText: string = '', iconName: string = '') {
     Column({ space: 4 }) {
-      UiaIcon({ icon: icon, iconSize: 24, iconColor: iconColor, iconName: iconName })
+      ViaIcon({ icon: icon, iconSize: 24, iconColor: iconColor, iconName: iconName })
       Text(labelOverride === null ? label : labelOverride)
         .fontSize(11 * this.settings.textZoom / 100)
         .fontColor(labelColor === null ? $r('app.color.menu_text') : labelColor)
@@ -1538,7 +1572,7 @@ export struct MenuSheet {
       }
     })
     // 长按时长与 Toolbar/AddressBar 统一 400ms（原版系统默认约 400ms）
-    .gesture(LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
       longPress()
     }))  }
 
@@ -1549,7 +1583,7 @@ export struct MenuSheet {
       Blank()
         .layoutWeight(3)
       Column() {
-        UiaIcon({ icon: $r('app.media.uia_ic_exit'), iconSize: 22, iconColor: $r('app.color.menu_icon') })
+        ViaIcon({ icon: $r('app.media.uia_ic_exit'), iconSize: 22, iconColor: $r('app.color.menu_icon') })
       }
       .layoutWeight(1)
       .height(38)
@@ -1560,7 +1594,7 @@ export struct MenuSheet {
       })
 
       Column() {
-        UiaIcon({ icon: $r('app.media.uia_ic_cancel'), iconSize: 22, iconColor: $r('app.color.menu_icon') })
+        ViaIcon({ icon: $r('app.media.uia_ic_cancel'), iconSize: 22, iconColor: $r('app.color.menu_icon') })
       }
       .layoutWeight(1)
       .height(38)
@@ -1589,11 +1623,11 @@ export struct MenuSheet {
         bundleName: context.abilityInfo.bundleName,
         moduleName: 'entry',
         abilityName: 'EntryAbility',
-        parameters: { 'uiaUrl': tab.url }
+        parameters: { 'viaUrl': tab.url }
       }
       const label = tab.title.trim() !== '' ? tab.title.trim() : hostOf(tab.url)
-      const iconPath = `${context.filesDir}/uia_shortcut_icon.png`
-      return productViewManager.checkPinShortcutPermitted(context, `uia_${Date.now()}`, want, label, iconPath, '')
+      const iconPath = `${context.filesDir}/via_shortcut_icon.png`
+      return productViewManager.checkPinShortcutPermitted(context, `via_${Date.now()}`, want, label, iconPath, '')
     }).then((result: productViewManager.CheckShortcutResult) => {
       this.shortcutTid = result.tid ?? ''
       if (this.shortcutTid === '') {
@@ -1608,7 +1642,7 @@ export struct MenuSheet {
   }
 
   private prepareShortcutIcon(context: common.UIAbilityContext): Promise<void> {
-    const iconPath = `${context.filesDir}/uia_shortcut_icon.png`
+    const iconPath = `${context.filesDir}/via_shortcut_icon.png`
     return context.resourceManager.getMediaContent($r('app.media.foreground').id).then((content: Uint8Array) => {
       const file = fileIo.openSync(iconPath,
         fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
@@ -1640,7 +1674,7 @@ export struct MenuSheet {
     if (!tab.url.startsWith('http://') && !tab.url.startsWith('https://')) {
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.mark_ad_http_only'),
-        duration: TOAST_SHORT
+        duration: 1500
       })
       return false
     }
@@ -1659,12 +1693,12 @@ export struct MenuSheet {
   }
 
   // 原版 y3 case6 → na.b2() → i6/f0.g → e0.b：translate.js client.edge 页内翻译（微软翻译）
-  private translateUiaEdgeJs(): void {
+  private translateViaEdgeJs(): void {
     if (!this.translateHttpGuard()) {
       return
     }
     const lang = this.translateTargetLang()
-    const js = '(function(){var e="uia-translate-bridge",t=document.getElementById(e);' +
+    const js = '(function(){var e="via-translate-bridge",t=document.getElementById(e);' +
       `if(t)if("undefined"!=typeof translate)"${lang}"!=translate.to&&translate.changeLanguage("${lang}");` +
       'else{var n=document.createElement("script");n.id=e;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t)}' +
       'else{(t=document.createElement("script")).id=e;' +
@@ -1674,7 +1708,7 @@ export struct MenuSheet {
     try {
       this.tabStore.current().controller.runJavaScript(js)
       this.showTranslateMenuDialog = false
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.read_aloud_wait'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
       this.onClose()
     } catch (error) {
       console.error('inject edge translate failed')
@@ -1745,7 +1779,7 @@ export struct MenuSheet {
       this.showAddBookmarkDialog = false
       this.onClose()
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.bookmark_added'), duration: TOAST_SHORT
+        message: $r('app.string.bookmark_added'), duration: 1500
       })
     }).catch((error: BusinessError) => {
       console.error(`add bookmark dialog failed: ${error.message}`)
@@ -1761,7 +1795,7 @@ export struct MenuSheet {
     try {
       const adapter = tab.controller.createWebPrintDocumentAdapter(`${hostOf(tab.url)}.pdf`)
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-      print.print('uia_print_job', adapter, null, context)
+      print.print('via_print_job', adapter, null, context)
       this.onClose()
     } catch (error) {
       console.error('launch print failed')
@@ -1803,11 +1837,11 @@ export struct MenuSheet {
     }
     if (RemoteConfig.getInstance().isInWlr(tab.url)) {
       this.onClose()
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_unsupported'), duration: TOAST_LONG })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_unsupported'), duration: 2500 })
       return
     }
     this.onClose()
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_empty'), duration: TOAST_LONG })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_empty'), duration: 2500 })
   }
 
   // 电脑模式：切换当前站点的桌面版标识并刷新（原版 toast「电脑模式 已开启/已关闭」）
@@ -1826,7 +1860,7 @@ export struct MenuSheet {
     this.settings.upsertSiteSetting(site)
     this.getUIContext().getPromptAction().showToast({
       message: `${this.getUIContext().getHostContext()!.resourceManager.getStringSync($r('app.string.pc_mode').id)} ${site.pcMode ? '已开启' : '已关闭'}`,
-      duration: TOAST_SHORT
+      duration: 1500
     })
     try {
       tab.controller.refresh()
@@ -1842,7 +1876,7 @@ export struct MenuSheet {
 
   private homePageGuard(): void {
     this.onClose()
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.no_page_open'), duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.no_page_open'), duration: 1500 })
   }
 
   // 原版 k6.cb()：!隐身→A8() 进入；已隐身且标签>1→确认框（关闭/保留）；否则 l8(true) 退出
@@ -1851,7 +1885,7 @@ export struct MenuSheet {
     if (!this.tabStore.sessionIncognito) {
       this.tabStore.sessionIncognito = true
       this.tabStore.newTab(true)
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.entered_incognito'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.entered_incognito'), duration: 1500 })
       return
     }
     const incognitoCount = this.tabStore.incognitoTabCount()
@@ -1882,7 +1916,7 @@ export struct MenuSheet {
   // 原版 l8(close)：close=关闭全部隐身标签后退出；否则保留标签仅退出会话；toast la「退出隐身浏览」
   private exitIncognito(close: boolean): void {
     this.tabStore.exitIncognitoSession(close)
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.exit_incognito'), duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.exit_incognito'), duration: 1500 })
   }
 
   private exitApp(): void {
@@ -1900,7 +1934,7 @@ export struct MenuSheet {
     const title = tab.title !== '' ? tab.title : hostOf(tab.url)
     BrowserDb.getInstance().addBookmark(title, tab.url).then(() => {
       this.onClose()
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.bookmark_added'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.bookmark_added'), duration: 1500 })
     }).catch((error: BusinessError) => {
       console.error(`add bookmark failed: ${error.message}`)
     })
@@ -1921,7 +1955,7 @@ export struct MenuSheet {
     this.onClose()
     const follow = this.settings.toggleNightMode()
     if (follow) {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.night_follow_toast'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.night_follow_toast'), duration: 1500 })
     }
   }
 
@@ -1940,7 +1974,7 @@ export struct MenuSheet {
       const template = context.resourceManager.getStringSync(
         (next ? $r('app.string.status_enabled') : $r('app.string.status_disabled')).id)
       const label = context.resourceManager.getStringSync($r('app.string.ad_block').id)
-      this.getUIContext().getPromptAction().showToast({ message: `${label} ${template}`, duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: `${label} ${template}`, duration: 1500 })
     }
   }
 
@@ -1963,7 +1997,7 @@ export struct MenuSheet {
             return
           }
           try {
-            const path = `${context.cacheDir}/uia_view_source.html`
+            const path = `${context.cacheDir}/via_view_source.html`
             const file = fileIo.openSync(path,
               fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
             fileIo.writeSync(file.fd, result)
@@ -1992,7 +2026,7 @@ export struct MenuSheet {
     }
     this.getUIContext().getPromptAction().showToast({
       message: next ? $r('app.string.fullscreen_toast_on') : $r('app.string.fullscreen_toast_off'),
-      duration: TOAST_SHORT
+      duration: 1500
     })
     this.onClose()
   }
@@ -2009,7 +2043,7 @@ export struct MenuSheet {
       $r('app.string.image_mode_block'),
       $r('app.string.image_mode_wifi')
     ]
-    this.getUIContext().getPromptAction().showToast({ message: labels[index], duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: labels[index], duration: 1500 })
     this.onClose()
   }
 
@@ -2023,7 +2057,7 @@ export struct MenuSheet {
     if (!tab.url.startsWith('http')) {
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.mark_ad_http_only'),
-        duration: TOAST_SHORT
+        duration: 1500
       })
       return
     }
@@ -2084,7 +2118,7 @@ export struct MenuSheet {
     }).then(() => {
       client.destroy()
       this.showReportDialog = false
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.report_success'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.report_success'), duration: 1500 })
       this.onClose()
     }).catch((error: BusinessError) => {
       client.destroy()
@@ -2111,7 +2145,7 @@ export struct MenuSheet {
       console.error(`open with failed: ${error.code}`)
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.open_with_failed'),
-        duration: TOAST_SHORT
+        duration: 1500
       })
     })
   }
@@ -2121,7 +2155,7 @@ export struct MenuSheet {
     this.settings.setGameMode(next)
     this.getUIContext().getPromptAction().showToast({
       message: next ? $r('app.string.game_mode_toast_on') : $r('app.string.game_mode_toast_off'),
-      duration: TOAST_MEDIUM
+      duration: 2000
     })
     this.onClose()
   }
@@ -2149,7 +2183,7 @@ export struct MenuSheet {
     if (resourceContext !== undefined) {
       const template = resourceContext.resourceManager.getStringSync($r('app.string.orientation_toast').id)
       const label = resourceContext.resourceManager.getStringSync(labels[index].id)
-      this.getUIContext().getPromptAction().showToast({ message: template.replace('%s', label), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: template.replace('%s', label), duration: 1500 })
     }
     this.onClose()
   }
@@ -2177,7 +2211,7 @@ export struct MenuSheet {
       db.addHomeFav(title, url, '', items.length).then(() => {
         this.showAddHomeFavDialog = false
         this.onClose()
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.home_fav_added'), duration: TOAST_SHORT })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.home_fav_added'), duration: 1500 })
       })
     }).catch((error: BusinessError) => {
       console.error(`add home fav failed: ${error.message}`)

@@ -1,4 +1,3 @@
-import { TOAST_MEDIUM } from '../common/ToastDuration'
 // AiPanel.ets —— 原版 b9 包 AI 面板 1:1 移植
 //
 // 对应原版：
@@ -16,8 +15,8 @@ import { TOAST_MEDIUM } from '../common/ToastDuration'
 //   助手气泡 #15808080、文字 14sp；ASSISTANT 标签 11sp 加粗大写 #8a000000
 // - chip：圆角 18dp、描边 1dp #30808080、选中描边/文字 accent、文字 12sp、maxWidth 96dp
 // - 输入容器：圆角 18dp、描边 2dp #30808080；输入 14sp、maxLines 5、hint「消息」
-// - 发送按钮：圆形 accent + uia_ai_send；busy：圆形 #d64146 + uia_ic_stop
-// - 主题行：uia_ai_thread 图标、标题 14sp 加粗 #8a000000、时间 11sp、预览 12sp（单行省略）
+// - 发送按钮：圆形 accent + via_ai_send；busy：圆形 #d64146 + via_ic_stop
+// - 主题行：via_ai_thread 图标、标题 14sp 加粗 #8a000000、时间 11sp、预览 12sp（单行省略）
 // - 空态：「¯\_(ツ)_/¯」22sp；选中行背景 #30808080
 
 import { pasteboard } from '@kit.BasicServicesKit'
@@ -28,8 +27,8 @@ import { AiEngine, AiChatResult, ChatMsgIn } from '../common/AiEngine'
 import { CopilotStore, AiThread, AiMsg, AiBackend, AiAttachment, AiSuggestion,
   userMsg, assistantMsg, systemMsg, ROLE_SYSTEM, ROLE_USER,
   defaultSystemPrompt, webpageSystemPrompt } from '../common/CopilotStore'
-import { UiaIcon } from './UiaIcon'
-import { computeDialogWidthVp } from './UiaDialogCard'
+import { ViaIcon } from './ViaIcon'
+import { computeDialogWidthVp } from './ViaDialogCard'
 
 // ----- 展示模型 -----
 
@@ -916,7 +915,7 @@ export struct AiPanel {
   }
 
   private toast(msg: string): void {
-    this.getUIContext().getPromptAction().showToast({ message: msg, duration: TOAST_MEDIUM })
+    this.getUIContext().getPromptAction().showToast({ message: msg, duration: 2000 })
   }
 
   // ================= UI =================
@@ -928,7 +927,7 @@ export struct AiPanel {
       Row() {
         if (this.multiSelect) {
           Row() {
-            UiaIcon({ icon: $r('app.media.uia_ic_cancel'), iconSize: 24, iconColor: $r('app.color.fg') })
+            ViaIcon({ icon: $r('app.media.uia_ic_cancel'), iconSize: 24, iconColor: $r('app.color.fg') })
               .onClick(() => {
                 this.exitMultiSelect()
               })
@@ -946,7 +945,7 @@ export struct AiPanel {
           .layoutWeight(1)
         if (!this.multiSelect) {
           Row() {
-            UiaIcon({ icon: $r('app.media.uia_ai_settings'), iconSize: 24, iconColor: $r('app.color.fg') })
+            ViaIcon({ icon: $r('app.media.uia_ai_settings'), iconSize: 24, iconColor: $r('app.color.fg') })
               .onClick(() => {
                 this.onOpenSettings()
               })
@@ -958,12 +957,12 @@ export struct AiPanel {
         }
         Row() {
           if (this.multiSelect) {
-            UiaIcon({ icon: $r('app.media.uia_ai_delete'), iconSize: 24, iconColor: $r('app.color.fg') })
+            ViaIcon({ icon: $r('app.media.uia_ai_delete'), iconSize: 24, iconColor: $r('app.color.fg') })
               .onClick(() => {
                 this.confirmDeleteSelected()
               })
           } else {
-            UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 24, iconColor: $r('app.color.fg') })
+            ViaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 24, iconColor: $r('app.color.fg') })
               .onClick(() => {
                 this.t0('')
                 this.page = 1
@@ -985,7 +984,7 @@ export struct AiPanel {
           ForEach(this.threadRows, (row: ThreadDisplay) => {
             ListItem() {
               Row() {
-                UiaIcon({ icon: $r('app.media.uia_ai_thread'), iconSize: 20, iconColor: $r('app.color.fg') })
+                ViaIcon({ icon: $r('app.media.uia_ai_thread'), iconSize: 20, iconColor: $r('app.color.fg') })
                   .margin({ left: 3, right: 13 })
                 Column() {
                   Row() {
@@ -1052,7 +1051,7 @@ export struct AiPanel {
       // 工具栏（a2.C1 linearLayout）
       Row() {
         Row() {
-          UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 24, iconColor: $r('app.color.fg') })
+          ViaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 24, iconColor: $r('app.color.fg') })
             .onClick(() => {
               this.page = 0
             })
@@ -1069,7 +1068,7 @@ export struct AiPanel {
           .layoutWeight(1)
           .margin({ left: 3, right: 16 })
         Row() {
-          UiaIcon({ icon: $r('app.media.uia_ai_overflow'), iconSize: 24, iconColor: $r('app.color.fg') })
+          ViaIcon({ icon: $r('app.media.uia_ai_overflow'), iconSize: 24, iconColor: $r('app.color.fg') })
             .bindMenu(this.overflowMenu)
         }
         .width(40)
@@ -1173,14 +1172,14 @@ export struct AiPanel {
         Scroll() {
           Row() {
             Row({ space: 4 }) {
-              UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 16, iconColor: $r('app.color.fg') })
+              ViaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 16, iconColor: $r('app.color.fg') })
               Text(this.attachment.title === '' ? this.attachment.url : this.attachment.title)
                 .fontSize(12)
                 .fontColor($r('app.color.fg'))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .constraintSize({ minWidth: 0, maxWidth: 120 })
-              UiaIcon({ icon: $r('app.media.uia_ic_cancel'), iconSize: 16, iconColor: $r('app.color.fg') })
+              ViaIcon({ icon: $r('app.media.uia_ic_cancel'), iconSize: 16, iconColor: $r('app.color.fg') })
                 .onClick(() => {
                   this.attachment = null
                   this.v0()
@@ -1227,7 +1226,7 @@ export struct AiPanel {
           if (this.busy) {
             // S3(true)：停止
             Row() {
-              UiaIcon({ icon: $r('app.media.uia_ic_stop'), iconSize: 20, iconColor: Color.White })
+              ViaIcon({ icon: $r('app.media.uia_ic_stop'), iconSize: 20, iconColor: Color.White })
             }
             .width(32)
             .height(32)
@@ -1241,7 +1240,7 @@ export struct AiPanel {
           } else {
             // S3(false)：发送
             Row() {
-              UiaIcon({ icon: $r('app.media.uia_ai_send'), iconSize: 20, iconColor: Color.White })
+              ViaIcon({ icon: $r('app.media.uia_ai_send'), iconSize: 20, iconColor: Color.White })
             }
             .width(32)
             .height(32)
@@ -1326,7 +1325,7 @@ export struct AiPanel {
     Column() {
       Row() {
         Row() {
-          UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 24, iconColor: $r('app.color.fg') })
+          ViaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 24, iconColor: $r('app.color.fg') })
             .onClick(() => {
               this.closePreview()
             })
@@ -1429,7 +1428,7 @@ export struct AiPanel {
                 .fontColor($r('app.color.fg'))
                 .layoutWeight(1)
               if (model === this.settings.aiModel) {
-                UiaIcon({ icon: $r('app.media.uia_ai_settings'), iconSize: 0, iconColor: Color.Transparent })
+                ViaIcon({ icon: $r('app.media.uia_ai_settings'), iconSize: 0, iconColor: Color.Transparent })
                 Radio({ value: model, group: 'ai_model' })
                   .checked(model === this.settings.aiModel)
                   .radioStyle({ checkedBackgroundColor: $r('app.color.accent') })

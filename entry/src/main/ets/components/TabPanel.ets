@@ -4,11 +4,11 @@ import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import { ClosedTabsStore, ClosedSingleResult, ClosedBatchResult, OPEN_CLOSED_TABS_EVENT_ID } from '../common/ClosedTabsStore'
 import { AppIcon } from './AppIcon'
-import { UiaIcon } from './UiaIcon'
+import { ViaIcon } from './ViaIcon'
 import { BusinessError, pasteboard, emitter } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
 import { BEZIER_0202_CURVE, dimTransition, dialogTransition } from '../common/Transitions'
-import { computeDialogWidthVp } from './UiaDialogCard'
+import { computeDialogWidthVp } from './ViaDialogCard'
 
 const PANEL_FG: ResourceColor = '#E6E6E6'
 
@@ -111,7 +111,7 @@ export struct TabPanel {
                 Column() {
                   if (tab.isHomePage()) {
                     // 原版主页标签 favicon 为地球图标 22dp（f8/y.java iD=22dp）
-                    UiaIcon({ icon: $r('app.media.uia_ic_globe'), iconSize: 22, iconColor: PANEL_FG })
+                    ViaIcon({ icon: $r('app.media.uia_ic_globe'), iconSize: 22, iconColor: PANEL_FG })
                   } else if (tab.icon !== null) {
                     // 原版 p4/c.java:110 onReceivedIcon：优先显示捕获的站点图标
                     Image(tab.icon)
@@ -120,7 +120,7 @@ export struct TabPanel {
                       .objectFit(ImageFit.Contain)
                   } else if (this.faviconFailed[tab.id] === true) {
                     // 原版 e9（L1）默认网页图标
-                    UiaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: PANEL_FG })
+                    ViaIcon({ icon: $r('app.media.uia_ic_webpage'), iconSize: 22, iconColor: PANEL_FG })
                   } else {
                     Image(this.faviconUrl(tab.url))
                       .width(22)
@@ -237,9 +237,9 @@ export struct TabPanel {
         Row() {
           // 原版 + 按钮 = drawable ay（Rd ic_add）：点击新建标签，长按打开「关闭的标签页」
           // （f8/l0.c3：contentDescription ad「新建标签」，longClick → b.f() → k6.ia()）
-          UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 24, iconColor: PANEL_FG })
+          ViaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 24, iconColor: PANEL_FG })
             .padding(12)
-            .accessibilityText($r('app.string.orig_ad'))
+            .accessibilityText('新建标签')
             .onClick(() => {
               // 原版隐身会话中新建标签同为隐身（k6.cb/l8 会话模型）
               this.tabStore.newTab(this.tabStore.sessionIncognito)
@@ -435,9 +435,7 @@ export struct TabPanel {
       this.openUndoDialog(`已关闭 ${result.titles[0]}`)
       return
     }
-    const n = result.count()
-    this.openUndoDialog(this.getUIContext().getHostContext()!.resourceManager
-      .getPluralStringValueSync($r('app.plural.tabs_closed').id, n))
+    this.openUndoDialog(`已关闭 ${result.count()} 个标签页`)
   }
 
   private openUndoDialog(message: string): void {

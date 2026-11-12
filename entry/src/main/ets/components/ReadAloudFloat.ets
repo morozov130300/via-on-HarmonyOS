@@ -1,7 +1,7 @@
 import { display, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 
-// 原版 mark/uia/common/widget/k1：朗读悬浮控件
+// 原版 mark/via/common/widget/k1：朗读悬浮控件
 // 贴左边缘 accent 圆角胶囊 [0,18,18,0]，三图标 36dp，
 // 垂直拖拽范围 [88dp, 父高-控件高-88dp]，
 // 播放中左图标 3000ms 线性旋转、右图标（停止）隐藏

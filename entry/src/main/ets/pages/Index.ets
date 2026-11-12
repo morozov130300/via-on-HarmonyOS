@@ -1,4 +1,3 @@
-import { TOAST_SHORT } from '../common/ToastDuration'
 import { TabItem, RuleSubEntry, BookmarkFolderRec } from '../common/Types'
 import { AppSettings, applyOrientationSetting } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
@@ -42,8 +41,7 @@ import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/Searc
 import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
-import { computeDialogWidthVp } from '../components/UiaDialogCard'
-import { UiaDialogButton } from '../components/UiaDialogButton'
+import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
 import { AutoHideGesture, AutoHideHost } from '../common/AutoHideGesture'
 
@@ -58,9 +56,9 @@ const EXTERNAL_LINK_EVENT_ID = 10002
 const OPEN_DOWNLOADS_EVENT_ID = 10003
 // 原版 k6.i9() 双击返回显式退出 → m0.r0()（z8/h0.c 退出清除）：退出清除仅在显式退出时执行
 const EXIT_CLEAR_EVENT_ID = 10005
-// 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 uia-reader-body）
+// 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 via-reader-body）
 const READ_ALOUD_EXTRACT_JS: string =
-  '(function(){try{var e=document.getElementsByClassName("uia-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
+  '(function(){try{var e=document.getElementsByClassName("via-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
 // 保存网页降级序列化：canvas 转 img data URL（跨域污染 catch 跳过）+ outerHTML
 const SAVE_PAGE_SERIALIZE_JS: string =
   '(function(){try{var cs=document.querySelectorAll("canvas");' +
@@ -134,7 +132,7 @@ struct Index {
   @Local exitHintTime: number = 0
   // 游戏模式双击返回退出计时
   @Local gameModeBackTime: number = 0
-  // 下载确认弹层（原版 mark/uia/download/m.java）
+  // 下载确认弹层（原版 mark/via/download/m.java）
   @Local downloadConfirm: PendingDownloadUi | null = null
   // 保存网页弹窗（原版 k6.m0：标题/输入/保存为 PDF 复选框）
   @Local showSavePage: boolean = false
@@ -287,9 +285,9 @@ struct Index {
     }
     emitter.on({ eventId: SHORTCUT_URL_EVENT_ID }, (event: emitter.EventData) => {
       const data = event.data as Record<string, Object>
-      const uiaUrl = data['uiaUrl']
-      if (typeof uiaUrl === 'string' && uiaUrl !== '') {
-        this.tabStore.navigate(uiaUrl)
+      const viaUrl = data['viaUrl']
+      if (typeof viaUrl === 'string' && viaUrl !== '') {
+        this.tabStore.navigate(viaUrl)
       }
     })
     emitter.on({ eventId: EXTERNAL_LINK_EVENT_ID }, (event: emitter.EventData) => {
@@ -305,7 +303,7 @@ struct Index {
         this.openExternalLink(linkUrl, external !== false)
       }
     })
-    // 热启动 uia:// 内部命令（EntryAbility.onNewEntry → AppStorage 'uia_internal_cmd'）
+    // 热启动 via:// 内部命令（EntryAbility.onNewEntry → AppStorage 'via_internal_cmd'）
     emitter.on({ eventId: UIA_CMD_EVENT_ID }, () => {
       this.handleInternalCmd()
     })
@@ -338,7 +336,7 @@ struct Index {
         pageUa
       )
     })
-    // 主页模式=书签：新标签打开书签页（原版 uia://bookmark）
+    // 主页模式=书签：新标签打开书签页（原版 via://bookmark）
     emitter.on({ eventId: OPEN_BOOKMARKS_EVENT_ID }, () => {
       this.openPage('bookmarks')
     })
@@ -367,7 +365,7 @@ struct Index {
     this.settings.persistAdBlockTotal()
   }
 
-  // 原版 k6.u() + z8/w2 + z8/b0.Q()：uia://(v://) 内部命令全量分发（深链/Trampoline 入口）
+  // 原版 k6.u() + z8/w2 + z8/b0.Q()：via://(v://) 内部命令全量分发（深链/Trampoline 入口）
   // 原版 W9() → a8.k.o3()：打开书签快捷选择对话框（菜单长按书签 / 工具栏动作 30）。
   // 与「书签管理页」不同：这是从当前页快速挑一个书签在新标签打开的对话框。
   @Local showBookmarkPicker: boolean = false
@@ -439,11 +437,11 @@ struct Index {
   }
 
   private handleInternalCmd(): void {
-    const raw = AppStorage.get<string>('uia_internal_cmd') ?? ''
+    const raw = AppStorage.get<string>('via_internal_cmd') ?? ''
     if (raw === '') {
       return
     }
-    AppStorage.setOrCreate('uia_internal_cmd', '')
+    AppStorage.setOrCreate('via_internal_cmd', '')
     const cmd = parseUiaDeepLink(raw)
     if (cmd === null) {
       return
@@ -613,11 +611,11 @@ struct Index {
 
   // 原版 restoreclosedtabs=2：启动时优先询问是否恢复未关闭标签
   private askPendingRestore(): void {
-    const pending = AppStorage.get<string>('uia_pending_restore_tabs') ?? ''
+    const pending = AppStorage.get<string>('via_pending_restore_tabs') ?? ''
     if (pending === '') {
       return
     }
-    AppStorage.setOrCreate('uia_pending_restore_tabs', '')
+    AppStorage.setOrCreate('via_pending_restore_tabs', '')
     this.getUIContext().showAlertDialog({
       message: $r('app.string.restore_session_ask'),
       primaryButton: {
@@ -666,18 +664,18 @@ struct Index {
     await this.tabStore.init(this.settings)
     this.handleInternalCmd()
     this.askPendingRestore()
-    if (AppStorage.get<boolean>('uia_open_downloads') === true) {
-      AppStorage.setOrCreate('uia_open_downloads', false)
+    if (AppStorage.get<boolean>('via_open_downloads') === true) {
+      AppStorage.setOrCreate('via_open_downloads', false)
       this.openPage('downloads')
     }
     this.ready = true
-    const launchUrl = AppStorage.get<string>('uia_launch_url') ?? ''
+    const launchUrl = AppStorage.get<string>('via_launch_url') ?? ''
     if (launchUrl !== '') {
-      AppStorage.setOrCreate('uia_launch_url', '')
-      const launchExternal = AppStorage.get<boolean>('uia_launch_external') ?? false
-      AppStorage.setOrCreate('uia_launch_external', false)
-      const launchSharedText = AppStorage.get<boolean>('uia_shared_text') ?? false
-      AppStorage.setOrCreate('uia_shared_text', false)
+      AppStorage.setOrCreate('via_launch_url', '')
+      const launchExternal = AppStorage.get<boolean>('via_launch_external') ?? false
+      AppStorage.setOrCreate('via_launch_external', false)
+      const launchSharedText = AppStorage.get<boolean>('via_shared_text') ?? false
+      AppStorage.setOrCreate('via_shared_text', false)
       if (launchSharedText) {
         this.openReceivedText(launchUrl)
       } else {
@@ -731,7 +729,7 @@ struct Index {
     }
     // 其余 v:// 内部命令（含未知 → CATALOG、NONE → 无动作）统一交给同一分发器，
     // 绝不再把 v://xxx 当网页 URL 塞进标签（原版 k6.u 对这些分支一律 return true）
-    AppStorage.setOrCreate('uia_internal_cmd', url)
+    AppStorage.setOrCreate('via_internal_cmd', url)
     this.handleInternalCmd()
   }
 
@@ -840,36 +838,43 @@ struct Index {
       if (now - this.gameModeBackTime < 1500) {
         this.gameModeBackTime = 0
         this.settings.setGameMode(false)
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.game_mode_toast_off'), duration: TOAST_SHORT })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.game_mode_toast_off'), duration: 1500 })
         // 原版 bb(false)（6822-6844）→ else 分支 → g9()：退出游戏模式隐藏操作栏（模式2）
         this.hideToolbarsForPage()
       } else {
         this.gameModeBackTime = now
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit_game_mode'), duration: TOAST_SHORT })
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit_game_mode'), duration: 1500 })
       }
       return true
     }
     const tab = this.tabStore.current()
-    // 原版隐身会话（f2583n1，k6.java:4483-4494）：可后退则后退，多标签关当前标签，否则结束会话
+    // 原版隐身会话（f2583n1）：可后退则后退，多标签开标签面板，否则结束会话
     if (this.tabStore.sessionIncognito && tab.incognito) {
-      if (this.tabStore.canGoBack(tab)) {
-        this.tabStore.goBack(tab)
+      if (tab.canBack) {
+        try {
+          tab.controller.backward()
+        } catch (error) {
+          console.error('backward failed')
+        }
         return true
       }
       if (this.tabStore.tabs.length > 1) {
-        this.tabStore.closeTab(this.tabStore.currentIndex)
+        this.showTabPanel = true
         return true
       }
       this.tabStore.exitIncognitoSession(false)
       return true
     }
-    // 原版 k6.I9（4460-4507）：非主页 → U8（可退则退，不可退关标签）；
-    // 主页 → 多标签关标签，否则 1500ms 内双击退出
     if (!tab.isHomePage()) {
-      this.tabStore.goBack(tab)
-      return true
-    }
-    if (this.tabStore.tabs.length > 1) {
+      // 原版 U8：可后退则后退；不可后退且非主页 → 关闭当前标签（f2580m0.B0()）
+      if (tab.canBack) {
+        try {
+          tab.controller.backward()
+        } catch (error) {
+          console.error('backward failed')
+        }
+        return true
+      }
       this.tabStore.closeTab(this.tabStore.currentIndex)
       return true
     }
@@ -880,11 +885,11 @@ struct Index {
       return false
     }
     this.exitHintTime = now
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit'), duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.press_back_again_exit'), duration: 1500 })
     return true
   }
 
-  // ===== 原版 PC 键盘快捷键（mark/uia/Shell.dispatchKeyEvent → c8/k6.n8 → L9/M9）=====
+  // ===== 原版 PC 键盘快捷键（mark/via/Shell.dispatchKeyEvent → c8/k6.n8 → L9/M9）=====
 
   // 原版 k6.n8：宿主按键分发入口（onInterceptKeyEvent / onKeyEvent 双通道共用）
   private handlePcKey(event: KeyEvent): boolean {
@@ -1173,7 +1178,14 @@ struct Index {
     if (!this.pcMainScene()) {
       return
     }
-    this.tabStore.goBack(this.tabStore.current())
+    const tab = this.tabStore.current()
+    if (tab.canBack) {
+      try {
+        tab.controller.backward()
+      } catch (error) {
+        console.error('backward failed')
+      }
+    }
   }
 
   // 原版 ra(13)=V8：网页前进
@@ -1181,7 +1193,14 @@ struct Index {
     if (!this.pcMainScene()) {
       return
     }
-    this.tabStore.goForward(this.tabStore.current())
+    const tab = this.tabStore.current()
+    if (tab.canForward) {
+      try {
+        tab.controller.forward()
+      } catch (error) {
+        console.error('forward failed')
+      }
+    }
   }
 
   // 原版 tb()：打开菜单（k6.java:8547-8558 —— 先算 N8() 宽与 i10 贴边距）
@@ -1325,9 +1344,9 @@ struct Index {
 
   // 原版 k6.h 粘贴项：剪贴板文本经 AppStorage 传递后带入搜索输入框
   private addressTapInitialText(): string {
-    const paste = AppStorage.get<string>('uia_paste_url') ?? ''
+    const paste = AppStorage.get<string>('via_paste_url') ?? ''
     if (paste !== '') {
-      AppStorage.setOrCreate('uia_paste_url', '')
+      AppStorage.setOrCreate('via_paste_url', '')
       return paste
     }
     const tab = this.tabStore.current()
@@ -1344,7 +1363,7 @@ struct Index {
   //   return (!this.Z0 || this.W0 == 0) ? iMin
   //        : Math.min(iMin - g6.y.h(I(), 96.0f), g6.y.h(I(), 384.0f));  // 大屏且非布局0
   // Z0 = g6.y.E(context)（k6.java:8398）：screenLayout 为 LARGE/XLARGE 且对角线 >= 7 英寸。
-  // 鸿蒙侧等价判据：窗口短边 vp >= 600（UiaDialogCard 同口径的大屏分界）。
+  // 鸿蒙侧等价判据：窗口短边 vp >= 600（ViaDialogCard 同口径的大屏分界）。
   private largeScreenByShortSide(): boolean {
     const shortVp: number = this.windowShortSideVp()
     return shortVp >= 600
@@ -1394,13 +1413,13 @@ struct Index {
   }
 
   // 打开菜单前把尺寸参数发布给 MenuSheet（MenuSheet 不在本域，取用端由主控接线）：
-  //   AppStorage 'uia_menu_size_vp'     : number  菜单可用边长（原版 N8()）
-  //   AppStorage 'uia_menu_side_gap_vp' : number  贴边距（原版 i10）
-  //   AppStorage 'uia_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
+  //   AppStorage 'via_menu_size_vp'     : number  菜单可用边长（原版 N8()）
+  //   AppStorage 'via_menu_side_gap_vp' : number  贴边距（原版 i10）
+  //   AppStorage 'via_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
   private publishMenuMetrics(): void {
-    AppStorage.setOrCreate('uia_menu_size_vp', this.menuAvailableSizeVp())
-    AppStorage.setOrCreate('uia_menu_side_gap_vp', this.menuSideGapVp())
-    AppStorage.setOrCreate('uia_menu_layout', this.effectiveLayout())
+    AppStorage.setOrCreate('via_menu_size_vp', this.menuAvailableSizeVp())
+    AppStorage.setOrCreate('via_menu_side_gap_vp', this.menuSideGapVp())
+    AppStorage.setOrCreate('via_menu_layout', this.effectiveLayout())
   }
 
   private bottomBg(): ResourceColor {
@@ -1650,11 +1669,23 @@ struct Index {
       action = this.settings.fabdownaction
     }
     if (action === 12) {
-      // 原版 ra(12) → U8
-      this.tabStore.goBack(this.tabStore.current())
+      const tab = this.tabStore.current()
+      if (tab.canBack) {
+        try {
+          tab.controller.backward()
+        } catch (error) {
+          console.error('fab backward failed')
+        }
+      }
     } else if (action === 13) {
-      // 原版 ra(13) → V8
-      this.tabStore.goForward(this.tabStore.current())
+      const tab = this.tabStore.current()
+      if (tab.canForward) {
+        try {
+          tab.controller.forward()
+        } catch (error) {
+          console.error('fab forward failed')
+        }
+      }
     } else if (action === 23) {
       try {
         this.tabStore.current().controller.runJavaScript('window.scrollBy(0, -window.innerHeight)')
@@ -2189,13 +2220,24 @@ struct Index {
         this.openPage('siteSettings')
       },
       onBack: () => {
-        // 原版 k6.U8()：可后退则后退（加载中先 stop），否则非主页 → 关当前标签。
-        // 每次点击实时查询 accessBackward()，不读 onPageBegin/onPageEnd 更新的缓存值。
-        this.tabStore.goBack(this.tabStore.current())
+        const tab = this.tabStore.current()
+        if (tab.canBack) {
+          try {
+            tab.controller.backward()
+          } catch (error) {
+            console.error('backward failed')
+          }
+        }
       },
       onForward: () => {
-        // 原版 k6.V8()：可前进则前进，否则重开最近关闭的标签（na.U0）
-        this.tabStore.goForward(this.tabStore.current())
+        const tab = this.tabStore.current()
+        if (tab.canForward) {
+          try {
+            tab.controller.forward()
+          } catch (error) {
+            console.error('forward failed')
+          }
+        }
       },
       onHome: () => {
         if (!this.tabStore.current().isHomePage()) {
@@ -2288,7 +2330,7 @@ struct Index {
                 return
               }
               try {
-                const path = `${context.cacheDir}/uia_view_source.html`
+                const path = `${context.cacheDir}/via_view_source.html`
                 const file = fileIo.openSync(path,
                   fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
                 fileIo.writeSync(file.fd, result)
@@ -2362,13 +2404,13 @@ struct Index {
                         this.showSearch = true
                       },
                       onLogoTap: () => {
-                        // 原版 logo 点击 uia.cmd(257)→ja(true)→aa(null)：打开书签管理页（RecordContainerFragment 标签 1）
+                        // 原版 logo 点击 via.cmd(257)→ja(true)→aa(null)：打开书签管理页（RecordContainerFragment 标签 1）
                         this.openPage('bookmarks')
                       },
                       onAutoHideTouch: (action: number, x: number, y: number): void => {
                         this.autoHideGesture.onTouch(action, x, y)
                       },
-                      // 原版 isGestureDisabled → uia.cmd(515)：工具栏隐藏时禁用主页下拉搜索
+                      // 原版 isGestureDisabled → via.cmd(515)：工具栏隐藏时禁用主页下拉搜索
                       gestureEnabledQuery: (): boolean => this.toolbarShown || this.fabVisible
                     })
                   }
@@ -2484,7 +2526,7 @@ struct Index {
           .width('100%')
           .height('100%')
           // 原版压暗层正常态 color a8 = #40808080（0x70808080 仅为 focused 态）
-          .backgroundColor($r('app.color.hc_40808080'))
+          .backgroundColor('#40808080')
           // 原版搜索面板 k6.oa（c8/k6.java 7874）与 tb/k0（tb/k0.java 801）：
           //   .v(f13636a, f13642g, f13642g, f13637b) = .v(anim/c, anim/j, anim/j, anim/d)
           //   enter=anim/c（alpha 0→1，240ms 线性）、exit=anim/j（alpha 1→1，240ms，即无过渡）、
@@ -2582,7 +2624,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor('rgba(0,0,0,0.4)')
+        .backgroundColor('rgba(0,0,0,0.2)')
         .transition(dimTransition(240))
         .onClick(() => {
           this.showBookmarkPicker = false
@@ -2604,7 +2646,7 @@ struct Index {
         Column()
           .width('100%')
           .height('100%')
-          .backgroundColor($r('app.color.hc_33000000'))
+          .backgroundColor('#33000000')
           .transition(dimTransition(160))
           .onClick(() => {
             this.showAi = false
@@ -2813,7 +2855,7 @@ struct Index {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.page_failed_load'), duration: TOAST_SHORT
+        message: $r('app.string.page_failed_load'), duration: 1500
       })
       return
     }
@@ -2825,7 +2867,7 @@ struct Index {
       if (RemoteConfig.getInstance().isInWld(tab.url)) {
         this.getUIContext().getPromptAction().showToast({
           message: $r('app.string.site_not_supported'),
-          duration: TOAST_SHORT
+          duration: 1500
         })
         return
       }
@@ -2835,7 +2877,7 @@ struct Index {
       }).then((ok: boolean) => {
         if (!ok) {
           this.getUIContext().getPromptAction().showToast({
-            message: $r('app.string.page_failed_load'), duration: TOAST_SHORT
+            message: $r('app.string.page_failed_load'), duration: 1500
           })
         }
       })
@@ -2886,7 +2928,7 @@ struct Index {
     const jsEnabled = siteSetting !== null ? siteSetting.javaScript : this.settings.jsEnabled
     if (!jsEnabled) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_js_disabled'), duration: TOAST_SHORT
+        message: $r('app.string.read_aloud_js_disabled'), duration: 1500
       })
       return
     }
@@ -2899,12 +2941,12 @@ struct Index {
     const state = this.readAloudController.getEngine().getState()
     if (state !== 0 && state !== 1 && state !== 2) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_engine_failed'), duration: TOAST_SHORT
+        message: $r('app.string.read_aloud_engine_failed'), duration: 1500
       })
       return
     }
     this.getUIContext().getPromptAction().showToast({
-      message: $r('app.string.read_aloud_wait'), duration: TOAST_SHORT
+      message: $r('app.string.read_aloud_wait'), duration: 1500
     })
     const taskId = `ra${Date.now()}${Math.floor(Math.random() * 100000)}`
     const url = tab.url
@@ -2914,7 +2956,7 @@ struct Index {
         if (error) {
           console.error(`read aloud extract failed: ${error.code}`)
           this.getUIContext().getPromptAction().showToast({
-            message: $r('app.string.read_aloud_cannot'), duration: TOAST_SHORT
+            message: $r('app.string.read_aloud_cannot'), duration: 1500
           })
           return
         }
@@ -2923,7 +2965,7 @@ struct Index {
     } catch (error) {
       console.error('runJavaScript read aloud failed')
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_cannot'), duration: TOAST_SHORT
+        message: $r('app.string.read_aloud_cannot'), duration: 1500
       })
     }
   }
@@ -2933,7 +2975,7 @@ struct Index {
     const sentences = sentencesFromJson(json)
     if (sentences.length === 0) {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.read_aloud_cannot'), duration: TOAST_SHORT
+        message: $r('app.string.read_aloud_cannot'), duration: 1500
       })
       return
     }
@@ -3075,7 +3117,7 @@ struct Index {
     const tab = this.tabStore.current()
     if (tab.isHomePage() || tab.url === '') {
       this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.mark_ad_http_only'), duration: TOAST_SHORT
+        message: $r('app.string.mark_ad_http_only'), duration: 1500
       })
       return
     }
@@ -3088,7 +3130,7 @@ struct Index {
   // 原版 k6.m0：复选框初始态 = w9.a.p()
   private loadSaveAsPdfPref(): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-    preferences.getPreferences(context, 'uia_settings').then((store: preferences.Preferences) => {
+    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
       this.saveAsPdf = store.getSync('save_as_pdf', false) as boolean
     }).catch((error: BusinessError) => {
       console.error(`load save_as_pdf failed: ${error.message}`)
@@ -3098,7 +3140,7 @@ struct Index {
   // 原版 k6.e5：勾选态变化时持久化 w9.a.I
   private persistSaveAsPdf(value: boolean): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-    preferences.getPreferences(context, 'uia_settings').then((store: preferences.Preferences) => {
+    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
       store.put('save_as_pdf', value).then(() => {
         store.flush()
       }).catch((error: BusinessError) => {
@@ -3237,7 +3279,7 @@ struct Index {
   }
 }
 
-// 下载确认弹层数据（原版 k6.mb → mark/uia/download/m.java）
+// 下载确认弹层数据（原版 k6.mb → mark/via/download/m.java）
 class PendingDownloadUi {
   kind: string = 'web'
   guid: string = ''
@@ -3303,27 +3345,37 @@ struct DownloadConfirmOverlay {
               this.copyUrl()
             })
         }
-        Row() {
-          Blank().layoutWeight(1)
-          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
-            this.cancel()
-          } })
-          UiaDialogButton({ label: $r('app.string.download_btn'), onAction: () => {
-            this.confirm()
-          } })
+        Row({ space: 12 }) {
+          Button($r('app.string.cancel'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.surface'))
+            .fontColor($r('app.color.fg'))
+            .onClick(() => {
+              this.cancel()
+            })
+          Button($r('app.string.download_btn'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.accent'))
+            .fontColor(Color.White)
+            .onClick(() => {
+              this.confirm()
+            })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(18)
-      .border({ width: 1, color: $r('app.color.dialog_border') })
-      .backgroundColor($r('app.color.dialog_bg'))
+      .borderRadius(16)
+      .backgroundColor($r('app.color.page_bg'))
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.5)')
     .onClick(() => {
       this.cancel()
     })
@@ -3342,7 +3394,7 @@ struct DownloadConfirmOverlay {
   private copyUrl(): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.info.url)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied_link'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied_link'), duration: 1500 })
     }).catch(() => {
       console.error('copy download url failed')
     })
@@ -3363,7 +3415,7 @@ struct DownloadConfirmOverlay {
     } else {
       this.coordinator.confirmUrlDownload(this.fileName)
     }
-    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_started'), duration: TOAST_SHORT })
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.download_started'), duration: 1500 })
     this.onDone()
   }
 }
@@ -3410,27 +3462,37 @@ struct SavePageDialog {
             .fontColor($r('app.color.fg'))
         }
         .width('100%')
-        Row() {
-          Blank().layoutWeight(1)
-          UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
-            this.onCancel()
-          } })
-          UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
-            this.onConfirm(this.name, this.pdf)
-          } })
+        Row({ space: 12 }) {
+          Button($r('app.string.cancel'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.surface'))
+            .fontColor($r('app.color.fg'))
+            .onClick(() => {
+              this.onCancel()
+            })
+          Button($r('app.string.confirm'))
+            .fontSize(14)
+            .height(36)
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.accent'))
+            .fontColor(Color.White)
+            .onClick(() => {
+              this.onConfirm(this.name, this.pdf)
+            })
         }
         .width('100%')
       }
       .width('100%')
       .padding(20)
-      .borderRadius(18)
-      .border({ width: 1, color: $r('app.color.dialog_border') })
-      .backgroundColor($r('app.color.dialog_bg'))
+      .borderRadius(16)
+      .backgroundColor($r('app.color.page_bg'))
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('rgba(0,0,0,0.4)')
+    .backgroundColor('rgba(0,0,0,0.5)')
     .onClick(() => {
       this.onCancel()
     })

@@ -1,4 +1,3 @@
-import { TOAST_SHORT } from '../common/ToastDuration'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { abilityAccessCtrl, Permissions, PermissionRequestResult } from '@kit.AbilityKit'
@@ -9,7 +8,7 @@ import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { detectBarcode, scanBarcode } from '@kit.ScanKit'
 import { fileIo } from '@kit.CoreFileKit'
 import { TabItem, globMatches, parseJsonArray, SiteSetting, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
-import { computeDialogWidthVp } from './UiaDialogCard'
+import { computeDialogWidthVp } from './ViaDialogCard'
 import { dialogTransition } from '../common/Transitions'
 import { AppSettings } from '../common/Settings'
 import { AdBlocker, buildBlockedPageHtml, TYPE_ALL_MASK, TYPE_DOCUMENT } from '../common/AdBlock'
@@ -26,8 +25,8 @@ import { VideoOverlayState } from './VideoPlayerOverlay'
 import { TranslateState } from './TranslatePanel'
 import { MARK_AD_INJECT_JS } from './MenuSheet'
 import { AppIcon } from './AppIcon'
-// 原版横滑指示层图标（uia_ic_back / uia_ic_forward，rotate180 复用）
-import { UiaIcon } from './UiaIcon'
+// 原版横滑指示层图标（via_ic_back / via_ic_forward，rotate180 复用）
+import { ViaIcon } from './ViaIcon'
 import { PdfViewerView } from '../view/PdfViewerPage'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 // 原版 hb/g4 + w9/k.G2()：ignoredsslwarning 位掩码（SSL 证书警告忽略白名单）
@@ -44,16 +43,16 @@ const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
 ])
 
 // 原版 i6/r.java 用户脚本桥 1:1：runAt 1=文档开始/2=DOMContentLoaded/4=load，
-// 经 window.uia.postMessage({action:101,runAt,from}) 回传主线程分发
+// 经 window.via.postMessage({action:101,runAt,from}) 回传主线程分发
 const USER_SCRIPT_BRIDGE_JS: string = '(function(){' +
-  'var e=function(r){try{window.uia.postMessage(JSON.stringify({action:101,runAt:r,from:location.href}))}catch(x){}};' +
+  'var e=function(r){try{window.via.postMessage(JSON.stringify({action:101,runAt:r,from:location.href}))}catch(x){}};' +
   'new MutationObserver(function(){e(1);this.disconnect()}).observe(document.documentElement,{childList:true,subtree:true});' +
   'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){e(2)})}else{e(2)}' +
   'if(document.readyState==="complete"){e(4)}else{window.addEventListener("load",function(){e(4)})}' +
   '})()'
 
-// 原版 c8/ta.a 1:1：@font-face UiaCustomFont + body 字体族 CSS（排除图标），__PATH__ 运行时替换
-const CUSTOM_FONT_JS: string = '(function(){var i=\'uia_custom_font\';var f=\'@font-face{font-family:UiaCustomFont;font-display:swap;src:url("__PATH__")}body,body :not(.bi):not(.bx):not(.bxr):not(.docon):not(.fa):not(.fab):not(.fad):not(.fal):not(.far):not(.fas):not(.glyphicon):not(.icon):not(.la):not(.las):not(.material-icons):not(.material-icons-outlined):not(.material-icons-round):not(.material-icons-sharp):not(.material-icons-two-tone):not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp):not(.md):not(.typcn):not(.uni-btn-icon):not(.uni-icons):not(ion-icon):not(mat-icon):not(maticon):not(mdui-icon):not(i[data-feather]):not(span[data-feather]):not(i[class^="ri-"]):not(span[class^="ri-"]):not([class*="fa-"]):not([class*="mce-i-"]):not([class*=FONT]):not([class*=Font]):not([class*=ICON]):not([class*=Icon]):not([class*=arrow]):not([class*=font]):not([class*=icon]):not([class*=player]){font-family:UiaCustomFont,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important}\';var s=document.getElementById(i);if(s){s.innerHTML=f}else{s=document.createElement(\'style\');s.id=i;s.type=\'text/css\';s.innerHTML=f;document.head.appendChild(s)}})();'
+// 原版 c8/ta.a 1:1：@font-face ViaCustomFont + body 字体族 CSS（排除图标），__PATH__ 运行时替换
+const CUSTOM_FONT_JS: string = '(function(){var i=\'via_custom_font\';var f=\'@font-face{font-family:ViaCustomFont;font-display:swap;src:url("__PATH__")}body,body :not(.bi):not(.bx):not(.bxr):not(.docon):not(.fa):not(.fab):not(.fad):not(.fal):not(.far):not(.fas):not(.glyphicon):not(.icon):not(.la):not(.las):not(.material-icons):not(.material-icons-outlined):not(.material-icons-round):not(.material-icons-sharp):not(.material-icons-two-tone):not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp):not(.md):not(.typcn):not(.uni-btn-icon):not(.uni-icons):not(ion-icon):not(mat-icon):not(maticon):not(mdui-icon):not(i[data-feather]):not(span[data-feather]):not(i[class^="ri-"]):not(span[class^="ri-"]):not([class*="fa-"]):not([class*="mce-i-"]):not([class*=FONT]):not([class*=Font]):not([class*=ICON]):not([class*=Icon]):not([class*=arrow]):not([class*=font]):not([class*=icon]):not([class*=player]){font-family:ViaCustomFont,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important}\';var s=document.getElementById(i);if(s){s.innerHTML=f}else{s=document.createElement(\'style\');s.id=i;s.type=\'text/css\';s.innerHTML=f;document.head.appendChild(s)}})();'
 
 interface ScriptRunMsg {
   action: number
@@ -63,9 +62,9 @@ interface ScriptRunMsg {
 
 // 划词菜单自定义项 id（过滤系统 TRANSLATE 项后追加）：
 // 搜索=划词搜索（k6.C → Ua(str,false,true)）、查找=页内查找（k6.C → ob）、翻译=划词翻译面板
-const EDIT_MENU_ID_UIA_SEARCH: string = 'uia_search'
-const EDIT_MENU_ID_UIA_FIND: string = 'uia_find'
-const EDIT_MENU_ID_UIA_TRANSLATE: string = 'uia_translate'
+const EDIT_MENU_ID_VIA_SEARCH: string = 'via_search'
+const EDIT_MENU_ID_VIA_FIND: string = 'via_find'
+const EDIT_MENU_ID_VIA_TRANSLATE: string = 'via_translate'
 
 // 原版 k6.Qa（k6.java:5651）以图搜图引擎表：12 引擎名称与 URL 模板 1:1（k6.k6 分发）
 class ImageSearchEngine {
@@ -109,8 +108,8 @@ const PICTURE_MODE_JS: string =
   '0==d?alert("无图片"):(a.push(\'<script>var viewer = new Viewer(document.getElementById("images"), {toolbar: {zoomIn: true, zoomOut: true, oneToOne: true, reset: true, prev: true, next: true, rotateLeft: true\'),a.push("},});\\x3c/script>"),a.push("</body></html>"),b=window.open(""),' +
   'b.document.write(a.join("")),b.focus())})();'
 
-// window.uia 桥对象（k6:1487 postMessage 通道）
-class UiaBridge {
+// window.via 桥对象（k6:1487 postMessage 通道）
+class ViaBridge {
   handler: (msg: string) => void = (): void => {
   }
 
@@ -128,8 +127,8 @@ export struct TabWeb {
   private tabStore: TabStore = TabStore.getInstance()
   @Local privacyScripts: Array<ScriptItem> = []
   private schemeHandler: webview.WebSchemeHandler = new webview.WebSchemeHandler()
-  private uiaBridge: UiaBridge = new UiaBridge()
-  // 原版 o5/a：window.uia_gm GM_* 分派桥（每 tab 一实例，宿主回调 1:1 k6.s）
+  private viaBridge: ViaBridge = new ViaBridge()
+  // 原版 o5/a：window.via_gm GM_* 分派桥（每 tab 一实例，宿主回调 1:1 k6.s）
   private gmBridge: GmBridge = new GmBridge()
   // 原版 Shell.dispatchKeyEvent → k6.n8：Web 获焦时按键先经宿主分发再进网页（onInterceptKeyEvent 等价层）
   @Param onPcKey: (event: KeyEvent) => boolean = (_event: KeyEvent): boolean => false
@@ -144,17 +143,14 @@ export struct TabWeb {
   // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
-  // 首个页面加载完成时清一次历史：抵消 ArkWeb 初始 about:blank 入栈导致的
-  // 「新标签第一个页面就显示可后退」。原版 WebView 构造后空白不入历史栈。
-  private clearHistoryOnce: boolean = false
-  // —— 原版 GestureTouchEvent 横滑前进/后退（mark/uia/common/widget/GestureTouchEvent.java 对齐）——
+  // —— 原版 GestureTouchEvent 横滑前进/后退（mark/via/common/widget/GestureTouchEvent.java 对齐）——
   // ★ 载体：原版 c8/k6.java:4104 把状态机绑在「独立指示视图」f2584o0.f2940p（c8/y7.java:136
   //   的 ImageView，72dp 宽 × 60dp 高、四边 20dp 内边距、圆角白底 drawable b_、
   //   elevation 12dp、CENTER_VERTICAL + alignParentLeft；marginStart = -73dp 初始藏于左侧屏外）。
   //   m()（377-388）对**该 ImageView** setTranslationX，e()（248）对**该 ImageView**
   //   ALPHA 1→0；网页视图 WebView 全程不动、不透明度不变。
   //   早期实现把 translate/opacity 挂在 Web 上（整页跟着动），与原版不符，此处改为独立指示层。
-  //   指示图标：i10==1 后退 → drawable b2（uia_ic_back）、i10==2 前进 → a3（rotate180 的 b2）。
+  //   指示图标：i10==1 后退 → drawable b2（via_ic_back）、i10==2 前进 → a3（rotate180 的 b2）。
   // 原版 y7.f()（70-77）setVisibility(INVISIBLE=4)：指示层无手势时不可见
   @Local swipeIndicatorVisible: boolean = false
   @Local swipeIndicatorShift: number = 0
@@ -188,8 +184,8 @@ export struct TabWeb {
   private geoPageOrigin: string = ''
 
   aboutToAppear(): void {
-    this.uiaBridge.handler = (msg: string): void => {
-      this.onUiaMessage(msg)
+    this.viaBridge.handler = (msg: string): void => {
+      this.onViaMessage(msg)
     }
     // k6.s 宿主回调接线
     this.gmBridge.onSetClipboard = (data: string, type: string): void => {
@@ -260,15 +256,15 @@ export struct TabWeb {
     }
     result.push({
       content: $r('app.string.search'),
-      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_SEARCH)
+      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH)
     })
     result.push({
-      content: $r('app.string.orig_jh'),
-      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_FIND)
+      content: '查找',
+      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND)
     })
     result.push({
       content: $r('app.string.translate'),
-      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_TRANSLATE)
+      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE)
     })
     return result
   }
@@ -305,13 +301,13 @@ export struct TabWeb {
   }
 
   private onEditMenuItemClick(menuItem: TextMenuItem, range: TextRange): boolean {
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_SEARCH))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH))) {
       this.fetchSelection((text: string): void => {
         this.searchSelection(text)
       })
       return true
     }
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_FIND))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND))) {
       // 原版 k6.C id=f4824g → ob(str)：页内查找（预填划词）。
       // ArkTS FindBar 无法从本组件拉起，直接以同一 searchAllAsync 管线执行查找
       this.fetchSelection((text: string): void => {
@@ -323,7 +319,7 @@ export struct TabWeb {
       })
       return true
     }
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_TRANSLATE))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE))) {
       this.fetchSelection((text: string): void => {
         TranslateState.getInstance().open(text)
       })
@@ -349,10 +345,10 @@ export struct TabWeb {
         .darkMode(this.settings.nightCss ? WebDarkMode.On : WebDarkMode.Off)
         .forceDarkAccess(this.settings.nightCss)
         .runJavaScriptOnDocumentStart(this.privacyScripts)
-        // 原版 k6:1487 registerJavaScriptProxy：window.uia 桥
+        // 原版 k6:1487 registerJavaScriptProxy：window.via 桥
         .javaScriptProxy({
-          object: this.uiaBridge,
-          name: 'uia',
+          object: this.viaBridge,
+          name: 'via',
           methodList: ['postMessage'],
           controller: this.tab.controller
         })
@@ -395,13 +391,13 @@ export struct TabWeb {
         .onControllerAttached(() => {
           this.setupSchemeHandler()
           this.applyAdvancedSettings()
-          // 原版 k6:1487 registerJavaScriptProxy 之外的第二个桥：window.uia_gm（o5/a.call）
-          // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，uia_gm 走 controller 注册
+          // 原版 k6:1487 registerJavaScriptProxy 之外的第二个桥：window.via_gm（o5/a.call）
+          // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，via_gm 走 controller 注册
           try {
-            this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'uia_gm', ['call'])
+            this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'via_gm', ['call'])
             this.tab.controller.refresh()
           } catch (error) {
-            console.error('register uia_gm proxy failed')
+            console.error('register via_gm proxy failed')
           }
           if (this.tab.initialUrl !== '') {
             try {
@@ -410,11 +406,6 @@ export struct TabWeb {
               } else {
                 this.tab.controller.loadUrl(this.tab.initialUrl)
               }
-              // Web 组件的初始 src 是 about:blank，首次 loadUrl 会让它进入历史栈，
-              // 使新标签第一个页面就「可后退」到空白页。原版 WebView 构造后为空白且不入栈，
-              // 首个页面 canGoBack() 为 false（后退到底走 U8 的关标签分支）。
-              // 故首个页面落定后清一次历史，与原版首屏一致。
-              this.clearHistoryOnce = true
             } catch (error) {
               console.error('restore tab loadUrl failed')
             }
@@ -431,12 +422,6 @@ export struct TabWeb {
           this.applyAdvancedSettings()
           this.applyUa(event.url)
           this.updateNavState()
-          // 原版 k6.i0（k6.java:7300-7306，由 e8/n0.java:136 在 onPageStarted 触发）：
-          // 目标页不是主页/内部页（u9.d.k）时 na.s0() 作废「最近关闭」记录，
-          // 这样前进到底才不会误重开一个早已被新导航顶掉的旧标签。
-          if (!this.tab.isHomePage()) {
-            this.tabStore.invalidateLastClosed()
-          }
           // 原版 k6.b0 → d9() → pb()：确保模式2 隐藏态下 FAB 在场
           this.onPageSettle()
         })
@@ -444,14 +429,6 @@ export struct TabWeb {
           this.tab.url = event.url
           this.tab.loading = false
           this.tab.progress = 100
-          if (this.clearHistoryOnce) {
-            this.clearHistoryOnce = false
-            try {
-              this.tab.controller.clearHistory()
-            } catch (error) {
-              console.error('clear initial history failed')
-            }
-          }
           this.updateNavState()
           this.saveHistory(event.url)
           this.injectPrivacy(event.url)
@@ -466,13 +443,6 @@ export struct TabWeb {
         .onProgressChange((event: OnProgressChangeEvent) => {
           this.tab.progress = event.newProgress
         })
-        // 同文档导航（history.pushState / replaceState / 锚点跳转）不触发 onPageBegin/onPageEnd，
-        // 但会新增/切换历史项。不回填 canBack/canForward 的话，单页应用里按钮状态永远停在旧值。
-        // 点击路径本身已改为实时查 accessBackward()/accessForward()（原版 r4/d.j()/n() 语义），
-        // 此回调只负责让「状态变量」与其保持同步（横滑方向闸、UI 依赖方使用）。
-        .onNavigationEntryCommitted((_details: LoadCommittedDetails) => {
-          this.updateNavState()
-        })
         .onTitleReceive((event: OnTitleReceiveEvent) => {
           this.tab.title = event.title
           // 原版 k6.b0 → d9() → pb()：标题落定同样确保 FAB 在场
@@ -481,7 +451,7 @@ export struct TabWeb {
         // 原版 C9「标记广告」回传通道：注入的选择器经 console 回传广告域名，
         // 命中后加入自定义拦截规则并刷新页面
         .onConsole((event: OnConsoleEvent) => {
-          const prefix = 'uia_mark_ad:'
+          const prefix = 'via_mark_ad:'
           const msg: string = event.message.getMessage()
           if (msg.indexOf(prefix) === 0) {
             const domain = msg.substring(prefix.length).trim().toLowerCase()
@@ -805,11 +775,11 @@ export struct TabWeb {
       //   .y(g6.f.d(x7.n.f13700s))   → marginStart = dimen "ah" = -73dp（初始完全藏于左侧屏外）
       //   .d(x7.o.N1)                → background = drawable "b_"（96x96 圆角底色，见下 tint）
       //   y7.f()（70-77）：setVisibility(INVISIBLE=4)、setColorFilter(-1 白)、API21+ elevation 12dp
-      // 图标：i10==1 后退用 drawable b2（uia_ic_back），i10==2 前进用 a3（= rotate180 的 b2）
+      // 图标：i10==1 后退用 drawable b2（via_ic_back），i10==2 前进用 a3（= rotate180 的 b2）
       // 位移由 m()/o() 驱动：m() 开局 setTranslationX(f9565t)，o() 每次 +dx*0.8 并限幅 ±f9563r
       if (this.settings.swipeSwitchTab && this.swipeIndicatorVisible) {
         Row() {
-          UiaIcon({
+          ViaIcon({
             icon: this.swipeIndicatorForward ? $r('app.media.uia_ic_forward') : $r('app.media.uia_ic_back'),
             iconSize: 24,
             iconColor: '#FFFFFF'
@@ -901,7 +871,6 @@ export struct TabWeb {
     .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal })
       .onActionEnd((event: GestureEvent) => {
         // 原版「滑动屏幕前进后退」（cm，默认开启）：右滑后退、左滑前进（k6.java:6892）
-        // 方向闸实时查询（同 V7/W7），导航走 U8/V8 等价实现
         if (!this.settings.swipeSwitchTab) {
           return
         }
@@ -909,10 +878,14 @@ export struct TabWeb {
           return
         }
         const tab = this.tabStore.current()
-        if (event.offsetX > 0 && this.tabStore.canNavigateBack(tab)) {
-          this.tabStore.goBack(tab)
-        } else if (event.offsetX < 0 && this.tabStore.canNavigateForward(tab)) {
-          this.tabStore.goForward(tab)
+        try {
+          if (event.offsetX > 0 && tab.canBack) {
+            tab.controller.backward()
+          } else if (event.offsetX < 0 && tab.canForward) {
+            tab.controller.forward()
+          }
+        } catch (error) {
+          console.error('swipe nav failed')
         }
       }))
   }
@@ -1296,8 +1269,7 @@ export struct TabWeb {
   }
 
   // 检测段（GestureTouchEvent.c 191-215）：4dp 检测阈值、横向优势、速度 0.5px/ms；
-  // 方向闸 k6.a.f→V7/W7：右滑后退可用、左滑前进可用，均实时查询（含「退到底关标签」
-  // 与「前进到底重开最近关闭标签」两个原版分支）。
+  // 方向闸 k6.a.f→V7/W7：右滑后退需 canBack、左滑前进需 canForward。
   // 起手（m() 376-389）：进入 HORIZONTAL 时算好 f9563r / f9565t 并把指示层搬到屏外基准位：
   //   iMax     = max(指示层宽, 指示层测量宽) = 72dp
   //   f9563r   = iMax * 4 / 5              = 57.6dp（限幅）
@@ -1318,11 +1290,7 @@ export struct TabWeb {
       if (Math.abs(event.velocityX) < px2vp(500)) {
         return
       }
-      // 原版 k6.a.f.c()（k6.java:375-382）：方向可用性实时查询 V7()/W7()。
-      //   V7 = 可后退 || 当前非主页（退到底会关标签，仍算有动作）
-      //   W7 = 可前进 || 有最近关闭的标签可重开（na.W0）
-      if ((dx > 0 && !this.tabStore.canNavigateBack(this.tab)) ||
-        (dx < 0 && !this.tabStore.canNavigateForward(this.tab))) {
+      if ((dx > 0 && !this.tab.canBack) || (dx < 0 && !this.tab.canForward)) {
         this.swipeNavLocked = true
         return
       }
@@ -1405,7 +1373,7 @@ export struct TabWeb {
     this.swipeIndicatorVisible = false
   }
 
-  // 松手（GestureTouchEvent.h → e()）：mark/uia/common/widget/GestureTouchEvent.java:239-255
+  // 松手（GestureTouchEvent.h → e()）：mark/via/common/widget/GestureTouchEvent.java:239-255
   //   int iAbs = |f9564s|（已滑位移）；int i10 = f9563r（阈值 = 宽度*4/5）
   //   未过阈值：fAbs = |位移| / 阈值，TRANSLATION_X 回到 f9565t（复位基准）
   //   过阈值：  ALPHA 1→0，fAbs = 1.0f；★同一语句块内立即调 h(位移<=0 ? 2 : 1) 触发导航
@@ -1422,15 +1390,19 @@ export struct TabWeb {
     const max = this.swipeIndicatorMax
     const passed = max > 0 && Math.abs(this.swipeIndicatorShift) >= max
     if (passed) {
-      // 原版 e()：h(f9564s <= 0 ? 2 : 1) —— 位移右正 → 1（U8 后退），左负 → 2（V8 前进）
+      // 原版 e()：h(f9564s <= 0 ? 2 : 1) —— 位移右正 → 1（后退），左负 → 2（前进）
       const goBack = this.swipeIndicatorShift > 0
       // 原版在同一处先发起导航（h()），再让 alpha 淡出；旧实现把导航塞进 300ms 的
       // setTimeout，导致淡出结束后才换页，与原版时序不符。
-      // 前进到底时 V8 会重开最近关闭的标签（na.U0），故统一走 TabStore 的 U8/V8 等价实现。
-      if (goBack) {
-        this.tabStore.goBack(this.tab)
-      } else {
-        this.tabStore.goForward(this.tab)
+      try {
+        const tab = this.tabStore.current()
+        if (goBack) {
+          tab.controller.backward()
+        } else {
+          tab.controller.forward()
+        }
+      } catch (error) {
+        console.error('swipe navigate failed')
       }
       // fAbs = 1.0f → duration = 300ms
       // 复位时机：原版指示层是常驻 View，下次 touchstart 的 j() 才把 alpha 复位 1。
@@ -1593,8 +1565,7 @@ export struct TabWeb {
     }
   }
 
-  private updateNavState(): void {
-    try {
+  private updateNavState(): void {    try {
       this.tab.canBack = this.tab.controller.accessBackward()
       this.tab.canForward = this.tab.controller.accessForward()
     } catch (error) {
@@ -1640,7 +1611,7 @@ export struct TabWeb {
     const sheets: SheetInfo[] = []
     if (hidden.indexOf('open_background') < 0) {
       sheets.push({
-        title: $r('app.string.open_in_background'),
+        title: '后台打开',
         action: (): void => {
           this.tabStore.newTabAt(link, true)
         }
@@ -1648,7 +1619,7 @@ export struct TabWeb {
     }
     if (hidden.indexOf('open_new_tab') < 0) {
       sheets.push({
-        title: $r('app.string.open_new_tab_short'),
+        title: '新标签打开',
         action: (): void => {
           this.tabStore.newTabAt(link, false)
         }
@@ -1656,7 +1627,7 @@ export struct TabWeb {
     }
     if (hidden.indexOf('copy_link') < 0) {
       sheets.push({
-        title: $r('app.string.copy_link'),
+        title: '复制链接',
         action: (): void => {
           this.copyLink(link)
         }
@@ -1664,7 +1635,7 @@ export struct TabWeb {
     }
     if (hidden.indexOf('share') < 0) {
       sheets.push({
-        title: $r('app.string.share'),
+        title: '分享',
         action: (): void => {
           this.shareLink(link)
         }
@@ -1693,14 +1664,14 @@ export struct TabWeb {
     const sheets: SheetInfo[] = []
     // (2, b0) 查看图片：Q3 case2 → na.k1 图片地址新标签打开
     sheets.push({
-      title: $r('app.string.orig_b0'),
+      title: '查看图片',
       action: (): void => {
         this.tabStore.newTabAt(src, false)
       }
     })
     // (38, a1) 下载图片：Q3 case38 → q8 下载管线（mime image/*）
     sheets.push({
-      title: $r('app.string.orig_a1'),
+      title: '下载图片',
       action: (): void => {
         this.downloadLink(src)
       }
@@ -1708,7 +1679,7 @@ export struct TabWeb {
     // (6, aq) 保存图片：Q3 case6 → La → Ea(str,4) 下载管线存图。
     // 工程下载管线无存图分类，接最近似：同走下载管线
     sheets.push({
-      title: $r('app.string.orig_aq'),
+      title: '保存图片',
       action: (): void => {
         this.downloadLink(src)
       }
@@ -1716,7 +1687,7 @@ export struct TabWeb {
     if (shareable) {
       // (33, ts) 分享图片：Q3 case33 → hb → Ea(str,1) 系统分享
       sheets.push({
-        title: $r('app.string.orig_ts'),
+        title: '分享图片',
         action: (): void => {
           this.shareLink(src)
         }
@@ -1725,7 +1696,7 @@ export struct TabWeb {
     if (src.startsWith('http')) {
       // (7, sw) 以图搜图：Q3 case7 → Qa 12 引擎选择弹窗
       sheets.push({
-        title: $r('app.string.orig_sw'),
+        title: '以图搜图',
         action: (): void => {
           this.showImageSearchMenu(src)
         }
@@ -1734,7 +1705,7 @@ export struct TabWeb {
     if (pageHttp && this.imageAllowedNow()) {
       // (8, ak) 看图模式：Q3 case8 → z8 → y9(db.a)（条件 e1=当前有图）
       sheets.push({
-        title: $r('app.string.orig_ak'),
+        title: '看图模式',
         action: (): void => {
           this.openPictureMode()
         }
@@ -1742,7 +1713,7 @@ export struct TabWeb {
     }
     // (22, ah) 页面信息：Q3 case22 标题/页面链接/选中链接
     sheets.push({
-      title: $r('app.string.orig_ah'),
+      title: '页面信息',
       action: (): void => {
         this.showPageInfo(link)
       }
@@ -1750,7 +1721,7 @@ export struct TabWeb {
     if (pageHttp && this.settings.adBlockOn) {
       // (23, aa) 标记广告：Q3 case23 → C9() 注入元素选择器（条件 b1=广告拦截开启）
       sheets.push({
-        title: $r('app.string.mark_ad'),
+        title: '标记广告',
         action: (): void => {
           try {
             this.tab.controller.runJavaScript(MARK_AD_INJECT_JS)
@@ -1764,7 +1735,7 @@ export struct TabWeb {
       // (29, u) 复制链接文本：Q3 case29（原版取 requestFocusNodeHref 锚文本，
       // ArkWeb 无锚文本源，以当前选中文本近似）
       sheets.push({
-        title: $r('app.string.orig_u'),
+        title: '复制链接文本',
         action: (): void => {
           this.copyText(selection)
         }
@@ -1773,7 +1744,7 @@ export struct TabWeb {
     if (shareable) {
       // (34, si) 扫描二维码：Q3 case34 → Pa → Ea(str,2) 下载后识码
       sheets.push({
-        title: $r('app.string.scan_qr_code'),
+        title: '扫描二维码',
         action: (): void => {
           this.scanQrFromImage(src)
         }
@@ -1782,13 +1753,13 @@ export struct TabWeb {
     if (link !== '') {
       // (3, s) 复制链接 / (31, at) 分享
       sheets.push({
-        title: $r('app.string.copy_link'),
+        title: '复制链接',
         action: (): void => {
           this.copyLink(link)
         }
       })
       sheets.push({
-        title: $r('app.string.share'),
+        title: '分享',
         action: (): void => {
           this.shareLink(link)
         }
@@ -1822,7 +1793,7 @@ export struct TabWeb {
       })
     }
     ActionSheet.show({
-      title: $r('app.string.orig_sw'),
+      title: '以图搜图',
       message: '',
       sheets: sheets
     })
@@ -1840,7 +1811,7 @@ export struct TabWeb {
   // 原版 Q3 case22：AlertDialog 标题 ah「页面信息」，正文 标题：/页面链接：/选中链接：
   private showPageInfo(link: string): void {
     this.getUIContext().showAlertDialog({
-      title: $r('app.string.orig_ah'),
+      title: '页面信息',
       message: `标题：${this.tab.title}\n\n页面链接：${this.tab.url}\n\n选中链接：${link}`,
       primaryButton: {
         value: $r('app.string.confirm'),
@@ -1855,7 +1826,7 @@ export struct TabWeb {
   private copyText(text: string): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.copied'), duration: 1500 })
     }).catch(() => {
       console.error('copy text failed')
     })
@@ -1875,7 +1846,7 @@ export struct TabWeb {
     }).then((resp: http.HttpResponse) => {
       client.destroy()
       const data = resp.result instanceof ArrayBuffer ? resp.result : new ArrayBuffer(0)
-      const path = `${context.cacheDir}/uia_qr_image`
+      const path = `${context.cacheDir}/via_qr_image`
       const file = fileIo.openSync(path,
         fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
       fileIo.writeSync(file.fd, data)
@@ -1892,7 +1863,7 @@ export struct TabWeb {
         }
         const value = results[0].originalValue
         this.getUIContext().showAlertDialog({
-          title: $r('app.string.ai_unsaved_title'),
+          title: '提示',
           message: value,
           primaryButton: {
             value: $r('app.string.confirm'),
@@ -1921,14 +1892,14 @@ export struct TabWeb {
   private copyLink(link: string): void {
     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, link)
     pasteboard.getSystemPasteboard().setData(data).then(() => {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.link_copied'), duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.link_copied'), duration: 1500 })
     }).catch(() => {
       console.error('copy link failed')
     })
   }
 
   private downloadLink(link: string): void {
-    // 原版下载链接与网页下载同走确认弹层（mark/uia/download/m.java）
+    // 原版下载链接与网页下载同走确认弹层（mark/via/download/m.java）
     const pageUa = this.settings.uaForHost(hostOf(this.tab.url)) ?? ''
     DownloadCoordinator.getInstance().requestUrlDownload(link, this.tab.url, pageUa)
   }
@@ -1950,9 +1921,9 @@ export struct TabWeb {
     })
   }
 
-  // 原版 na.E0()：元素隐藏 CSS（uia_inject_blocker.css）
+  // 原版 na.E0()：元素隐藏 CSS（via_inject_blocker.css）
   // 原版 k6.Ja(i10=1):4573：b1(url) 命中 wlb 白名单（youku/iqiyi/mgtv/qq）时
-  // 跳过 m8.b.b（uia_inject_blocker.css 注入豁免），视频站不被元素隐藏 CSS 干扰
+  // 跳过 m8.b.b（via_inject_blocker.css 注入豁免），视频站不被元素隐藏 CSS 干扰
   private injectBlockerCss(pageUrl: string): void {
     if (RemoteConfig.getInstance().isInWlb(pageUrl)) {
       return
@@ -2037,14 +2008,14 @@ export struct TabWeb {
       if (!this.settings.readerAuto) {
         return
       }
-      // 原版 w.i state 5：用户已确认自动进入（localStorage.__uia_reader_enabled__）
+      // 原版 w.i state 5：用户已确认自动进入（localStorage.__via_reader_enabled__）
       return Reader.checkState(this.tab).then((state: number) => {
         if (state === 5) {
           // 原版 Q4 state 5 → B8()：wld 命中 → g6.n.q(O1)「不支持该网站」，不进入阅读
           if (RemoteConfig.getInstance().isInWld(this.tab.url)) {
             this.getUIContext().getPromptAction().showToast({
               message: $r('app.string.site_not_supported'),
-              duration: TOAST_SHORT
+              duration: 1500
             })
             return false
           }
@@ -2228,8 +2199,8 @@ export struct TabWeb {
     return mime !== '' ? mime : 'text/html'
   }
 
-  // k6:1487-1512：window.uia.postMessage action 101 → 主线程分发注入
-  private onUiaMessage(msg: string): void {
+  // k6:1487-1512：window.via.postMessage action 101 → 主线程分发注入
+  private onViaMessage(msg: string): void {
     try {
       const parsed = JSON.parse(msg) as ScriptRunMsg
       if (parsed.action === 101) {

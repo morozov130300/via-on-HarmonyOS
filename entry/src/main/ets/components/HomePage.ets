@@ -37,7 +37,7 @@ export struct HomePage {
   @Event onSearchTap: () => void = () => {}
   @Event onScanResult: (text: string) => void = (text: string) => {}
   @Event onLogoTap: () => void = () => {}
-  // 原版原生搜索面板打开时下拉手势禁用（k6 window.uia.cmd(515)==0）
+  // 原版原生搜索面板打开时下拉手势禁用（k6 window.via.cmd(515)==0）
   @Param searchOpen: boolean = false
   // 原版主页是同一 WebView 内部页，触摸事件同样喂竖滑隐藏状态机
   // （e8/i.java:124 OnTouchListener 挂 WebView 本体，主页不过滤）
@@ -171,7 +171,7 @@ export struct HomePage {
             }
           }
           .width('100%')
-          // 原版 i6/o.java:24：logo 是 <a onclick="window.uia.cmd(257)">；
+          // 原版 i6/o.java:24：logo 是 <a onclick="window.via.cmd(257)">；
           // c8/k6.java:1409 → ja(true) → aa(null) → g6.i.i(..., bb.i.n3(true,1))，
           // 即打开书签管理页（RecordContainerFragment 标签 1），并非进入主页定制设置。
           .onClick(() => {
@@ -338,8 +338,8 @@ export struct HomePage {
       }
     })
     // 原版 initGesture（i6/o.java:45）+ isGestureDisabled：
-    //   禁用条件 = 焦点在搜索框 || !uia.cmd(515) || 页面已滚动。
-    //   uia.cmd(515) = k6.java:1426-1427 返回 (f2589q1 || f2597u1)，
+    //   禁用条件 = 焦点在搜索框 || !via.cmd(515) || 页面已滚动。
+    //   via.cmd(515) = k6.java:1426-1427 返回 (f2589q1 || f2597u1)，
     //   即「工具栏显示或 FAB 可见」=1。⇒ 工具栏隐藏时主页下拉搜索被禁用，
     //   此时下滑只走原生竖滑状态机恢复工具栏；工具栏显示时下拉搜索照常。
     //   本端以 toolbarShown 标志等价 cmd(515)：隐藏态下不再累积下拉位移、
@@ -387,7 +387,7 @@ export struct HomePage {
       }))
   }
 
-  // 原版 i6/o.java initGesture 的 isGestureDisabled → uia.cmd(515)
+  // 原版 i6/o.java initGesture 的 isGestureDisabled → via.cmd(515)
   // （k6.java:1426-1427：return (f2589q1 || f2597u1) ? 1 : 0）。
   // 工具栏隐藏时=0 → 主页下拉搜索禁用，下滑只恢复工具栏。
   // Index 通过 onGestureEnabledQuery 回调查询当前显隐态。

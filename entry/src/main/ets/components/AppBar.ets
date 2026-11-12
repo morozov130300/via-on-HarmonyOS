@@ -1,4 +1,4 @@
-import { UiaIcon } from './UiaIcon'
+import { ViaIcon } from './ViaIcon'
 import { UiInsets } from '../common/Immersive'
 
 // 全局唯一标题栏：页面不再各自叠加头部，只在 onReady/onWillAppear 时改写
@@ -133,7 +133,7 @@ export struct AppBarHeader {
       Column() {
         Row() {
           Stack({ alignContent: Alignment.Center }) {
-            UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+            ViaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
           }
             .width(48)
             .height(52)
@@ -156,7 +156,7 @@ export struct AppBarHeader {
             .layoutWeight(1)
           if (this.bar.rightIcon2 !== null) {
             Stack({ alignContent: Alignment.Center }) {
-              UiaIcon({ icon: this.bar.rightIcon2, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+              ViaIcon({ icon: this.bar.rightIcon2, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
             }
               .width(48)
               .height(52)
@@ -181,7 +181,7 @@ export struct AppBarHeader {
           }
           if (this.bar.rightIcon !== null) {
             Stack({ alignContent: Alignment.Center }) {
-              UiaIcon({ icon: this.bar.rightIcon, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+              ViaIcon({ icon: this.bar.rightIcon, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
             }
               .width(48)
               .height(52)

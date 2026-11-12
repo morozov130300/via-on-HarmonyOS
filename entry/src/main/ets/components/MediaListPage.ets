@@ -1,10 +1,9 @@
-import { TOAST_SHORT } from '../common/ToastDuration'
 import { hostOf } from '../common/SearchEngines'
 import { DownloadCoordinator } from '../common/Downloads'
 import { AppSettings } from '../common/Settings'
 import { common, Want } from '@kit.AbilityKit'
 import { SettingsHeader } from './SettingsHeader'
-import { UiaIcon } from './UiaIcon'
+import { ViaIcon } from './ViaIcon'
 
 @ComponentV2
 export struct MediaListPage {
@@ -18,7 +17,7 @@ export struct MediaListPage {
   build() {
     Column() {
       SettingsHeader({
-        headerTitle: $r('app.string.res_sniffer'),
+        headerTitle: '资源嗅探',
         rightText: this.mediaUrls.length > 0 ? `${this.mediaUrls.length} 个` : '',
         onBack: () => {
           this.close()
@@ -37,11 +36,11 @@ export struct MediaListPage {
 
       if (this.mediaUrls.length === 0) {
         Column({ space: 10 }) {
-          UiaIcon({ icon: $r('app.media.uia_ic_download'), iconSize: 40, iconColor: $r('app.color.fg_tertiary') })
-          Text($r('app.string.res_sniffer_unsupported'))
+          ViaIcon({ icon: $r('app.media.uia_ic_download'), iconSize: 40, iconColor: $r('app.color.fg_tertiary') })
+          Text('该网站不支持资源嗅探')
             .fontSize(14)
             .fontColor($r('app.color.fg_secondary'))
-          Text($r('app.string.orig_s0'))
+          Text('注：音乐或视频在播放时更容易被获取。资源嗅探不支持部分网站。')
             .fontSize(12)
             .fontColor($r('app.color.fg_tertiary'))
             .textAlign(TextAlign.Center)
@@ -75,7 +74,7 @@ export struct MediaListPage {
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
 
-                UiaIcon({ icon: $r('app.media.uia_ic_download'), iconSize: 20, iconColor: $r('app.color.icon') })
+                ViaIcon({ icon: $r('app.media.uia_ic_download'), iconSize: 20, iconColor: $r('app.color.icon') })
                   .width(36)
                   .height(36)
                   .onClick(() => {
@@ -132,7 +131,7 @@ export struct MediaListPage {
       type: mime
     }
     context.startAbility(want).catch(() => {
-      this.getUIContext().getPromptAction().showToast({ message: '没有可用的外置播放器', duration: TOAST_SHORT })
+      this.getUIContext().getPromptAction().showToast({ message: '没有可用的外置播放器', duration: 1500 })
     })
   }
 
@@ -147,7 +146,7 @@ export struct MediaListPage {
   }
 
   private download(url: string): void {
-    // 原版媒体下载与链接下载同走确认弹层（mark/uia/download/m.java）
+    // 原版媒体下载与链接下载同走确认弹层（mark/via/download/m.java）
     DownloadCoordinator.getInstance().requestUrlDownload(url, '', '')
   }
 
