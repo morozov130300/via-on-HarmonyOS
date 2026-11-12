@@ -350,13 +350,16 @@ export struct Toolbar {
         .padding({ left: 12, right: 0 })
       }
       if (this.showNavButtons('back')) {
-        this.ToolButton('back', $r('app.media.uia_ic_back'), this.tab.canBack, () => {
+        // 原版 g0.g()/k6.f.a()：图标不做禁用态灰化，可后退与否由点击分支
+        // U8()（可退则退、不可退非主页则关标签）实时判断，故此处恒可点。
+        this.ToolButton('back', $r('app.media.uia_ic_back'), true, () => {
           this.onBack()
         })
       }
       if (this.showNavButtons('forward')) {
         // 原版前进 = drawable/a3.xml：<rotate drawable=@drawable/b2 180°>
-        this.ToolButton('forward', $r('app.media.uia_ic_back'), this.tab.canForward, () => {
+        // 原版 V8()：可前进则前进，否则重开最近关闭的标签（na.U0），同样恒可点。
+        this.ToolButton('forward', $r('app.media.uia_ic_back'), true, () => {
           this.onForward()
         }, 180)
       }

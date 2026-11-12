@@ -4,8 +4,7 @@ import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { AppIcon } from '../components/AppIcon'
 import { UiaIcon } from '../components/UiaIcon'
-import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { buildNavSlide } from './PageTransitions'
+import { RecordBackController } from './RecordTypes'
 import { UiInsets } from '../common/Immersive'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
@@ -53,9 +52,11 @@ export struct HistoryPage {
   private db: BrowserDb = BrowserDb.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
-  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
-  @Local slideOffset: string = '0'
-  private insets: UiInsets = UiInsets.getInstance()
+  // 容器页（RecordContainerPage）注入：返回拦截回调（原版 db.n.W()/l() 语义）
+  //   true = 已消费返回（退出多选/清空搜索），容器不得 pop
+  backController: RecordBackController = new RecordBackController()
+  // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
+  @Event onRequestPop: () => void = () => {}
   @Local items: HistoryRec[] = []
   // 原版历史页搜索框（sz 搜索历史同款交互）
   @Local query: string = ''
@@ -68,25 +69,28 @@ export struct HistoryPage {
   @Local clearMenuOpen: boolean = false
   // favicon 加载失败回退
   @Local faviconFailed: Record<number, boolean> = {}
+  private insets: UiInsets = UiInsets.getInstance()
 
   aboutToAppear(): void {
+    // 原版 db.n.W()（458-469）返回拦截顺序：多选退出 → 清空搜索 → 未消费
+    this.backController.handler = (): boolean => {
+      if (this.selecting) {
+        this.selecting = false
+        this.selectedIds = []
+        return true
+      }
+      if (this.query.length > 0) {
+        this.query = ''
+        return true
+      }
+      return false
+    }
     this.reload()
   }
 
-  private bindAppBar(): void {
-    AppBar.show({
-      title: $r('app.string.history'),
-      onBack: () => {
-        this.navPathStack.pop()
-      }
-    }, this)
-  }
-
   build() {
-    NavDestination() {
-      Column() {
-        AppBarSpacer()
-        TextInput({ placeholder: $r('app.string.search') })
+    Column() {
+      TextInput({ placeholder: $r('app.string.search') })
           .height(33)
           .fontSize(14)
           .placeholderFont({ size: 14 })
@@ -137,31 +141,6 @@ export struct HistoryPage {
       .width('100%')
       .height('100%')
       .backgroundColor($r('app.color.page_bg'))
-    }
-    .hideTitleBar(true)
-    .backgroundColor($r('app.color.page_bg'))
-    .translate({ x: this.slideOffset })
-    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
-    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
-    .customTransition((operation: NavigationOperation, isEnter: boolean):
-      Array<NavDestinationTransition> | undefined => {
-      return buildNavSlide(operation, isEnter, (value: string): void => {
-        this.slideOffset = value
-      })
-    })
-    .onReady((ctx: NavDestinationContext) => {
-      this.navPathStack = ctx.pathStack
-      this.bindAppBar()
-    })
-    .onWillAppear(() => {
-      this.bindAppBar()
-    })
-    .onShown(() => {
-      this.bindAppBar()
-    })
-    .onWillDisappear(() => {
-      AppBar.maybeHide(this)
-    })
   }
 
   @Builder
@@ -209,7 +188,7 @@ export struct HistoryPage {
         return
       }
       this.tabStore.navigate(item.url)
-      this.navPathStack.pop()
+      this.onRequestPop()
     })
     .bindPopup(this.menuRowId === item.id, {
       builder: (): void => {
@@ -276,7 +255,7 @@ export struct HistoryPage {
       })
       this.MenuItem('新标签打开', (): void => {
         this.tabStore.newTabAt(item.url, false)
-        this.navPathStack.pop()
+        this.onRequestPop()
       })
       this.MenuItem('删除', (): void => {
         // 原版 u3：菜单单删无确认

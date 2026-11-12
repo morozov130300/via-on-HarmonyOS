@@ -3,7 +3,6 @@ import { BookmarkRec, BookmarkFolderRec, HomeFavRec } from '../common/Types'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
 import { dialogTransition, dimTransition } from '../common/Transitions'
-import { buildNavSlide } from './PageTransitions'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
 import { BackupManager } from '../common/Backup'
@@ -53,13 +52,9 @@ class FolderStackEntry {
 export struct BookmarkPage {
   private db: BrowserDb = BrowserDb.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
-  private insets: UiInsets = UiInsets.getInstance()
-  private navPathStack: NavPathStack = new NavPathStack()
   // 容器页（RecordContainerPage）注入：返回拦截回调（原版 bb.i.c W()/l() 语义）
   //   true = 已消费返回（退出多选/回上级文件夹/清空搜索），容器不得 pop
-  backController: RecordBackController | null = null
-  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
-  @Local slideOffset: string = '0'
+  backController: RecordBackController = new RecordBackController()
   @Local items: BookmarkRec[] = []
   @Local folders: BookmarkFolderRec[] = []
   @Local allBookmarks: BookmarkRec[] = []
@@ -91,7 +86,7 @@ export struct BookmarkPage {
 
   aboutToAppear(): void {
     // 原版 cb.e0.W()（880-897）返回拦截顺序：多选退出 → 清空搜索 → 回上级文件夹 → 未消费
-    this.backController?.handler = (): boolean => {
+    this.backController.handler = (): boolean => {
       if (this.selecting) {
         this.exitSelection()
         return true
@@ -116,7 +111,6 @@ export struct BookmarkPage {
   build() {
     Stack() {
         Column() {
-          this.HeaderBar()
           this.SearchField()
           List({ space: 0 }) {
             ForEach(this.visibleFolders(), (folder: BookmarkFolderRec) => {
@@ -203,23 +197,7 @@ export struct BookmarkPage {
       }
       .width('100%')
       .height('100%')
-    }
-    .hideTitleBar(true)
-    .padding({ top: this.insets.top })
-    .backgroundColor($r('app.color.page_bg'))
-    .translate({ x: this.slideOffset })
-    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
-    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
-    .customTransition((operation: NavigationOperation, isEnter: boolean):
-      Array<NavDestinationTransition> | undefined => {
-      return buildNavSlide(operation, isEnter, (value: string): void => {
-        this.slideOffset = value
-      })
-    })
-    .onReady((ctx: NavDestinationContext) => {
-      this.navPathStack = ctx.pathStack
-      this.applyFolderParam(ctx)
-    })
+      .backgroundColor($r('app.color.page_bg'))
   }
 
   // ===== 行渲染 =====
@@ -328,7 +306,7 @@ export struct BookmarkPage {
       // 原版点击书签记录热度（ea/b click_times）
       this.db.clickBookmark(item.id)
       this.tabStore.navigate(item.url)
-      this.navPathStack.pop()
+      this.onRequestPop()
     })
     .bindPopup(this.menuRowKey === `b${item.id}`, {
       builder: (): void => {
@@ -604,7 +582,7 @@ export struct BookmarkPage {
       })
       this.RowMenuItem('新标签打开', (): void => {
         this.tabStore.newTabAt(item.url, false)
-        this.navPathStack.pop()
+        this.onRequestPop()
       })
       this.RowMenuItem('编辑', (): void => {
         this.editing = item
@@ -670,7 +648,7 @@ export struct BookmarkPage {
       for (let i = 0; i < urls.length; i++) {
         this.tabStore.newTabAt(urls[i], i > 0)
       }
-      this.navPathStack.pop()
+      this.onRequestPop()
     }).catch((error: BusinessError) => {
       console.error(`list folder bookmarks failed: ${error.message}`)
     })
@@ -920,7 +898,7 @@ export struct BookmarkPage {
       this.tabStore.newTabAt(urls[i], i > 0)
     }
     this.exitSelection()
-    this.navPathStack.pop()
+    this.onRequestPop()
   }
 
   // 目标目录是否位于 folderId 内部（含自身）——移入自身/子孙会成环，跳过
@@ -1284,80 +1262,16 @@ export struct BookmarkPage {
     })
   }
 
-  // 深链参数（Index.openBookmarksAtFolder）：folder=数字文件夹 id、folderName=名称。
-  // 对应原版 k6.u 8657（v://bookmarks/?folder=&folderName=）与 8567（folder://X）
-  private applyFolderParam(ctx: NavDestinationContext): void {
-    try {
-      const rawParams: string | undefined = JSON.stringify(ctx.pathStack.getParamByName('bookmarks'))
-      const params: string[] = rawParams !== undefined && rawParams !== 'undefined' && rawParams !== '[]'
-        ? JSON.parse(rawParams) as string[] : []
-      if (params.length === 0) {
-        return
-      }
-      const param: string = params[params.length - 1]
-      if (typeof param !== 'string' || param === '') {
-        return
-      }
-      const obj = JSON.parse(param) as Record<string, string>
-      const folderRaw = obj['folder'] ?? ''
-      if (folderRaw === '' || Number.isNaN(Number(folderRaw))) {
-        return
-      }
-      const folderId = Number(folderRaw)
-      if (folderId === this.currentFolderId) {
-        return
-      }
-      this.currentFolderId = folderId
-      this.folderStack = [new FolderStackEntry(folderId, obj['folderName'] ?? '')]
-      this.reload()
-    } catch (error) {
-      console.error('read bookmark folder param failed')
+  // 深链参数（容器页传入）：folder=数字文件夹 id、folderName=名称。
+  // 对应原版 k6.u 8657（v://bookmarks/?folder=&folderName=）与 8567（folder://X）；
+  // 原版 aa(str) 落到 cb.e0.T3(str) 预置定位（e0.java:404），容器页经此方法透传。
+  applyFolderParam(folderId: number, folderName: string): void {
+    if (Number.isNaN(folderId) || folderId === this.currentFolderId) {
+      return
     }
-  }
-
-  @Builder
-  HeaderBar() {
-    Row() {
-      Stack({ alignContent: Alignment.Center }) {
-        UiaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.fg') })
-      }
-        .width(44)
-        .height(43)
-        .onClick(() => {
-          this.navigateBack()
-        })
-
-      Row() {
-        Text(this.currentFolderId === 0 ? $r('app.string.bookmarks') : this.currentFolderTitle())
-          .fontSize(15)
-          .fontColor($r('app.color.fg'))
-          .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .onClick(() => {
-          })
-        if (this.currentFolderId === 0) {
-          Text($r('app.string.history'))
-            .fontSize(15)
-            .fontColor($r('app.color.fg_secondary'))
-            .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.navPathStack.replacePathByName('history', '', true)
-            })
-          Text($r('app.string.offline_page'))
-            .fontSize(15)
-            .fontColor($r('app.color.fg_secondary'))
-            .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-            .onClick(() => {
-              this.navPathStack.pushPathByName('offlinePage', '', true)
-            })
-        }
-      }
-      .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
-    }
-    .width('100%')
-    .height(43)
+    this.currentFolderId = folderId
+    this.folderStack = [new FolderStackEntry(folderId, folderName)]
+    this.reload()
   }
 
   @Builder
@@ -1417,8 +1331,12 @@ export struct BookmarkPage {
       this.reload()
       return
     }
-    this.navPathStack.pop()
+    this.backController.handler = null
+    this.onRequestPop()
   }
+
+  // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
+  @Event onRequestPop: () => void = () => {}
 
   private reload(): void {
     this.db.listBookmarks(this.currentFolderId).then((items: BookmarkRec[]) => {

@@ -143,6 +143,9 @@ export struct TabWeb {
   // 原版 k6.java:8592-8596：file:// 且 .pdf → za.g 查看器（本端为内嵌全屏 PdfViewerView）
   @Local pdfPreviewPath: string = ''
   @Local pdfPreviewName: string = ''
+  // 首个页面加载完成时清一次历史：抵消 ArkWeb 初始 about:blank 入栈导致的
+  // 「新标签第一个页面就显示可后退」。原版 WebView 构造后空白不入历史栈。
+  private clearHistoryOnce: boolean = false
   // —— 原版 GestureTouchEvent 横滑前进/后退（mark/via/common/widget/GestureTouchEvent.java 对齐）——
   // ★ 载体：原版 c8/k6.java:4104 把状态机绑在「独立指示视图」f2584o0.f2940p（c8/y7.java:136
   //   的 ImageView，72dp 宽 × 60dp 高、四边 20dp 内边距、圆角白底 drawable b_、
@@ -406,6 +409,11 @@ export struct TabWeb {
               } else {
                 this.tab.controller.loadUrl(this.tab.initialUrl)
               }
+              // Web 组件的初始 src 是 about:blank，首次 loadUrl 会让它进入历史栈，
+              // 使新标签第一个页面就「可后退」到空白页。原版 WebView 构造后为空白且不入栈，
+              // 首个页面 canGoBack() 为 false（后退到底走 U8 的关标签分支）。
+              // 故首个页面落定后清一次历史，与原版首屏一致。
+              this.clearHistoryOnce = true
             } catch (error) {
               console.error('restore tab loadUrl failed')
             }
@@ -422,6 +430,12 @@ export struct TabWeb {
           this.applyAdvancedSettings()
           this.applyUa(event.url)
           this.updateNavState()
+          // 原版 k6.i0（k6.java:7300-7306，由 e8/n0.java:136 在 onPageStarted 触发）：
+          // 目标页不是主页/内部页（u9.d.k）时 na.s0() 作废「最近关闭」记录，
+          // 这样前进到底才不会误重开一个早已被新导航顶掉的旧标签。
+          if (!this.tab.isHomePage()) {
+            this.tabStore.invalidateLastClosed()
+          }
           // 原版 k6.b0 → d9() → pb()：确保模式2 隐藏态下 FAB 在场
           this.onPageSettle()
         })
@@ -429,6 +443,14 @@ export struct TabWeb {
           this.tab.url = event.url
           this.tab.loading = false
           this.tab.progress = 100
+          if (this.clearHistoryOnce) {
+            this.clearHistoryOnce = false
+            try {
+              this.tab.controller.clearHistory()
+            } catch (error) {
+              console.error('clear initial history failed')
+            }
+          }
           this.updateNavState()
           this.saveHistory(event.url)
           this.injectPrivacy(event.url)
@@ -442,6 +464,13 @@ export struct TabWeb {
         })
         .onProgressChange((event: OnProgressChangeEvent) => {
           this.tab.progress = event.newProgress
+        })
+        // 同文档导航（history.pushState / replaceState / 锚点跳转）不触发 onPageBegin/onPageEnd，
+        // 但会新增/切换历史项。不回填 canBack/canForward 的话，单页应用里按钮状态永远停在旧值。
+        // 点击路径本身已改为实时查 accessBackward()/accessForward()（原版 r4/d.j()/n() 语义），
+        // 此回调只负责让「状态变量」与其保持同步（横滑方向闸、UI 依赖方使用）。
+        .onNavigationEntryCommitted((_details: LoadCommittedDetails) => {
+          this.updateNavState()
         })
         .onTitleReceive((event: OnTitleReceiveEvent) => {
           this.tab.title = event.title
@@ -878,14 +907,11 @@ export struct TabWeb {
           return
         }
         const tab = this.tabStore.current()
-        try {
-          if (event.offsetX > 0 && tab.canBack) {
-            tab.controller.backward()
-          } else if (event.offsetX < 0 && tab.canForward) {
-            tab.controller.forward()
-          }
-        } catch (error) {
-          console.error('swipe nav failed')
+        // 方向闸实时查询（V7/W7 语义），导航走 U8/V8 等价实现
+        if (event.offsetX > 0 && this.tabStore.canNavigateBack(tab)) {
+          this.tabStore.goBack(tab)
+        } else if (event.offsetX < 0 && this.tabStore.canNavigateForward(tab)) {
+          this.tabStore.goForward(tab)
         }
       }))
   }
@@ -1290,7 +1316,11 @@ export struct TabWeb {
       if (Math.abs(event.velocityX) < px2vp(500)) {
         return
       }
-      if ((dx > 0 && !this.tab.canBack) || (dx < 0 && !this.tab.canForward)) {
+      // 原版 k6.a.f.c()（k6.java:375-382）：方向可用性实时查询 V7()/W7()。
+      //   V7 = 可后退 || 当前非主页（退到底会关标签，仍算有动作）
+      //   W7 = 可前进 || 有最近关闭的标签可重开（na.W0）
+      if ((dx > 0 && !this.tabStore.canNavigateBack(this.tab)) ||
+        (dx < 0 && !this.tabStore.canNavigateForward(this.tab))) {
         this.swipeNavLocked = true
         return
       }
@@ -1394,15 +1424,11 @@ export struct TabWeb {
       const goBack = this.swipeIndicatorShift > 0
       // 原版在同一处先发起导航（h()），再让 alpha 淡出；旧实现把导航塞进 300ms 的
       // setTimeout，导致淡出结束后才换页，与原版时序不符。
-      try {
-        const tab = this.tabStore.current()
-        if (goBack) {
-          tab.controller.backward()
-        } else {
-          tab.controller.forward()
-        }
-      } catch (error) {
-        console.error('swipe navigate failed')
+      // 前进到底时 V8 会重开最近关闭的标签（na.U0），故统一走 TabStore 的 U8/V8 等价实现。
+      if (goBack) {
+        this.tabStore.goBack(this.tab)
+      } else {
+        this.tabStore.goForward(this.tab)
       }
       // fAbs = 1.0f → duration = 300ms
       // 复位时机：原版指示层是常驻 View，下次 touchstart 的 j() 才把 alpha 复位 1。
