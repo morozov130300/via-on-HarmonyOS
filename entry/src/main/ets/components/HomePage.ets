@@ -641,20 +641,22 @@ export struct HomePage {
   }
 
   private pillBorder(): BorderOptions {
-    // 原版 i6/o.java:304-316,401,503,582 四条三元全部位于 jadx 标注
-    // "Code decompiled incorrectly" 的 b() 方法内，字面 !config.p() 的取反系反编译错误产物，不可照抄。
-    // config.p() = searchBarLineEnabled = usingLine（i6/m.toString / i9/e bit24 / r8/d.java:138）。
-    // 依据 r8/d.java:139,142（p()⇒alpha=0 透明底、radius=0）与 o.java:301（q() 圆角仅在四边框可见）：
-    // 线条(p()=true) → 透明底 + 无圆角 + 仅 border-bottom 一条线；
-    // 矩形(p()=false) → 有底色 + 圆角 + border 四边。
+    // 原版 i6/o.java:304-316,400-409,502-509,581-590 四处 CSS 拼接一致：
+    //   sb.append(!config.p() ? "border-bottom" : "border").append(": <s>px solid <str20>; border-radius: <q>px; ...")
+    // config.p() = searchBarLineEnabled = usingLine（i6/m.java:324 p()/toString、i9/e.java:74 l()、
+    // r8/d.java:138 mVar.T(eVarV2.l())）。jadx 的 "Code decompiled incorrectly" 只针对 b() 方法里
+    // str 变量的控制流合并（o.java:100-103 的 removed duplicated block），不影响 append 参数里的内联三元；
+    // 且该三元在 4 个独立位置反编译结果完全一致，不可能是系统性取反错误。忠实字面：
+    //   线条(p()=true) → "border" 四边描边；r8/d.java:139,142 同时 alpha=0(透明底)、radius=0(方角) → 方角线框
+    //   矩形(p()=false) → "border-bottom" 仅底边；带圆角填充块（alpha>0、radius=corner*(s+23)）
     if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
       return {
-        width: { bottom: this.settings.homePillStrokeWidth },
+        width: this.settings.homePillStrokeWidth,
         color: this.strokeColor()
       }
     }
     return {
-      width: this.settings.homePillStrokeWidth,
+      width: { bottom: this.settings.homePillStrokeWidth },
       color: this.strokeColor()
     }
   }

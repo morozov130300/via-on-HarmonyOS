@@ -43,9 +43,9 @@ const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
 ])
 
 // 原版 i6/r.java 用户脚本桥 1:1：runAt 1=文档开始/2=DOMContentLoaded/4=load，
-// 经 window.via.postMessage({action:101,runAt,from}) 回传主线程分发
+// 经 window.uia.postMessage({action:101,runAt,from}) 回传主线程分发（豁免项5）
 const USER_SCRIPT_BRIDGE_JS: string = '(function(){' +
-  'var e=function(r){try{window.via.postMessage(JSON.stringify({action:101,runAt:r,from:location.href}))}catch(x){}};' +
+  'var e=function(r){try{window.uia.postMessage(JSON.stringify({action:101,runAt:r,from:location.href}))}catch(x){}};' +
   'new MutationObserver(function(){e(1);this.disconnect()}).observe(document.documentElement,{childList:true,subtree:true});' +
   'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){e(2)})}else{e(2)}' +
   'if(document.readyState==="complete"){e(4)}else{window.addEventListener("load",function(){e(4)})}' +
@@ -62,9 +62,9 @@ interface ScriptRunMsg {
 
 // 划词菜单自定义项 id（过滤系统 TRANSLATE 项后追加）：
 // 搜索=划词搜索（k6.C → Ua(str,false,true)）、查找=页内查找（k6.C → ob）、翻译=划词翻译面板
-const EDIT_MENU_ID_VIA_SEARCH: string = 'via_search'
-const EDIT_MENU_ID_VIA_FIND: string = 'via_find'
-const EDIT_MENU_ID_VIA_TRANSLATE: string = 'via_translate'
+const EDIT_MENU_ID_UIA_SEARCH: string = 'uia_search'
+const EDIT_MENU_ID_UIA_FIND: string = 'uia_find'
+const EDIT_MENU_ID_UIA_TRANSLATE: string = 'uia_translate'
 
 // 原版 k6.Qa（k6.java:5651）以图搜图引擎表：12 引擎名称与 URL 模板 1:1（k6.k6 分发）
 class ImageSearchEngine {
@@ -108,7 +108,7 @@ const PICTURE_MODE_JS: string =
   '0==d?alert("无图片"):(a.push(\'<script>var viewer = new Viewer(document.getElementById("images"), {toolbar: {zoomIn: true, zoomOut: true, oneToOne: true, reset: true, prev: true, next: true, rotateLeft: true\'),a.push("},});\\x3c/script>"),a.push("</body></html>"),b=window.open(""),' +
   'b.document.write(a.join("")),b.focus())})();'
 
-// window.via 桥对象（k6:1487 postMessage 通道）
+// window.uia 桥对象（k6:1487 postMessage 通道；豁免项5：桥名统一 uia）
 class ViaBridge {
   handler: (msg: string) => void = (): void => {
   }
@@ -259,15 +259,15 @@ export struct TabWeb {
     }
     result.push({
       content: $r('app.string.search'),
-      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH)
+      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_SEARCH)
     })
     result.push({
       content: '查找',
-      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND)
+      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_FIND)
     })
     result.push({
       content: $r('app.string.translate'),
-      id: TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE)
+      id: TextMenuItemId.of(EDIT_MENU_ID_UIA_TRANSLATE)
     })
     return result
   }
@@ -304,13 +304,13 @@ export struct TabWeb {
   }
 
   private onEditMenuItemClick(menuItem: TextMenuItem, range: TextRange): boolean {
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_SEARCH))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_SEARCH))) {
       this.fetchSelection((text: string): void => {
         this.searchSelection(text)
       })
       return true
     }
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_FIND))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_FIND))) {
       // 原版 k6.C id=f4824g → ob(str)：页内查找（预填划词）。
       // ArkTS FindBar 无法从本组件拉起，直接以同一 searchAllAsync 管线执行查找
       this.fetchSelection((text: string): void => {
@@ -322,7 +322,7 @@ export struct TabWeb {
       })
       return true
     }
-    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_VIA_TRANSLATE))) {
+    if (menuItem.id.equals(TextMenuItemId.of(EDIT_MENU_ID_UIA_TRANSLATE))) {
       this.fetchSelection((text: string): void => {
         TranslateState.getInstance().open(text)
       })
@@ -351,7 +351,7 @@ export struct TabWeb {
         // 原版 k6:1487 registerJavaScriptProxy：window.via 桥
         .javaScriptProxy({
           object: this.viaBridge,
-          name: 'via',
+          name: 'uia',
           methodList: ['postMessage'],
           controller: this.tab.controller
         })
@@ -397,7 +397,7 @@ export struct TabWeb {
           // 原版 k6:1487 registerJavaScriptProxy 之外的第二个桥：window.via_gm（o5/a.call）
           // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，via_gm 走 controller 注册
           try {
-            this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'via_gm', ['call'])
+            this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'uia_gm', ['call'])
             this.tab.controller.refresh()
           } catch (error) {
             console.error('register via_gm proxy failed')
@@ -480,7 +480,7 @@ export struct TabWeb {
         // 原版 C9「标记广告」回传通道：注入的选择器经 console 回传广告域名，
         // 命中后加入自定义拦截规则并刷新页面
         .onConsole((event: OnConsoleEvent) => {
-          const prefix = 'via_mark_ad:'
+          const prefix = 'uia_mark_ad:'
           const msg: string = event.message.getMessage()
           if (msg.indexOf(prefix) === 0) {
             const domain = msg.substring(prefix.length).trim().toLowerCase()

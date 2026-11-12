@@ -494,7 +494,9 @@ export struct SettingsCustomPage {
         .onClick(() => {
           this.onParamTap(param)
         })
-      }, (param: CustomParam) => `${param.id}_${this.paramValue(param)}`)
+        // ForEach key 只取稳定 id：滑杆拖动时 paramValue 每帧变化，若拼进 key 会被判定整项替换、
+        // 销毁重建 item（含 Image 图标）→ 图标闪烁。V2 下 Text(paramValue) 读 @Trace 字段自动局部刷新。
+      }, (param: CustomParam) => param.id)
     }
     .width('100%')
     .padding({ left: 6, right: 6 })

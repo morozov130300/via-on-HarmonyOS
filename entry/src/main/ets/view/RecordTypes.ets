@@ -11,4 +11,13 @@ export class RecordBackController {
   handle(): boolean {
     return this.handler === null ? false : this.handler()
   }
+
+  // 子页向路由栈压入新页（closedTabs / pdfViewer 等），经容器页的 NavPathStack 执行
+  navPathStack: NavPathStack | null = null
+
+  pushPage(name: string, param: string): void {
+    if (this.navPathStack !== null) {
+      this.navPathStack.pushPathByName(name, param, true)
+    }
+  }
 }

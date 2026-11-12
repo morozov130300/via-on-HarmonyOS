@@ -28,7 +28,7 @@ export const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translat
   + `window.__via_translator__.showBanner(true);};`
   + `var s=document.createElement("script");s.src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";document.getElementsByTagName("head")[0].appendChild(s);`
   + `document.addEventListener("securitypolicyviolation",function onCsp(e){document.removeEventListener("securitypolicyviolation",onCsp);`
-  + `var id="via-translate-bridge";var t=document.getElementById(id);`
+  + `var id="uia-translate-bridge";var t=document.getElementById(id);`
   + `if(t){if(typeof translate!=="undefined"){if("zh-CN"!==translate.to){translate.changeLanguage("zh-CN");}}else{var n=document.createElement("script");n.id=id;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t);}}`
   + `else{t=document.createElement("script");t.id=id;t.src="https://fastly.jsdelivr.net/gh/xnx3/translate@v3.14.0/translate.js/translate.min.js";`
   + `t.onload=function(){translate.selectLanguageTag.show=false;translate.service.use("client.edge");translate.changeLanguage("zh-CN");};document.head.appendChild(t);}});})();`
@@ -75,8 +75,8 @@ const REPORT_TOKEN: string = 'Bearer tk_o4s4ghe1tqu60mj0ljy5im762ebrr'
 // 原版 C9「标记广告」：注入元素选择器，点击广告元素后经 console 通道
 // （TabWeb.onConsole）回传资源域名，加入自定义拦截规则并刷新。
 // 图片长按菜单「标记广告」项（k6.Q3 case23 → C9()）复用同一注入脚本
-export const MARK_AD_INJECT_JS: string = `(function(){if(window.__via_mark_ad__){return;}`
-  + `window.__via_mark_ad__=true;var prev=null;`
+export const MARK_AD_INJECT_JS: string = `(function(){if(window.__uia_mark_ad__){return;}`
+  + `window.__uia_mark_ad__=true;var prev=null;`
   + `function host(u){try{var h=new URL(u,location.href).hostname;return h&&h!==location.hostname?h:'';}catch(e){return '';}}`
   + `function findUrl(el){var c=[el.getAttribute('src'),el.getAttribute('data-src'),el.getAttribute('href')];`
   + `var bg=getComputedStyle(el).backgroundImage;if(bg&&bg.indexOf('url(')>=0){c.push(bg.replace(/^.*url\\(["']?/,'').replace(/["']?\\).*$/,''));}`
@@ -84,7 +84,7 @@ export const MARK_AD_INJECT_JS: string = `(function(){if(window.__via_mark_ad__)
   + `for(var i=0;i<c.length;i++){if(c[i]){var h=host(c[i]);if(h){return h;}}}return '';}`
   + `document.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();`
   + `if(prev){prev.style.outline='';}prev=e.target;prev.style.outline='2px solid #f00';`
-  + `var h=findUrl(prev);if(h){console.log('via_mark_ad:'+h);}},true);})();`
+  + `var h=findUrl(prev);if(h){console.log('uia_mark_ad:'+h);}},true);})();`
 
 @ComponentV2
 export struct MenuSheet {
@@ -162,15 +162,15 @@ export struct MenuSheet {
   }
 
   // 原版 k6.java:8558：`int i10 = this.W0 == 1 ? 48 : 80;`（布局1=工具栏在上 → gravity 48 贴顶，
-  // 其余 80 贴底）——菜单容器按布局切 Top/Bottom，由 Index 经 AppStorage 'via_menu_layout' 提供。
+  // 其余 80 贴底）——菜单容器按布局切 Top/Bottom，由 Index 经 AppStorage 'uia_menu_layout' 提供。
   private menuLayout(): number {
-    return AppStorage.get<number>('via_menu_layout') ?? 0
+    return AppStorage.get<number>('uia_menu_layout') ?? 0
   }
 
   // 原版 N8()（k6.java:5072-5078）：菜单宽 = min(容器宽,容器高)；大屏非布局0 时
-  //   min(短边-96dp, 384dp)。由 Index 经 AppStorage 'via_menu_size_vp' 提供（含 384dp 宽限）。
+  //   min(短边-96dp, 384dp)。由 Index 经 AppStorage 'uia_menu_size_vp' 提供（含 384dp 宽限）。
   private menuWidthVp(): number {
-    const size: number = AppStorage.get<number>('via_menu_size_vp') ?? 0
+    const size: number = AppStorage.get<number>('uia_menu_size_vp') ?? 0
     return size > 0 ? size - 24 : 0  // 减去容器左右 margin 12+12
   }
 
@@ -1703,7 +1703,7 @@ export struct MenuSheet {
       return
     }
     const lang = this.translateTargetLang()
-    const js = '(function(){var e="via-translate-bridge",t=document.getElementById(e);' +
+    const js = '(function(){var e="uia-translate-bridge",t=document.getElementById(e);' +
       `if(t)if("undefined"!=typeof translate)"${lang}"!=translate.to&&translate.changeLanguage("${lang}");` +
       'else{var n=document.createElement("script");n.id=e;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t)}' +
       'else{(t=document.createElement("script")).id=e;' +
@@ -1800,7 +1800,7 @@ export struct MenuSheet {
     try {
       const adapter = tab.controller.createWebPrintDocumentAdapter(`${hostOf(tab.url)}.pdf`)
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-      print.print('via_print_job', adapter, null, context)
+      print.print('uia_print_job', adapter, null, context)
       this.onClose()
     } catch (error) {
       console.error('launch print failed')

@@ -55,9 +55,9 @@ const EXTERNAL_LINK_EVENT_ID = 10002
 const OPEN_DOWNLOADS_EVENT_ID = 10003
 // 原版 k6.i9() 双击返回显式退出 → m0.r0()（z8/h0.c 退出清除）：退出清除仅在显式退出时执行
 const EXIT_CLEAR_EVENT_ID = 10005
-// 原版 i6/w.e()：抽取正文 innerText（阅读模式中取 via-reader-body）
+// 原版 i6/w.e()：抽取正文 innerText（阅读模式覆盖层；豁免项5：类名统一 uia-reader-body）
 const READ_ALOUD_EXTRACT_JS: string =
-  '(function(){try{var e=document.getElementsByClassName("via-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
+  '(function(){try{var e=document.getElementsByClassName("uia-reader-body"),n=e.length>0?e[0].innerText:document.body.innerText;return JSON.stringify(n.split("\\n"))}catch(e){}})()'
 // 保存网页降级序列化：canvas 转 img data URL（跨域污染 catch 跳过）+ outerHTML
 const SAVE_PAGE_SERIALIZE_JS: string =
   '(function(){try{var cs=document.querySelectorAll("canvas");' +
@@ -1316,9 +1316,9 @@ struct Index {
 
   // 原版 k6.h 粘贴项：剪贴板文本经 AppStorage 传递后带入搜索输入框
   private addressTapInitialText(): string {
-    const paste = AppStorage.get<string>('via_paste_url') ?? ''
+    const paste = AppStorage.get<string>('uia_paste_url') ?? ''
     if (paste !== '') {
-      AppStorage.setOrCreate('via_paste_url', '')
+      AppStorage.setOrCreate('uia_paste_url', '')
       return paste
     }
     const tab = this.tabStore.current()
@@ -1385,13 +1385,13 @@ struct Index {
   }
 
   // 打开菜单前把尺寸参数发布给 MenuSheet（MenuSheet 不在本域，取用端由主控接线）：
-  //   AppStorage 'via_menu_size_vp'     : number  菜单可用边长（原版 N8()）
-  //   AppStorage 'via_menu_side_gap_vp' : number  贴边距（原版 i10）
-  //   AppStorage 'via_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
+  //   AppStorage 'uia_menu_size_vp'     : number  菜单可用边长（原版 N8()）
+  //   AppStorage 'uia_menu_side_gap_vp' : number  贴边距（原版 i10）
+  //   AppStorage 'uia_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
   private publishMenuMetrics(): void {
-    AppStorage.setOrCreate('via_menu_size_vp', this.menuAvailableSizeVp())
-    AppStorage.setOrCreate('via_menu_side_gap_vp', this.menuSideGapVp())
-    AppStorage.setOrCreate('via_menu_layout', this.effectiveLayout())
+    AppStorage.setOrCreate('uia_menu_size_vp', this.menuAvailableSizeVp())
+    AppStorage.setOrCreate('uia_menu_side_gap_vp', this.menuSideGapVp())
+    AppStorage.setOrCreate('uia_menu_layout', this.effectiveLayout())
   }
 
   private bottomBg(): ResourceColor {

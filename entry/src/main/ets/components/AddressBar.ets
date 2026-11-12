@@ -299,7 +299,7 @@ export struct AddressBar {
       pasteboard.getSystemPasteboard().getData().then((data: pasteboard.PasteData) => {
         const text = data.getPrimaryText().trim()
         if (text !== '') {
-          AppStorage.setOrCreate('via_paste_url', text)
+          AppStorage.setOrCreate('uia_paste_url', text)
           this.onAddressTap()
         }
       }).catch(() => {})

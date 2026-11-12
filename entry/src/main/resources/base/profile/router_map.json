@@ -2,12 +2,12 @@
   "routerMap": [
     {
       "name": "bookmarks",
-      "pageSourceFile": "src/main/ets/view/BookmarkPage.ets",
+      "pageSourceFile": "src/main/ets/view/RecordContainerPage.ets",
       "buildFunction": "BookmarkPageBuilder"
     },
     {
       "name": "history",
-      "pageSourceFile": "src/main/ets/view/HistoryPage.ets",
+      "pageSourceFile": "src/main/ets/view/RecordContainerPage.ets",
       "buildFunction": "HistoryPageBuilder"
     },
     {
@@ -87,7 +87,7 @@
     },
     {
       "name": "offlinePage",
-      "pageSourceFile": "src/main/ets/view/OfflinePage.ets",
+      "pageSourceFile": "src/main/ets/view/RecordContainerPage.ets",
       "buildFunction": "OfflinePageBuilder"
     },
     {

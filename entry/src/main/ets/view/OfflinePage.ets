@@ -54,10 +54,9 @@ function formatDateStamp(date: Date): string {
 @ComponentV2
 export struct OfflinePage {
   private tabStore: TabStore = TabStore.getInstance()
-  private navPathStack: NavPathStack = new NavPathStack()
   // 容器页（RecordContainerPage）注入：返回拦截回调（原版 eb.s.W()/l() 语义）
   //   true = 已消费返回（退出多选/清空搜索），容器不得 pop
-  backController: RecordBackController = new RecordBackController()
+  @Param backController: RecordBackController = new RecordBackController()
   // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
   @Event onRequestPop: () => void = () => {}
   @Local items: OfflineEntry[] = []
@@ -214,7 +213,7 @@ export struct OfflinePage {
   private openEntry(entry: OfflineEntry, mode: number): void {
     // 原版 eb.C3：pdf 一律走内置查看器（za.g 等价 = pdfViewer 路由），不分标签模式
     if (entry.isPdf) {
-      this.navPathStack.pushPathByName('pdfViewer', entry.path)
+      this.backController.pushPage('pdfViewer', entry.path)
       return
     }
     const url = `file://${entry.path}`
@@ -734,7 +733,3 @@ export struct OfflinePage {
   }
 }
 
-@Builder
-export function OfflinePageBuilder() {
-  OfflinePage()
-}
