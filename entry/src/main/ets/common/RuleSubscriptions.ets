@@ -3,6 +3,7 @@ import { fileIo } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { RuleSubEntry } from './Types'
 import { AdBlocker } from './AdBlock'
+import { mirrorUrlOf } from './ScriptUpdater'
 
 export interface ParsedRules {
   blocks: string[]
@@ -66,15 +67,10 @@ export class RuleSubManager {
     }
   }
 
-  // 原版 b5/c.java:325-346 i()：github 源下载失败回退 jsdelivr 镜像
+  // 原版 b5/c.java:325-346 i()：github 源下载失败回退 jsdelivr 镜像。
+  // 与 ScriptUpdater.mirrorUrlOf（s5/b.f）同语义：gh 镜像必须带 '@' 分隔 branch/path。
   private mirrorUrl(url: string): string | null {
-    if (url.indexOf('raw.githubusercontent.com') >= 0) {
-      return url.replace('raw.githubusercontent.com', 'fastly.jsdelivr.net/gh')
-    }
-    if (url.indexOf('github.com') >= 0 && url.indexOf('/blob/') >= 0) {
-      return url.replace('github.com', 'fastly.jsdelivr.net/gh').replace('/blob/', '@')
-    }
-    return null
+    return mirrorUrlOf(url)
   }
 
   async updateSubscription(context: Context, sub: RuleSubEntry): Promise<number> {

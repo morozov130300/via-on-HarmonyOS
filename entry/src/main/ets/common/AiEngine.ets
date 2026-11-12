@@ -380,12 +380,13 @@ export class AiEngine {
         finishWith(AiChatResult.failed(`HTTP ${httpCode}`, httpCode, httpBody))
         return
       }
-      // 流正常结束但未收到 [DONE]（p9/m.a.d()：未完成 → 请求未完成）
+      // 流正常结束但未收到 [DONE]（p9/m.a.d()：未完成 → g.c status 100「请求未完成」，
+      // 仅 :65-70 收到字面 [DONE] 才算完成——断流时半截回答不当完整回答落库）
       if (buffer.startsWith('data:')) {
         processLine(buffer)
       }
       if (!finished) {
-        finishWith(AiChatResult.done(content, reasoning, role, finishReason))
+        finishWith(AiChatResult.failed('请求未完成（流中断，未收到结束标记）'))
       }
     })
 

@@ -155,8 +155,8 @@ async function httpGetText(url: string): Promise<string | null> {
   }
 }
 
-// s5/b.f(String)：CDN 镜像回退（fastly.jsdelivr.net / gh / npm）1:1
-function mirrorUrlOf(url: string): string | null {
+// s5/b.f(String)：CDN 镜像回退（fastly.jsdelivr.net / gh / npm）1:1（导出供 RuleSubscriptions 复用）
+export function mirrorUrlOf(url: string): string | null {
   if (url.startsWith('https://fastly.jsdelivr.net/')) {
     return null
   }
