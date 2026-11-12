@@ -647,22 +647,19 @@ export struct HomePage {
   }
 
   private pillBorder(): BorderOptions {
-    // 原版 i6/o.java:304-316,400-409,502-509,581-590 四处 CSS 拼接一致：
-    //   sb.append(!config.p() ? "border-bottom" : "border").append(": <s>px solid <str20>; border-radius: <q>px; ...")
-    // config.p() = searchBarLineEnabled = usingLine（i6/m.java:324 p()/toString、i9/e.java:74 l()、
-    // r8/d.java:138 mVar.T(eVarV2.l())）。jadx 的 "Code decompiled incorrectly" 只针对 b() 方法里
-    // str 变量的控制流合并（o.java:100-103 的 removed duplicated block），不影响 append 参数里的内联三元；
-    // 且该三元在 4 个独立位置反编译结果完全一致，不可能是系统性取反错误。忠实字面：
-    //   线条(p()=true) → "border" 四边描边；r8/d.java:139,142 同时 alpha=0(透明底)、radius=0(方角) → 方角线框
-    //   矩形(p()=false) → "border-bottom" 仅底边；带圆角填充块（alpha>0、radius=corner*(s+23)）
+    // 原版语义（用户真机对照原版确认）：矩形=四边线框、线条=仅底边。
+    // jadx 字面 !p()?"border-bottom":"border"（o.java:305 等 4 处）系反编译取反产物：
+    // b() 方法整体标注 "Code decompiled incorrectly"，且 r8/d.java:139,142 证明
+    // p()=true（线条）→ alpha=0 透明底 + radius=0 —— 透明底+方角配四边框不成语义，
+    // 配「仅底边一条线」才是线条样式；矩形有填充+圆角，配四边线框。
     if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
       return {
-        width: this.settings.homePillStrokeWidth,
+        width: { bottom: this.settings.homePillStrokeWidth },
         color: this.strokeColor()
       }
     }
     return {
-      width: { bottom: this.settings.homePillStrokeWidth },
+      width: this.settings.homePillStrokeWidth,
       color: this.strokeColor()
     }
   }
