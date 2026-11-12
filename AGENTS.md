@@ -318,7 +318,20 @@
 
 # 📌 当前状态清单（每完成一项实时更新，禁止留成「待定」）
 
-**当前任务：应用更名为 Uia（2026-11-09，已完成并编译通过）**
+**当前任务：记录页对齐原版三标签容器（2026-11-12，已完成编译，待真机确认）**
+
+### 记录页容器化（已完成）
+- [x] **逆向确认**：原版点主页 logo（`i6/o.java:24` → `k6.java:1409 cmd(257)` → `ja(true)` → `aa(null)` → `bb/i.java:6739`）打开的是 **`bb.i` RecordContainerFragment = 顶栏 z + TabLayout 三标签（书签/历史/离线页面）+ ViewPager2 可横滑容器页**，`n3(true,page)` 的 page 决定默认标签（1=书签 2=历史 3=离线页面）；logo/工具栏7→page1、工具栏8/菜单历史/`v://history`→page2、菜单case13→page3
+- [x] TabLayout 规格（`com/tuyafeng/support/widget/TabLayout.java`）：指示器透明（`bb/i.f3:141 setIndicatorColor(0)`）、文字三态 textColorPrimary（选中全色/未选中 α150）、14sp sans-serif-medium 非加粗、allCaps=false、tab 左右 padding 12dp、宽自适应、底 padding 2px
+- [x] 顶栏 z 规格：返回键=drawable b2（`x7.o.f13759r=0x7f080022`）+「向上导航」（`x7.u.C8=o1`）、高 54dp 底 2px 分割线（`z.java:262-267`）、返回=activity.onBackPressed（`z.java:47-58`）
+- [x] 新增 [RecordContainerPage.ets](entry/src/main/ets/view/RecordContainerPage.ets)：Tabs 三 TabContent 复刻容器（横滑 animationDuration 0）、`bookmarks`/`history`/`offlinePage` 三路由共用、默认标签由 `ctx.pathInfo.name` 决定（等价三个 n3(true,page) 调用点）
+- [x] [BookmarkPage.ets](entry/src/main/ets/view/BookmarkPage.ets)/[HistoryPage.ets](entry/src/main/ets/view/HistoryPage.ets)/[OfflinePage.ets](entry/src/main/ets/view/OfflinePage.ets) 去 NavDestination 包壳改容器子页；删除书签页假三标签头（1297-1339 旧 HeaderBar）；返回拦截按原版 `W()/l()` 语义（多选退出→清搜索→回上级文件夹→容器 pop）经 [RecordTypes.ets](entry/src/main/ets/view/RecordTypes.ets) RecordBackController 注入
+- [x] 深链 `v://bookmarks?folder=` 经 @Param folderParamId/folderParamName + @Monitor 透传 BookmarkPage（=cb.e0.T3）；HistoryPage closedTabs / OfflinePage pdfViewer 经容器路由栈 pushPage
+- [x] `devecocli check arkts` 130 文件 0 error；`devecocli build` BUILD SUCCESSFUL，HAP 内 abc 含 RecordContainerPage
+- [x] 提交：`5d7b540`（含并行手改收尾）、`6a8e092`（via:// 归一 v:// 分发），已推送
+- [ ] **待用户真机确认**：点 logo 进容器页、三标签横滑、各入口默认标签、多选/文件夹层级返回不弹容器
+
+**上一任务：应用更名为 Uia（2026-11-09，已完成并编译通过）**
 
 ### 应用更名 Uia（已完成）
 - [x] **包名保持 `cn.edu.whut.via` 不变**（AGC 包名创建后不支持修改，官方创建页原文「应用包名不可修改 创建后不支持修改」；更名只改显示名，不动包名，因此复用原应用与原签名）
