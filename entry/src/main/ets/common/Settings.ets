@@ -49,7 +49,7 @@ const SYNC_KEYS: string[] = [
   'homeBgOpacity', 'homeThemeColor', 'homeIconEpoch',
   'homeAdvEffect', 'homeAdvArea',
   'readerAuto', 'customCss', 'appLanguage', 'menuHidden', 'longPressHidden',
-  'menuOrder', 'toolbarHidden', 'scriptAutoUpdate', 'aibackend', 'aimodel',
+  'menuOrder', 'toolbarHidden', 'scriptautoupdate', 'lastScriptUpdate', 'aibackend', 'aimodel',
   'readerConfirm', 'readerTheme', 'readerFontSize', 'readerCustomCss',
   'appLayout', 'toolbarAutoHide', 'tabBarEnabled', 'addressBarContent', 'toolbarColorAdapt',
   'searchHistory', 'customRules', 'userScripts', 'siteSettings',

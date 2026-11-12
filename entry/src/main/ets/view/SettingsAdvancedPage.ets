@@ -16,6 +16,8 @@ export struct SettingsAdvancedPage {
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
   @Local sslAck: boolean = false
+  // 确认钮未勾选时的水平抖动位移（原版 w5/k y.X：±24dp/280ms ×2 反转）
+  @Local sslConfirmShake: number = 0
   private sslDialogId: number = -1
 
   aboutToAppear(): void {
@@ -182,6 +184,16 @@ export struct SettingsAdvancedPage {
     this.sslDialogId = -1
   }
 
+  // 原版 w5/k y.X（g6.y.X 同款）：±24dp、280ms、×2 反转的水平抖动
+  private shakeSslConfirm(): void {
+    this.getUIContext().keyframeAnimateTo({ iterations: 2 }, [
+      { duration: 70, curve: Curve.Linear, event: () => { this.sslConfirmShake = -24 } },
+      { duration: 70, curve: Curve.Linear, event: () => { this.sslConfirmShake = 24 } },
+      { duration: 70, curve: Curve.Linear, event: () => { this.sslConfirmShake = -12 } },
+      { duration: 70, curve: Curve.Linear, event: () => { this.sslConfirmShake = 0 } }
+    ])
+  }
+
   @Builder
   SslDialog() {
     Column() {
@@ -235,7 +247,14 @@ export struct SettingsAdvancedPage {
           .textAlign(TextAlign.Center)
           .constraintSize({ minWidth: 56 })
           .padding(16)
+          .translate({ x: this.sslConfirmShake })
           .onClick(() => {
+            // 原版 w5/k.java:239 'if (!f13319h || f13338b)'：未勾选复选框时确认钮
+            // 只执行 y.X 抖动（24dp/280ms ×2 反转），不回调跳页。
+            if (!this.sslAck) {
+              this.shakeSslConfirm()
+              return
+            }
             // 原版 z.g3（hb/z.java:34-37）→ g6.i.g(z, g4.class)：确认后跳 SSL 白名单页，
             // 不写任何设置值（掩码只由白名单页 g4.j3 → w9/k.a → ignoredsslwarning 写入）
             this.closeSslDialog()
