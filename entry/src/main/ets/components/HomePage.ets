@@ -178,19 +178,9 @@ export struct HomePage {
             this.onLogoTap()
           })
 
-          // 原版 i6/o.java:304-316：矩形(p()=false) = "border-bottom: <s>px solid <str20>"，仅底边。
-          // ArkUI 的 .border 单边宽度与 borderRadius 不兼容（边框沿圆角路径渲染，单边设置被
-          // 忽略、退化成四边均匀描边，真机表现为整圈描边）。故矩形样式的底边线不走 .border，
-          // 用 Stack 底部对齐的独立线条元素 1:1 复刻 CSS border-bottom；线条样式(p()=true)
-          // = "border" 四边，uniform 边框无此问题，保留 .border。
-          Stack({ alignContent: Alignment.Bottom }) {
-            if (HOME_PILL_STYLES[this.settings.homePillStyle] !== '线条') {
-              Row()
-                .height(this.settings.homePillStrokeWidth)
-                .width('100%')
-                .backgroundColor(this.strokeColor())
-            }
-          }
+          // 原版 .search_bar 内 #search_submit 默认 display:none、#search_input value=""（i6/o.java:30-34,300）：
+          // 静态主页搜索框是纯描边空 pill，不含图标与占位文字
+          Row()
           .height(HOME_PILL_HEIGHT)
           .width('100%')
           .backgroundColor(this.pillBackground())
@@ -201,9 +191,9 @@ export struct HomePage {
           // 不能用 backgroundBlurStyle(BlurStyle.*)：该材质自带背板色/蒙层，与 backgroundColor 的 α 无关，
           // 表现为「不透明度 0 仍有一层蒙版」。改用 backdropBlur 对应原版 backdrop-filter。
           .backdropBlur(this.settings.homeAdvEffect === 1 ? 10 : 0)
-          // 官方 ts-universal-attributes-border / faqs-arkui-1376：border 配置须在 borderRadius
-          // **之前**；否则 border 缺省 radius=0 覆盖圆角。矩形样式底边线已在 Stack 内独立绘制，
-          // pillBorder() 此时仅在线条样式返回四边 uniform 边框（矩形返回零宽边框）。
+          // 官方 ts-universal-attributes-border / faqs-arkui-1376：border 的适用范围大于 borderRadius，
+          // 两者都生效要求 border 配置在 borderRadius **之前**；否则 border 缺省的 radius=0 会覆盖圆角，
+          // 搜索框变方角并显出一整圈突兀描边（原版是 q() 圆角的下划线）。
           .border(this.pillBorder())
           .borderRadius(this.pillRadius())
           // 原版 .search_bar 无任何按压态样式（全 CSS 只有 .opSug_wpr tr:hover 与
@@ -658,19 +648,21 @@ export struct HomePage {
 
   private pillBorder(): BorderOptions {
     // 原版 i6/o.java:304-316,400-409,502-509,581-590 四处 CSS 拼接一致：
-    //   sb.append(!config.p() ? "border-bottom" : "border").append(": <s>px solid <str20>; ...")
-    // config.p() = usingLine（i6/m.java:324 p()、i9/e bit24、r8/d.java:138）。
-    // 矩形(p()=false) 的 border-bottom 由 build() 里 Stack 底部独立线条复刻
-    // （ArkUI .border 单边宽度与 borderRadius 不兼容，会退化成四边描边），此处返回零宽。
-    // 线条(p()=true) = "border" 四边 uniform，r8/d.java:139,142 同时 alpha=0、radius=0 → 方角线框。
-    if (HOME_PILL_STYLES[this.settings.homePillStyle] !== '线条') {
+    //   sb.append(!config.p() ? "border-bottom" : "border").append(": <s>px solid <str20>; border-radius: <q>px; ...")
+    // config.p() = searchBarLineEnabled = usingLine（i6/m.java:324 p()/toString、i9/e.java:74 l()、
+    // r8/d.java:138 mVar.T(eVarV2.l())）。jadx 的 "Code decompiled incorrectly" 只针对 b() 方法里
+    // str 变量的控制流合并（o.java:100-103 的 removed duplicated block），不影响 append 参数里的内联三元；
+    // 且该三元在 4 个独立位置反编译结果完全一致，不可能是系统性取反错误。忠实字面：
+    //   线条(p()=true) → "border" 四边描边；r8/d.java:139,142 同时 alpha=0(透明底)、radius=0(方角) → 方角线框
+    //   矩形(p()=false) → "border-bottom" 仅底边；带圆角填充块（alpha>0、radius=corner*(s+23)）
+    if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
       return {
-        width: 0,
-        color: Color.Transparent
+        width: this.settings.homePillStrokeWidth,
+        color: this.strokeColor()
       }
     }
     return {
-      width: this.settings.homePillStrokeWidth,
+      width: { bottom: this.settings.homePillStrokeWidth },
       color: this.strokeColor()
     }
   }
