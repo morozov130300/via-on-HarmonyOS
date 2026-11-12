@@ -20,6 +20,7 @@ import { DownloadEngine } from '../common/DownloadEngine';
 import { DownloadNotifier, DL_ACTION_PAUSE, DL_ACTION_RESUME } from '../common/DownloadNotifier';
 import { TabStore } from '../common/TabStore';
 import { ClosedTabsStore } from '../common/ClosedTabsStore';
+import { SslWhitelistStore } from '../common/SslWhitelist';
 import { webview } from '@kit.ArkWeb';
 import { fileIo } from '@kit.CoreFileKit';
 
@@ -153,6 +154,10 @@ export default class EntryAbility extends UIAbility {
     });
     // 原版 mark/uia/Shell 启动时机：读 proxy config → enabled 则启动应用级代理
     ProxyManager.getInstance().applyOnStartup(this.context);
+    // 原版 w9/k 构造 n3()（107-116）启动即预载 ignoredsslwarning：冷启动即生效，
+    // 不依赖用户进设置页（TabWeb 消费掩码 e8/h0.v()）
+    SslWhitelistStore.getInstance().init(this.context).catch(() => {
+    });
     // NFC 前台分发注册所需 ElementName（原版无前台分发，仅 NDEF_DISCOVERED 后台匹配；
     // 鸿蒙侧按 NFC 标签读写开发指南在 onForeground/onBackground 注册/注销）
     if (canIUse('SystemCapability.Communication.NFC.Tag')) {
