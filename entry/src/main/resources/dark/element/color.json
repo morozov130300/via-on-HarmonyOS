@@ -62,7 +62,11 @@
     },
     {
       "name": "url_input_panel_bg",
-      "value": "#1c1b1d"
+      "value": "#000000"
+    },
+    {
+      "name": "url_input_text",
+      "value": "#BEFFFFFF"
     },
     {
       "name": "url_input_panel_bg_translucent",
