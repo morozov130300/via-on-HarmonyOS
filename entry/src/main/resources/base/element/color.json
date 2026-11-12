@@ -69,6 +69,10 @@
       "value": "#FFFFFF"
     },
     {
+      "name": "url_input_text",
+      "value": "#DE000000"
+    },
+    {
       "name": "url_input_panel_bg_translucent",
       "value": "#EBFFFFFF"
     },

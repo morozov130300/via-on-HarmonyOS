@@ -420,6 +420,7 @@ export struct SearchOverlay {
   }
 
   // 原版 I3:762-776：bit2 自定义背景色时的前景色 —— 背景亮用 color t(#232323)，否则白
+  // （I3:766 iB = zC ? color t : white；771 g6.y.S 同时染四个图标；772-774 文字/chip 同色）
   private fgOnCustomBg(): string {
     if (this.toolbarBg !== '' && SearchOverlay.isLightColor(this.toolbarBg)) {
       return '#232323'
@@ -434,6 +435,24 @@ export struct SearchOverlay {
       return this.toolbarBg
     }
     return $r('app.color.url_input_panel_bg')
+  }
+
+  // 原版 I3:762-775（bit2/zB2）：自定义背景色时输入行整体反色 ——
+  // 图标 x7.t0/r0/s0/v0 经 g6.y.S 染 fgOnCustomBg、文字/输入框/chip 同色。
+  // 无自定义背景时输入行走主题 attr ac（日 #de000000 / 夜 #beffffff），此处经资源自适应。
+  private inputFg(): ResourceColor {
+    if (this.hasCustomBg()) {
+      return this.fgOnCustomBg()
+    }
+    return $r('app.color.fg')
+  }
+
+  // 原版 I3:771 g6.y.S(t0, r0, s0, v0)：bit2 时四个输入行图标染前景色
+  private inputIconFg(): ResourceColor {
+    if (this.hasCustomBg()) {
+      return this.fgOnCustomBg()
+    }
+    return $r('app.color.url_input_icon_tint')
   }
 
   // 原版 k0.C1 bit2（zB2）：uiflags 由 k6.oa z11 = (U0!=0 && !n0.d()) 计算；
@@ -625,11 +644,11 @@ export struct SearchOverlay {
       if (this.qualifiedEngineId !== 0) {
         Text(this.engineNameById(this.qualifiedEngineId))
           .fontSize(16)
-          .fontColor($r('app.color.fg'))
+          .fontColor(this.inputFg())
           .maxLines(1)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .margin({ left: 4, right: 4 })
-          .border({ width: 1, color: $r('app.color.fg') })
+          .border({ width: 1, color: this.inputFg() })
           .borderRadius(4)
       }
       // 3) 输入框：16sp、正文与 hint 同色 ?attr/ac、透明底、IME Go
@@ -638,8 +657,8 @@ export struct SearchOverlay {
         .height(URL_BAR_HEIGHT)
         .fontSize(16)
         .backgroundColor(Color.Transparent)
-        .fontColor($r('app.color.fg'))
-        .placeholderColor($r('app.color.fg'))
+        .fontColor(this.inputFg())
+        .placeholderColor(this.inputFg())
         .enterKeyType(EnterKeyType.Go)
         .maxLength(Number.MAX_SAFE_INTEGER)
         .defaultFocus(true)
@@ -693,11 +712,12 @@ export struct SearchOverlay {
     .clip(true)
   }
 
-  // 原版 C1：ImageView 48×48dp、padding 13dp（实图 22dp）、drawable q 圆形按压、tint ?attr/a9
+  // 原版 C1：ImageView 48×48dp、padding 13dp（实图 22dp）、drawable q 圆形按压、tint ?attr/a9；
+  // bit2 自定义背景色时经 g6.y.S 染 fgOnCustomBg（I3:771）
   @Builder
   IconSlot(icon: Resource, desc: Resource, action: () => void, rotateDeg: number = 0) {
     Stack() {
-      ViaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: $r('app.color.url_input_icon_tint'),
+      ViaIcon({ icon: icon, iconSize: URL_ICON_SIZE, iconColor: this.inputIconFg(),
         rotateDeg: rotateDeg })
     }
     .width(URL_BAR_HEIGHT)
@@ -824,7 +844,7 @@ export struct SearchOverlay {
       Column() {
         Text(row.text)
           .fontSize(14)
-          .fontColor($r('app.color.fg'))
+          .fontColor(this.rowTextFg())
           .maxLines(1)
           .width('100%')
         if (row.sub !== '') {
@@ -873,6 +893,12 @@ export struct SearchOverlay {
         this.confirmClearHistory()
       }
     }))
+  }
+
+  // 原版 a1.xml：建议行文字色 = ?attr/ac（日 @color/a1 #de000000 / 夜 @color/a2 #beffffff），
+  // 副文字 = ?attr/ad（日 #8a000000 / 夜 #99ffffff）——均经主题资源自适应，非 fg 通用色
+  private rowTextFg(): ResourceColor {
+    return $r('app.color.url_input_text')
   }
 
   private suggestIcon(type: number): Resource {
