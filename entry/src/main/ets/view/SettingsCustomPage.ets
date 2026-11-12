@@ -585,24 +585,31 @@ export struct SettingsCustomPage {
 
   @Builder
   TabBar() {
-    Row() {
-      ForEach(this.tabs, (tab: string, index: number) => {
-        Text(tab)
-          .fontSize(13)
-          .fontColor(this.activeTab === index ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .height(40)
-          .onClick(() => {
-            this.activeTab = index
-            this.activeSlider = ''
-            this.paletteKey = ''
-          })
-      }, (tab: string) => tab)
+    Column() {
+      Row() {
+        ForEach(this.tabs, (tab: string, index: number) => {
+          Text(tab)
+            .fontSize(13)
+            .fontColor(this.activeTab === index ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .height(40)
+            .onClick(() => {
+              this.activeTab = index
+              this.activeSlider = ''
+              this.paletteKey = ''
+            })
+        }, (tab: string) => tab)
+      }
+      .width('100%')
+      .height(44)
+      .padding({ bottom: 4 })
     }
     .width('100%')
-    .height(44)
-    .padding({ bottom: this.insets.bottom > 0 ? 0 : 4 })
+    // 底部组件避让导航条：容器 padding 把标签行推入安全区，容器自身底色铺满含导航条的
+    // 整段（背景不避让），否则导航条那一段没有背景会「缺肉」。与 HistoryPage 底栏一致。
+    .padding({ bottom: this.insets.bottom })
+    .backgroundColor($r('app.color.page_bg'))
   }
 
   // ---------- 弹窗 ----------

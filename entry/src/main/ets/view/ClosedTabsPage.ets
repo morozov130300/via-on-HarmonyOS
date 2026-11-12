@@ -269,6 +269,8 @@ export struct ClosedTabsPage {
       .height(44)
     }
     .width('100%')
+    // 底部组件避让导航条：组件 padding 推入安全区，背景由本组件自身铺满含导航条整段，不缺肉
+    .padding({ bottom: this.insets.bottom })
     .backgroundColor($r('app.color.surface'))
   }
 

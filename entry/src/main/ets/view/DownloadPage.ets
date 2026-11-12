@@ -15,6 +15,7 @@ import { AppIcon } from '../components/AppIcon'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { UiInsets } from '../common/Immersive'
 import { buildNavSlide } from './PageTransitions'
 import { filePreview } from '@kit.PreviewKit'
 import { common } from '@kit.AbilityKit'
@@ -121,6 +122,7 @@ export struct DownloadPage {
   private coordinator: DownloadCoordinator = DownloadCoordinator.getInstance()
   private engine: DownloadEngine = DownloadEngine.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  private insets: UiInsets = UiInsets.getInstance()
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
   @Local items: DownloadRec[] = []
@@ -943,6 +945,9 @@ export struct DownloadPage {
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
+    // 底部组件避让导航条：组件 padding 推入安全区；底栏与根容器同透明、
+    // 整列统一露出 NavDestination 的 page_bg，背景连续铺满不缺肉。
+    .padding({ bottom: this.insets.bottom })
   }
 
   build() {

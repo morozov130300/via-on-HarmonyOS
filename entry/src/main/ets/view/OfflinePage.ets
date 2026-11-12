@@ -1,5 +1,6 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { RecordBackController } from './RecordTypes'
+import { UiInsets } from '../common/Immersive'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
 import { AppIcon } from '../components/AppIcon'
@@ -54,6 +55,7 @@ function formatDateStamp(date: Date): string {
 @ComponentV2
 export struct OfflinePage {
   private tabStore: TabStore = TabStore.getInstance()
+  private insets: UiInsets = UiInsets.getInstance()
   // 容器页（RecordContainerPage）注入：返回拦截回调（原版 eb.s.W()/l() 语义）
   //   true = 已消费返回（退出多选/清空搜索），容器不得 pop
   @Param backController: RecordBackController = new RecordBackController()
@@ -636,6 +638,9 @@ export struct OfflinePage {
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
+    // 底部组件避让导航条：组件 padding 推入安全区；底栏与根容器同透明、
+    // 整列统一露出外层 Stack 的 page_bg，背景连续铺满不缺肉。
+    .padding({ bottom: this.insets.bottom })
   }
 
   private selectedEntries(): OfflineEntry[] {
