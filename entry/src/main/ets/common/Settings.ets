@@ -145,6 +145,10 @@ export class AppSettings {
   @Trace textZoom: number = 100
   // 原版 nightmode2（w9/k n3/d/m0/T0）：0=手动关 1=手动开 2=跟随系统(当前浅) 3=跟随系统(当前深)，默认 2
   @Trace nightMode2: number = 2
+  // 颜色模式代数：isNightActive/systemDark/colorMode 任一变化时自增。
+  // 供 UI 侧 @Computed 依赖追踪——ArkUI 无法感知 colorMode/resourceManager 解析值这类
+  // 非状态量，工具栏图标亮度判定等需要它来重算（k6.Z7 三分支）。
+  @Trace colorEpoch: number = 0
   // 原版 nightfilter（w9/k n2/Y0）：网页蒙版黑色滤镜不透明度，默认 77
   @Trace nightFilter: number = 77
   // 原版 nightcss「强制网页暗色」（w9/k S2），默认取 Webview forceDark 可用性（现代内核恒 true）
@@ -653,6 +657,11 @@ export class AppSettings {
     }
   }
 
+  // 颜色模式变化后由 applyAppTheme 调用：自增代数触发 UI 侧 @Computed 重算
+  private bumpColorEpoch(): void {
+    this.colorEpoch++
+  }
+
   // 原版 k6 O9 case1：目标态与系统深浅一致时进入跟随模式（2/3），否则手动开/关（1/0）
   // 返回是否进入跟随模式（用于 toast「跟随系统暗模式已启用」）
   toggleNightMode(): boolean {
@@ -697,6 +706,7 @@ export class AppSettings {
 
   applyAppTheme(): void {
     this.notifyNightChanged()
+    this.bumpColorEpoch()
     if (this.appContext === null) {
       return
     }

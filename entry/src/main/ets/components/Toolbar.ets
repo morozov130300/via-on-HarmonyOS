@@ -4,6 +4,7 @@ import { AppSettings } from '../common/Settings'
 import { AddressBar } from './AddressBar'
 import { ViaIcon } from './ViaIcon'
 import { BEZIER_0202_CURVE } from '../common/Transitions'
+import { common } from '@kit.AbilityKit'
 
 const BAR_HEIGHT: number = 48
 // 原版 dimens a=13dp 内边距 → 88px(@4x)=22dp 图标本体
@@ -101,7 +102,10 @@ export struct Toolbar {
   //   夜间(zD) → color u = #9F9F9F
   //   非夜间且工具栏背景偏亮（y.C 亮度>=192）→ color t = #232323
   //   其余（非夜间暗背景）→ 白色
-  private toolbarIconColor(): ResourceColor {
+  // @Computed 保证图标 Text 同一次取值——普通方法在 build 中各元素独立求值，
+  // colorMode 这类非状态量变化时 Text 不会重算（曾出现图标白/数字仍 #232323 的分裂）。
+  @Computed
+  get toolbarAccent(): ResourceColor {
     if (this.settings.isNightActive()) {
       return '#9F9F9F'
     }
@@ -110,8 +114,11 @@ export struct Toolbar {
     if (typeof bg === 'string') {
       hex = bg
     } else if (typeof bg === 'object' && (bg as Resource).id !== undefined) {
-      // Resource 色（home_bg）：夜间分支已拦截，此处非夜间 home_bg=#FFFFFF 亮
-      hex = '#FFFFFF'
+      // Resource 色（home_bg）：按应用当前 colorMode 实际解析值判亮度。
+      // 夜间分支只拦 isNightActive()（nightMode2 1/3）；「夜间关 + 系统深色」时
+      // 应用 colorMode 仍跟随系统为深色，home_bg 解析为 #1C1B1D——
+      // 若像旧实现硬编码 #FFFFFF 判亮，会算出 #232323 深图标叠深底 → 按钮全部隐形。
+      hex = this.resolveResourceHex(bg as Resource)
     }
     hex = hex.replace('#', '')
     if (hex.length === 8) {
@@ -126,6 +133,21 @@ export struct Toolbar {
       }
     }
     return '#FFFFFF'
+  }
+
+  // 解析 Resource 颜色在**当前应用 colorMode** 下的实际 #RRGGBB（ChromeColors 同口径）
+  private resolveResourceHex(res: Resource): string {
+    try {
+      const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+      const argb = ctx.resourceManager.getColorSync(res)
+      const r = (argb >> 16) & 0xFF
+      const g = (argb >> 8) & 0xFF
+      const b = argb & 0xFF
+      const to2 = (v: number): string => v.toString(16).padStart(2, '0')
+      return `#${to2(r)}${to2(g)}${to2(b)}`
+    } catch (error) {
+      return '#FFFFFF'
+    }
   }
 
   // 原版 g0.m()：按宽度决定返回/前进是否显示及地址槽权重
@@ -372,11 +394,11 @@ export struct Toolbar {
         // 原版 g0.h()：栈叠图标 + 加粗标签数叠加（>99 显示 :)）；隐身时 g0.l 置 alpha 0.15
         // 图标与数字色 = setAccentColor 三分支（k6.Z7）：夜间 #9F9F9F / 亮背景 #232323 / 其余白
         Stack() {
-          ViaIcon({ icon: $r('app.media.uia_ic_tabs'), iconSize: ICON_SIZE, iconColor: this.toolbarIconColor() })
+          ViaIcon({ icon: $r('app.media.uia_ic_tabs'), iconSize: ICON_SIZE, iconColor: this.toolbarAccent })
           Text(this.swipePreviewText())
             .fontSize(11)
             .fontWeight(FontWeight.Bold)
-            .fontColor(this.toolbarIconColor())
+            .fontColor(this.toolbarAccent)
             .maxLines(1)
         }
         .layoutWeight(1)
@@ -462,7 +484,7 @@ export struct Toolbar {
       ViaIcon({
         icon: icon,
         iconSize: ICON_SIZE,
-        iconColor: this.toolbarIconColor(),
+        iconColor: this.toolbarAccent,
         rotateDeg: rotate
       })
     }
