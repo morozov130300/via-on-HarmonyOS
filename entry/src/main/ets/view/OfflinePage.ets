@@ -1,6 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
-import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { buildNavSlide } from './PageTransitions'
+import { RecordBackController } from './RecordTypes'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
 import { AppIcon } from '../components/AppIcon'
@@ -56,8 +55,11 @@ function formatDateStamp(date: Date): string {
 export struct OfflinePage {
   private tabStore: TabStore = TabStore.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
-  // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
-  @Local slideOffset: string = '0'
+  // 容器页（RecordContainerPage）注入：返回拦截回调（原版 eb.s.W()/l() 语义）
+  //   true = 已消费返回（退出多选/清空搜索），容器不得 pop
+  backController: RecordBackController = new RecordBackController()
+  // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
+  @Event onRequestPop: () => void = () => {}
   @Local items: OfflineEntry[] = []
   @Local searchText: string = ''
   @Local editMode: boolean = false
@@ -78,16 +80,20 @@ export struct OfflinePage {
     return `${context.filesDir}/offline`
   }
 
-  private bindAppBar(): void {
-    AppBar.show({
-      title: $r('app.string.offline_page'),
-      onBack: () => {
-        this.navPathStack.pop()
-      }
-    }, this)
-  }
-
   aboutToAppear(): void {
+    // 原版 eb.s.W()（622-633）返回拦截顺序：多选退出 → 清空搜索 → 未消费
+    this.backController.handler = (): boolean => {
+      if (this.editMode) {
+        this.editMode = false
+        this.selected = []
+        return true
+      }
+      if (this.searchText.length > 0) {
+        this.searchText = ''
+        return true
+      }
+      return false
+    }
     this.reload()
   }
 
@@ -214,12 +220,12 @@ export struct OfflinePage {
     const url = `file://${entry.path}`
     if (mode === 1) {
       this.tabStore.newTabAt(url, false)
-      this.navPathStack.pop()
+      this.onRequestPop()
     } else if (mode === 2) {
       this.tabStore.newTabAt(url, true)
     } else {
       this.tabStore.navigate(url)
-      this.navPathStack.pop()
+      this.onRequestPop()
     }
   }
 
@@ -644,12 +650,10 @@ export struct OfflinePage {
   }
 
   build() {
-    NavDestination() {
-      Stack() {
-        Column() {
-          AppBarSpacer()
-          // 搜索框（原版 eb.B3：顶部 EditText，hint 搜索）
-          Row({ space: 8 }) {
+    Stack() {
+      Column() {
+        // 搜索框（原版 eb.B3：顶部 EditText，hint 搜索）
+        Row({ space: 8 }) {
             AppIcon({ icon: $r('sys.symbol.magnifyingglass'), iconSize: 16,
               iconColor: $r('app.color.fg_secondary') })
             TextInput({ placeholder: $r('app.string.search') })
@@ -726,41 +730,7 @@ export struct OfflinePage {
       }
       .width('100%')
       .height('100%')
-    }
-    .hideTitleBar(true)
-    .backgroundColor($r('app.color.page_bg'))
-    .translate({ x: this.slideOffset })
-    // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
-    // 时长 integer/b=220、accelerate_decelerate —— 改用鸿蒙原生 NavDestination 转场接口
-    .customTransition((operation: NavigationOperation, isEnter: boolean):
-      Array<NavDestinationTransition> | undefined => {
-      return buildNavSlide(operation, isEnter, (value: string): void => {
-        this.slideOffset = value
-      })
-    })
-    .onReady((ctx: NavDestinationContext) => {
-      this.navPathStack = ctx.pathStack
-      this.bindAppBar()
-    })
-    .onWillAppear(() => {
-      this.bindAppBar()
-    })
-    .onShown(() => {
-      this.bindAppBar()
-      this.reload()
-    })
-    .onWillDisappear(() => {
-      AppBar.maybeHide(this)
-    })
-    .onBackPressed(() => {
-      // 原版 eb.W：选择模式返回先退出选择，其次清空搜索
-      if (this.editMode) {
-        this.editMode = false
-        this.selected = []
-        return true
-      }
-      return false
-    })
+      .backgroundColor($r('app.color.page_bg'))
   }
 }
 
