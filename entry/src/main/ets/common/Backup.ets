@@ -1,6 +1,8 @@
 import { fileIo } from '@kit.CoreFileKit'
 import zlib from '@ohos.zlib'
 import { BusinessError } from '@kit.BasicServicesKit'
+import { preferences } from '@kit.ArkData'
+import { AppContextHolder } from './Reader'
 import { BrowserDb } from './Database'
 import { AppSettings, SavedTab } from './Settings'
 import { BackupSettings } from './BackupSettings'
@@ -433,8 +435,18 @@ export class BackupManager {
     }
   }
 
-  // ZipBackupManager.e：安卓端导出的 .zip 备份还原（mode 0）
-  async restoreFromZipBackup(uri: string, context: Context): Promise<void> {
+  // ZipBackupManager.e 返回三态（hb/c4.java:642-646 消费）
+  //   SUCCESS：全部还原（含密码库成功）
+  //   SKIPPED：ZIP 含 pass.enc 但未提供密码/解出空库 → 密码位跳过
+  //   FAILED：提供了密码但解密失败
+  static readonly RESTORE_SUCCESS: number = 0
+  static readonly RESTORE_SKIPPED: number = 1
+  static readonly RESTORE_FAILED: number = 2
+
+  // ZipBackupManager.e：安卓端导出的 .zip 备份还原（mode 0）。
+  // password：勾选「保存的密码」位且 ZIP 含 pass.enc 时由调用方弹窗索取（豁免项5 导出空库的对称导入侧）。
+  async restoreFromZipBackup(uri: string, context: Context, password?: string): Promise<number> {
+    let result: number = BackupManager.RESTORE_SUCCESS
     const stamp = Date.now().toString()
     const zipPath = `${context.cacheDir}/backup_import_${stamp}.zip`
     const outDir = `${context.cacheDir}/backup_import_${stamp}`
@@ -591,8 +603,33 @@ export class BackupManager {
         await BackupSettings.applySettingsTxt(settingsText, readEntryText,
           AppSettings.getInstance(), context)
       }
-      // pass.enc / data-for-older-versions.txt：原版导入不恢复（m9/e.b 为空、
-      // pass.enc 仅在提供密码时解密），跳过
+      // ---- ZipBackupManager.e:283-296：pass.enc 仅在提供密码时解密入库 ----
+      // 链路：info.enc XOR 解出 uuid → PBKDF2-HMAC-SHA1(password, uuid, 10000, 256)
+      // → AES-256-CBC（前 16 字节 IV）解出 pass.csv → CSV 逐行（头 name,url,username,password,note）
+      const passEntry = entryPath('pass.enc')
+      if (passEntry !== null) {
+        if (password === undefined || password === '') {
+          result = BackupManager.RESTORE_SKIPPED
+        } else {
+          const infoPath = entryPath('info.enc')
+          if (infoPath === null) {
+            result = BackupManager.RESTORE_FAILED
+          } else {
+            const uuid = BackupCrypto.xorInfoDecode(this.readFileBytes(infoPath))
+            const key = BackupCrypto.pbkdf2Sha1(password, BackupCrypto.utf8Encode(uuid), 10000, 256)
+            try {
+              const plain = await BackupCrypto.aesCbcDecrypt(key, this.readFileBytes(passEntry))
+              const csv = BackupCrypto.utf8Decode(plain)
+              const imported = await BackupManager.importPassCsv(csv)
+              result = imported > 0 ? BackupManager.RESTORE_SUCCESS : BackupManager.RESTORE_SKIPPED
+            } catch (error) {
+              console.error(`pass.enc decrypt failed: ${(error as BusinessError).message}`)
+              result = BackupManager.RESTORE_FAILED
+            }
+          }
+        }
+      }
+      // data-for-older-versions.txt：原版导入不恢复（m9/e.b 为空）
     } finally {
       try {
         fileIo.unlinkSync(zipPath)
@@ -603,6 +640,86 @@ export class BackupManager {
       } catch (error) {
       }
     }
+    return result
+  }
+
+  // m9/i.c + v9/e：CSV（头 name,url,username,password,note）逐行入库。
+  // 本工程无密码表（豁免项4），以 uia_settings preferences 专用键存 JSON 数组（最接近的现有存储路径）。
+  private static async importPassCsv(csv: string): Promise<number> {
+    const lines = csv.split('\n')
+    const items: Record<string, Object>[] = []
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i]
+      if (line.trim() === '') {
+        continue
+      }
+      // 简易 CSV 解析：支持双引号包裹与 "" 转义（原版 d1.i 同语义）
+      const cols: string[] = []
+      let cur = ''
+      let inQuote = false
+      for (let j = 0; j < line.length; j++) {
+        const ch = line[j]
+        if (inQuote) {
+          if (ch === '"') {
+            if (j + 1 < line.length && line[j + 1] === '"') {
+              cur += '"'
+              j++
+            } else {
+              inQuote = false
+            }
+          } else {
+            cur += ch
+          }
+        } else if (ch === '"') {
+          inQuote = true
+        } else if (ch === ',') {
+          cols.push(cur)
+          cur = ''
+        } else {
+          cur += ch
+        }
+      }
+      cols.push(cur)
+      if (cols.length < 4 || cols[1] === '') {
+        continue
+      }
+      const item: Record<string, Object> = {}
+      item['name'] = cols[0]
+      item['url'] = cols[1]
+      item['username'] = cols[2]
+      item['password'] = cols[3]
+      item['note'] = cols.length > 4 ? cols[4] : ''
+      item['createdAt'] = Date.now()
+      items.push(item)
+    }
+    if (items.length === 0) {
+      return 0
+    }
+    const context = AppContextHolder.getContext()
+    if (context === null) {
+      return 0
+    }
+    const store = await preferences.getPreferences(context, 'uia_settings')
+    const existingRaw = await store.get('saved_passwords', '[]')
+    let existing: Record<string, Object>[] = []
+    try {
+      existing = JSON.parse(typeof existingRaw === 'string' ? existingRaw : '[]') as Record<string, Object>[]
+    } catch (error) {
+      existing = []
+    }
+    // 按 name+username 去重合并（原版 v9/e 以 name+username 为主键 delete+insert）
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      for (let j = existing.length - 1; j >= 0; j--) {
+        if (existing[j]['name'] === item['name'] && existing[j]['username'] === item['username']) {
+          existing.splice(j, 1)
+        }
+      }
+      existing.push(item)
+    }
+    await store.put('saved_passwords', JSON.stringify(existing))
+    await store.flush()
+    return items.length
   }
 
   // icons.zip 还原：解压到临时目录，把文件复制到 filesDir/icon/，
