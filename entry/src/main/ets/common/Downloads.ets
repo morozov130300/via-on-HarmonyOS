@@ -7,7 +7,8 @@ import { DownloadEngine } from './DownloadEngine'
 import { DownloadNotifier } from './DownloadNotifier'
 
 // 原版 mark/uia/download/m.java：下载前确认弹层（可编辑文件名 + 文件大小 + 取消/下载）
-export const DOWNLOAD_CONFIRM_EVENT_ID: number = 10003
+// 10003 已被 OPEN_DOWNLOADS_EVENT_ID 占用，取 10007（原 10003 冲突会串扰打开下载页）
+export const DOWNLOAD_CONFIRM_EVENT_ID: number = 10007
 
 interface PendingWebDownload {
   item: webview.WebDownloadItem

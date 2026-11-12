@@ -5,7 +5,8 @@ import { emitter } from '@kit.BasicServicesKit'
 
 const BLANK_URL: string = 'about:blank'
 // 主页模式=书签：新标签打开书签页（原版 uia://bookmark）
-export const OPEN_BOOKMARKS_EVENT_ID: number = 10004
+// 10004 已被 UIA_CMD_EVENT_ID 占用，取 10008（原 10004 冲突会顺带打开书签页）
+export const OPEN_BOOKMARKS_EVENT_ID: number = 10008
 
 @ObservedV2
 export class TabStore {

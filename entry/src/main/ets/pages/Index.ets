@@ -51,7 +51,6 @@ const PROGRESS_GRADIENT: LinearGradient = {
   angle: 90,
   colors: [['#59C2E5', 0], ['#A687E0', 1]]
 }
-const SHORTCUT_URL_EVENT_ID = 10001
 const EXTERNAL_LINK_EVENT_ID = 10002
 const OPEN_DOWNLOADS_EVENT_ID = 10003
 // 原版 k6.i9() 双击返回显式退出 → m0.r0()（z8/h0.c 退出清除）：退出清除仅在显式退出时执行
@@ -283,13 +282,6 @@ struct Index {
     } catch (error) {
       console.error(`display.on change failed: ${error}`)
     }
-    emitter.on({ eventId: SHORTCUT_URL_EVENT_ID }, (event: emitter.EventData) => {
-      const data = event.data as Record<string, Object>
-      const viaUrl = data['viaUrl']
-      if (typeof viaUrl === 'string' && viaUrl !== '') {
-        this.tabStore.navigate(viaUrl)
-      }
-    })
     emitter.on({ eventId: EXTERNAL_LINK_EVENT_ID }, (event: emitter.EventData) => {
       const data = event.data as Record<string, Object>
       const linkUrl = data['linkUrl']
@@ -303,7 +295,7 @@ struct Index {
         this.openExternalLink(linkUrl, external !== false)
       }
     })
-    // 热启动 via:// 内部命令（EntryAbility.onNewEntry → AppStorage 'via_internal_cmd'）
+    // 热启动 uia:// 内部命令（EntryAbility.onNewWant → AppStorage 'uia_internal_cmd'）
     emitter.on({ eventId: UIA_CMD_EVENT_ID }, () => {
       this.handleInternalCmd()
     })
@@ -437,11 +429,11 @@ struct Index {
   }
 
   private handleInternalCmd(): void {
-    const raw = AppStorage.get<string>('via_internal_cmd') ?? ''
+    const raw = AppStorage.get<string>('uia_internal_cmd') ?? ''
     if (raw === '') {
       return
     }
-    AppStorage.setOrCreate('via_internal_cmd', '')
+    AppStorage.setOrCreate('uia_internal_cmd', '')
     const cmd = parseUiaDeepLink(raw)
     if (cmd === null) {
       return
@@ -611,11 +603,11 @@ struct Index {
 
   // 原版 restoreclosedtabs=2：启动时优先询问是否恢复未关闭标签
   private askPendingRestore(): void {
-    const pending = AppStorage.get<string>('via_pending_restore_tabs') ?? ''
+    const pending = AppStorage.get<string>('uia_pending_restore_tabs') ?? ''
     if (pending === '') {
       return
     }
-    AppStorage.setOrCreate('via_pending_restore_tabs', '')
+    AppStorage.setOrCreate('uia_pending_restore_tabs', '')
     this.getUIContext().showAlertDialog({
       message: $r('app.string.restore_session_ask'),
       primaryButton: {
@@ -664,18 +656,18 @@ struct Index {
     await this.tabStore.init(this.settings)
     this.handleInternalCmd()
     this.askPendingRestore()
-    if (AppStorage.get<boolean>('via_open_downloads') === true) {
-      AppStorage.setOrCreate('via_open_downloads', false)
+    if (AppStorage.get<boolean>('uia_open_downloads') === true) {
+      AppStorage.setOrCreate('uia_open_downloads', false)
       this.openPage('downloads')
     }
     this.ready = true
-    const launchUrl = AppStorage.get<string>('via_launch_url') ?? ''
+    const launchUrl = AppStorage.get<string>('uia_launch_url') ?? ''
     if (launchUrl !== '') {
-      AppStorage.setOrCreate('via_launch_url', '')
-      const launchExternal = AppStorage.get<boolean>('via_launch_external') ?? false
-      AppStorage.setOrCreate('via_launch_external', false)
-      const launchSharedText = AppStorage.get<boolean>('via_shared_text') ?? false
-      AppStorage.setOrCreate('via_shared_text', false)
+      AppStorage.setOrCreate('uia_launch_url', '')
+      const launchExternal = AppStorage.get<boolean>('uia_launch_external') ?? false
+      AppStorage.setOrCreate('uia_launch_external', false)
+      const launchSharedText = AppStorage.get<boolean>('uia_shared_text') ?? false
+      AppStorage.setOrCreate('uia_shared_text', false)
       if (launchSharedText) {
         this.openReceivedText(launchUrl)
       } else {
@@ -729,7 +721,7 @@ struct Index {
     }
     // 其余 v:// 内部命令（含未知 → CATALOG、NONE → 无动作）统一交给同一分发器，
     // 绝不再把 v://xxx 当网页 URL 塞进标签（原版 k6.u 对这些分支一律 return true）
-    AppStorage.setOrCreate('via_internal_cmd', url)
+    AppStorage.setOrCreate('uia_internal_cmd', url)
     this.handleInternalCmd()
   }
 
@@ -3133,7 +3125,7 @@ struct Index {
   // 原版 k6.m0：复选框初始态 = w9.a.p()
   private loadSaveAsPdfPref(): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
+    preferences.getPreferences(context, 'uia_settings').then((store: preferences.Preferences) => {
       this.saveAsPdf = store.getSync('save_as_pdf', false) as boolean
     }).catch((error: BusinessError) => {
       console.error(`load save_as_pdf failed: ${error.message}`)
@@ -3143,7 +3135,7 @@ struct Index {
   // 原版 k6.e5：勾选态变化时持久化 w9.a.I
   private persistSaveAsPdf(value: boolean): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-    preferences.getPreferences(context, 'via_settings').then((store: preferences.Preferences) => {
+    preferences.getPreferences(context, 'uia_settings').then((store: preferences.Preferences) => {
       store.put('save_as_pdf', value).then(() => {
         store.flush()
       }).catch((error: BusinessError) => {

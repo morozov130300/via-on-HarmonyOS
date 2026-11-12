@@ -18,6 +18,7 @@ import { fileIo, picker } from '@kit.CoreFileKit'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { preferences } from '@kit.ArkData'
+import { RecordBackController } from './RecordTypes'
 
 // 原版 cb/e0.java 1:1 移植（书签页）：
 // - 底栏 a0（com.tuyafeng/support/widget/a0.java）：普通态 [更多(nu)|编辑(a3)]，
@@ -54,6 +55,9 @@ export struct BookmarkPage {
   private tabStore: TabStore = TabStore.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // 容器页（RecordContainerPage）注入：返回拦截回调（原版 bb.i.c W()/l() 语义）
+  //   true = 已消费返回（退出多选/回上级文件夹/清空搜索），容器不得 pop
+  backController: RecordBackController | null = null
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
   @Local items: BookmarkRec[] = []
@@ -86,13 +90,31 @@ export struct BookmarkPage {
   private uiStore: preferences.Preferences | null = null
 
   aboutToAppear(): void {
+    // 原版 cb.e0.W()（880-897）返回拦截顺序：多选退出 → 清空搜索 → 回上级文件夹 → 未消费
+    this.backController?.handler = (): boolean => {
+      if (this.selecting) {
+        this.exitSelection()
+        return true
+      }
+      if (this.query.length > 0) {
+        this.query = ''
+        return true
+      }
+      if (this.folderStack.length > 0) {
+        this.folderStack.pop()
+        const parent = this.folderStack.length > 0 ? this.folderStack[this.folderStack.length - 1] : null
+        this.currentFolderId = parent !== null ? parent.id : 0
+        this.reload()
+        return true
+      }
+      return false
+    }
     this.reload()
     this.loadUiPrefs()
   }
 
   build() {
-    NavDestination() {
-      Stack() {
+    Stack() {
         Column() {
           this.HeaderBar()
           this.SearchField()
