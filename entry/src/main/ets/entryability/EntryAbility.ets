@@ -55,9 +55,9 @@ function ndefBytesToString(bytes: number[]): string {
   return text;
 }
 
-// 仅接受原版 intent-filter 声明的 scheme：http/https/uia
+// 仅接受原版 intent-filter 声明的 scheme：http/https/uia（via:// 兼容归一）
 function isNfcHandledUri(uri: string): boolean {
-  return uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('uia://');
+  return uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('uia://') || uri.startsWith('via://');
 }
 
 // 解析 NDEF 消息中的 URI 记录（TNF well-known=1 + RTD 'U'=0x55，payload[0] 为前缀码）
@@ -123,9 +123,10 @@ function extractEntryUrl(want: Want): EntryUrl {
   }
   const uri = want.uri
   if (typeof uri === 'string' && uri !== '') {
-    // 原版 k6.u()：uia://→v:// 内部命令协议（z8/w2 + z8/b0.Q 全量命令表），不是网页 URL
-    if (uri.startsWith('uia://')) {
-      AppStorage.setOrCreate('uia_internal_cmd', uri)
+    // 原版 k6.u()：uia://→v:// 内部命令协议（z8/w2 + z8/b0.Q 全量命令表），不是网页 URL。
+    // 原版 via:// 深链（清单仍声明 scheme via）同样按内部命令处理，归一到 uia:// 通道。
+    if (uri.startsWith('uia://') || uri.startsWith('via://')) {
+      AppStorage.setOrCreate('uia_internal_cmd', uri.startsWith('via://') ? 'uia://' + uri.substring(6) : uri)
       return { url: '', external: false }
     }
     return { url: uri, external: true }
@@ -388,8 +389,8 @@ export default class EntryAbility extends UIAbility {
     if (uri === '') {
       return;
     }
-    if (uri.startsWith('uia://')) {
-      AppStorage.setOrCreate('uia_internal_cmd', uri);
+    if (uri.startsWith('uia://') || uri.startsWith('via://')) {
+      AppStorage.setOrCreate('uia_internal_cmd', uri.startsWith('via://') ? 'uia://' + uri.substring(6) : uri);
       if (!cold) {
         emitter.emit({ eventId: UIA_CMD_EVENT_ID }, { data: {} });
       }
