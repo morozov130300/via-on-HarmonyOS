@@ -257,10 +257,14 @@ function parseSpecialScheme(text: string): UiaDeepLink | null {
   return null
 }
 
-// uia:// → v://（k6.u 8564：前 6 位忽略大小写匹配即替换）
+// uia:// → v://（k6.u 8564：前 6 位忽略大小写匹配即替换）。
+// 豁免项5：本工程对外协议为 uia://；原版 via:// 深链（清单仍声明 scheme via）
+// 同样归一到 v:// 处理，避免被当网页 URL 塞进标签。
 export function parseUiaDeepLink(raw: string): UiaDeepLink | null {
   let text: string = raw
   if (text.length >= 6 && 'uia://'.toLowerCase() === text.substring(0, 6).toLowerCase()) {
+    text = 'v://' + text.substring(6)
+  } else if (text.length >= 6 && 'via://'.toLowerCase() === text.substring(0, 6).toLowerCase()) {
     text = 'v://' + text.substring(6)
   }
   const result: UiaDeepLink = new UiaDeepLink()

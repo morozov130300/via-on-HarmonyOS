@@ -6,7 +6,7 @@
       "icon": "$media:uia_shortcut_scan",
       "wants": [
         {
-          "bundleName": "cn.edu.whut.uia",
+          "bundleName": "cn.edu.whut.via",
           "moduleName": "entry",
           "abilityName": "EntryAbility",
           "parameters": {
@@ -21,7 +21,7 @@
       "icon": "$media:uia_shortcut_search",
       "wants": [
         {
-          "bundleName": "cn.edu.whut.uia",
+          "bundleName": "cn.edu.whut.via",
           "moduleName": "entry",
           "abilityName": "EntryAbility",
           "parameters": {
@@ -36,7 +36,7 @@
       "icon": "$media:uia_shortcut_history",
       "wants": [
         {
-          "bundleName": "cn.edu.whut.uia",
+          "bundleName": "cn.edu.whut.via",
           "moduleName": "entry",
           "abilityName": "EntryAbility",
           "parameters": {
@@ -51,7 +51,7 @@
       "icon": "$media:uia_shortcut_bookmark",
       "wants": [
         {
-          "bundleName": "cn.edu.whut.uia",
+          "bundleName": "cn.edu.whut.via",
           "moduleName": "entry",
           "abilityName": "EntryAbility",
           "parameters": {

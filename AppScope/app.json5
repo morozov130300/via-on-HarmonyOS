@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "cn.edu.whut.uia",
+    "bundleName": "cn.edu.whut.via",
     "vendor": "example",
     // 版本号对齐原版 AndroidManifest：versionCode=20260920、versionName=7.4.0（去掉 beta 后缀）
     "versionCode": 20260920,
