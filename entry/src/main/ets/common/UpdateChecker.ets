@@ -1,72 +1,21 @@
-import { http } from '@kit.NetworkKit'
 import { bundleManager } from '@kit.AbilityKit'
+import { common, Want } from '@kit.AbilityKit'
 
-// 原版 y8/h.k()：play flavor 更新配置地址（c0.i() 为 play 时取 latest_play.json）
-const UPDATE_CONFIG_URL: string = 'https://res.uiayoo.com/v1/latest_play.json'
-// 原版 y8/h.a.i()：version > 20260920 才视为有效下发
-const MIN_EFFECTIVE_VERSION: number = 20260920
-
-export interface UpdateConfig {
-  taskId: number
-  version: number
-  changelog: string
-  url: string
-  md5: string
-}
-
+// 豁免项11：检查更新改用华为应用市场官方接口——不再连 Via 原作者服务器拉版本 JSON。
+// 应用市场内详情页自会显示本应用是否有新版本并提供更新入口；本端只负责拉起详情页。
 export class UpdateChecker {
-  // 原版 y8/h.k()：GET 请求（Accept: */*、Charset: UTF-8、Connection: Keep-Alive），
-  // 任何异常静默返回 null（原版返回未填充的默认 a 实例）
-  static async fetchLatestConfig(): Promise<UpdateConfig | null> {
-    const request = http.createHttp()
-    try {
-      const response = await request.request(UPDATE_CONFIG_URL, {
-        method: http.RequestMethod.GET,
-        connectTimeout: 10000,
-        readTimeout: 30000,
-        usingCache: false,
-        header: { 'Accept': '*/*', 'Charset': 'UTF-8', 'Connection': 'Keep-Alive' }
-      })
-      if (response.responseCode !== 200) {
-        return null
-      }
-      const body = response.result
-      if (typeof body !== 'string') {
-        return null
-      }
-      return UpdateChecker.parseConfig(body)
-    } catch (error) {
-      return null
-    } finally {
-      request.destroy()
+  // 拉起华为应用市场本应用详情页（ohos.want.action.appdetail +
+  // store://appgallery.huawei.com/app/detail?id=<bundleName>，见 AppGallery Kit 文档）
+  static async openAppGalleryDetail(context: common.UIAbilityContext): Promise<void> {
+    const want: Want = {
+      action: 'ohos.want.action.appdetail',
+      uri: `store://appgallery.huawei.com/app/detail?id=${context.abilityInfo.bundleName}`
     }
-  }
-
-  // 原版 y8/h.a.l() 逐字段读取 + a.i() 有效性判定：
-  // version > 20260920 且 changelog/url/md5 均非空
-  private static parseConfig(text: string): UpdateConfig | null {
     try {
-      const root: Record<string, Object> = JSON.parse(text) as Record<string, Object>
-      const taskIdRaw: Object | undefined = root['task_id']
-      const versionRaw: Object | undefined = root['version']
-      const changelogRaw: Object | undefined = root['changelog']
-      const urlRaw: Object | undefined = root['url']
-      const md5Raw: Object | undefined = root['md5']
-      const config: UpdateConfig = {
-        taskId: typeof taskIdRaw === 'number' ? taskIdRaw : -1,
-        version: typeof versionRaw === 'number' ? versionRaw : 0,
-        changelog: typeof changelogRaw === 'string' ? changelogRaw : '',
-        url: typeof urlRaw === 'string' ? urlRaw : '',
-        md5: typeof md5Raw === 'string' ? md5Raw : ''
-      }
-      return UpdateChecker.isEffective(config) ? config : null
+      await context.startAbility(want)
     } catch (error) {
-      return null
+      console.error('open appgallery detail failed')
     }
-  }
-
-  static isEffective(config: UpdateConfig): boolean {
-    return config.version > MIN_EFFECTIVE_VERSION && config.changelog !== '' && config.url !== '' && config.md5 !== ''
   }
 
   static getLocalVersionCode(): number {
@@ -76,12 +25,5 @@ export class UpdateChecker {
     } catch (error) {
       return 0
     }
-  }
-
-  static isUpdateAvailable(config: UpdateConfig | null): boolean {
-    if (config === null || !UpdateChecker.isEffective(config)) {
-      return false
-    }
-    return config.version > UpdateChecker.getLocalVersionCode()
   }
 }
