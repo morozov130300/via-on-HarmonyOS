@@ -1567,6 +1567,20 @@ export struct TabWeb {
     } catch (error) {
       console.error('enableSafeBrowsing failed')
     }
+    // 原版 e8/i.java:281-284 按 w9/p.C()（bit16384）调用 setAcceptThirdPartyCookies；
+    // Cookie 总开关对应 CookieManager.setAcceptCookie。鸿蒙等价 API：
+    // WebCookieManager.putAcceptCookieEnabled / putAcceptThirdPartyCookieEnabled
+    try {
+      webview.WebCookieManager.putAcceptCookieEnabled(this.settings.cookiesEnabled)
+    } catch (error) {
+      console.error('putAcceptCookieEnabled failed')
+    }
+    try {
+      // 原版语义：cookiesBlockThirdParty=true → 不接受第三方 Cookie
+      webview.WebCookieManager.putAcceptThirdPartyCookieEnabled(!this.settings.cookiesBlockThirdParty)
+    } catch (error) {
+      console.error('putAcceptThirdPartyCookieEnabled failed')
+    }
   }
 
   private lastAppliedUa: string = ''
