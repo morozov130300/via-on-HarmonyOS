@@ -1,11 +1,10 @@
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { AppIcon } from '../components/AppIcon'
 import { buildNavSlide } from './PageTransitions'
 import { RecordBackController } from './RecordTypes'
 import { BookmarkPage } from './BookmarkPage'
 import { HistoryPage } from './HistoryPage'
 import { OfflinePage } from './OfflinePage'
-import { UiInsets } from '../common/Immersive'
-import { BusinessError } from '@kit.BasicServicesKit'
 
 // 原版 bb\i.java（RecordContainerFragment）1:1 移植——记录容器页：
 // 所有「打开记录」入口（主页 logo cmd257→ja(true)→aa(null)、工具栏7/8、菜单书签/历史/
@@ -68,17 +67,19 @@ function defaultPageOfRoute(route: string): number {
 @ComponentV2
 export struct RecordContainerPage {
   private navPathStack: NavPathStack = new NavPathStack()
-  private insets: UiInsets = UiInsets.getInstance()
   private backController: RecordBackController = new RecordBackController()
+  private tabsController: TabsController = new TabsController()
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
   // 路由名（onReady 读出），决定默认标签 = 原版 n3(true,page) 的 page
   @Local routeName: string = 'bookmarks'
-  // 原版 v://bookmarks 深链的文件夹定位参数（cb.e0.T3 预置）
-  private pendingFolderId: number = 0
-  private pendingFolderName: string = ''
+  // 原版 v://bookmarks 深链的文件夹定位参数（cb.e0.T3 预置，经 @Param 透传 BookmarkPage）
+  @Local folderParamId: number = 0
+  @Local folderParamName: string = ''
   // TabLayout 当前选中索引（原版 TabLayout.f4281o）
   @Local currentIndex: number = 0
+  // Tabs 初始索引（onReady 在 build 前不可用，用 @Local 承接）
+  @Local initialIndex: number = 0
 
   // 原版 z.java 返回键：contentDescription「向上导航」，点击 = 容器返回
   private handleBack(): void {
@@ -121,16 +122,18 @@ export struct RecordContainerPage {
             ForEach(RECORD_TABS, (tab: RecordTabSpec, idx: number) => {
               Text(tab.label)
                 .fontSize(14)
-                // selected 全不透明 / 未选中 α150 半透明（textColorPrimary 同色）
-                .fontColor(idx === this.currentIndex ? $r('app.color.fg') : $r('app.color.fg_tab'))
+                // selected 全不透明 / 未选中 α150 半透明（textColorPrimary 同色，
+                // TabLayout.m()：default 态 = 同色 α150 ≈ 0.59）
+                .fontColor(idx === this.currentIndex ? $r('app.color.fg') : $r('app.color.fg_tertiary'))
                 // sans-serif-medium（非加粗，TabLayout 构造 291-292）
                 .fontWeight(FontWeight.Medium)
                 .maxLines(1)
                 // tab 左右 padding 12dp（f4292z=12）；宽自适应（E=false）
                 .padding({ left: 12, right: 12, top: 10, bottom: 10 })
                 .onClick(() => {
-                  // 原版 TabLayout.b onClick：setCurrentItem(target)（159-171）
-                  this.currentIndex = idx
+                  // 原版 TabLayout.b onClick：setCurrentItem(target)（159-171），
+                  // Tabs.onChange 回写 currentIndex 保持双向同步
+                  this.tabsController.changeIndex(idx)
                 })
             }, (tab: RecordTabSpec) => `tab${tab.page}`)
           }
@@ -146,10 +149,12 @@ export struct RecordContainerPage {
         .backgroundColor($r('app.color.page_bg'))
 
         // ===== ViewPager2（bb/i.d FragmentStateAdapter，可横滑）=====
-        Tabs({ index: this.pageToIndex(this.defaultPageOfRoute(this.routeName)), controller: this.tabsController }) {
+        Tabs({ index: this.initialIndex, controller: this.tabsController }) {
           TabContent() {
             BookmarkPage({
               backController: this.backController,
+              folderParamId: this.folderParamId,
+              folderParamName: this.folderParamName,
               onRequestPop: (): void => {
                 this.navPathStack.pop()
               }
@@ -197,15 +202,25 @@ export struct RecordContainerPage {
     })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
-      this.routeName = ctx.name
-      this.pendingFolderId = 0
-      this.pendingFolderName = ''
-    })
-    .onShown(() => {
-      // deep link 参数（v://bookmarks?folder=）：BookmarkPage 挂载后透传（cb.e0.T3）
-      if (this.pendingFolderId > 0) {
-        this.bookmarkPage?.applyFolderParam(this.pendingFolderId, this.pendingFolderName)
-        this.pendingFolderId = 0
+      // 子页 pushPage（closedTabs / pdfViewer）复用容器的路由栈
+      this.backController.navPathStack = ctx.pathStack
+      this.routeName = ctx.pathInfo.name
+      // 原版 bb/i X1：y0().getInt("page",0) → l3(page) → viewPager.j(index,false)
+      this.initialIndex = this.pageToIndex(defaultPageOfRoute(this.routeName))
+      this.currentIndex = this.initialIndex
+      // v://bookmarks 深链的文件夹参数（原版 k6.u 8665 aa(str) → cb.e0.T3）
+      const rawParam: string | object | undefined = ctx.pathStack.getParamByName(this.routeName)
+      if (typeof rawParam === 'string' && rawParam !== '') {
+        try {
+          const obj = JSON.parse(rawParam) as Record<string, string>
+          const folderRaw = obj['folder'] ?? ''
+          if (folderRaw !== '' && !Number.isNaN(Number(folderRaw))) {
+            this.folderParamId = Number(folderRaw)
+            this.folderParamName = obj['folderName'] ?? ''
+          }
+        } catch (error) {
+          console.error('read record container param failed')
+        }
       }
     })
     .onWillDisappear(() => {
@@ -225,10 +240,6 @@ export struct RecordContainerPage {
       return 2
     }
     return 0
-  }
-
-  private defaultPageOfRoute(route: string): number {
-    return defaultPageOfRoute(route)
   }
 }
 

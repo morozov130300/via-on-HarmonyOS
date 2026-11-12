@@ -54,7 +54,12 @@ export struct BookmarkPage {
   private tabStore: TabStore = TabStore.getInstance()
   // 容器页（RecordContainerPage）注入：返回拦截回调（原版 bb.i.c W()/l() 语义）
   //   true = 已消费返回（退出多选/回上级文件夹/清空搜索），容器不得 pop
-  backController: RecordBackController = new RecordBackController()
+  @Param backController: RecordBackController = new RecordBackController()
+  // 容器页注入：v://bookmarks 深链的文件夹定位（原版 cb.e0.T3 预置），@Monitor 感知变化
+  @Param folderParamId: number = 0
+  @Param folderParamName: string = ''
+  // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
+  @Event onRequestPop: () => void = () => {}
   @Local items: BookmarkRec[] = []
   @Local folders: BookmarkFolderRec[] = []
   @Local allBookmarks: BookmarkRec[] = []
@@ -106,6 +111,17 @@ export struct BookmarkPage {
     }
     this.reload()
     this.loadUiPrefs()
+  }
+
+  // 深链文件夹定位（v://bookmarks?folder=）：容器页改 Param 后落到这里
+  // （原版 k6.u 8665 aa(str) → cb.e0.T3(str) 预置定位）
+  @Monitor('folderParamId')
+  onFolderParamChange(): void {
+    if (this.folderParamId > 0 && this.folderParamId !== this.currentFolderId) {
+      this.currentFolderId = this.folderParamId
+      this.folderStack = [new FolderStackEntry(this.folderParamId, this.folderParamName)]
+      this.reload()
+    }
   }
 
   build() {
@@ -1262,9 +1278,7 @@ export struct BookmarkPage {
     })
   }
 
-  // 深链参数（容器页传入）：folder=数字文件夹 id、folderName=名称。
-  // 对应原版 k6.u 8657（v://bookmarks/?folder=&folderName=）与 8567（folder://X）；
-  // 原版 aa(str) 落到 cb.e0.T3(str) 预置定位（e0.java:404），容器页经此方法透传。
+  // 深链文件夹定位方法（保留给容器页显式调用）
   applyFolderParam(folderId: number, folderName: string): void {
     if (Number.isNaN(folderId) || folderId === this.currentFolderId) {
       return
@@ -1331,12 +1345,8 @@ export struct BookmarkPage {
       this.reload()
       return
     }
-    this.backController.handler = null
     this.onRequestPop()
   }
-
-  // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
-  @Event onRequestPop: () => void = () => {}
 
   private reload(): void {
     this.db.listBookmarks(this.currentFolderId).then((items: BookmarkRec[]) => {
@@ -1668,7 +1678,3 @@ struct FolderPickerOverlay {
   }
 }
 
-@Builder
-export function BookmarkPageBuilder() {
-  BookmarkPage()
-}

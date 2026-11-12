@@ -51,10 +51,9 @@ class ClearGroup {
 export struct HistoryPage {
   private db: BrowserDb = BrowserDb.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
-  private navPathStack: NavPathStack = new NavPathStack()
   // 容器页（RecordContainerPage）注入：返回拦截回调（原版 db.n.W()/l() 语义）
   //   true = 已消费返回（退出多选/清空搜索），容器不得 pop
-  backController: RecordBackController = new RecordBackController()
+  @Param backController: RecordBackController = new RecordBackController()
   // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
   @Event onRequestPop: () => void = () => {}
   @Local items: HistoryRec[] = []
@@ -411,8 +410,8 @@ export struct HistoryPage {
 
   private openClosedTabs(): void {
     try {
-      // 路由名 'closedTabs' 需在 router_map.json 登记（主控接线项）
-      this.navPathStack.pushPathByName('closedTabs', '', true)
+      // 路由名 'closedTabs'：经容器页的路由栈压入（原版 n.t3 → ViewPager 同栈）
+      this.backController.pushPage('closedTabs', '')
     } catch (error) {
       console.error('open closed tabs page failed')
     }
@@ -708,7 +707,3 @@ export struct HistoryPage {
   }
 }
 
-@Builder
-export function HistoryPageBuilder() {
-  HistoryPage()
-}
