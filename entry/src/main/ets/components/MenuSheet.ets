@@ -190,8 +190,11 @@ export struct MenuSheet {
         this.DotsBar()
         this.BottomRow()
       }
-      // 原版 N8()：大屏时 min(短边-96, 384)（见 menuWidthVp）；布局1 贴顶时改用顶部 insets
-      .constraintSize({ maxWidth: this.menuWidthVp() > 0 ? this.menuWidthVp() : '100%' })
+      // 原版 N8()：菜单宽 = min(容器宽,容器高)，大屏非布局0 时 min(短边-96, 384)。
+      // ★ 必须给显式 width：容器原先只有 constraintSize.maxWidth，而内部 Grid/Button 全是
+      //   width('100%')，百分比相对父宽、父宽又由内容决定 → 循环依赖，Column 塌成最小内容宽
+      //   （表现为菜单变一条窄条、Grid 5 列挤成 1 列、文案被裁）。
+      .width(this.menuWidthVp() > 0 ? this.menuWidthVp() : '92%')
       .margin({
         left: 12,
         right: 12,
