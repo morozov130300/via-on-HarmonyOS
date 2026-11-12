@@ -540,8 +540,15 @@ export struct HomePage {
     if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
       return 0
     }
-    // 原版 r8.d：searchBarRadius = corner% * (strokeWidth + 23)
-    return (this.settings.homePillCorner / 100) * (this.settings.homePillStrokeWidth + 23)
+    // 原版 r8/d：searchBarRadius = corner% * (strokeWidth + 23)。
+    // 原版渲染端是 CSS border-radius，浏览器自动钳制到盒尺寸一半（.search_bar 高 46px → 23px），
+    // 描边粗细拉大时圆角值(24~30)全部被钳回 23 —— 这才是原版的实际观感。
+    // ArkUI borderRadius 不钳制，超限（默认 corner=100%、stroke=1 → 24 > 23）时
+    // 描边跟随畸变圆角错位渲染。补齐钳制语义（HOME_PILL_HEIGHT=46 → 23）。
+    return Math.min(
+      (this.settings.homePillCorner / 100) * (this.settings.homePillStrokeWidth + 23),
+      HOME_PILL_HEIGHT / 2
+    )
   }
 
   // 原版 r8/d.java:109 mVar.P(lVarJ.d())：isNight = 应用夜间模式（w9/k.java:863 d()：nightmode2 1/3）
