@@ -92,26 +92,3 @@ export function simplifyUaString(ua: string): string {
 export function cleanUaInput(ua: string): string {
   return ua.replace(/[\t\n\r]+/g, ' ').trim()
 }
-
-// z8/b4.i()：去 "; wv" 与 " Version/x.y"
-export function uaCleanWv(ua: string): string {
-  if (ua === null || ua === '') {
-    return ua
-  }
-  const wvIdx = ua.indexOf('; wv')
-  if (wvIdx < 0) {
-    return ua
-  }
-  let result = ua.substring(0, wvIdx) + ua.substring(wvIdx + 4)
-  const versionIdx = result.indexOf(' Version/')
-  if (versionIdx >= 0) {
-    let endIdx = result.indexOf(' ', versionIdx + 1)
-    if (endIdx < 0) {
-      endIdx = result.length
-    }
-    if (endIdx > versionIdx) {
-      result = result.substring(0, versionIdx) + result.substring(endIdx)
-    }
-  }
-  return result
-}

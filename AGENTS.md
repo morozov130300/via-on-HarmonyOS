@@ -234,7 +234,8 @@
 - 技术栈：HarmonyOS NEXT API 26, ArkTS
 - 目标设备：鸿蒙 PC/平板/手机
 ## 调试设备
-- HUAWEI MateBook Pro / 2in1 / `10.79.231.117:45439`、`10.78.40.118:38277`
+- HUAWEI MateBook Pro / 2in1 / `10.78.40.118:38277`
+- HUAWEI Mate X7 典藏版 / phone / `10.79.231.117:45439`
 
 ### ⚠️ 项目背景（每个智能体必读，禁止脱离实际项目状态空谈）
 
