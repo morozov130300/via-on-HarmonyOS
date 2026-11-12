@@ -1525,11 +1525,6 @@ export class AppSettings {
     this.flushKey('disableSafeBrowsing', on)
   }
 
-  setIgnoreSslWarning(on: boolean): void {
-    this.ignoreSslWarning = on
-    this.flushKey('ignoreSslWarning', on)
-  }
-
   setHomeBgColor(color: string): void {
     this.homeBgColor = color
     this.flushKey('homeBgColor', color)
@@ -1764,11 +1759,6 @@ export class AppSettings {
     // 标记已是原版 1..4 语义，避免 loadFields 旧枚举迁移误转（0/1/2 → 1/3/4）
     this.flushKey('orientationV2', 1)
     this.flushKey('orientation', value)
-  }
-
-  setShowStatusBar(on: boolean): void {
-    this.showStatusBar = on
-    this.flushKey('showStatusBar', on)
   }
 
   setDownloadDir(dir: string): void {

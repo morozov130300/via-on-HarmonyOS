@@ -76,9 +76,4 @@ export class SslWhitelistStore {
     }
     this.setMask(next)
   }
-
-  // 原版 e8/h0.v()：I(sslError) 的位集合是否全部被允许
-  static allows(mask: number, bits: number): boolean {
-    return bits !== 0 && (mask & bits) === bits
-  }
 }
