@@ -16,6 +16,9 @@
 # 临时诊断产物（AGENTS.md：临时文件用完必清，禁止入库）
 /.diag/
 /screenshots/
+# 隐私保护：签名材料与智能体记忆文件禁止入库（2026-11 公开仓库清理）
+/signing/
+/AGENTS.md
 _shot*
 _screenshot*
 screenshot_*
