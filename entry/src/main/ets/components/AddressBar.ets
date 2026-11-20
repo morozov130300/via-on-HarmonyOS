@@ -9,6 +9,7 @@ import { i18n } from '@kit.LocalizationKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { BEZIER_0202_CURVE, dialogTransition } from '../common/Transitions'
+import { chromeIconColor, chromeTextColor, resolveColorHex, toolbarBackgroundColor } from '../common/ChromeColors'
 
 const BAR_HEIGHT: number = 48
 // 原版图标 PNG 为 88px(@4x) = 22dp
@@ -259,6 +260,24 @@ export struct AddressBar {
     }
   }
 
+  // 原版 k6.Z7：顶栏地址栏图标/标题与底栏共用一次着色计算（亮度自适应）。
+  // 顶栏背景 = toolbarBackgroundColor（主页自设色/网页 theme-color/home_bg），
+  // 与底栏同源；夜间图标 #9f9f9f、文字 #beffffff，亮底深字，暗底白字。
+  // @Computed 保证同一次 build 中多图标取值一致（对齐底栏 toolbarAccent 的做法）。
+  @Computed
+  get chromeIcon(): ResourceColor {
+    const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const bgHex = resolveColorHex(toolbarBackgroundColor(this.tab, this.settings), ctx)
+    return chromeIconColor(bgHex, this.settings.isNightActive())
+  }
+
+  @Computed
+  get chromeText(): ResourceColor {
+    const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const bgHex = resolveColorHex(toolbarBackgroundColor(this.tab, this.settings), ctx)
+    return chromeTextColor(bgHex, this.settings.isNightActive())
+  }
+
   // 原版左图标长按对话框条目（k6.h：z8/v2.e(Context) 引擎名数组，含自定义引擎）
   private engineItems(): EngineItem[] {
     let lang = 'zh'
@@ -454,7 +473,7 @@ export struct AddressBar {
   build() {
     Row() {
       Stack() {
-        ViaIcon({ icon: this.leftIcon(), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
+        ViaIcon({ icon: this.leftIcon(), iconSize: ICON_SIZE, iconColor: this.chromeIcon })
           .scale({ x: this.pulseScale, y: this.pulseScale })
           .accessibilityText(this.readerHint
             ? $r('app.string.open_reader_mode') : $r('app.string.site_info'))
@@ -484,7 +503,7 @@ export struct AddressBar {
 
       Text(this.titleText())
         .fontSize(this.titleFontSize())
-        .fontColor($r('app.color.fg'))
+        .fontColor(this.chromeText)
         .maxLines(1)
         // 原版 n0.p()：setEllipsize(null) + setSingleLine(true) → 不显示省略号，超出裁切
         .textOverflow({ overflow: TextOverflow.Clip })
@@ -521,7 +540,7 @@ export struct AddressBar {
       //   图标宽 = LinearLayout.LayoutParams(g6.f.d(ctx, x7.n.E))，E=0x7f070052=dimen bi=48dp）
       if (this.tab.sniffedMedia.length > 0) {
         Stack() {
-          ViaIcon({ icon: $r('app.media.uia_ic_resource'), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
+          ViaIcon({ icon: $r('app.media.uia_ic_resource'), iconSize: ICON_SIZE, iconColor: this.chromeIcon })
         }
         .width(ICON_SLOT)
         .height('100%')
@@ -537,7 +556,7 @@ export struct AddressBar {
       }
 
       Stack() {
-        ViaIcon({ icon: this.actionIcon(), iconSize: ICON_SIZE, iconColor: $r('app.color.icon') })
+        ViaIcon({ icon: this.actionIcon(), iconSize: ICON_SIZE, iconColor: this.chromeIcon })
       }
       .width(ICON_SLOT)
       .height('100%')

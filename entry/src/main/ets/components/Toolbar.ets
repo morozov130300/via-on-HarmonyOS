@@ -5,61 +5,14 @@ import { AddressBar } from './AddressBar'
 import { ViaIcon } from './ViaIcon'
 import { BEZIER_0202_CURVE } from '../common/Transitions'
 import { common } from '@kit.AbilityKit'
+import { normalizeThemeColor, toolbarBackgroundColor, resolveColorHex } from '../common/ChromeColors'
+
+// re-export 保持 Index 等既有 import 路径不变
+export { toolbarBackgroundColor } from '../common/ChromeColors'
 
 const BAR_HEIGHT: number = 48
 // 原版 dimens a=13dp 内边距 → 88px(@4x)=22dp 图标本体
 const ICON_SIZE: number = 22
-
-// 原版 k6.Nb()：网页 theme-color 规范化为 ArkUI 可用的 #RRGGBB，无法解析返回空串
-export function normalizeThemeColor(raw: string): string {
-  const s: string = raw.trim()
-  if (s === '') {
-    return ''
-  }
-  if (s.startsWith('#')) {
-    if (s.length === 4) {
-      return `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`
-    }
-    if (s.length === 7 || s.length === 9) {
-      return s
-    }
-    return ''
-  }
-  const matched: RegExpMatchArray | null = s.match(/^rgba?\(([^)]+)\)$/i)
-  if (matched === null) {
-    return ''
-  }
-  const parts: string[] = matched[1].split(',')
-  if (parts.length < 3) {
-    return ''
-  }
-  const r: number = Math.round(Number(parts[0].trim()))
-  const g: number = Math.round(Number(parts[1].trim()))
-  const b: number = Math.round(Number(parts[2].trim()))
-  if (isNaN(r) || isNaN(g) || isNaN(b)) {
-    return ''
-  }
-  let hex: string = '#'
-  hex += Math.min(255, Math.max(0, r)).toString(16).padStart(2, '0')
-  hex += Math.min(255, Math.max(0, g)).toString(16).padStart(2, '0')
-  hex += Math.min(255, Math.max(0, b)).toString(16).padStart(2, '0')
-  return hex
-}
-
-// 原版 k6.Nb()/g0：工具栏底色（含网页 theme-color 自适应、主页自设背景色夜间联动）。
-// 抽成公共函数供 Index 底部容器复用：背景铺满含导航条避让区的整个底栏，组件仍单独避让。
-export function toolbarBackgroundColor(tab: TabItem, settings: AppSettings): ResourceColor {
-  if (settings.toolbarColorAdapt && !settings.isNightActive()) {
-    const themed: string = normalizeThemeColor(tab.themeColor)
-    if (themed !== '') {
-      return themed
-    }
-  }
-  if (tab.isHomePage() && settings.homeBgColor !== '') {
-    return settings.nightBlend(settings.homeBgColor)
-  }
-  return $r('app.color.home_bg')
-}
 
 @ComponentV2
 export struct Toolbar {
