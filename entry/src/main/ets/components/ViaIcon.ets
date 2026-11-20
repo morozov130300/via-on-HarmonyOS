@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit'
 import { SkinStore } from '../common/SkinStore'
+import { AppSettings } from '../common/Settings'
 
 @ComponentV2
 export struct ViaIcon {
@@ -19,9 +20,11 @@ export struct ViaIcon {
   // RGB 整体替换为目标色、alpha 保留原图（与已验证可用的小组件卡片同口径 0~1 归一化）。
   // 旧写法把目标色塞进「alpha 系数列」（R' = r*A），r/g/b 又没归一化到 0~1，
   // 结果通道值被钳到 255 → 所有图标恒为白色，浅色底上直接看不见（真机实测）。
+  // colorEpoch（@Trace）参与计算：夜间切换 applyAppTheme 时自增，驱动本矩阵按新
+  // colorMode 重算；否则 @Computed 只依赖恒定的 $r 引用对象，深浅切换后缓存旧色。
   @Computed
   get tintMatrix(): number[] {
-    const c: number = this.resolveColor();
+    const c: number = this.resolveColor(AppSettings.getInstance().colorEpoch);
     const r: number = ((c >>> 16) & 0xFF) / 255;
     const g: number = ((c >>> 8) & 0xFF) / 255;
     const b: number = (c & 0xFF) / 255;
@@ -40,7 +43,12 @@ export struct ViaIcon {
     return SkinStore.getInstance().skinIconPath(context, this.iconName)
   }
 
-  private resolveColor(): number {
+  // epoch 仅作响应式依赖锚点：夜间切换 colorEpoch 自增 → @Computed 重算 →
+  // resolveColor 重新按当前 colorMode 解析资源色（数值本身不参与计算）
+  private resolveColor(epoch: number): number {
+    if (epoch < 0) {
+      return 0xFFFFFFFF;
+    }
     const colorValue: ResourceColor = this.iconColor;
     if (typeof colorValue === 'number') {
       return colorValue as number;
@@ -50,7 +58,9 @@ export struct ViaIcon {
     }
     try {
       const res: Resource = colorValue as Resource;
-      return getContext(this).resourceManager.getColorSync(res);
+      // 官方 FAQ faqs-arkui-354：getColorSync 传完整 Resource 对象不会按深浅色
+      // 限定词目录解析（夜间永远拿到 base 浅色 → 深面板黑图标），传 res.id 才会
+      return getContext(this).resourceManager.getColorSync(res.id);
     } catch (error) {
       return 0xFFFFFFFF;
     }

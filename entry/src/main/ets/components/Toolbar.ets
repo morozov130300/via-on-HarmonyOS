@@ -92,7 +92,8 @@ export struct Toolbar {
   private resolveResourceHex(res: Resource): string {
     try {
       const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
-      const argb = ctx.resourceManager.getColorSync(res)
+      // FAQ faqs-arkui-354：传完整 Resource 不按深浅色限定词解析，传 res.id 才会
+      const argb = ctx.resourceManager.getColorSync(res.id)
       const r = (argb >> 16) & 0xFF
       const g = (argb >> 8) & 0xFF
       const b = argb & 0xFF

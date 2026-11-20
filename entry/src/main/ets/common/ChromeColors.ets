@@ -61,7 +61,8 @@ export function resolveColorHex(color: ResourceColor, context: common.UIAbilityC
     return `#${to2((color >>> 16) & 255)}${to2((color >>> 8) & 255)}${to2(color & 255)}`
   }
   try {
-    const argb: number = context.resourceManager.getColorSync(color as Resource)
+    // FAQ faqs-arkui-354：传完整 Resource 不按深浅色限定词解析，传 res.id 才会
+    const argb: number = context.resourceManager.getColorSync((color as Resource).id)
     const to2 = (v: number): string => v.toString(16).padStart(2, '0')
     return `#${to2((argb >>> 16) & 255)}${to2((argb >>> 8) & 255)}${to2(argb & 255)}`
   } catch (error) {
