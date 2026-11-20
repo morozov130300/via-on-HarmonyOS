@@ -15,19 +15,20 @@ export struct UiaIcon {
   // 原版前进图标为 rotate 180° 的返回图标（drawable/a3.xml：<rotate drawable=@drawable/b2 ...>）
   @Param rotateDeg: number = 0
 
-  // 等价原版 PorterDuff.SRC_IN 着色：out.rgb = color.rgb * src.alpha，out.a = src.a * color.a
-  // 对纯黑/纯白 alpha 蒙版 PNG（uia_menu_* / uia_ic_*）均生效
+  // 等价原版 PorterDuff.SRC_IN 着色：图标本体是纯黑 alpha 蒙版 PNG（uia_ic_*/uia_menu_*），
+  // RGB 整体替换为目标色、alpha 保留原图（与已验证可用的小组件卡片同口径 0~1 归一化）。
+  // 旧写法把目标色塞进「alpha 系数列」（R' = r*A），r/g/b 又没归一化到 0~1，
+  // 结果通道值被钳到 255 → 所有图标恒为白色，浅色底上直接看不见（真机实测）。
   @Computed
   get tintMatrix(): number[] {
     const c: number = this.resolveColor();
-    const a: number = ((c >>> 24) & 0xFF) / 255;
     const r: number = ((c >>> 16) & 0xFF) / 255;
     const g: number = ((c >>> 8) & 0xFF) / 255;
     const b: number = (c & 0xFF) / 255;
-    return [0, 0, 0, r, 0,
-      0, 0, 0, g, 0,
-      0, 0, 0, b, 0,
-      0, 0, 0, a, 0];
+    return [0, 0, 0, 0, r,
+      0, 0, 0, 0, g,
+      0, 0, 0, 0, b,
+      0, 0, 0, 1, 0];
   }
 
   // 原版 lb.a.a：当前皮肤下存在 <iconName>.png 则返回其路径（皮肤需重启生效，无需响应式）

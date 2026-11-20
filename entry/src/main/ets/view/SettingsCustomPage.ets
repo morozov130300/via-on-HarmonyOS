@@ -22,6 +22,8 @@ import {
   HOME_CLEAR_ICON_TITLE,
   HOME_DIM_MAX,
   HOME_DIM_MIN,
+  HOME_FAV_DIM_MAX,
+  HOME_FAV_DIM_MIN,
   HOME_FAV_ICON_STYLES,
   HOME_FAV_SHADOWS,
   HOME_LOGO_FONT_MAX,
@@ -49,6 +51,9 @@ class CustomParam {
   max: number = 100
   unit: string = ''
   zeroLabel: string = ''
+  // 原版 h9/b 的 zeroValue（e(min, 文案)）：滑杆停在该值即代表「自适应」，存 0。
+  // -1 = 无该语义（如圆角值、描边粗细）。
+  zeroValue: number = -1
 
   constructor(id: string, icon: Resource, label: string, kind: string) {
     this.id = id
@@ -101,9 +106,8 @@ export struct SettingsCustomPage {
             HomePage({ onSearchTap: () => {
             } })
           }
-          .width('100%')
+          .width('95%')
           .layoutWeight(1)
-          .padding({ left: 12, right: 12, top: 12 })
           .borderRadius(18)
           .border({ width: 1, color: $r('app.color.appbar_divider') })
           .backgroundColor($r('app.color.page_bg'))
@@ -165,8 +169,8 @@ export struct SettingsCustomPage {
     const params: CustomParam[] = []
     const logoType = new CustomParam('logo_type', $r('app.media.uia_ic_c_logo_text'), 'Logo', KIND_ACTION)
     params.push(logoType)
-    params.push(this.dimParam('logo_width', $r('app.media.uia_ic_c_fav_width'), '宽度', this.settings.homeLogoWidth))
-    params.push(this.dimParam('logo_height', $r('app.media.uia_ic_c_fav_height'), '高度', this.settings.homeLogoHeight))
+    params.push(this.dimParam('logo_width', $r('app.media.uia_ic_c_fav_width'), '宽度', HOME_DIM_MIN, HOME_DIM_MAX))
+    params.push(this.dimParam('logo_height', $r('app.media.uia_ic_c_fav_height'), '高度', HOME_DIM_MIN, HOME_DIM_MAX))
     params.push(this.pctParam('logo_corner', $r('app.media.uia_ic_c_fav_corner'), '圆角值', this.settings.homeLogoCorner))
     if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '文字') {
       const font = new CustomParam('logo_font', $r('app.media.uia_ic_c_font_size'), '字体大小', KIND_SLIDER)
@@ -179,12 +183,17 @@ export struct SettingsCustomPage {
     return params
   }
 
-  private dimParam(id: string, icon: Resource, label: string, _value: number): CustomParam {
+  // 原版 h9/b：d(min,max) + e(zeroValue,零值文案)。
+  // 滑杆最左 = min，而 min 就是「自适应」哨兵值——原版 W2 里 `j() != k() ? j() : 0`
+  // 表示滑杆停在 zeroValue 时存 0（自适应），否则存实际值。
+  // Logo 宽高 min=10（e9/u.java:145-146），收藏宽高 min=24（e9/l.java:17-18）。
+  private dimParam(id: string, icon: Resource, label: string, min: number, max: number): CustomParam {
     const param = new CustomParam(id, icon, label, KIND_SLIDER)
-    param.min = HOME_DIM_MIN
-    param.max = HOME_DIM_MAX
+    param.min = min
+    param.max = max
     param.unit = 'px'
     param.zeroLabel = '自适应'
+    param.zeroValue = min
     return param
   }
 
@@ -223,8 +232,8 @@ export struct SettingsCustomPage {
 
   private favParams(): CustomParam[] {
     const params: CustomParam[] = []
-    params.push(this.dimParam('fav_width', $r('app.media.uia_ic_c_fav_width'), '宽度', this.settings.homeFavWidth))
-    params.push(this.dimParam('fav_height', $r('app.media.uia_ic_c_fav_height'), '高度', this.settings.homeFavHeight))
+    params.push(this.dimParam('fav_width', $r('app.media.uia_ic_c_fav_width'), '宽度', HOME_FAV_DIM_MIN, HOME_FAV_DIM_MAX))
+    params.push(this.dimParam('fav_height', $r('app.media.uia_ic_c_fav_height'), '高度', HOME_FAV_DIM_MIN, HOME_FAV_DIM_MAX))
     params.push(this.pctParam('fav_corner', $r('app.media.uia_ic_c_fav_corner'), '圆角值', this.settings.homeFavCorner))
     params.push(new CustomParam('fav_icon_style', $r('app.media.uia_ic_c_fav_icon_style'), '图标样式', KIND_ACTION))
     params.push(new CustomParam('fav_shadow', $r('app.media.uia_ic_c_fav_icon_color'), '图标色彩', KIND_ACTION))
@@ -310,10 +319,11 @@ export struct SettingsCustomPage {
 
   private sliderValueOf(param: CustomParam): number {
     switch (param.id) {
+      // 原版 e9/u.java:145-146：`c(e() == 0 ? 10 : e())`——存 0 时滑杆停在 min（10），不是 72
       case 'logo_width':
-        return this.settings.homeLogoWidth === 0 ? 72 : this.settings.homeLogoWidth
+        return this.settings.homeLogoWidth === 0 ? HOME_DIM_MIN : this.settings.homeLogoWidth
       case 'logo_height':
-        return this.settings.homeLogoHeight === 0 ? 72 : this.settings.homeLogoHeight
+        return this.settings.homeLogoHeight === 0 ? HOME_DIM_MIN : this.settings.homeLogoHeight
       case 'logo_corner':
         return this.settings.homeLogoCorner
       case 'logo_font':
@@ -339,9 +349,12 @@ export struct SettingsCustomPage {
     }
   }
 
-  private applySlider(id: string, value: number): void {
-    const v = Math.round(value)
-    switch (id) {
+  // 原版 e9/u.java W2 case2/3：`j() != k() ? j() : 0`——滑杆停在 zeroValue（=min）时写入 0，
+  // 也就是「自适应」；其余写入实际像素值。
+  private applySlider(param: CustomParam, value: number): void {
+    const raw = Math.round(value)
+    const v = (param.zeroValue >= 0 && raw === param.zeroValue) ? 0 : raw
+    switch (param.id) {
       case 'logo_width':
         this.settings.setHomeLogoWidth(v)
         break
@@ -459,7 +472,7 @@ export struct SettingsCustomPage {
               .blockSize({ width: 14, height: 14 })
               .onChange((value: number) => {
                 this.sliderPos = value
-                this.applySlider(param.id, value)
+                this.applySlider(param, value)
               })
           }
         }, (param: CustomParam) => param.id)
@@ -474,18 +487,19 @@ export struct SettingsCustomPage {
     Row({ space: 4 }) {
       ForEach(this.currentParams(), (param: CustomParam) => {
         Column({ space: 5 }) {
-          Image(param.icon)
-            .height(22)
-            .width(26)
-            .objectFit(ImageFit.Contain)
-            .fillColor($r('app.color.fg'))
+          // 原版 f9/b.java:45：imageView.setColorFilter(选中 ? accent : 常规文字色)。
+          // 图标是带自身 RGB 的 PNG，Image.fillColor 只对 SVG 生效，PNG 会原样渲染成灰色，
+          // 必须用 colorFilter（UiaIcon 的等价 SRC_IN 着色）才是原版的深色。
+          UiaIcon({ icon: param.icon, iconSize: 22 })
           Text(param.label)
             .fontSize(11)
             .fontColor(this.activeSlider === param.id ? $r('app.color.accent') : $r('app.color.fg'))
             .maxLines(1)
+          // 原版 f9/b.java:49-55：名称行与数值行同用一套 colorStateList（常规=文字色、选中=accent），
+          // 数值行不是次要灰
           Text(this.paramValue(param))
             .fontSize(10)
-            .fontColor(this.activeSlider === param.id ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+            .fontColor(this.activeSlider === param.id ? $r('app.color.accent') : $r('app.color.fg'))
             .maxLines(1)
         }
         .layoutWeight(1)
@@ -590,7 +604,8 @@ export struct SettingsCustomPage {
         ForEach(this.tabs, (tab: string, index: number) => {
           Text(tab)
             .fontSize(13)
-            .fontColor(this.activeTab === index ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+            // 原版分类标签行未选中为常规文字色（深），不是次要灰
+            .fontColor(this.activeTab === index ? $r('app.color.accent') : $r('app.color.fg'))
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
             .height(40)
@@ -718,7 +733,7 @@ export struct SettingsCustomPage {
     })
   }
 
-  // 确认弹窗：清除网站图标缓存 / 重置为默认设置（视频 116s / 125s）
+  // 确认弹窗：清除网站图标缓存 / 重置为默认设置
   @Builder
   ConfirmDialog() {
     Stack({ alignContent: Alignment.Center }) {
@@ -801,4 +816,17 @@ export struct SettingsCustomPage {
 @Builder
 export function SettingsCustomPageBuilder() {
   SettingsCustomPage()
+}
+
+//以下是预览器使用的，冗余代码，闲时可以删除
+@Entry
+@ComponentV2
+struct SettingsCustomPreview {
+  build() {
+    Navigation() {
+      SettingsCustomPage()
+    }
+    .hideTitleBar(true)
+    .mode(NavigationMode.Stack)
+  }
 }

@@ -34,9 +34,10 @@ export class UiInsets {
 
 /**
  * 让窗口进入全屏布局并保持系统栏透明，实现状态栏/导航条沉浸。
- * 系统栏内容（时间、电量、手势条）固定白色，与深色界面一致。
+ * 系统栏内容（时间、电量、手势条）明暗跟随界面：原版 z8/l3.p()/o()（k6.Z7 6567-6608 调用）
+ * ——亮背景用深色内容，否则白色。固定白色会让浅色模式下状态栏时间在白底上隐形。
  */
-export function applyImmersiveWindow(win: window.Window, showStatusBar: boolean): void {
+export function applyImmersiveWindow(win: window.Window, showStatusBar: boolean, darkContent: boolean): void {
   try {
     win.setWindowLayoutFullScreen(true).catch(() => {
       // PC/2in1 自由多窗模式下该接口禁用，忽略即可
@@ -44,17 +45,22 @@ export function applyImmersiveWindow(win: window.Window, showStatusBar: boolean)
   } catch (error) {
     console.error('setWindowLayoutFullScreen failed')
   }
+  applySystemBarContentColor(win, darkContent)
+  applyStatusBarVisible(win, showStatusBar)
+}
+
+/** 原版 z8/l3.p()/o()：系统栏图标与文字明暗（darkContent=true 用深色内容） */
+export function applySystemBarContentColor(win: window.Window, darkContent: boolean): void {
   try {
     win.setWindowSystemBarProperties({
       statusBarColor: '#00000000',
       navigationBarColor: '#00000000',
-      statusBarContentColor: '#FFFFFF',
-      navigationBarContentColor: '#FFFFFF'
+      statusBarContentColor: darkContent ? '#000000' : '#FFFFFF',
+      navigationBarContentColor: darkContent ? '#000000' : '#FFFFFF'
     })
   } catch (error) {
     console.error('setWindowSystemBarProperties failed')
   }
-  applyStatusBarVisible(win, showStatusBar)
 }
 
 // 原版 z8/l3.java:266 n(window, z10)：

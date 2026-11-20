@@ -130,7 +130,7 @@
     },
     {
       "name": "menu_icon",
-      "value": "#9F9F9F"
+      "value": "#232323"
     },
     {
       "name": "menu_hint",
@@ -142,7 +142,7 @@
     },
     {
       "name": "menu_text",
-      "value": "#C2C2C2"
+      "value": "#DE000000"
     },
     {
       "name": "menu_bg",
@@ -154,11 +154,11 @@
     },
     {
       "name": "appbar_text",
-      "value": "#BEFFFFFF"
+      "value": "#DE000000"
     },
     {
       "name": "appbar_icon",
-      "value": "#FF9E9E9E"
+      "value": "#232323"
     },
     {
       "name": "appbar_divider",

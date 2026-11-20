@@ -1,5 +1,6 @@
-import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { AppBar } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
+import { UiInsets } from '../common/Immersive'
 import { buildNavSlide } from './PageTransitions'
 import { RecordBackController } from './RecordTypes'
 import { BookmarkPage } from './BookmarkPage'
@@ -11,9 +12,10 @@ import { OfflinePage } from './OfflinePage'
 // 离线 case13、v://bookmarks、v://history）都进这一页，仅默认标签不同
 // （n3(draggable,page)：1=书签 2=历史 3=离线页面，bb/i.java:157-161）。
 //
-// 结构（o8\h.java C1 + bb\i.java）：
+// 结构（o8\h.java C1 + bb\i.java，竖直 LinearLayout，从状态栏下直接起）：
 //   LinearLayout(vertical)
-//   ├ z 顶栏（返回键 + TabLayout + 右上「导出」动作 a3:264-269 → l0().L().c1()）
+//   ├ z 顶栏（54dp：返回键 + 标题区空 + 右上「导出」动作 a3:264-269；底部 2px 分割线）
+//   ├ TabLayout（44dp：三标签文字；底部 2px padding = max(indicator=2, underline=0)）
 //   └ ViewPager2（三 Fragment：cb.e0 书签 / db.n 历史 / eb.s 离线页面）
 // TabLayout（com.tuyafeng.support.widget.TabLayout）：
 //   · setIndicatorColor(0)（bb/i.f3:141）→ 指示器透明（f4285s=0 → onDraw 不画）
@@ -31,7 +33,7 @@ import { OfflinePage } from './OfflinePage'
 //   · 底部 2px 分割线（z.java:262-267 onDraw）
 // 标签名称 m3()（bb/i.java:310-321）：1→u.f14026j=书签 / 2→u.H=历史 / 3→u.f13929c0=离线页面
 // 返回拦截（o8\h.V2 + bb\i.k3）：当前子页 W()=true（多选退出/清搜索/回上级文件夹）则不弹，
-// 否则弹出容器。子页经 RecordBackController 注入。
+// 否则弹出容器。子页按标签位经 RecordBackController 注入。
 // 本端路由：'bookmarks'/'history'/'offlinePage' 三个路由名都落到本页（router_map），
 // 默认标签由路由名决定 —— 等价原版三个 n3(true,page) 调用点。
 
@@ -69,6 +71,7 @@ export struct RecordContainerPage {
   private navPathStack: NavPathStack = new NavPathStack()
   private backController: RecordBackController = new RecordBackController()
   private tabsController: TabsController = new TabsController()
+  private insets: UiInsets = UiInsets.getInstance()
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
   // 路由名（onReady 读出），决定默认标签 = 原版 n3(true,page) 的 page
@@ -92,61 +95,57 @@ export struct RecordContainerPage {
   build() {
     NavDestination() {
       Column() {
-        AppBarSpacer()
-        // ===== 顶栏 z + TabLayout（bb/i.a3 1:1）=====
-        Column() {
-          Row() {
-            Stack({ alignContent: Alignment.Center }) {
-              // 原版返回键 drawable b2（x7.o.f13759r），沿用工程同语义返回图标
-              AppIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
-            }
-              .width(48)
-              .height(52)
-              .padding({ left: 13, right: 13 })
-              .margin({ top: 1, bottom: 1 })
-              .onClick(() => {
-                this.handleBack()
-              })
-            Blank()
-              .layoutWeight(1)
+        // ===== 顶栏 z（bb/i.a3 1:1）：紧贴状态栏，54dp 高 + 底部 2px 分割线 =====
+        Row() {
+          Stack({ alignContent: Alignment.Center }) {
+            // 原版返回键 drawable b2（x7.o.f13759r），沿用工程同语义返回图标
+            AppIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
           }
-          .width('100%')
-          .height(54)
-          Divider()
-            .vertical(false)
-            .strokeWidth(1)
-            .color($r('app.color.appbar_divider'))
-
-          // ===== TabLayout（指示器透明 bb/i.f3:141；文字三态 TabLayout.m()）=====
-          Row() {
-            ForEach(RECORD_TABS, (tab: RecordTabSpec, idx: number) => {
-              Text(tab.label)
-                .fontSize(14)
-                // selected 全不透明 / 未选中 α150 半透明（textColorPrimary 同色，
-                // TabLayout.m()：default 态 = 同色 α150 ≈ 0.59）
-                .fontColor(idx === this.currentIndex ? $r('app.color.fg') : $r('app.color.fg_tertiary'))
-                // sans-serif-medium（非加粗，TabLayout 构造 291-292）
-                .fontWeight(FontWeight.Medium)
-                .maxLines(1)
-                // tab 左右 padding 12dp（f4292z=12）；宽自适应（E=false）
-                .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-                .onClick(() => {
-                  // 原版 TabLayout.b onClick：setCurrentItem(target)（159-171），
-                  // Tabs.onChange 回写 currentIndex 保持双向同步
-                  this.tabsController.changeIndex(idx)
-                })
-            }, (tab: RecordTabSpec) => `tab${tab.page}`)
-          }
-          .width('100%')
-          .height(44)
-          .padding({ bottom: 2 })
-          Divider()
-            .vertical(false)
-            .strokeWidth(1)
-            .color($r('app.color.appbar_divider'))
+            .width(48)
+            .height(52)
+            .padding({ left: 13, right: 13 })
+            .margin({ top: 1, bottom: 1 })
+            .onClick(() => {
+              this.handleBack()
+            })
+          Blank()
+            .layoutWeight(1)
         }
         .width('100%')
-        .backgroundColor($r('app.color.page_bg'))
+        .height(54)
+        .padding({ top: this.insets.top })
+        Divider()
+          .vertical(false)
+          .strokeWidth(2)
+          .color($r('app.color.appbar_divider'))
+
+        // ===== TabLayout（指示器透明 bb/i.f3:141；文字三态 TabLayout.m()）=====
+        Row() {
+          ForEach(RECORD_TABS, (tab: RecordTabSpec, idx: number) => {
+            Text(tab.label)
+              .fontSize(14)
+              // selected 全不透明 / 未选中 α150 半透明（textColorPrimary 同色，
+              // TabLayout.m()：default 态 = 同色 α150 ≈ 0.59）
+              .fontColor(idx === this.currentIndex ? $r('app.color.fg') : $r('app.color.fg_tertiary'))
+              // sans-serif-medium（非加粗，TabLayout 构造 291-292）
+              .fontWeight(FontWeight.Medium)
+              .maxLines(1)
+              // tab 左右 padding 12dp（f4292z=12）；宽自适应（E=false）
+              .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+              .onClick(() => {
+                // 原版 TabLayout.b onClick：setCurrentItem(target)（159-171），
+                // Tabs.onChange 回写 currentIndex 保持双向同步
+                this.tabsController.changeIndex(idx)
+              })
+          }, (tab: RecordTabSpec) => `tab${tab.page}`)
+        }
+        .width('100%')
+        .height(44)
+        .padding({ bottom: 2 })
+        Divider()
+          .vertical(false)
+          .strokeWidth(1)
+          .color($r('app.color.appbar_divider'))
 
         // ===== ViewPager2（bb/i.d FragmentStateAdapter，可横滑）=====
         Tabs({ index: this.initialIndex, controller: this.tabsController }) {
@@ -183,6 +182,7 @@ export struct RecordContainerPage {
         .onChange((index: number) => {
           // 原版 TabLayout.d.c()：ViewPager 落定页 → 文字选中态
           this.currentIndex = index
+          this.backController.activeIndex = index
         })
         .layoutWeight(1)
         .width('100%')
@@ -208,6 +208,7 @@ export struct RecordContainerPage {
       // 原版 bb/i X1：y0().getInt("page",0) → l3(page) → viewPager.j(index,false)
       this.initialIndex = this.pageToIndex(defaultPageOfRoute(this.routeName))
       this.currentIndex = this.initialIndex
+      this.backController.activeIndex = this.initialIndex
       // v://bookmarks 深链的文件夹参数（原版 k6.u 8665 aa(str) → cb.e0.T3）
       const rawParam: string | object | undefined = ctx.pathStack.getParamByName(this.routeName)
       if (typeof rawParam === 'string' && rawParam !== '') {
@@ -227,8 +228,9 @@ export struct RecordContainerPage {
       AppBar.maybeHide(this)
     })
     .onBackPressed(() => {
-      // o8\h.V2 + bb\i.k3：当前子页已消费返回（多选/搜索/文件夹层级）则不弹容器
-      return !this.backController.handle()
+      // o8\h.V2 + bb\i.k3：当前子页已消费返回（多选/搜索/文件夹层级）→ true 吞掉本次返回
+      // 不弹容器；未消费 → false 交回系统默认 pop 弹出容器
+      return this.backController.handle()
     })
   }
 

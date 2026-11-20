@@ -344,9 +344,10 @@ export struct TabWeb {
         .imageAccess(this.imageAllowedNow())
         .mixedMode(MixedMode.Compatible)
         .textZoomRatio(this.textZoomForTab(this.tab.url))
-        // 原版 nightcss「强制网页暗色」：引擎级强制暗色（旧内核路径由 CSS 注入承担，ArkWeb 用 forceDark 等价实现）
-        .darkMode(this.settings.nightCss ? WebDarkMode.On : WebDarkMode.Off)
-        .forceDarkAccess(this.settings.nightCss)
+        // 原版 e8/i.java:233-239 L()：z11 = d() && Z()，即「夜间生效」且「nightcss 开启」
+        // 才强制网页暗色。只看 nightcss 会把明亮模式下的正常网页也压成黑底（真机实测整页变黑）。
+        .darkMode(this.settings.isNightActive() && this.settings.nightCss ? WebDarkMode.On : WebDarkMode.Off)
+        .forceDarkAccess(this.settings.isNightActive() && this.settings.nightCss)
         .runJavaScriptOnDocumentStart(this.privacyScripts)
         // 原版 k6:1487 registerJavaScriptProxy：window.via 桥
         .javaScriptProxy({

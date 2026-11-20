@@ -83,7 +83,7 @@ export struct OfflinePage {
 
   aboutToAppear(): void {
     // 原版 eb.s.W()（622-633）返回拦截顺序：多选退出 → 清空搜索 → 未消费
-    this.backController.handler = (): boolean => {
+    this.backController.handlers.set(2, (): boolean => {
       if (this.editMode) {
         this.editMode = false
         this.selected = []
@@ -94,7 +94,7 @@ export struct OfflinePage {
         return true
       }
       return false
-    }
+    })
     this.reload()
   }
 

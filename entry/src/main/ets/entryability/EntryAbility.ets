@@ -449,7 +449,8 @@ export default class EntryAbility extends UIAbility {
       AppStorage.setOrCreate('mainWindow', win);
       // 原版 k6.i9():7384 启动即按设置复位系统栏（l3.n(...,false)）。
       // 此处读 AppSettings 的 showStatusBar，避免 showStatusBar=false 时启动瞬态闪烁。
-      applyImmersiveWindow(win, AppSettings.getInstance().showStatusBar);
+      applyImmersiveWindow(win, AppSettings.getInstance().showStatusBar,
+        !AppSettings.getInstance().isNightActive());
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to setup immersive window. Cause: %{public}s', JSON.stringify(err));
     }

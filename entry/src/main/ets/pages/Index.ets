@@ -40,7 +40,7 @@ import { scanBarcode } from '@kit.ScanKit'
 import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
-import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
+import { UiInsets, applyStatusBarVisible, applySystemBarContentColor } from '../common/Immersive'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
 import { AutoHideGesture, AutoHideHost } from '../common/AutoHideGesture'
@@ -213,6 +213,16 @@ struct Index {
   onSystemBarSettingChange(): void {
     const baseVisible = this.settings.showStatusBar && !this.settings.fullScreen
     this.applySystemBarsVisible(baseVisible && !this.systemBarsHiddenByToolbar)
+  }
+
+  // 夜间态切换时同步系统栏内容明暗（原版 k6.Z7 → l3.p()/o()）
+  @Monitor('settings.nightMode2')
+  onNightModeChange(): void {
+    const win = AppStorage.get<window.Window>('mainWindow')
+    if (win === undefined) {
+      return
+    }
+    applySystemBarContentColor(win, !this.settings.isNightActive())
   }
 
   private syncVolumeKeyConsumers(): void {
@@ -747,6 +757,8 @@ struct Index {
     // 基础值由设置决定；若此刻两栏已收起，则按拍板联动一并隐藏
     const baseVisible = this.settings.showStatusBar && !this.settings.fullScreen
     this.applySystemBarsVisible(baseVisible && !this.systemBarsHiddenByToolbar)
+    // 原版 k6.Z7 尾部 l3.p()/o()：系统栏内容明暗跟随当前夜间态
+    applySystemBarContentColor(win, !this.settings.isNightActive())
     this.insets.refresh(win)
     try {
       win.on('avoidAreaChange', () => {

@@ -72,7 +72,7 @@ export struct HistoryPage {
 
   aboutToAppear(): void {
     // 原版 db.n.W()（458-469）返回拦截顺序：多选退出 → 清空搜索 → 未消费
-    this.backController.handler = (): boolean => {
+    this.backController.handlers.set(1, (): boolean => {
       if (this.selecting) {
         this.selecting = false
         this.selectedIds = []
@@ -83,7 +83,7 @@ export struct HistoryPage {
         return true
       }
       return false
-    }
+    })
     this.reload()
   }
 

@@ -92,7 +92,7 @@ export struct BookmarkPage {
 
   aboutToAppear(): void {
     // 原版 cb.e0.W()（880-897）返回拦截顺序：多选退出 → 清空搜索 → 回上级文件夹 → 未消费
-    this.backController.handler = (): boolean => {
+    this.backController.handlers.set(0, (): boolean => {
       if (this.selecting) {
         this.exitSelection()
         return true
@@ -109,7 +109,7 @@ export struct BookmarkPage {
         return true
       }
       return false
-    }
+    })
     this.reload()
     this.loadUiPrefs()
   }
