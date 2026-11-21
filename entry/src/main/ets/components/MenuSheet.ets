@@ -174,8 +174,19 @@ export struct MenuSheet {
     return size > 0 ? size - 24 : 0  // 减去容器左右 margin 12+12
   }
 
+  // 原版 i8/k.java:8557-8558 gravity = i10 | 8388613（Gravity.END）+ i8/k.java:229-232 窗口参数：
+  // 菜单横向**永远贴右缘**（TOP|END / BOTTOM|END），宽 = N8()。手机竖屏 N8()=短边=全宽看不出差异；
+  // 横屏（窗口宽>>菜单宽）时必须贴右，纵向对齐按布局贴顶/贴底，居中渲染是移植偏差。
+  private menuAlignEnd(): boolean {
+    return true
+  }
+
   build() {
-    Stack({ alignContent: this.menuLayout() === 1 ? Alignment.Top : Alignment.Bottom }) {
+    // 原版 gravity = (W0==1?48:80)|8388613：纵向按布局贴顶/贴底、横向贴 END（右缘）。
+    // ArkUI Stack 用九宫格 Alignment 等价表达：TopEnd/BottomEnd。
+    Stack({ alignContent: this.menuAlignEnd()
+      ? (this.menuLayout() === 1 ? Alignment.TopEnd : Alignment.BottomEnd)
+      : (this.menuLayout() === 1 ? Alignment.Top : Alignment.Bottom) }) {
       Column()
         .width('100%')
         .height('100%')
@@ -194,6 +205,8 @@ export struct MenuSheet {
       // ★ 必须给显式 width：容器原先只有 constraintSize.maxWidth，而内部 Grid/Button 全是
       //   width('100%')，百分比相对父宽、父宽又由内容决定 → 循环依赖，Column 塌成最小内容宽
       //   （表现为菜单变一条窄条、Grid 5 列挤成 1 列、文案被裁）。
+      // 原版 gravity 含 END：横向贴右缘，左右 margin 12 由窗口 x 偏移承担——竖屏全宽时
+      // 左右各 12 生效；横屏贴右时仅右缘留 12（左缘空白由压暗层填充，原版一致）。
       .width(this.menuWidthVp() > 0 ? this.menuWidthVp() : '92%')
       .margin({
         left: 12,

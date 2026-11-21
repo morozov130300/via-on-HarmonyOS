@@ -348,7 +348,12 @@ export struct Toolbar {
         // 原版 g0.h()：栈叠图标 + 加粗标签数叠加（>99 显示 :)）；隐身时 g0.l 置 alpha 0.15
         // 图标与数字色 = setAccentColor 三分支（k6.Z7）：夜间 #9F9F9F / 亮背景 #232323 / 其余白
         Stack() {
-          ViaIcon({ icon: $r('app.media.uia_ic_tabs'), iconSize: ICON_SIZE, iconColor: this.toolbarAccent })
+          ViaIcon({
+            icon: $r('app.media.uia_ic_tabs'),
+            iconSize: ICON_SIZE,
+            iconColor: this.toolbarAccent,
+            imageDraggable: false
+          })
           Text(this.swipePreviewText())
             .fontSize(11)
             .fontWeight(FontWeight.Bold)
@@ -366,24 +371,28 @@ export struct Toolbar {
         // 鸿蒙用 keyframeAnimateTo 一条时间轴承载两段 140ms，替代分段 animateTo + setTimeout 拼接。
         .translate({ y: this.bounceY })
         .onClick(() => {
-          const frames: KeyframeState[] = [
-            {
-              duration: 140,
-              curve: BEZIER_0202_CURVE,
-              event: (): void => {
-                this.bounceY = -BAR_HEIGHT * 0.3
-              }
-            },
-            {
-              duration: 140,
-              curve: BEZIER_0202_CURVE,
-              event: (): void => {
-                this.bounceY = 0
-              }
-            }
-          ]
-          this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, frames)
           this.onTabs()
+          try {
+            const frames: KeyframeState[] = [
+              {
+                duration: 140,
+                curve: BEZIER_0202_CURVE,
+                event: (): void => {
+                  this.bounceY = -BAR_HEIGHT * 0.3
+                }
+              },
+              {
+                duration: 140,
+                curve: BEZIER_0202_CURVE,
+                event: (): void => {
+                  this.bounceY = 0
+                }
+              }
+            ]
+            this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, frames)
+          } catch (error) {
+            this.bounceY = 0
+          }
         })
         .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
           this.longPressAction(this.keyOf('tabs'))
@@ -402,18 +411,22 @@ export struct Toolbar {
     .onAreaChange((_old: Area, newArea: Area) => {
       this.barWidth = Number(newArea.width)
     })
-    .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 1 })
+    // 原版横滑需位移达到 84dp * 0.8 才切换；较小位移留给按钮点击识别。
+    .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 67 })
       .onActionUpdate((event: GestureEvent) => {
         this.swipeOffset = event.offsetX
-        // 原版 k6.W4：f10 = 拖拽位移 / 84dp
         this.updateSwipePreview(px2vp(this.swipeOffset) / this.swipeDistance)
       })
       .onActionEnd(() => {
-        // 原版 k6.W4 释放分支：|f10|>0.8 → ra(g2()/m1()) 执行方向动作键
         const fraction = px2vp(this.swipeOffset) / this.swipeDistance
         if (Math.abs(fraction) > 0.8) {
-          this.longPressAction(fraction > 0 ? this.settings.gesturetoolbarleft : this.settings.gesturetoolbarright)
+          this.longPressAction(fraction > 0
+            ? this.settings.gesturetoolbarleft : this.settings.gesturetoolbarright)
         }
+        this.swipeOffset = 0
+        this.updateSwipePreview(0)
+      })
+      .onActionCancel(() => {
         this.swipeOffset = 0
         this.updateSwipePreview(0)
       }))

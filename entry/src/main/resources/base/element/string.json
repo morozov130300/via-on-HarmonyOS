@@ -3027,6 +3027,70 @@
     {
       "name": "orig_kz",
       "value": "无法导入"
+    },
+    {
+      "name": "orig_cn",
+      "value": "色彩"
+    },
+    {
+      "name": "orig_yd",
+      "value": "暗色"
+    },
+    {
+      "name": "orig_ye",
+      "value": "亮色"
+    },
+    {
+      "name": "orig_fd",
+      "value": "默认"
+    },
+    {
+      "name": "orig_ud",
+      "value": "Logo"
+    },
+    {
+      "name": "orig_tl",
+      "value": "高级"
+    },
+    {
+      "name": "orig_ua",
+      "value": "字体大小"
+    },
+    {
+      "name": "orig_j6",
+      "value": "文字"
+    },
+    {
+      "name": "orig_qr",
+      "value": "图片"
+    },
+    {
+      "name": "orig_ez",
+      "value": "重置"
+    },
+    {
+      "name": "orig_rw",
+      "value": "重置为默认设置"
+    },
+    {
+      "name": "orig_g8",
+      "value": "你确定继续吗？"
+    },
+    {
+      "name": "orig_y9",
+      "value": "文字"
+    },
+    {
+      "name": "orig_ss",
+      "value": "透明"
+    },
+    {
+      "name": "orig_oj",
+      "value": "无"
+    },
+    {
+      "name": "orig_bold_italic",
+      "value": "粗体 斜体"
     }
   ]
 }

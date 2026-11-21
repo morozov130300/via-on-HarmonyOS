@@ -15,6 +15,13 @@ import {
   homeFavColor
 } from '../common/HomeStyle'
 import { HomeFavEditor } from './HomeFavEditor'
+import {
+  HomeCssDecls,
+  HomeRowCssModifier,
+  HomeStackCssModifier,
+  HomeTextCssModifier,
+  parseHomeCss
+} from '../common/HomeCss'
 
 // 原版主页注入的 CSS（i6/o.java:374）：
 //   writer.a("#content { top: 25%; transition: 0.14s; }")
@@ -60,6 +67,55 @@ export struct HomePage {
   // 即「屏幕 - 状态栏 - 地址栏 - 操作栏」，不等于物理屏幕高（i6/o.java:357-379）
   @Local vpW: number = 0
   @Local vpH: number = 0
+  // 主页自定义 CSS（原版 csstheme）解析结果：@Computed 直接依赖 settings.customCss
+  //（@Trace）→ 保存 CSS 的当下主页即刷新，无需重建标签页
+  @Computed
+  get cssDecls(): HomeCssDecls {
+    return parseHomeCss(this.settings.customCss)
+  }
+  // 原版 o.java:372：搜索区 display:none 时 #content top 固定 18px、.search_part 不渲染
+  @Computed
+  get cssSearchHidden(): boolean {
+    return this.cssDecls.displayNone('.search_part')
+  }
+  // 原版 #bookmark_part display:none → 收藏区整块不渲染
+  @Computed
+  get cssFavsHidden(): boolean {
+    return this.cssDecls.displayNone('#bookmark_part') || this.cssDecls.displayNone('#box_container')
+  }
+  @Computed
+  get logoCssModifier(): HomeTextCssModifier {
+    return new HomeTextCssModifier(this.cssDecls, ['.logo'])
+  }
+  @Computed
+  get pillCssModifier(): HomeRowCssModifier {
+    return new HomeRowCssModifier(this.cssDecls, ['.search_bar', '#search_input'])
+  }
+  @Computed
+  get titleCssModifier(): HomeTextCssModifier {
+    return new HomeTextCssModifier(this.cssDecls, ['.title'])
+  }
+  @Computed
+  get urlCssModifier(): HomeTextCssModifier {
+    return new HomeTextCssModifier(this.cssDecls, ['.url'])
+  }
+  @Computed
+  get favStackCssModifier(): HomeStackCssModifier {
+    return new HomeStackCssModifier(this.cssDecls, ['.overlay', '.box'])
+  }
+  @Computed
+  get rootCssModifier(): HomeStackCssModifier {
+    return new HomeStackCssModifier(this.cssDecls, ['body', 'html', '#content'])
+  }
+  // body background: url(...) → 主页背景图（对应原版 config.c()/backgroundPath）
+  @Computed
+  get cssBgUrl(): string {
+    return this.cssDecls.urlValue(['body', 'html', '#content'])
+  }
+  // .search_part 隐藏（CSS）与 homeAdvArea=隐藏（设置项）取并集，等价原版 o() 判定
+  private searchPartHidden(): boolean {
+    return this.cssSearchHidden || HOME_ADV_AREAS[this.settings.homeAdvArea] === '隐藏'
+  }
   // 原版 #content 的 transition 只在搜索区「展示」分支注入（i6/o.java:374），
   // 隐藏分支（o.java:372）无 transition → 用这条 public 标志决定 animateTo 是否带参数。
   private contentTransitionEnabled(): boolean {
@@ -121,14 +177,26 @@ export struct HomePage {
           .width('100%')
           .height('100%')
           .backgroundColor(`#${this.bgOverlayAlpha()}000000`)
+      } else if (this.cssBgUrl !== '') {
+        // 用户 CSS：body/html background: url(...) → 主页背景图
+        // （原版 config.c() backgroundPath 同位；遮罩仍走 bginfo 不透明度）
+        Image(this.cssBgUrl)
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(`#${this.bgOverlayAlpha()}000000`)
       }
       Scroll() {
       Column() {
       // 原版 #content top 按屏高分档（i6/o.java:374-379）：62/87/135/195/255px，低于 250px 用 25%
+      // CSS .search_part{display:none} 时固定 18px（o.java:372 隐藏分支）
       Column()
-        .height(this.contentTopOffset())
+        .height(this.searchPartHidden() ? 18 : this.contentTopOffset())
 
-      if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '展示') {
+      if (!this.searchPartHidden()) {
         // 原版 i6/o.java:23-36,294-298：#content（max-width:600 居中）内
         //   .search_part { display:table; width:90%; max-width:600px; margin:0 auto 20px }
         //     ├ <a class="logo">（inline，body text-align:center 继承居中）
@@ -148,6 +216,8 @@ export struct HomePage {
                 .fontStyle(this.logoItalic())
                 // 原版 .logo 为 white-space:normal + overflow:auto，无行数限制
                 .textAlign(TextAlign.Center)
+                // 用户 CSS .logo { color/font-size/... } 追加在原版样式之后（后写覆盖先写）
+                .attributeModifier(this.logoCssModifier)
             } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '图片'
               && this.settings.homeLogoImage !== '') {
               Image(this.settings.homeLogoImage)
@@ -196,6 +266,8 @@ export struct HomePage {
           // 搜索框变方角并显出一整圈突兀描边（原版是 q() 圆角的下划线）。
           .border(this.pillBorder())
           .borderRadius(this.pillRadius())
+          // 用户 CSS .search_bar/#search_input 的 background(-color)/border-radius/opacity
+          .attributeModifier(this.pillCssModifier)
           // 原版 .search_bar 无任何按压态样式（全 CSS 只有 .opSug_wpr tr:hover 与
           // #search_bar_trigger:focus-visible），故不加 stateStyles
           // 原版 .search_bar_wrapper margin:15px auto 0（仅 top 15）；bottom 20 归 .search_part
@@ -211,7 +283,7 @@ export struct HomePage {
         .margin({ bottom: 20 })
       }
 
-      if (this.favs.length > 0) {
+      if (this.favs.length > 0 && !this.cssFavsHidden) {
         Grid() {
           ForEach(this.favs, (item: HomeFavRec) => {
             GridItem() {
@@ -231,6 +303,8 @@ export struct HomePage {
                       .align(Alignment.Center)
                       // 原版 i6/o.java:290-291/412-413：.title 恒叠加 brightness(75%)
                       .brightness(this.logoDim())
+                      // 用户 CSS .title { color/font-size/... }
+                      .attributeModifier(this.titleCssModifier)
                     if (this.showFavicon() && item.icon !== '') {
                       Image(item.icon)
                         .width('100%')
@@ -245,6 +319,8 @@ export struct HomePage {
                   .height(this.favHeight())
                   .borderRadius(this.favRadius())
                   .backgroundColor(this.favColor(item) === '' ? Color.Transparent : this.favColor(item))
+                  // 用户 CSS .overlay/.box { border-radius/... }
+                  .attributeModifier(this.favStackCssModifier)
                   // 原版 .url（i6/o.java:356）：宽=图标宽、margin-top 2px、height/line-height 20px、
                   // font-size 10px、overflow:hidden + text-overflow:clip（原版仅两行：图标字 + 名称）
                   Text(item.title)
@@ -257,6 +333,8 @@ export struct HomePage {
                     // 原版 line-height 20 = height 20 → 单行垂直居中
                     .align(Alignment.Center)
                     .textOverflow({ overflow: TextOverflow.Clip })
+                    // 用户 CSS .url { color/font-size/... }
+                    .attributeModifier(this.urlCssModifier)
                 }
                 .padding({ top: 4, bottom: 4 })
               }
@@ -326,6 +404,8 @@ export struct HomePage {
       this.vpH = Number(area.height)
     })
     .backgroundColor(this.homeBackground())
+    // 用户 CSS body/html/#content { background(-color)/opacity }：追加在默认背景之后
+    .attributeModifier(this.rootCssModifier)
     // 原版 qa.e1：主页收藏管理底部弹层
     .bindSheet($$this.showEditor, this.HomeFavSheet(), {
       // 原版 qa.e1.d3：clamp(默认 导航栏+屏高/2, 下限 导航栏+168, 上限 导航栏+60%屏高)
@@ -613,7 +693,8 @@ export struct HomePage {
   }
 
   // 原版 i6/o.java:371-379：#content top —— 搜索区隐藏时固定 18px，否则按屏高分档
-  // 分档依据是 WebView 视口高（min-height 媒体查询），非物理屏幕高
+  // 分档依据是 WebView 视口高（min-height 媒体查询），非物理屏幕高。
+  // 调用方已用 searchPartHidden()（设置项 ∪ 用户 CSS display:none）分流 18px 分支。
   private contentTopOffset(): Length {
     if (HOME_ADV_AREAS[this.settings.homeAdvArea] === '隐藏') {
       return 18

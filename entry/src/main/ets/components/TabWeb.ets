@@ -134,6 +134,9 @@ export struct TabWeb {
   @Param onPcKey: (event: KeyEvent) => boolean = (_event: KeyEvent): boolean => false
   // 原版 k6.b0（r4.f 页面回调）→ d9() → pb()：仅模式2 且已隐藏时确保 FAB 显示
   @Param onPageSettle: () => void = (): void => {}
+  // 原版 e8/k0.j0（页面回调 → k6.j0 → k6.Nb）：网页 theme-color 落定 → 宿主刷新
+  // 工具栏/系统栏配色（k6.Z7 统一算色分发）
+  @Param onPageThemeColor: () => void = (): void => {}
   // —— 原版 GestureTouchEvent 竖滑隐藏操作栏：WebView OnTouchListener（e8/i.java:124）
   // → k6.E → GestureTouchEvent.g() 全量转发。ArkWeb 原生层吃事件、父容器手势收不到，
   // 故在 Web 组件上并行挂 PanGesture（All 方向，与横滑前进/后退共存），把
@@ -456,7 +459,6 @@ export struct TabWeb {
           this.saveHistory(event.url)
           this.injectPrivacy(event.url)
           this.injectBlockerCss(event.url)
-          this.injectCustomCss()
           this.injectCustomFont()
           this.prepareReader()
           this.expandFullText()
@@ -2027,15 +2029,6 @@ export struct TabWeb {
     return response
   }
 
-  private injectCustomCss(): void {    if (this.settings.customCss === '') {
-      return
-    }
-    const js = `(function(){var s=document.createElement("style");s.textContent=${JSON.stringify(this.settings.customCss)};document.head.appendChild(s);})();`
-    this.tab.controller.runJavaScript(js).catch(() => {
-      console.error('inject custom css failed')
-    })
-  }
-
   // 原版 c0.q + 自动阅读（c0.g/w.i state 5 时自动进入）：
   // 页面加载完成后注入 Readability + isProbablyReaderable，自动开启场景下检查状态
   private prepareReader(): void {
@@ -2081,18 +2074,21 @@ export struct TabWeb {
     })
   }
 
-  // 原版 k6.Nb()：网页 meta theme-color 决定工具栏/地址栏配色（颜色模式开关控制）
+  // 原版 k6.Nb()：网页 meta theme-color 决定工具栏/地址栏/系统栏配色（颜色模式开关控制）
   private syncThemeColor(): void {
     if (this.tab.isHomePage()) {
       this.tab.themeColor = ''
+      this.onPageThemeColor()
       return
     }
     const js = '(function(){var m=document.querySelector("meta[name=theme-color]");' +
       'return (m&&m.content)?m.content:"";})()'
     this.tab.controller.runJavaScript(js).then((result: string) => {
       this.tab.themeColor = typeof result === 'string' ? result.trim() : ''
+      this.onPageThemeColor()
     }).catch(() => {
       this.tab.themeColor = ''
+      this.onPageThemeColor()
     })
   }
 

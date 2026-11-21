@@ -11,7 +11,8 @@ import { preferences } from '@kit.ArkData';
 import { AppSettings } from '../common/Settings';
 import { UIA_CMD_EVENT_ID } from '../common/DeepLink';
 import { BrowserDb } from '../common/Database';
-import { applyImmersiveWindow } from '../common/Immersive';
+import { applyImmersiveWindow, applyWindowBackgroundColor } from '../common/Immersive';
+import { systemBarDarkContent } from '../common/ChromeColors';
 import { initReaderContext } from '../common/Reader';
 import { initGmRuntime } from '../common/GmRuntime';
 import { RemoteConfig } from '../common/RemoteConfig';
@@ -447,10 +448,16 @@ export default class EntryAbility extends UIAbility {
     try {
       const win = windowStage.getMainWindowSync();
       AppStorage.setOrCreate('mainWindow', win);
+      // 窗口背景色同步页面底色（base #FFFFFF / dark #1C1B1D）：
+      // 旋转时系统释放渲染缓存（RS DisableCacheForRotation），新尺寸首帧合成前露出窗口底色，
+      // 默认白底叠深色页面即"闪屏"。底色一致后空帧不可见。
+      applyWindowBackgroundColor(win);
       // 原版 k6.i9():7384 启动即按设置复位系统栏（l3.n(...,false)）。
       // 此处读 AppSettings 的 showStatusBar，避免 showStatusBar=false 时启动瞬态闪烁。
+      // darkContent 按工具栏默认背景（home_bg）亮度判定（原版 i9 → Nb(0) → Z7 链：
+      // z12 = g6.y.C(默认色)），夜间态强制白色内容（zD 拦截）。
       applyImmersiveWindow(win, AppSettings.getInstance().showStatusBar,
-        !AppSettings.getInstance().isNightActive());
+        systemBarDarkContent(undefined, AppSettings.getInstance(), this.context));
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to setup immersive window. Cause: %{public}s', JSON.stringify(err));
     }

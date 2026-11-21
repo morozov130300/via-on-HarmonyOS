@@ -57,12 +57,12 @@ export class RuleSubManager {
 
   private ensureDir(context: Context): void {
     try {
-      fileIo.accessSync(this.subsDir(context))
+      fileIo.mkdirSync(this.subsDir(context))
     } catch (error) {
       try {
-        fileIo.mkdirSync(this.subsDir(context))
-      } catch (innerError) {
-        console.error('mkdir rulesubs failed')
+        fileIo.accessSync(this.subsDir(context))
+      } catch (accessError) {
+        throw new Error(`create rulesubs directory failed: ${accessError instanceof Error ? accessError.message : String(accessError)}`)
       }
     }
   }
@@ -88,8 +88,20 @@ export class RuleSubManager {
     this.ensureDir(context)
     const blockPath = `${this.subsDir(context)}/${sub.key}.block`
     const allowPath = `${this.subsDir(context)}/${sub.key}.allow`
-    fileIo.writeSync(fileIo.openSync(blockPath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC).fd, parsed.blocks.join('\n'))
-    fileIo.writeSync(fileIo.openSync(allowPath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC).fd, parsed.allows.join('\n'))
+    const blockFile = fileIo.openSync(blockPath,
+      fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+    try {
+      fileIo.writeSync(blockFile.fd, parsed.blocks.join('\n'))
+    } finally {
+      fileIo.closeSync(blockFile)
+    }
+    const allowFile = fileIo.openSync(allowPath,
+      fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+    try {
+      fileIo.writeSync(allowFile.fd, parsed.allows.join('\n'))
+    } finally {
+      fileIo.closeSync(allowFile)
+    }
     return parsed.count
   }
 

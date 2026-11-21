@@ -40,7 +40,8 @@ import { scanBarcode } from '@kit.ScanKit'
 import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
 import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
-import { UiInsets, applyStatusBarVisible, applySystemBarContentColor } from '../common/Immersive'
+import { UiInsets, applyStatusBarVisible, applySystemBarContentColor, applyWindowBackgroundColor } from '../common/Immersive'
+import { systemBarDarkContent } from '../common/ChromeColors'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
 import { AutoHideGesture, AutoHideHost } from '../common/AutoHideGesture'
@@ -162,6 +163,9 @@ struct Index {
   @Local physicalLandscape: boolean = false
   private displayChangeCallback: (id: number) => void = (id: number): void => {
     this.refreshPhysicalOrientation()
+    // 原版 k8()（onConfigurationChanged）方向变化即重算 Ya()：面板类（菜单/标签/查找条）
+    // 的 N8() 宽与贴边距依赖窗口短边，旋转后必须重新发布，否则横屏残留竖屏尺寸。
+    this.publishMenuMetrics()
   }
   // ============ 自动隐藏操作栏（原版 fullscreenmode 三态 + GestureTouchEvent 竖滑） ============
   // 原版 k6.f2591r1：隐藏进度，0=显示 1=隐藏（初始 0.0，k6.java:284）；
@@ -218,11 +222,41 @@ struct Index {
   // 夜间态切换时同步系统栏内容明暗（原版 k6.Z7 → l3.p()/o()）
   @Monitor('settings.nightMode2')
   onNightModeChange(): void {
+    this.syncSystemBarContentColor()
+  }
+
+  // 原版 Nb → Z7 触发链（e8/k0.java j0 → k6.Nb → Z7 的本端等价）：
+  // 系统栏内容明暗跟随「工具栏当前实际背景」的亮度（k6.Z7 6566 g6.y.C 判定统一分发），
+  // 非只跟随夜间开关。theme-color 自适应到深色网页、主页深色自设背景时必须切白色内容，
+  // 否则黑字叠深底 → 状态栏时间/电量隐形。
+  // darkContent 的取色口径与 Toolbar.toolbarAccent 完全一致（toolbarBackgroundColor +
+  // resolveColorHex），保证「工具栏图标变白」与「状态栏文字变白」永远同帧。
+  private syncSystemBarContentColor(): void {
     const win = AppStorage.get<window.Window>('mainWindow')
     if (win === undefined) {
       return
     }
-    applySystemBarContentColor(win, !this.settings.isNightActive())
+    const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+    applySystemBarContentColor(win, systemBarDarkContent(this.tabStore.current(), this.settings, ctx))
+  }
+
+  // 原版 e8/k0.j0（页面回调 → k6.j0 → Nb）：网页 theme-color 落定即刷新配色。
+  // @Monitor 路径不支持方法调用（tabStore.current().themeColor 非法），按原版回调架构
+  // 由 TabWeb syncThemeColor 落定后经 onPageThemeColor 回调宿主。
+  onTabThemeColorSettled(): void {
+    this.syncSystemBarContentColor()
+  }
+
+  // 原版 f8/k 切标签 → k6.Nb：切标签后系统栏跟随新标签的工具栏背景
+  @Monitor('tabStore.currentIndex')
+  onCurrentTabChange(): void {
+    this.syncSystemBarContentColor()
+  }
+
+  // 原版 k6.Nb：theme-color 开关/主页背景变化都会改变工具栏实际底色，系统栏跟随
+  @Monitor('settings.toolbarColorAdapt', 'settings.homeBgColor')
+  onToolbarBgSettingChange(): void {
+    this.syncSystemBarContentColor()
   }
 
   private syncVolumeKeyConsumers(): void {
@@ -283,6 +317,8 @@ struct Index {
       .matchMediaSync('(orientation: landscape)')
     this.landscapeListener.on('change', (result: mediaquery.MediaQueryResult) => {
       this.isLandscape = result.matches
+      // 窗口宽高比变化即重算面板尺寸（N8() 依赖窗口短边；PC/平板分屏拖拽也走这里）
+      this.publishMenuMetrics()
     })
     this.isLandscape = this.landscapeListener.matches
     // 原版 C1：设备物理方向初值 + 旋转订阅（display.on('change') 在方向变化时回调）
@@ -652,16 +688,25 @@ struct Index {
     await this.db.init(context)
     CopilotStore.getInstance().init(context)
     this.downloads.register(context)
-    AdBlocker.getInstance().init(this.settings)
-    RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, AdBlocker.getInstance()).then(() => {
-      RuleSubManager.getInstance().maybeAutoUpdate(context, this.settings.ruleSubscriptions, this.settings.ruleAutoUpdate).then((updated: RuleSubEntry[] | null) => {
-        if (updated !== null) {
-          for (let i = 0; i < updated.length; i++) {
-            this.settings.updateRuleSubEntry(updated[i].key, updated[i].ruleCount, updated[i].lastUpdate)
-          }
-          RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, AdBlocker.getInstance())
+    const adBlocker = AdBlocker.getInstance()
+    adBlocker.init(this.settings)
+    try {
+      const rawRules = await context.resourceManager.getRawFileContent('simple.txt')
+      const decoder = util.TextDecoder.create('utf-8')
+      const builtinRules = decoder.decodeToString(rawRules).split('\n')
+      adBlocker.setBuiltinRules(builtinRules)
+    } catch (error) {
+      console.error(`load builtin ad rules failed: ${error instanceof Error ? error.message : String(error)}`)
+      adBlocker.setBuiltinRules([])
+    }
+    await RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, adBlocker)
+    RuleSubManager.getInstance().maybeAutoUpdate(context, this.settings.ruleSubscriptions, this.settings.ruleAutoUpdate).then((updated: RuleSubEntry[] | null) => {
+      if (updated !== null) {
+        for (let i = 0; i < updated.length; i++) {
+          this.settings.updateRuleSubEntry(updated[i].key, updated[i].ruleCount, updated[i].lastUpdate)
         }
-      })
+        RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, adBlocker)
+      }
     })
     await this.tabStore.init(this.settings)
     this.handleInternalCmd()
@@ -754,11 +799,14 @@ struct Index {
     if (win === undefined) {
       return
     }
+    // 窗口背景色同步页面底色：旋转空帧不露白（详见 applyWindowBackgroundColor 注释）。
+    // 夜间切换走 settings.addNightListener 统一刷新。
+    applyWindowBackgroundColor(win)
     // 基础值由设置决定；若此刻两栏已收起，则按拍板联动一并隐藏
     const baseVisible = this.settings.showStatusBar && !this.settings.fullScreen
     this.applySystemBarsVisible(baseVisible && !this.systemBarsHiddenByToolbar)
-    // 原版 k6.Z7 尾部 l3.p()/o()：系统栏内容明暗跟随当前夜间态
-    applySystemBarContentColor(win, !this.settings.isNightActive())
+    // 原版 k6.Z7 尾部 l3.p()/o()：系统栏内容明暗跟随工具栏实际背景亮度（夜间态强制白）
+    this.syncSystemBarContentColor()
     this.insets.refresh(win)
     try {
       win.on('avoidAreaChange', () => {
@@ -767,6 +815,12 @@ struct Index {
     } catch (error) {
       console.error('watch avoidAreaChange failed')
     }
+    // 夜间切换后窗口背景随 colorMode 重新解析（page_bg base/dark 两套）
+    this.settings.addNightListener(() => {
+      applyWindowBackgroundColor(win)
+      // 夜间态变化同帧刷新系统栏内容明暗（原版 k6.Hb 夜间切换 → Nb 链）
+      this.syncSystemBarContentColor()
+    })
   }
 
   // 系统栏显隐统一入口（原版 z8/l3.n(window,true) 的 hide(systemBars()) 等价：
@@ -1377,6 +1431,24 @@ struct Index {
       const wVp: number = wPx / density
       const hVp: number = hPx / density
       return Math.min(wVp, hVp)
+    } catch (error) {
+      return 360
+    }
+  }
+
+  // 应用窗口宽（vp）：查找条等贴 END 面板的右缘定位基准（原版 gravity END 等价）
+  private windowWidthVp(): number {
+    try {
+      let wPx: number = 0
+      const win = AppStorage.get<window.Window>('mainWindow')
+      if (win) {
+        wPx = win.getWindowProperties().windowRect.width
+      }
+      if (wPx <= 0) {
+        wPx = display.getDefaultDisplaySync().width
+      }
+      const density: number = display.getDefaultDisplaySync().densityPixels
+      return density > 0 && wPx > 0 ? wPx / density : 360
     } catch (error) {
       return 360
     }
@@ -2021,8 +2093,7 @@ struct Index {
             this.openPage('siteSettings')
           },
           onScan: () => {
-            this.searchInitialText = ''
-            this.showSearch = true
+            this.startScan()
           },
           // 原版 k6.d9()：面板打开时点左图标先关面板并拦截本次点击
           onTryClosePanels: (): boolean => this.closeTopPanelsForLeftIcon()
@@ -2136,8 +2207,7 @@ struct Index {
             this.openPage('siteSettings')
           },
           onScan: () => {
-            this.searchInitialText = ''
-            this.showSearch = true
+            this.startScan()
           },
           // 原版 k6.d9()：面板打开时点左图标先关面板并拦截本次点击
           onTryClosePanels: (): boolean => this.closeTopPanelsForLeftIcon()
@@ -2348,6 +2418,8 @@ struct Index {
                     onPcKey: (event: KeyEvent): boolean => this.handlePcKey(event),
                     // 原版 k6.b0 → d9() → pb()：页面加载/标题落定时确保 FAB 在场
                     onPageSettle: (): void => this.maybeShowFab(),
+                    // 原版 e8/k0.j0 → k6.Nb：网页 theme-color 落定 → 系统栏/工具栏配色刷新
+                    onPageThemeColor: (): void => this.onTabThemeColorSettled(),
                     // 原版 WebView OnTouchListener → k6.E → GestureTouchEvent.g()：
                     // 触摸事件全量喂竖滑状态机（action 0=down 1=up 2=move 3=cancel）
                     onAutoHideTouch: (action: number, x: number, y: number): void => {
@@ -2533,6 +2605,13 @@ struct Index {
             this.showTabPanel = false
           }
         })
+          .transition(TransitionEffect.asymmetric(
+            TransitionEffect.OPACITY.animation({ duration: 160, curve: ACCELERATE_CURVE })
+              .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP ? -120 : 120 })
+                .animation({ duration: 160, curve: ACCELERATE_CURVE })),
+            TransitionEffect.OPACITY.animation({ duration: 160, curve: ACCELERATE_CURVE })
+              .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP ? -120 : 120 })
+                .animation({ duration: 160, curve: ACCELERATE_CURVE }))))
       }
       if (this.showMenu) {
         MenuSheet({
@@ -2595,13 +2674,19 @@ struct Index {
         })
       }
       if (this.showFindBar) {
-        FindBar({
-          tab: this.tabStore.current(),
-          onClose: () => {
-            this.showFindBar = false
-          }
-        })
-          .position({ x: 0, y: this.effectiveInsetTop() })
+        // 原版 k6.ob（7887）：查找条 f8.h 宽 = N8()、gravity = (布局1/4?TOP:BOTTOM)|END —— 贴右缘。
+        // 竖屏 N8()=全宽无差异；横屏宽受限且贴右（与菜单/标签面板同规格）。
+        Row() {
+          FindBar({
+            tab: this.tabStore.current(),
+            onClose: () => {
+              this.showFindBar = false
+            }
+          })
+        }
+        .width(this.menuAvailableSizeVp())
+        .alignItems(VerticalAlign.Center)
+        .position({ x: this.windowWidthVp() - this.menuAvailableSizeVp(), y: this.effectiveInsetTop() })
       }
       if (this.showAi) {
         // 原版 b9/g Dialog：b9/g.java 232-233 行 —— attributes.dimAmount = 0.2f，

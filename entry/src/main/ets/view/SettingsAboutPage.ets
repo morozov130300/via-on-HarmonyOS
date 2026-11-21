@@ -7,15 +7,8 @@ import { UpdateChecker } from '../common/UpdateChecker'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 
-const CONTACT_QQ_GROUP_URL: string = 'http://uiayoo.com/contact/qqgroup/'
-const CONTACT_WECHAT_URL: string = 'http://uiayoo.com/contact/wechat/'
-// 原版 hb/d.j3 case 5：z8.c0.i()=false → telegram-zh（c0.e()=true 恒显示该行）
-const CONTACT_TELEGRAM_URL: string = 'http://uiayoo.com/contact/telegram-zh/'
-const TERMS_OF_USE_URL: string = 'https://uiayoo.com/zh-cn/docs/terms-of-use.html'
-const PRIVACY_POLICY_URL: string = 'https://uiayoo.com/zh-cn/docs/privacy-policy.html'
-const CONTACT_EMAIL: string = 'yafengtu@gmail.com'
-// 原版 hb/d.java j3 case 4（q(4, x7.u.f13963e6 = string k_「协助翻译」）→ k3("https://github.com/tuyafeng/Uia")
-const HELP_TRANSLATE_URL: string = 'https://github.com/tuyafeng/Uia'
+const PRIVACY_POLICY_URL: string = 'https://agreement-drcn.hispace.dbankcloud.cn/index.html?lang=zh&agreementId=2088394613189516032'
+const CONTACT_EMAIL: string = 'jihuanyu417@126.com'
 
 @ComponentV2
 export struct SettingsAboutPage {
@@ -65,13 +58,13 @@ export struct SettingsAboutPage {
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.fg'))
               .maxLines(1)
-            Text('7.4.0.b13.edf6737e')
+            Text('7.4.0')
               .fontSize(14)
               .fontColor($r('app.color.fg'))
               .margin({ top: 2 })
               .onClick(() => {
                 this.getUIContext().showAlertDialog({
-                  title: '7.4.0.b13.edf6737e',
+                  title: '7.4.0',
                   message: this.sloganText(),
                   confirm: {
                     value: $r('app.string.confirm'),
@@ -88,43 +81,18 @@ export struct SettingsAboutPage {
           this.AboutRow('检查更新', () => {
             this.checkUpdate()
           })
-          this.AboutRow('加入 Telegram 群组', () => {
-            this.openLink(CONTACT_TELEGRAM_URL)
-          })
-          this.AboutRow('加入 QQ 群组', () => {
-            this.openLink(CONTACT_QQ_GROUP_URL)
-          })
+          this.AboutValueRow('QQ 群组', '无')
           this.AboutRow('通过邮件联系我', () => {
             this.copyEmail()
           })
-          this.AboutRow('微信公众号', () => {
-            this.openLink(CONTACT_WECHAT_URL)
-          })
-          this.AboutRow('协助翻译', () => {
-            this.openLink(HELP_TRANSLATE_URL)
-          })
-          this.AboutRow('使用协议', () => {
-            this.openLink(TERMS_OF_USE_URL)
-          })
+          this.AboutValueRow('使用协议', '无')
           this.AboutRow('隐私政策', () => {
             this.openLink(PRIVACY_POLICY_URL)
           })
           this.AboutRow('开源许可协议', () => {
             this.navPathStack.pushPathByName('licensePage', '', true)
           })
-          Column() {
-            Text('备案号')
-              .fontSize(15)
-              .fontColor($r('app.color.fg'))
-              .maxLines(1)
-            Text('沪ICP备2022019616号-3A')
-              .fontSize(13)
-              .fontColor($r('app.color.fg_secondary'))
-              .margin({ top: 2 })
-          }
-          .width('100%')
-          .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-          .alignItems(HorizontalAlign.Start)
+          this.AboutValueRow('备案号', '无')
         }
         .width('100%')
         }
@@ -180,6 +148,23 @@ export struct SettingsAboutPage {
       .onClick(() => {
         action()
       })
+  }
+
+  @Builder
+  AboutValueRow(label: string, value: string) {
+    Column() {
+      Text(label)
+        .fontSize(15)
+        .fontColor($r('app.color.fg'))
+        .maxLines(1)
+      Text(value)
+        .fontSize(13)
+        .fontColor($r('app.color.fg_secondary'))
+        .margin({ top: 2 })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 13, bottom: 13 })
+    .alignItems(HorizontalAlign.Start)
   }
 
   private openLink(url: string): void {

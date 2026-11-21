@@ -3027,6 +3027,70 @@
     {
       "name": "orig_kz",
       "value": "Couldn't import bookmarks from file!"
+    },
+    {
+      "name": "orig_cn",
+      "value": "Color"
+    },
+    {
+      "name": "orig_yd",
+      "value": "Dark"
+    },
+    {
+      "name": "orig_ye",
+      "value": "Light"
+    },
+    {
+      "name": "orig_fd",
+      "value": "Default"
+    },
+    {
+      "name": "orig_ud",
+      "value": "Logo"
+    },
+    {
+      "name": "orig_tl",
+      "value": "Advanced"
+    },
+    {
+      "name": "orig_ua",
+      "value": "Font size"
+    },
+    {
+      "name": "orig_j6",
+      "value": "Text"
+    },
+    {
+      "name": "orig_qr",
+      "value": "Image"
+    },
+    {
+      "name": "orig_ez",
+      "value": "Reset"
+    },
+    {
+      "name": "orig_rw",
+      "value": "Reset to default settings"
+    },
+    {
+      "name": "orig_g8",
+      "value": "Are you sure you want to continue?"
+    },
+    {
+      "name": "orig_y9",
+      "value": "Text"
+    },
+    {
+      "name": "orig_ss",
+      "value": "Transparent"
+    },
+    {
+      "name": "orig_oj",
+      "value": "None"
+    },
+    {
+      "name": "orig_bold_italic",
+      "value": "Bold Italic"
     }
   ]
 }

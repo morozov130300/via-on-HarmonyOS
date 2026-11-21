@@ -120,3 +120,23 @@ export function toolbarBackgroundColor(tab: TabItem, settings: AppSettings): Res
   }
   return $r('app.color.home_bg')
 }
+
+// 原版 k6.Z7 的 z12 判定（6560-6570）+ Nb 分发：系统栏内容明暗与工具栏图标同一来源——
+// 夜间(zD) → 白色内容；否则对工具栏实际背景（theme-color 自适应/主页自设背景/默认
+// home_bg）判亮度，>=192 → 深色内容（l3.p appearance 8），否则白色内容。
+// 主页自设背景原版用 bginfo bit8（背景偏亮标志）判定；本端对 nightBlend 后的色值判
+// 亮度等价——夜间已被 isNightActive 拦截，非夜间 nightBlend 原样返回原始色。
+// tab undefined（tabStore 未初始化，启动极早期）按默认 home_bg 资源色判定，与窗口
+// 底色（applyWindowBackgroundColor 同资源）保持一致。
+export function systemBarDarkContent(tab: TabItem | undefined, settings: AppSettings,
+  context: common.UIAbilityContext): boolean {
+  if (settings.isNightActive()) {
+    return false
+  }
+  const bg: ResourceColor = tab === undefined
+    ? $r('app.color.home_bg')
+    : toolbarBackgroundColor(tab, settings)
+  // 主页无 theme-color 且自设背景为空时 toolbarBackgroundColor 也返回 home_bg 资源，
+  // resolveColorHex 统一按当前 colorMode 解析（深色资源夜间态已在上方拦截）
+  return luminanceOf(resolveColorHex(bg, context)) >= 192
+}

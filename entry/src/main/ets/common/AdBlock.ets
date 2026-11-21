@@ -1118,6 +1118,9 @@ export class AdBlocker {
 
   init(settings: AppSettings): void {
     this.settings = settings
+    settings.setAdBlockRulesRefresh((): void => {
+      this.rebuild()
+    })
   }
 
   // 内建规则（a5/a.java：rawfile simple.txt 逐行）
@@ -1134,6 +1137,10 @@ export class AdBlocker {
 
   // 自定义规则文本变化后重编（y4）
   rebuildCustomRules(): void {
+    this.rebuild()
+  }
+
+  refreshRules(): void {
     this.rebuild()
   }
 

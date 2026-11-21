@@ -87,6 +87,12 @@
         "label": "$string:EntryAbility_label",
         "startWindowIcon": "$media:startIcon",
         "startWindowBackground": "$color:start_window_background",
+        // 原版 AndroidManifest 主 Activity 未设 android:screenOrientation（k6.java 全部跟随系统）
+        // → auto_rotation_restricted：四向跟随传感器、受控制中心旋转锁控制，与安卓默认行为 1:1。
+        // 配置层声明是根治：真机实测（X7，10:46 WMSRotation 日志）运行时 setPreferredOrientation
+        // 未生效（系统读到 requestOrientation:1 竖屏），窗口创建时直接带对方向请求。
+        // 设置页「竖屏/横屏」档仍由运行时 setPreferredOrientation 覆盖（Settings.applyOrientationSetting）。
+        "orientation": "auto_rotation_restricted",
         "exported": true,
         "launchType": "singleton",
         "backgroundModes": [

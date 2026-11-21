@@ -9,6 +9,12 @@ import { uaByKey, simplifyUaString, CustomUaEntry } from './UaTable'
 import { RemoteConfig } from './RemoteConfig'
 
 // 原版 f4/Q0 语义：orientation 存 1..4（1=跟随系统 2=自动 3=竖屏 4=横屏）
+// 鸿蒙枚举对照（官方 bpta-multi-device-window-direction）：
+//   跟随系统(1) = AUTO_ROTATION_RESTRICTED(8)：四向跟随传感器旋转、受控制中心旋转锁开关控制
+//     —— 与安卓 screenOrientation 未设置行为 1:1。
+//     不用 UNSPECIFIED(0)：那是「跟随桌面显示策略」，手机桌面竖屏锁定 → 应用恒竖屏（X7 真机实测）。
+//     不用 AUTO_ROTATION_UNSPECIFIED(12)：可旋转方向「受系统判定」，折叠机内屏展开态被系统判死竖屏（X7 真机实测）。
+//   自动(2) = AUTO_ROTATION(5)：跟随传感器旋转、不受旋转锁开关控制（等价安卓 fullSensor）。
 export function applyOrientationSetting(context: Context): void {
   const settings = AppSettings.getInstance()
   window.getLastWindow(context).then((win: window.Window) => {
@@ -19,7 +25,7 @@ export function applyOrientationSetting(context: Context): void {
     } else if (settings.orientation === 2) {
       win.setPreferredOrientation(window.Orientation.AUTO_ROTATION)
     } else {
-      win.setPreferredOrientation(window.Orientation.UNSPECIFIED)
+      win.setPreferredOrientation(window.Orientation.AUTO_ROTATION_RESTRICTED)
     }
   }).catch(() => {
   })
@@ -136,10 +142,11 @@ export class AppSettings {
   @Trace customEngines: CustomEngineRec[] = []
   // 原版 w9/k.X1()：searchsuggestion 位掩码，默认 31（1 标签页|2 书签|4 自定义|8 历史|16 网络建议）
   @Trace searchSuggestion: number = 31
-  @Trace adBlockOn: boolean = false
+  @Trace adBlockOn: boolean = true
   @Trace adBlockBuiltin: boolean = true
   @Trace adBlockTotal: number = 0
   @Trace adBlockSavedBytes: number = 0
+  private adBlockRulesRefresh: (() => void) | null = null
   // 原版 pa\c.java:57 首启默认：fl1.e() && labflag.e()（均默认 true）
   @Trace autoExpandFullText: boolean = true
   @Trace textZoom: number = 100
@@ -193,8 +200,10 @@ export class AppSettings {
   @Trace homeLogoType: number = 0
   @Trace homeLogoSize: number = 28
   @Trace homeLogoStyle: number = 1
-  @Trace homePillCorner: number = 100
-  @Trace homePillOpacity: number = 0
+  // 原版 searchinfo 缺省 0x260064（w9/k.java:650 → i9.e 位域）：
+  // radius bits0-6=0（直角）、opacity bits7-13=100（不透明）、描边不透明度 24、描边宽 1
+  @Trace homePillCorner: number = 0
+  @Trace homePillOpacity: number = 100
   @Trace homePillStrokeWidth: number = 1
   @Trace homePillStrokeOpacity: number = 24
   @Trace homePillStyle: number = 0
@@ -408,7 +417,7 @@ export class AppSettings {
         this.persistCustomEngines()
       }
       this.searchSuggestion = await this.readNumber('searchsuggestion', 31)
-      this.adBlockOn = await this.readBoolean('adBlockOn', false)
+      this.adBlockOn = await this.readBoolean('adBlockOn', true)
       this.adBlockBuiltin = await this.readBoolean('adBlockBuiltin', true)
       this.adBlockTotal = await this.readNumber('adBlockTotal', 0)
       this.adBlockSavedBytes = await this.readNumber('adBlockSavedBytes', 0)
@@ -470,8 +479,8 @@ export class AppSettings {
       this.homeLogoType = await this.readNumber('homeLogoType', 0)
       this.homeLogoSize = await this.readNumber('homeLogoSize', 28)
       this.homeLogoStyle = await this.readNumber('homeLogoStyle', 1)
-      this.homePillCorner = await this.readNumber('homePillCorner', 100)
-      this.homePillOpacity = await this.readNumber('homePillOpacity', 0)
+      this.homePillCorner = await this.readNumber('homePillCorner', 0)
+      this.homePillOpacity = await this.readNumber('homePillOpacity', 100)
       this.homePillStrokeWidth = await this.readNumber('homePillStrokeWidth', 1)
       this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 24)
       this.homePillStyle = await this.readNumber('homePillStyle', 0)
@@ -548,12 +557,14 @@ export class AppSettings {
       this.webdavUser = await this.readString('webdavUser', '')
       this.webdavPwd = await this.readString('webdavPwd', '')
       // orientation 语义版本标记：orientationV2=1 表示已是原版 1..4 语义，直读；
-      // 否则做旧数据迁移：0(跟随系统)→1、1(竖屏)→3、2(横屏)→4
+      // 否则做旧数据迁移：0(跟随系统)→1、1(竖屏)→3、2(横屏)→4。
+      // 缺少 orientation 键时必须保持新默认值 1（跟随系统）；不能把 readNumber 默认 1
+      // 当成旧版已存值，否则首次启动会误迁移成 3（竖屏），并覆盖系统旋转策略。
       const orientationV2 = await this.readNumber('orientationV2', 0) === 1
-      const rawOrientation = await this.readNumber('orientation', 1)
+      const rawOrientation = await this.readNumber('orientation', -1)
       if (orientationV2) {
-        this.orientation = rawOrientation
-      } else if (rawOrientation === 0) {
+        this.orientation = rawOrientation < 1 ? 1 : rawOrientation
+      } else if (rawOrientation < 0 || rawOrientation === 0) {
         this.orientation = 1
       } else if (rawOrientation === 1) {
         this.orientation = 3
@@ -1018,11 +1029,17 @@ export class AppSettings {
   setAdBlockOn(on: boolean): void {
     this.adBlockOn = on
     this.flushKey('adBlockOn', on)
+    this.adBlockRulesRefresh?.()
   }
 
   setAdBlockBuiltin(on: boolean): void {
     this.adBlockBuiltin = on
     this.flushKey('adBlockBuiltin', on)
+    this.adBlockRulesRefresh?.()
+  }
+
+  setAdBlockRulesRefresh(callback: (() => void) | null): void {
+    this.adBlockRulesRefresh = callback
   }
 
   setAutoExpandFullText(on: boolean): void {
@@ -1121,10 +1138,19 @@ export class AppSettings {
   }
 
   updateRuleSubEntry(key: string, ruleCount: number, lastUpdate: number): void {
-    const sub = this.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === key)
-    if (sub !== undefined) {
-      sub.ruleCount = ruleCount
-      sub.lastUpdate = lastUpdate
+    const next: RuleSubEntry[] = []
+    let changed = false
+    for (let i = 0; i < this.ruleSubscriptions.length; i++) {
+      const sub = this.ruleSubscriptions[i]
+      if (sub.key === key) {
+        next.push(new RuleSubEntry(sub.key, sub.name, sub.url, sub.enabled, ruleCount, lastUpdate, sub.isPreset))
+        changed = true
+      } else {
+        next.push(sub)
+      }
+    }
+    if (changed) {
+      this.ruleSubscriptions = next
       this.saveRuleSubs()
     }
   }
@@ -1891,8 +1917,9 @@ export class AppSettings {
     this.setHomeLogoCorner(50)
     this.setHomeLogoImage('')
     this.setHomeLogoHtml('')
-    this.setHomePillCorner(100)
-    this.setHomePillOpacity(0)
+    // 原版 searchinfo 缺省 0x260064：直角 + 不透明（与字段声明处缺省一致）
+    this.setHomePillCorner(0)
+    this.setHomePillOpacity(100)
     this.setHomePillStrokeWidth(1)
     this.setHomePillStrokeOpacity(24)
     this.setHomePillStyle(0)

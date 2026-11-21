@@ -7,7 +7,7 @@ import { AppIcon } from './AppIcon'
 import { ViaIcon } from './ViaIcon'
 import { BusinessError, pasteboard, emitter } from '@kit.BasicServicesKit'
 import { UiInsets } from '../common/Immersive'
-import { BEZIER_0202_CURVE, dimTransition, dialogTransition } from '../common/Transitions'
+import { ACCELERATE_CURVE, BEZIER_0202_CURVE, dimTransition, dialogTransition } from '../common/Transitions'
 import { computeDialogWidthVp } from './ViaDialogCard'
 
 const PANEL_FG: ResourceColor = '#E6E6E6'
@@ -42,6 +42,7 @@ export struct TabPanel {
   @Local pendingSingle: ClosedSingleResult | null = null
   @Local pendingBatch: ClosedBatchResult | null = null
   @Local swipeOffsets: Record<number, number> = {}
+  @Local panelWidth: number = 0
   @Local longPressIndex: number = -1
   @Local panelMaxHeight: number = 120
   // 原版 f8/y.java：行首图标按下触发 ItemTouchHelper 拖拽（l0.b3：列表 <2 不启动）
@@ -85,12 +86,32 @@ export struct TabPanel {
   // 即严格算式为 min(48*条数, max(0, 视口高 - 16 - 16 - 48)) = 视口高 - 80。
   // 本端 panelMaxHeight 约束的是「列表+新建按钮行+padding」整块（原版只约束 RecyclerView），
   // 故沿用既有 -64 的口径以免改变面板整体高度，推算过程记录在此便于后续校正。
+  // 原版 k6.Cb()：gravity 纵向分量 = W0==1（工具栏在上布局）? TOP : BOTTOM——由 Index 经
+  // AppStorage 'uia_menu_layout' 提供，与 MenuSheet 同一接线。
+  private menuLayoutTop(): boolean {
+    return (AppStorage.get<number>('uia_menu_layout') ?? 0) === 1
+  }
+
+  // 原版 f8/c.java:79：面板内容 FrameLayout.LayoutParams(width=N8(), height=WRAP, gravity)。
+  // N8() 与菜单同源（k6.Cb:4027 j(N8())）——由 Index 经 AppStorage 'uia_menu_size_vp' 提供。
+  private panelWidthVp(): number {
+    const size: number = AppStorage.get<number>('uia_menu_size_vp') ?? 0
+    return size > 0 ? size : 0
+  }
+
   private targetPanelHeight(): number {
-    return Math.min(this.tabStore.tabs.length * 48, Math.max(0, this.maxPanelHeight() - 64))
+    const maxHeight: number = Math.max(0, this.maxPanelHeight() - 64)
+    const panelChrome: number = 56 + this.insets.bottom
+    const listMaxHeight: number = Math.max(0, maxHeight - panelChrome)
+    const listHeight: number = Math.min(this.tabStore.tabs.length * 48, listMaxHeight)
+    return Math.min(maxHeight, listHeight + panelChrome)
   }
 
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
+    // 原版 k6.Cb()（k6.java:4027）：标签面板 f8.l0 gravity = (W0==1?48:80)|8388613（END）、
+    // 宽 = N8() —— 与菜单同款：纵向贴底（布局1贴顶）、横向**贴右缘**。手机竖屏 N8()=短边
+    // = 全宽无差异；横屏（宽>>面板宽）时必须贴右，居中是移植偏差。
+    Stack({ alignContent: this.menuLayoutTop() ? Alignment.TopEnd : Alignment.BottomEnd }) {
       Column()
         .width('100%')
         .height('100%')
@@ -186,23 +207,57 @@ export struct TabPanel {
               .width('100%')
               .height(48)
               .padding({ left: 16, right: 16 })
-              .translate({ x: this.swipeOffsets[index] ?? 0 })
-              .onClick(() => {
-                this.tabStore.switchTo(index)
-                this.onClose()
-              })
-              // 原版：左右滑动标签行移除该标签
-              .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 12 })
-                .onActionUpdate((event: GestureEvent) => {
-                  this.swipeOffsets[index] = event.offsetX
+              .translate({ x: this.swipeOffsets[tab.id] ?? 0 })
+              // 单行互斥识别：横向拖动优先于 Scroll，长按仍打开操作菜单，点按切换标签。
+              .priorityGesture(GestureGroup(GestureMode.Exclusive,
+                PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 4 })
+                  .onActionStart(() => {
+                    const resetOffsets: Record<number, number> = {}
+                    this.swipeOffsets = resetOffsets
+                  })
+                  .onActionUpdate((event: GestureEvent) => {
+                    const nextOffsets: Record<number, number> = {}
+                    const keys: string[] = Object.keys(this.swipeOffsets)
+                    for (let i = 0; i < keys.length; i++) {
+                      const key: number = Number(keys[i])
+                      nextOffsets[key] = this.swipeOffsets[key]
+                    }
+                    nextOffsets[tab.id] = px2vp(event.offsetX)
+                    this.swipeOffsets = nextOffsets
+                  })
+                  .onActionEnd(() => {
+                    const offset: number = this.swipeOffsets[tab.id] ?? 0
+                    const resetOffsets: Record<number, number> = {}
+                    const keys: string[] = Object.keys(this.swipeOffsets)
+                    for (let i = 0; i < keys.length; i++) {
+                      const key: number = Number(keys[i])
+                      resetOffsets[key] = this.swipeOffsets[key]
+                    }
+                    resetOffsets[tab.id] = 0
+                    this.swipeOffsets = resetOffsets
+                    const rowWidthVp: number = Math.max(0, this.panelWidth - 32)
+                    if (rowWidthVp > 0 && Math.abs(offset) > rowWidthVp * 0.5) {
+                      this.removeTab(index)
+                    }
+                  })
+                  .onActionCancel(() => {
+                    const resetOffsets: Record<number, number> = {}
+                    const keys: string[] = Object.keys(this.swipeOffsets)
+                    for (let i = 0; i < keys.length; i++) {
+                      const key: number = Number(keys[i])
+                      resetOffsets[key] = this.swipeOffsets[key]
+                    }
+                    resetOffsets[tab.id] = 0
+                    this.swipeOffsets = resetOffsets
+                  }),
+                LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+                  this.longPressIndex = index
+                }),
+                TapGesture({ fingers: 1 }).onAction(() => {
+                  this.tabStore.switchTo(index)
+                  this.onClose()
                 })
-                .onActionEnd((event: GestureEvent) => {
-                  const offset = this.swipeOffsets[index] ?? 0
-                  this.swipeOffsets[index] = 0
-                  if (Math.abs(offset) > 80) {
-                    this.removeTab(index)
-                  }
-                }))
+              ))
               // 原版 f8.l0.t3：长按弹行操作菜单（w5.k.h0(view) 锚定该行弹出）
               // 弹窗动画依据：w5/k.java:871 m() → new Dialog(context, v.f14256c)，
               //   x7.v.f14256c = 0x7f11000f = style "n" → windowAnimationStyle=@style/k →
@@ -222,15 +277,12 @@ export struct TabPanel {
                   }
                 }
               })
-              .gesture(LongPressGesture({ repeat: false, duration: 500 })
-                .onAction(() => {
-                  this.longPressIndex = index
-                }))
             }, (tab: TabItem) => tab.id.toString())
           }
           .width('100%')
         }
         .width('100%')
+        .constraintSize({ maxHeight: this.listMaxHeightVp() })
         .align(Alignment.Bottom)
         .scrollBar(BarState.Off)
 
@@ -253,16 +305,25 @@ export struct TabPanel {
         .width('100%')
         .justifyContent(FlexAlign.Center)
       }
-      .width('100%')
-      // 原版 f8/l0.n3()：min(48dp*条数, max_height-48dp-2*8dp)，max_height=窗口高-16dp（k6:3748）
-      .constraintSize({ maxHeight: this.panelMaxHeight })
+      // 原版 f8/c.java:79：面板内容 FrameLayout.LayoutParams(width=N8(), height=WRAP, gravity)。
+      // 竖屏 N8()=窗口短边=全宽；横屏时宽受限且贴右缘（alignContent BottomEnd 已保证）。
+      // 原版面板悬于底部工具栏之上，工具栏保持可见。
+      // 原版圆角：贴底时只圆上侧两角；布局1贴顶时圆下侧两角（镜像）。
+      .width(this.panelWidthVp() > 0 ? this.panelWidthVp() : '100%')
+      .onAreaChange((_old: Area, newArea: Area) => {
+        this.panelWidth = Number(newArea.width)
+      })
+      // 给 layoutWeight(1) 的滚动列表确定可分配高度，maxHeight 单独约束无法建立剩余空间。
+      .height(this.panelMaxHeight)
+      .constraintSize({ maxHeight: this.maxPanelHeight() - 64 })
       .padding({ top: 8, bottom: this.insets.bottom })
-      // 原版面板悬于底部工具栏之上，工具栏保持可见
       .margin({ bottom: 48 })
       .backgroundColor($r('app.color.menu_bg'))
-      .borderRadius({ topLeft: 16, topRight: 16 })
-      // 原版 f8.l0 用 style n 弹窗主题 → windowAnimationStyle=style/k → anim/a 进、anim/b 出（240ms bounce）
-      .transition(dialogTransition())
+      .borderRadius(this.menuLayoutTop()
+        ? { bottomLeft: 16, bottomRight: 16 }
+        : { topLeft: 16, topRight: 16 })
+      .translate({ y: this.panelDragY })
+      // 面板进出转场绑定在 Index 的条件挂载边界，内部列不承担进出动画。
     }
     .width('100%')
     .height('100%')

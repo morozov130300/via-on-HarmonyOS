@@ -60,8 +60,8 @@ export struct SettingsRuleSubPage {
   private bindAppBar(): void {
     AppBar.show({
       title: $r('app.string.orig_jf'),
+      rightIcon2: $r('sys.symbol.plus'),
       rightText: $r('app.string.update_btn'),
-      rightIcon: $r('sys.symbol.plus'),
       onBack: () => {
         this.navPathStack.pop()
       },
@@ -270,8 +270,10 @@ export struct SettingsRuleSubPage {
     RuleSubManager.getInstance().updateSubscription(context, sub).then((count: number) => {
       this.settings.updateRuleSubEntry(sub.key, count, Date.now())
       this.reloadBlocker()
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0k'), duration: TOAST_SHORT })
     }).catch((error: BusinessError) => {
       console.error(`update sub failed: ${error.message}`)
+      this.getUIContext().getPromptAction().showToast({ message: `规则更新失败：${error.message}`, duration: TOAST_SHORT })
     }).finally(() => {
       this.updating = false
     })
@@ -296,18 +298,23 @@ export struct SettingsRuleSubPage {
     this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_h3'), duration: TOAST_SHORT })
     const manager = RuleSubManager.getInstance()
     let done = 0
+    let succeeded = 0
     for (let i = 0; i < targets.length; i++) {
       const sub = targets[i]
       manager.updateSubscription(context, sub).then((count: number) => {
         this.settings.updateRuleSubEntry(sub.key, count, Date.now())
+        succeeded++
       }).catch((error: BusinessError) => {
-        console.error(`update sub failed: ${error.message}`)
+        console.error(`update sub failed: ${sub.key}, ${error.message}`)
       }).finally(() => {
         done = done + 1
         if (done === targets.length) {
           this.updating = false
           this.reloadBlocker()
-          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0k'), duration: TOAST_SHORT })
+          const message = succeeded === targets.length
+            ? $r('app.string.orig_a0k')
+            : `规则更新完成：成功 ${succeeded}/${targets.length}，失败 ${targets.length - succeeded}`
+          this.getUIContext().getPromptAction().showToast({ message: message, duration: TOAST_SHORT })
         }
       })
     }
