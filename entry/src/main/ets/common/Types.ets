@@ -1053,14 +1053,17 @@ export class RuleEntry {
   }
 }
 
+// 原版 w4/c.java（FilterSubscription）：enabled/ruleCount/lastUpdate 可原地变更，
+// 故加 V2 观测，使规则订阅页勾选、更新时间、规则数改动即时上屏（对应原版 notifyItemChanged）
+@ObservedV2
 export class RuleSubEntry {
-  key: string
-  name: string
-  url: string
-  enabled: boolean
-  ruleCount: number
-  lastUpdate: number
-  isPreset: boolean
+  readonly key: string
+  @Trace name: string
+  @Trace url: string
+  @Trace enabled: boolean
+  @Trace ruleCount: number
+  @Trace lastUpdate: number
+  readonly isPreset: boolean
 
   constructor(key: string, name: string, url: string, enabled: boolean, ruleCount: number, lastUpdate: number, isPreset: boolean) {
     this.key = key

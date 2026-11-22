@@ -58,6 +58,7 @@ export struct RulesPage {
           .fontFamily('monospace')
           .backgroundColor(Color.Transparent)
           .placeholderColor($r('app.color.fg_secondary'))
+          .caretColor($r('app.color.accent'))
           .constraintSize({ minHeight: 200 })
           .width('100%')
           .layoutWeight(1)

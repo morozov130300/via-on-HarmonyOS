@@ -8,6 +8,8 @@ export struct SettingNavRow {
   @Param rowValue: ResourceStr = ''
   @Param rowDesc: ResourceStr = ''
   @Event onTapRow: () => void = () => {}
+  // 原版 a6/r 行背景 = drawable/p（state_pressed → @color/l=#30808080，两主题同值）
+  @Local pressed: boolean = false
 
   build() {
     // 原版 a6/o.java：padding 左右 16 / 上下 20dp；标题 14sp（dimen a_）单行；
@@ -35,6 +37,14 @@ export struct SettingNavRow {
     .width('100%')
     .padding({ left: 16, right: 16, top: 20, bottom: 20 })
     .alignItems(HorizontalAlign.Start)
+    .backgroundColor(this.pressed ? $r('app.color.dialog_btn_pressed') : Color.Transparent)
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressed = true
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressed = false
+      }
+    })
     .onClick(() => {
       this.onTapRow()
     })
@@ -94,7 +104,8 @@ export struct SettingCheckRow {
 
   build() {
     // 原版 a6/o.java：padding 左右 16 / 上下 20dp；标题 14sp；desc 12sp 最多 3 行；
-    // CheckBox 20dp（o.java:110 y.h(context, 20.0f)）
+    // CheckBox 容器高 20dp（o.java:110 y.h(context, 20.0f)），但 buttonDrawable
+    // （x8.h.d → drawable/s|r）是 16dp 圆形：未选中描边 2dp #30808080、选中实心 accent。
     Row() {
       Column() {
         Text(this.rowLabel)
@@ -112,18 +123,16 @@ export struct SettingCheckRow {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      // 原版 a6/o.java 110 行：CheckBox 用 setButtonDrawable(x8.h.d(context))，
-      // 即 drawable/k 状态选择器（未选中描边 / 选中实心），勾选是状态切换，
-      // 没有动画也没有辉光，故此处不加 .shadow 与 .animation。
-      Circle({ width: 20, height: 20 })
+      // 勾选是状态切换，没有动画也没有辉光，故此处不加 .shadow 与 .animation。
+      Circle({ width: 16, height: 16 })
         .fill(this.isChecked ? $r('app.color.accent') : Color.Transparent)
         .stroke(this.isChecked ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-        .strokeWidth(1.5)
+        .strokeWidth(2)
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
     .padding({ left: 16, right: 16, top: 20, bottom: 20 })
-    .backgroundColor(this.pressed ? 'rgba(255,255,255,0.10)' : Color.Transparent)
+    .backgroundColor(this.pressed ? $r('app.color.dialog_btn_pressed') : Color.Transparent)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.setPressed(true)

@@ -1,10 +1,10 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { i18n } from '@kit.LocalizationKit'
 import { AppSettings } from '../common/Settings'
-import { SettingNavRow } from '../components/SettingRows'
+import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { dialogTransition } from '../common/Transitions'
-import { computeDialogWidthVp } from '../components/UiaDialogCard'
+import { UiaDialogCard, computeDialogWidthVp } from '../components/UiaDialogCard'
 import { buildNavSlide } from './PageTransitions'
 
 // 原版夜间模式设置页（hb/p4）：
@@ -87,29 +87,16 @@ export struct SettingsNightPage {
                 this.openFilterDialog()
               }
             })
-            Row() {
-              Column() {
-                Text($r('app.string.night_force_dark'))
-                  .fontSize(15)
-                  .fontColor($r('app.color.fg'))
-                  .maxLines(1)
-                Text($r('app.string.night_force_dark_desc'))
-                  .fontSize(12)
-                  .fontColor($r('app.color.fg_secondary'))
-                  .maxLines(2)
-                  .margin({ top: 2 })
+            // 原版 p4 行2：a6/n（u.M5 标题 + u.N5 desc）→ a6/o 行视图：
+            // 标题 14sp、desc 12sp、右侧 16dp 圆勾选框，行 padding 16/20
+            SettingCheckRow({
+              rowLabel: $r('app.string.night_force_dark'),
+              rowDesc: $r('app.string.night_force_dark_desc'),
+              isChecked: this.settings.nightCss,
+              onCheckRow: (isOn: boolean) => {
+                this.toggleForceDark(isOn)
               }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
-
-              Toggle({ type: ToggleType.Switch, isOn: this.settings.nightCss })
-                .onChange((isOn: boolean) => {
-                  this.toggleForceDark(isOn)
-                })
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Center)
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
+            })
           }
           .width('100%')
         }
@@ -146,41 +133,62 @@ export struct SettingsNightPage {
     })
   }
 
-  // 原版 p4.m3()：预览文本 + 黑色蒙版（alpha = 滑杆值）+ 滑杆（max 154，抬起保存）
+  // 原版 p4.p3() = w5.k.l(I()).y(m3()).f0()：视图塞进 u.xml 卡片（12dp 上下 Space +
+  // t/u 底），无标题无正文无按钮 → 只剩自定义视图 + 上下 12dp 留白
   @Builder
   FilterDialog() {
-    Column({ space: 12 }) {
-      Stack() {
+    UiaDialogCard() {
+      // 原版 p4.m3()：预览 FrameLayout（margin 22/16/22/16）内 TextView（padding 32/0/32/0、
+      // 字号 dimen ae=18、居中、色 fg=ac）+ 黑色蒙版（Color.argb(progress,0,0,0) 实时刷）；
+      // SeekBar margin 16/0/16/16、padding 16/0/16/16、最小轨高 2dp、max 154（k3）。
+      // SeekBar 自绘样式 z8.r3.g → x8.h.n/w：轨道 5dp 圆角 #40808080 + accent 进度、
+      // 滑块 12dp 圆点 accent；抬起时 Y0 保存（onStopTrackingTouch）。
+      Column({ space: 0 }) {
+        // 原版蒙版是 FrameLayout foreground（Color.argb(progress,0,0,0) 实时刷），
+        // 不参与布局；这里用 overlay 挂在文字上 —— 若放进 Stack 且 height('100%')，
+        // 百分比会参考弹窗可用高度把 Stack 撑满全屏、滑杆被挤出屏外（真机已踩坑）
         Text(this.previewText())
-          .fontSize(14)
+          .fontSize(18)
           .fontColor($r('app.color.fg'))
           .textAlign(TextAlign.Center)
-          .padding({ top: 22, bottom: 22, left: 16, right: 16 })
-        Column()
-          .backgroundColor(`rgba(0,0,0,${(this.filterDraft / 255).toFixed(3)})`)
           .width('100%')
-          .height('100%')
+          .padding({ top: 32, bottom: 32, left: 0, right: 0 })
+          .overlay(() => {
+            Column()
+              .backgroundColor(`rgba(0,0,0,${(this.filterDraft / 255).toFixed(3)})`)
+              .width('100%')
+              .height('100%')
+          })
+
+        Slider({
+          value: this.filterDraft,
+          min: 0,
+          max: 154,
+          step: 1,
+          style: SliderStyle.OutSet
+        })
+          .blockColor($r('app.color.accent'))
+          .trackColor($r('app.color.hc_40808080'))
+          .selectedColor($r('app.color.accent'))
+          .trackThickness(5)
+          .trackBorderRadius(2.5)
+          .blockSize({ width: 12, height: 12 })
+          .width('100%')
+          .padding({ left: 16, right: 16 })
+          .onChange((value: number, mode: SliderChangeMode) => {
+            const v = Math.round(value)
+            this.filterDraft = v
+            if (mode === SliderChangeMode.End) {
+              // 松手持久化（拖动中已实时写入内存值）
+              this.settings.setNightFilter(v)
+            } else {
+              // 拖动中实时生效：各 TabWeb 的黑色蒙版 alpha 绑定 @Trace nightFilter，实时变化
+              this.settings.nightFilter = v
+            }
+          })
       }
       .width('100%')
-
-      Slider({ value: this.filterDraft, min: 0, max: 154, step: 1, style: SliderStyle.OutSet })
-        .blockColor($r('app.color.accent'))
-        .selectedColor($r('app.color.accent'))
-        .trackColor($r('app.color.surface'))
-        .onChange((value: number, mode: SliderChangeMode) => {
-          this.filterDraft = Math.round(value)
-          if (mode === SliderChangeMode.End) {
-            this.settings.setNightFilter(this.filterDraft)
-          }
-        })
     }
-    .width('100%')
-    .constraintSize({ maxHeight: 320 })
-    .padding({ left: 24, right: 24, top: 16, bottom: 16 })
-    .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(18)
-    .border({ width: 1, color: $r('app.color.dialog_border') })
-    .transition(dialogTransition())
   }
 }
 

@@ -728,19 +728,20 @@ export struct HomePage {
   }
 
   private pillBorder(): BorderOptions {
-    // 原版语义（用户真机对照原版确认）：矩形=四边线框、线条=仅底边。
-    // jadx 字面 !p()?"border-bottom":"border"（o.java:305 等 4 处）系反编译取反产物：
-    // b() 方法整体标注 "Code decompiled incorrectly"，且 r8/d.java:139,142 证明
-    // p()=true（线条）→ alpha=0 透明底 + radius=0 —— 透明底+方角配四边框不成语义，
-    // 配「仅底边一条线」才是线条样式；矩形有填充+圆角，配四边线框。
+    // 原版 i6/o.java:305/401/503/582 字面（字符串常量三元，四处一致，无取反歧义）：
+    //   sb.append(!config.p() ? "border-bottom" : "border")
+    // p() = searchBarLineEnabled（i9/e bit24；e9/v.java 条目5 isOn=true 数值行显示「线条」）。
+    // ⇒ 线条 = 四边 border；矩形 = 仅底边 border-bottom。
+    // 与 r8/d.java:139/142 自洽：线条态强制背景 α=0 + 圆角 q()=0 → 透明方角纯线框；
+    // 矩形态默认 searchinfo=0x260064（透明底 + 底边线 + 圆角）即经典底线观感。
     if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
       return {
-        width: { bottom: this.settings.homePillStrokeWidth },
+        width: this.settings.homePillStrokeWidth,
         color: this.strokeColor()
       }
     }
     return {
-      width: this.settings.homePillStrokeWidth,
+      width: { bottom: this.settings.homePillStrokeWidth },
       color: this.strokeColor()
     }
   }

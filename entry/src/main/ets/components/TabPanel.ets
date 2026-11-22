@@ -1,4 +1,4 @@
-import { curves, display } from '@kit.ArkUI'
+import { curves, display, window } from '@kit.ArkUI'
 import { TabItem } from '../common/Types'
 import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
@@ -42,9 +42,17 @@ export struct TabPanel {
   @Local pendingSingle: ClosedSingleResult | null = null
   @Local pendingBatch: ClosedBatchResult | null = null
   @Local swipeOffsets: Record<number, number> = {}
-  @Local panelWidth: number = 0
+  private rowTouchStartX: number = 0
+  private rowTouchStartY: number = 0
+  private rowTouchStartTime: number = 0
+  private rowSwiping: boolean = false
+  private rowLongPressTimer: number = -1
+  private rowTapSuppressed: boolean = false
   @Local longPressIndex: number = -1
-  @Local panelMaxHeight: number = 120
+  @Local panelMaxHeight: number = 0
+  @Local rootHeightVp: number = 0
+  // 面板实测宽（vp）：滑动删除阈值与面板宽度定位用（onAreaChange 回写）
+  @Local panelWidth: number = 0
   // 原版 f8/y.java：行首图标按下触发 ItemTouchHelper 拖拽（l0.b3：列表 <2 不启动）
   @Local dragFromIndex: number = -1
   @Local dragToIndex: number = -1
@@ -59,7 +67,9 @@ export struct TabPanel {
     // 原版面板初始化不产生高度动画：f8/l0.java:295 建视图时就把 RecyclerView 高度设为 n3()，
     // 随后 p3(true) 走 ValueAnimator.ofInt(h, h, n3())，因 h 与目标相等，位移恒为 0。
     // 故这里直接落终值（不调用 animateTo），避免凭空多出一段「从 120 长到目标」的假动画。
+    this.rootHeightVp = this.maxPanelHeight()
     this.panelMaxHeight = this.targetPanelHeight()
+    AppStorage.setOrCreate('uia_menu_root_height_vp', this.rootHeightVp)
   }
 
   // 原版 f8/l0.java:379-381 o3() → p3(true)：标签增删后重算高度并做 350ms 三值动画。
@@ -78,14 +88,8 @@ export struct TabPanel {
     })
   }
 
-  // 原版 f8/l0.java:373-377 n3()：
-  //   min(max(0, (max_height - dimen_af*2) - dimen_b), dimen_ba * 条数)
-  //   max_height（k6.java:4027 Cb 传入的 bundle "max_height"）= 根视图高 - 16dp；
-  //   dimen_b(0x7f070001)=48dp 行高、dimen_af(0x7f07002a)=8dp 列表上下内边距、
-  //   dimen_ba(0x7f07004a)=48dp 行高。
-  // 即严格算式为 min(48*条数, max(0, 视口高 - 16 - 16 - 48)) = 视口高 - 80。
-  // 本端 panelMaxHeight 约束的是「列表+新建按钮行+padding」整块（原版只约束 RecyclerView），
-  // 故沿用既有 -64 的口径以免改变面板整体高度，推算过程记录在此便于后续校正。
+  // 原版 f8/l0.java:373-377 n3(): RecyclerView 高度 = min(48dp * 标签数, max(0, max_height - 48dp - 2*10dp))。
+  // Cb() 传入 max_height = 应用根视图高度 - 16dp；本值仅约束列表，底部新建 ImageView 独立 WRAP_CONTENT。
   // 原版 k6.Cb()：gravity 纵向分量 = W0==1（工具栏在上布局）? TOP : BOTTOM——由 Index 经
   // AppStorage 'uia_menu_layout' 提供，与 MenuSheet 同一接线。
   private menuLayoutTop(): boolean {
@@ -100,11 +104,8 @@ export struct TabPanel {
   }
 
   private targetPanelHeight(): number {
-    const maxHeight: number = Math.max(0, this.maxPanelHeight() - 64)
-    const panelChrome: number = 56 + this.insets.bottom
-    const listMaxHeight: number = Math.max(0, maxHeight - panelChrome)
-    const listHeight: number = Math.min(this.tabStore.tabs.length * 48, listMaxHeight)
-    return Math.min(maxHeight, listHeight + panelChrome)
+    const listMaxHeight: number = Math.max(0, this.maxPanelHeight() - 48 - 20)
+    return Math.min(this.tabStore.tabs.length * 48, listMaxHeight)
   }
 
   build() {
@@ -115,9 +116,8 @@ export struct TabPanel {
       Column()
         .width('100%')
         .height('100%')
-        // 原版 style n：backgroundDimAmount 0.4
+        // dim 由 Index 上同一 Fragment 对话框转场同步驱动，点击空白关闭。
         .backgroundColor('rgba(0,0,0,0.4)')
-        .transition(dimTransition(240))
         .onClick(() => {
           this.onClose()
         })
@@ -195,6 +195,7 @@ export struct TabPanel {
                 AppIcon({ icon: $r('sys.symbol.xmark'), iconSize: 20, iconColor: PANEL_FG })
                   .accessibilityText(tab.isHomePage() ? '关闭主页标签' : `关闭 ${this.rowTitle(tab)} 标签`)
                   .onClick(() => {
+                    this.rowTapSuppressed = true
                     // 原版 na.M/f0：单关入恢复库 + snackbar「已关闭 %1$s」（标题）
                     const info = this.tabStore.closeTab(index)
                     if (info !== null) {
@@ -208,13 +209,19 @@ export struct TabPanel {
               .height(48)
               .padding({ left: 16, right: 16 })
               .translate({ x: this.swipeOffsets[tab.id] ?? 0 })
-              // 单行互斥识别：横向拖动优先于 Scroll，长按仍打开操作菜单，点按切换标签。
               .priorityGesture(GestureGroup(GestureMode.Exclusive,
-                PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 4 })
-                  .onActionStart(() => {
-                    const resetOffsets: Record<number, number> = {}
-                    this.swipeOffsets = resetOffsets
-                  })
+                TapGesture({ fingers: 1 }).onAction(() => {
+                  if (this.rowTapSuppressed) {
+                    this.rowTapSuppressed = false
+                    return
+                  }
+                  this.tabStore.switchTo(index)
+                  this.onClose()
+                }),
+                LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
+                  this.longPressIndex = index
+                }),
+                PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
                   .onActionUpdate((event: GestureEvent) => {
                     const nextOffsets: Record<number, number> = {}
                     const keys: string[] = Object.keys(this.swipeOffsets)
@@ -222,11 +229,11 @@ export struct TabPanel {
                       const key: number = Number(keys[i])
                       nextOffsets[key] = this.swipeOffsets[key]
                     }
-                    nextOffsets[tab.id] = px2vp(event.offsetX)
+                    nextOffsets[tab.id] = event.offsetX
                     this.swipeOffsets = nextOffsets
                   })
-                  .onActionEnd(() => {
-                    const offset: number = this.swipeOffsets[tab.id] ?? 0
+                  .onActionEnd((event: GestureEvent) => {
+                    const offsetVp: number = event.offsetX
                     const resetOffsets: Record<number, number> = {}
                     const keys: string[] = Object.keys(this.swipeOffsets)
                     for (let i = 0; i < keys.length; i++) {
@@ -235,8 +242,14 @@ export struct TabPanel {
                     }
                     resetOffsets[tab.id] = 0
                     this.swipeOffsets = resetOffsets
-                    const rowWidthVp: number = Math.max(0, this.panelWidth - 32)
-                    if (rowWidthVp > 0 && Math.abs(offset) > rowWidthVp * 0.5) {
+                    const thresholdVp: number = this.panelWidth > 0 ? this.panelWidth * 0.5 : 80
+                    const vx: number = event.velocityX
+                    const vy: number = event.velocityY
+                    const velocityDirectionMatches: boolean =
+                      offsetVp > 0 ? vx > 0 : vx < 0
+                    const fastSwipe: boolean =
+                      Math.abs(vx) > 120 && Math.abs(vx) > Math.abs(vy) && velocityDirectionMatches
+                    if (fastSwipe || Math.abs(offsetVp) > thresholdVp) {
                       this.removeTab(index)
                     }
                   })
@@ -249,15 +262,8 @@ export struct TabPanel {
                     }
                     resetOffsets[tab.id] = 0
                     this.swipeOffsets = resetOffsets
-                  }),
-                LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
-                  this.longPressIndex = index
-                }),
-                TapGesture({ fingers: 1 }).onAction(() => {
-                  this.tabStore.switchTo(index)
-                  this.onClose()
-                })
-              ))
+                  })
+              ), GestureMask.Normal)
               // 原版 f8.l0.t3：长按弹行操作菜单（w5.k.h0(view) 锚定该行弹出）
               // 弹窗动画依据：w5/k.java:871 m() → new Dialog(context, v.f14256c)，
               //   x7.v.f14256c = 0x7f11000f = style "n" → windowAnimationStyle=@style/k →
@@ -282,28 +288,30 @@ export struct TabPanel {
           .width('100%')
         }
         .width('100%')
-        .constraintSize({ maxHeight: this.listMaxHeightVp() })
+        .height(this.panelMaxHeight)
         .align(Alignment.Bottom)
         .scrollBar(BarState.Off)
 
+        // 原版新建 ImageView 宽 = MATCH_PARENT、高 = 32dp，整行都是点击/长按热区。
         Row() {
-          // 原版 + 按钮 = drawable ay（Rd ic_add）：点击新建标签，长按打开「关闭的标签页」
-          // （f8/l0.c3：contentDescription ad「新建标签」，longClick → b.f() → k6.ia()）
           ViaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 24, iconColor: PANEL_FG })
-            .padding(12)
-            .accessibilityText('新建标签')
-            .onClick(() => {
-              // 原版隐身会话中新建标签同为隐身（k6.cb/l8 会话模型）
-              this.tabStore.newTab(this.tabStore.sessionIncognito)
-              this.onClose()
-            })
-            .gesture(LongPressGesture({ repeat: false, duration: 500 })
-              .onAction(() => {
-                this.openClosedTabs()
-              }))
+            .width(26)
+            .height(32)
         }
         .width('100%')
+        .height(32)
+        .accessibilityText('新建标签')
         .justifyContent(FlexAlign.Center)
+        .onClick(() => {
+          // 原版隐身会话中新建标签同为隐身（k6.cb/l8 会话模型）
+          this.tabStore.newTab(this.tabStore.sessionIncognito)
+          this.onClose()
+        })
+        .gesture(LongPressGesture({ repeat: false, duration: 500 })
+          .onAction(() => {
+            this.openClosedTabs()
+          }))
+        .padding({ top: 10, bottom: 10 })
       }
       // 原版 f8/c.java:79：面板内容 FrameLayout.LayoutParams(width=N8(), height=WRAP, gravity)。
       // 竖屏 N8()=窗口短边=全宽；横屏时宽受限且贴右缘（alignContent BottomEnd 已保证）。
@@ -313,29 +321,30 @@ export struct TabPanel {
       .onAreaChange((_old: Area, newArea: Area) => {
         this.panelWidth = Number(newArea.width)
       })
-      // 给 layoutWeight(1) 的滚动列表确定可分配高度，maxHeight 单独约束无法建立剩余空间。
-      .height(this.panelMaxHeight)
-      .constraintSize({ maxHeight: this.maxPanelHeight() - 64 })
-      .padding({ top: 8, bottom: this.insets.bottom })
-      .margin({ bottom: 48 })
+      .constraintSize({ maxHeight: this.maxPanelHeight() })
+      .padding({ top: 10, bottom: 10 })
+      .margin(this.menuLayoutTop() ? { top: 48 } : { bottom: 80 })
       .backgroundColor($r('app.color.menu_bg'))
       .borderRadius(this.menuLayoutTop()
         ? { bottomLeft: 16, bottomRight: 16 }
         : { topLeft: 16, topRight: 16 })
-      .translate({ y: this.panelDragY })
-      // 面板进出转场绑定在 Index 的条件挂载边界，内部列不承担进出动画。
+          // 面板进出转场绑定在 Index 的条件挂载边界，内部列不承担进出动画。
     }
     .width('100%')
     .height('100%')
   }
 
-  // 原版 k6:3748：max_height = 窗口高度 - 16dp
+  // 原版 Cb() 传入 max_height = 应用根容器实测高度 - 16px（转换为vp）。
   private maxPanelHeight(): number {
+    const rootHeight: number = AppStorage.get<number>('uia_menu_root_height_vp') ?? 0
+    if (rootHeight > 0) {
+      return Math.max(0, rootHeight - px2vp(16))
+    }
     try {
       const d = display.getDefaultDisplaySync()
-      return d.height / d.densityPixels
+      return Math.max(0, d.height / d.densityPixels - px2vp(16))
     } catch (error) {
-      return 800
+      return 784
     }
   }
 

@@ -394,9 +394,12 @@ export struct FontSizePage {
                 highlightZoom: -1,
                 onZoomChange: (zoom: number): void => {
                   this.pageZoom = zoom
+                  // 拖动中实时生效：@Trace textZoom 驱动各 TabWeb textZoomRatio 即时变化（不落盘）
+                  this.settings.textZoom = zoom
                 },
                 onZoomEnd: (zoom: number): void => {
                   this.pageZoom = zoom
+                  // 松手持久化（拖动中已实时写入内存值）
                   this.settings.setTextZoom(zoom)
                 }
               })

@@ -121,10 +121,6 @@
       "value": "#FFB700"
     },
     {
-      "name": "search_pill_bg",
-      "value": "#20FFFFFF"
-    },
-    {
       "name": "search_pill_border",
       "value": "#c2c2c2"
     },
@@ -147,10 +143,6 @@
     {
       "name": "menu_bg",
       "value": "#F5F5F5"
-    },
-    {
-      "name": "home_title",
-      "value": "#9f9f9f"
     },
     {
       "name": "appbar_text",
@@ -191,10 +183,6 @@
     {
       "name": "dialog_hint",
       "value": "#8A000000"
-    },
-    {
-      "name": "on_accent",
-      "value": "#FFFFFF"
     },
     {
       "name": "widget_bar_bg",

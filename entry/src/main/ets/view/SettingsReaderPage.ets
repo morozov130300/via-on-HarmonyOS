@@ -135,8 +135,13 @@ export struct SettingsReaderPage {
                 .trackColor($r('app.color.divider'))
                 .blockColor($r('app.color.accent'))
                 .onChange((value: number, mode: SliderChangeMode) => {
+                  const size = Math.round(value)
                   if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
-                    this.settings.setReaderFontSize(Math.round(value))
+                    // 松手持久化（拖动中已实时写入内存值）
+                    this.settings.setReaderFontSize(size)
+                  } else {
+                    // 拖动中实时生效：@Trace readerFontSize 驱动下方预览文本即时缩放（不落盘）
+                    this.settings.readerFontSize = size
                   }
                 })
             }

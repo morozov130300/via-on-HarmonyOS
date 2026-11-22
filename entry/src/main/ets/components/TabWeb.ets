@@ -21,6 +21,7 @@ import { GmBridge, gmSecret, gmFakeTampermonkeyJs, gmSandboxJs, GmRequireStore }
 import { FontStore } from '../common/FontStore'
 import { NetMonitor } from '../common/NetState'
 import { RemoteConfig } from '../common/RemoteConfig'
+import { ThemeColorCache } from '../common/ThemeColorCache'
 import { VideoOverlayState } from './VideoPlayerOverlay'
 import { TranslateState } from './TranslatePanel'
 import { MARK_AD_INJECT_JS } from './MenuSheet'
@@ -402,7 +403,10 @@ export struct TabWeb {
           // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，via_gm 走 controller 注册
           try {
             this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'uia_gm', ['call'])
-            this.tab.controller.refresh()
+            // 空白主页无需 refresh：刷新 about:blank 会触发 onPageBegin 造成假加载进度条。
+            if (this.tab.initialUrl !== '') {
+              this.tab.controller.refresh()
+            }
           } catch (error) {
             console.error('register via_gm proxy failed')
           }
@@ -425,7 +429,7 @@ export struct TabWeb {
         })
         .onPageBegin((event: OnPageBeginEvent) => {
           this.tab.url = event.url
-          this.tab.loading = true
+          this.tab.loading = event.url !== 'about:blank' && event.url !== ''
           this.tab.isError = false
           this.tab.sniffedMedia = []
           // 原版 e8/i.M() 页面开始重新应用正式缩放，qb 预览值失效
@@ -442,6 +446,11 @@ export struct TabWeb {
           }
           // 原版 k6.b0 → d9() → pb()：确保模式2 隐藏态下 FAB 在场
           this.onPageSettle()
+          // 原版 e8/k0.D（tabShown bitmask1）→ j0(缓存色)：页面开始即查 d8.g 缓存，
+          // 重访同站配色秒变（theme-color/主页自设色），不等加载完成。
+          // 主页走自设背景（k0.D 的 l() 内部页分支 → j0(0) → Nb 兜底默认色）。
+          this.tab.themeColor = ThemeColorCache.getInstance().get(event.url)
+          this.onPageThemeColor()
         })
         .onPageEnd((event: OnPageEndEvent) => {
           this.tab.url = event.url
@@ -811,18 +820,25 @@ export struct TabWeb {
       // 位移由 m()/o() 驱动：m() 开局 setTranslationX(f9565t)，o() 每次 +dx*0.8 并限幅 ±f9563r
       if (this.settings.swipeSwitchTab && this.swipeIndicatorVisible) {
         Row() {
+          // 原版 k6.a.c(view, i10)（349-358）：i10==1 后退 → drawable b2（via_ic_back），
+          // i10==2 前进 → drawable a3 = b2 外包 <rotate 180°>。两方向同一返回箭头，
+          // 前进只是旋转半圈，不是另一张图标（原版无独立 forward 资源）。
           ViaIcon({
-            icon: this.swipeIndicatorForward ? $r('app.media.uia_ic_forward') : $r('app.media.uia_ic_back'),
+            icon: $r('app.media.uia_ic_back'),
             iconSize: 24,
-            iconColor: '#FFFFFF'
+            iconColor: '#FFFFFF',
+            rotateDeg: this.swipeIndicatorForward ? 180 : 0
           })
         }
         .width(72)
         .height(60)
         .padding(20)
-        // 原版 background = drawable b_（96x96 png，圆角 10px@4x → 72dp 宽时约 8dp 圆角）
-        .backgroundColor('#FFFFFFFF')
-        .borderRadius(8)
+        // 原版 background = drawable ai（x7.o.N1 → 0x7f0800ac = r/d/ai.xml）：
+        // <shape rectangle> solid @color/a9=#E64E4E4E、corners @dimen/ae=18dp、
+        // stroke 1px @color/a8=#40808080（夜间无覆盖，深浅同值）
+        .backgroundColor('#E64E4E4E')
+        .borderRadius(18)
+        .border({ width: 1, color: '#40808080' })
         .alignItems(VerticalAlign.Center)
         .justifyContent(FlexAlign.Center)
         // 原版 y7.f()：API21+ setElevation(12dp)
@@ -1319,19 +1335,32 @@ export struct TabWeb {
       if (Math.abs(event.velocityX) < px2vp(500)) {
         return
       }
-      // 原版 k6.a.f.c()（k6.java:375-382）：方向可用性实时查询 V7()/W7()。
-      //   V7 = 可后退 || 当前非主页（退到底会关标签，仍算有动作）
-      //   W7 = 可前进 || 有最近关闭的标签可重开（na.W0）
-      if ((dx > 0 && !this.tabStore.canNavigateBack(this.tab)) ||
-        (dx < 0 && !this.tabStore.canNavigateForward(this.tab))) {
+      // 原版 c()（195-199）：i10 = dx>0 ? 1 : 2，(f9553h & i10) != i10 → a() 直接结束手势。
+      // f9553h 即 down 时 k6.a.f(view)（371-383）算出的方向位：
+      //   bit1 后退 = 页面横向不可滚 && V7()（可后退 || 非主页）
+      //   bit2 前进 = 页面横向不可滚 && W7()（可前进 || 有最近关闭可重开）
+      // 方向不可用 → 根本不进入 HORIZONTAL，指示标签不出现（与原版一致）。
+      // ArkWeb 没有横向滚动边界回调，页面可滚性不可查询，等价层不实现
+      // canScrollHorizontally 位（原版网页横向可滚时禁滑动导航，本端无此数据）。
+      const directionBit: number = dx > 0 ? 1 : 2
+      const navBit: number = dx > 0
+        ? (this.tabStore.canNavigateBack(this.tab) ? 1 : 0)
+        : (this.tabStore.canNavigateForward(this.tab) ? 2 : 0)
+      if ((navBit & directionBit) !== directionBit) {
         this.swipeNavLocked = true
         return
       }
       this.swipeNavActive = true
       // 原版 m()：指示层宽度取 72dp、限幅 4/5
       this.swipeIndicatorMax = 72 * 4 / 5
-      // 原版 m()：f9565t = f10 > 0 ? -10 : 页面宽 + iMax + 10
-      this.swipeIndicatorBase = dx > 0 ? -10 : this.swipeNavWidth + 72 + 10
+      // 原版 m()：f9565t = f10 > 0 ? -10 : WebView宽 + iMax + 10 —— 这是 **translationX**，
+      // 指示层布局位自带 marginStart -73dp（c8/y7.java:136 .y(f13700s)），实际 x = -73dp + translationX：
+      //   右滑(后退)：x = -73dp - 10px + shift → 贴左缘滑入
+      //   左滑(前进)：x = -73dp + 页面宽 + 72dp + 10px + shift → 贴右缘滑入
+      // 旧实现漏了 -73dp 布局偏移：右滑起点标签大半可见（太靠右）、左滑全程屏外（永远出不来）。
+      this.swipeIndicatorBase = dx > 0
+        ? -73 - px2vp(10)
+        : this.swipeNavWidth + 72 + px2vp(10) - 73
       this.swipeIndicatorForward = dx < 0
       this.swipeIndicatorShift = 0
       this.swipeIndicatorAlpha = 1
@@ -2053,8 +2082,20 @@ export struct TabWeb {
             })
             return false
           }
-          return Reader.enterReader(this.tab, READER_THEME_COLORS[this.settings.readerTheme],
-            this.settings.readerFontSize, this.settings.readerCustomCss)
+          // 原版 B8 → c0.j → R4 state0 → T7()：进阅读后 d8.g.f(url,color) + Nb(color)
+          // （k6.java:2229-2231），配色联动经 onPageThemeColor 回调宿主统一处理
+          const themeColor = READER_THEME_COLORS[this.settings.readerTheme]
+          return Reader.enterReader(this.tab, themeColor,
+            this.settings.readerFontSize, this.settings.readerCustomCss).then((ok: boolean) => {
+            if (ok) {
+              const effective = themeColor === 0 ? '#FFFFFF' :
+                `#${(themeColor & 0xFFFFFF).toString(16).padStart(6, '0')}`
+              ThemeColorCache.getInstance().put(this.tab.url, effective)
+              this.tab.themeColor = effective
+              this.onPageThemeColor()
+            }
+            return ok
+          })
         }
         return false
       })
@@ -2074,17 +2115,27 @@ export struct TabWeb {
     })
   }
 
-  // 原版 k6.Nb()：网页 meta theme-color 决定工具栏/地址栏/系统栏配色（颜色模式开关控制）
+  // 原版 k6.Nb()：网页 meta theme-color 决定工具栏/地址栏/系统栏配色（颜色模式开关控制）。
+  // 探得色值写入 d8.g 等价缓存（ThemeColorCache），重访同站时 onPageBegin 命中即上屏。
+  // view-source: 前缀与原版 i6.i0.u() 一致跳过（k0.H）。
   private syncThemeColor(): void {
     if (this.tab.isHomePage()) {
       this.tab.themeColor = ''
       this.onPageThemeColor()
       return
     }
+    if (this.tab.url.substring(0, 12).toLowerCase() === 'view-source:') {
+      return
+    }
     const js = '(function(){var m=document.querySelector("meta[name=theme-color]");' +
       'return (m&&m.content)?m.content:"";})()'
     this.tab.controller.runJavaScript(js).then((result: string) => {
-      this.tab.themeColor = typeof result === 'string' ? result.trim() : ''
+      const raw = typeof result === 'string' ? result.trim() : ''
+      this.tab.themeColor = raw
+      if (raw !== '') {
+        // 原版 k0.G：normalize 后落缓存（k0.H 内 d8.g.f(url, 0) 同位）
+        ThemeColorCache.getInstance().put(this.tab.url, raw)
+      }
       this.onPageThemeColor()
     }).catch(() => {
       this.tab.themeColor = ''

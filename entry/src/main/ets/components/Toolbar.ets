@@ -3,7 +3,6 @@ import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import { AddressBar } from './AddressBar'
 import { ViaIcon } from './ViaIcon'
-import { BEZIER_0202_CURVE } from '../common/Transitions'
 import { common } from '@kit.AbilityKit'
 import { normalizeThemeColor, toolbarBackgroundColor, resolveColorHex } from '../common/ChromeColors'
 
@@ -45,7 +44,6 @@ export struct Toolbar {
   // 原版 DragContainer：拖拽距离 84dp，比例 |f10| > 0.8 触发（k6.W4）
   private swipeDistance: number = 84
   @Local barWidth: number = 0
-  @Local bounceY: number = 0
 
   private toolbarBg(): ResourceColor {
     return toolbarBackgroundColor(this.tab, this.settings)
@@ -143,25 +141,21 @@ export struct Toolbar {
   // 原版 k6.W4 预览分支：|f10|>0.8 时按方向动作键映射 i10（10→-1，11→+1），
   // i11 = k()+1+i10（越下界取 total，越上界保持 1）
   private updateSwipePreview(fraction: number): void {
-    let dir = 0
+    let action: number = 0
     if (Math.abs(fraction) > 0.8) {
-      const key = fraction > 0 ? this.settings.gesturetoolbarleft : this.settings.gesturetoolbarright
-      if (key === 10) {
-        dir = -1
-      } else if (key === 11) {
-        dir = 1
-      }
+      action = fraction > 0 ? this.settings.gesturetoolbarleft : this.settings.gesturetoolbarright
     }
-    if (dir === this.swipeDir) {
+    if (action === this.swipeDir) {
       return
     }
-    this.swipeDir = dir
-    if (dir === 0) {
+    this.swipeDir = action
+    if (action !== 10 && action !== 11) {
       this.swipePreviewCur = -1
       return
     }
-    const total = this.tabStore.tabs.length
-    const target = this.tabStore.currentIndex + 1 + dir
+    const total: number = this.tabStore.tabs.length
+    const delta: number = action === 10 ? -1 : 1
+    const target: number = this.tabStore.currentIndex + 1 + delta
     if (target <= 0) {
       this.swipePreviewCur = total
     } else if (target <= total) {
@@ -369,30 +363,8 @@ export struct Toolbar {
         //   .setDuration(280L) + setInterpolator(x8.h.b()) 即 PathInterpolator(0.2,0.2,0.8,0.8)。
         // 单条 280ms 三关键帧动画（关键帧 0 / 0.5 / 1），作用对象只是标签栈本身，不是整条工具栏。
         // 鸿蒙用 keyframeAnimateTo 一条时间轴承载两段 140ms，替代分段 animateTo + setTimeout 拼接。
-        .translate({ y: this.bounceY })
         .onClick(() => {
           this.onTabs()
-          try {
-            const frames: KeyframeState[] = [
-              {
-                duration: 140,
-                curve: BEZIER_0202_CURVE,
-                event: (): void => {
-                  this.bounceY = -BAR_HEIGHT * 0.3
-                }
-              },
-              {
-                duration: 140,
-                curve: BEZIER_0202_CURVE,
-                event: (): void => {
-                  this.bounceY = 0
-                }
-              }
-            ]
-            this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, frames)
-          } catch (error) {
-            this.bounceY = 0
-          }
         })
         .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
           this.longPressAction(this.keyOf('tabs'))
@@ -406,22 +378,26 @@ export struct Toolbar {
     }
     .width('100%')
     .height(BAR_HEIGHT)
+    // 原版 Z7/c4：工具栏背景随配色动画渐变（ValueAnimator 逐帧 setBackgroundColor）。
+    // 容器层（Index animatedOrComputedBg）与组件层同走 animateTo 隐式动画，此处保持
+    // 直接计算值即可——外层 animateTo 闭包内本组件随状态重渲染，颜色同步补间。
     .backgroundColor(this.toolbarBg())
     .alignItems(VerticalAlign.Center)
     .onAreaChange((_old: Area, newArea: Area) => {
       this.barWidth = Number(newArea.width)
     })
-    // 原版横滑需位移达到 84dp * 0.8 才切换；较小位移留给按钮点击识别。
-    .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 67 })
+    // 原版 DragContainer 使用系统 touch slop 开始跟手，动作仍由 84dp * 0.8 提交门槛控制。
+    .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
       .onActionUpdate((event: GestureEvent) => {
         this.swipeOffset = event.offsetX
         this.updateSwipePreview(px2vp(this.swipeOffset) / this.swipeDistance)
       })
       .onActionEnd(() => {
-        const fraction = px2vp(this.swipeOffset) / this.swipeDistance
+        const fraction: number = px2vp(this.swipeOffset) / this.swipeDistance
         if (Math.abs(fraction) > 0.8) {
-          this.longPressAction(fraction > 0
-            ? this.settings.gesturetoolbarleft : this.settings.gesturetoolbarright)
+          const action: number = fraction > 0
+            ? this.settings.gesturetoolbarleft : this.settings.gesturetoolbarright
+          this.longPressAction(action)
         }
         this.swipeOffset = 0
         this.updateSwipePreview(0)

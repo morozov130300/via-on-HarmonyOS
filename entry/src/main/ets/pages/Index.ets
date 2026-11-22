@@ -41,7 +41,8 @@ import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/Searc
 import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible, applySystemBarContentColor, applyWindowBackgroundColor } from '../common/Immersive'
-import { systemBarDarkContent } from '../common/ChromeColors'
+import { systemBarDarkContent, resolveColorHex } from '../common/ChromeColors'
+import { ThemeColorCache } from '../common/ThemeColorCache'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
 import { AutoHideGesture, AutoHideHost } from '../common/AutoHideGesture'
@@ -97,6 +98,8 @@ const LAYOUT_TRADITIONAL: number = 0
 const LAYOUT_TOOLBAR_TOP: number = 1
 const LAYOUT_TOOLBAR_BOTTOM: number = 2
 const LAYOUT_DOUBLE: number = 3
+// 原版 Z7 配色过渡动画时长（x7.q.f13864a = integer a = 240，integers.xml）
+const COLOR_ANIM_DURATION: number = 240
 
 @Entry
 @ComponentV2
@@ -108,6 +111,9 @@ struct Index {
   // 反映系统栏当前是否可见：@Local 让 effectiveInset* 与布局随联动自动刷新。
   @Local systemBarsVisible: boolean = true
   private systemBarsHiddenByToolbar: boolean = false
+  // 原版 k6.U0：工具栏当前背景色的动画值（Z7 尾部 ArgbEvaluator 240ms 渐变驱动）。
+  // 空串 = 未初始化（首次直接落值不动画，对应原版 i13==i10 首帧路径）。
+  @Local animatedToolbarBg: string = ''
   private tabStore: TabStore = TabStore.getInstance()
   private db: BrowserDb = BrowserDb.getInstance()
   private downloads: DownloadCoordinator = DownloadCoordinator.getInstance()
@@ -238,6 +244,8 @@ struct Index {
     }
     const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
     applySystemBarContentColor(win, systemBarDarkContent(this.tabStore.current(), this.settings, ctx))
+    // 原版 Z7 尾部：配色变化触发 240ms 渐变（ValueAnimator + ArgbEvaluator）
+    this.runToolbarColorAnimation()
   }
 
   // 原版 e8/k0.j0（页面回调 → k6.j0 → Nb）：网页 theme-color 落定即刷新配色。
@@ -245,6 +253,25 @@ struct Index {
   // 由 TabWeb syncThemeColor 落定后经 onPageThemeColor 回调宿主。
   onTabThemeColorSettled(): void {
     this.syncSystemBarContentColor()
+  }
+
+  // 原版 Z7 尾部（k6.java:6610-6627）：背景色变化时 ValueAnimator + ArgbEvaluator
+  // 240ms 渐变到新色（c4 回调逐帧 setBackgroundColor）；颜色没变则瞬切。本端用
+  // animateTo 驱动 @Local 动画色，底栏容器与工具栏背景统一从这里取值。
+  private runToolbarColorAnimation(): void {
+    const tab = this.tabStore.current()
+    if (tab === undefined) {
+      return
+    }
+    const targetHex = resolveColorHex(toolbarBackgroundColor(tab, this.settings),
+      this.getUIContext().getHostContext() as common.UIAbilityContext)
+    if (targetHex === this.animatedToolbarBg) {
+      return
+    }
+    // animateTo 闭包内改 @Local 状态即按 duration 补间（隐式动画），ArgbEvaluator 等价
+    this.getUIContext().animateTo({ duration: COLOR_ANIM_DURATION, curve: Curve.Linear }, () => {
+      this.animatedToolbarBg = targetHex
+    })
   }
 
   // 原版 f8/k 切标签 → k6.Nb：切标签后系统栏跟随新标签的工具栏背景
@@ -1454,6 +1481,24 @@ struct Index {
     }
   }
 
+  // 应用窗口高（vp）：菜单根高度基准（'uia_menu_root_height_vp' 发布源）
+  private windowHeightVp(): number {
+    try {
+      let hPx: number = 0
+      const win = AppStorage.get<window.Window>('mainWindow')
+      if (win) {
+        hPx = win.getWindowProperties().windowRect.height
+      }
+      if (hPx <= 0) {
+        hPx = display.getDefaultDisplaySync().height
+      }
+      const density: number = display.getDefaultDisplaySync().densityPixels
+      return density > 0 && hPx > 0 ? hPx / density : 800
+    } catch (error) {
+      return 800
+    }
+  }
+
   // 原版 N8()：菜单可用边长
   menuAvailableSizeVp(): number {
     const shortVp: number = this.windowShortSideVp()
@@ -1473,9 +1518,19 @@ struct Index {
   //   AppStorage 'uia_menu_side_gap_vp' : number  贴边距（原版 i10）
   //   AppStorage 'uia_menu_layout'      : number  Ya() 后的有效布局（0/1/2/3）
   private publishMenuMetrics(): void {
+    AppStorage.setOrCreate('uia_menu_root_height_vp', this.windowHeightVp())
     AppStorage.setOrCreate('uia_menu_size_vp', this.menuAvailableSizeVp())
     AppStorage.setOrCreate('uia_menu_side_gap_vp', this.menuSideGapVp())
     AppStorage.setOrCreate('uia_menu_layout', this.effectiveLayout())
+  }
+
+  // 原版 k6.c4 动画帧 + Z7 落定：底栏容器背景取动画值 animatedToolbarBg（ArgbEvaluator
+  // 渐变）；未初始化（空串）回退直接计算值——与原版首帧 i13==i10 不起动画一致。
+  private animatedOrComputedBg(): ResourceColor {
+    if (this.animatedToolbarBg !== '') {
+      return this.animatedToolbarBg
+    }
+    return toolbarBackgroundColor(this.tabStore.current(), this.settings)
   }
 
   private bottomBg(): ResourceColor {
@@ -2111,7 +2166,7 @@ struct Index {
       }
       .padding({ top: this.effectiveInsetTop() })
       // 背景延伸进状态栏避让区（只有组件需要避让，背景不需要）
-      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
+      .backgroundColor(this.animatedOrComputedBg())
       // 原版 db(f)：f2604y0.setTranslationY(-p * height)
       .translate({ y: -this.topBarTranslate() })
       .onAreaChange((_old: Area, newArea: Area) => {
@@ -2165,7 +2220,7 @@ struct Index {
       }
       Column()
         .height(6 + this.effectiveInsetBottom())
-        .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
+        .backgroundColor(this.animatedOrComputedBg())
     } else if (this.effectiveLayout() === LAYOUT_TOOLBAR_BOTTOM) {
       Column() {
         SearchToolbar({
@@ -2177,7 +2232,7 @@ struct Index {
         this.ChromeToolbar(true)
       }
       .padding({ bottom: this.effectiveInsetBottom() })
-      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
+      .backgroundColor(this.animatedOrComputedBg())
       // 原版 db(f)：f2600w0.setTranslationY(+p * height)
       .translate({ y: this.bottomBarTranslate() })
       .onAreaChange((_old: Area, newArea: Area) => {
@@ -2215,7 +2270,7 @@ struct Index {
         this.ChromeToolbar(false)
       }
       .padding({ bottom: this.effectiveInsetBottom() })
-      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
+      .backgroundColor(this.animatedOrComputedBg())
       // 原版 Ya 布局3：f2600w0 = 地址栏+工具栏整块，db(p) ty=+p*h
       .translate({ y: this.bottomBarTranslate() })
       .onAreaChange((_old: Area, newArea: Area) => {
@@ -2232,7 +2287,7 @@ struct Index {
         this.ChromeToolbar(false)
       }
       .padding({ bottom: this.effectiveInsetBottom() })
-      .backgroundColor(toolbarBackgroundColor(this.tabStore.current(), this.settings))
+      .backgroundColor(this.animatedOrComputedBg())
       // 原版 Ya 布局0（传统）：工具栏在底栏容器 f2600w0（高 = tabbar 36dp + 工具栏
       // 48dp，6477-6484），db(p) ty=+p*h —— 与顶栏地址栏同步收放
       .translate({ y: this.bottomBarTranslate() })
@@ -2607,10 +2662,12 @@ struct Index {
         })
           .transition(TransitionEffect.asymmetric(
             TransitionEffect.OPACITY.animation({ duration: 160, curve: ACCELERATE_CURVE })
-              .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP ? -120 : 120 })
+              .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP
+                ? -px2vp(120) : px2vp(120) })
                 .animation({ duration: 160, curve: ACCELERATE_CURVE })),
             TransitionEffect.OPACITY.animation({ duration: 160, curve: ACCELERATE_CURVE })
-              .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP ? -120 : 120 })
+              .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP
+                ? px2vp(120) : -px2vp(120) })
                 .animation({ duration: 160, curve: ACCELERATE_CURVE }))))
       }
       if (this.showMenu) {
@@ -2899,7 +2956,10 @@ struct Index {
     return h.length === 1 ? `0${h}` : h
   }
 
-  // 原版阅读模式开关（c0.j 进入 / c0.i 退出）：注入到当前标签的 Web 组件内
+  // 原版阅读模式开关（c0.j 进入 / c0.i 退出）：注入到当前标签的 Web 组件内。
+  // 配色联动对齐原版：进阅读 T7() → Nb(阅读主题色,true)（k6.java:5883）——工具栏与
+  // 系统栏整体切到阅读主题色并写入 d8.g 缓存；退出 c3() → d8.g.e(url) 清缓存 +
+  // Nb(-1,false) 恢复默认配色（k6.java:2739-2741）。
   private toggleReader(): void {
     const tab = this.tabStore.current()
     if (tab.isHomePage()) {
@@ -2910,21 +2970,33 @@ struct Index {
     }
     Reader.isInReader(tab).then((inReader: boolean) => {
       if (inReader) {
+        // 原版 c3（k6.java:2728-2743）：退出 → 清缓存 + setAccentColor(-1) + Nb(-1)
+        ThemeColorCache.getInstance().remove(tab.url)
+        tab.themeColor = ''
+        this.syncSystemBarContentColor()
         return Reader.exitReader(tab)
       }
       // 原版 k6.B8：进入阅读前 wld 命中 → g6.n.q(O1)「不支持该网站」，不执行阅读检查
       if (RemoteConfig.getInstance().isInWld(tab.url)) {
         this.getUIContext().getPromptAction().showToast({
-          message: $r('app.string.site_not_supported'),
-          duration: 1500
+          message: $r('app.string.site_not_supported'), duration: 1500
         })
         return
       }
+      const themeColor = READER_THEME_COLORS[this.settings.readerTheme]
       return Reader.injectReaderScripts(tab).then(() => {
-        return Reader.enterReader(tab, READER_THEME_COLORS[this.settings.readerTheme],
+        return Reader.enterReader(tab, themeColor,
           this.settings.readerFontSize, this.settings.readerCustomCss)
       }).then((ok: boolean) => {
-        if (!ok) {
+        if (ok) {
+          // 原版 T7（k6.java:5870-5884）：c0.f 注入主题 + d8.g.f(url,color) + Nb(color,true)
+          // ARGB 0 → 原版 c0.f/f6985a.f 转 -1（白）
+          const effective = themeColor === 0 ? '#FFFFFF' :
+            `#${(themeColor & 0xFFFFFF).toString(16).padStart(6, '0')}`
+          ThemeColorCache.getInstance().put(tab.url, effective)
+          tab.themeColor = effective
+          this.syncSystemBarContentColor()
+        } else {
           this.getUIContext().getPromptAction().showToast({
             message: $r('app.string.page_failed_load'), duration: 1500
           })

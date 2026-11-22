@@ -1,4 +1,5 @@
 import { ViaIcon } from './ViaIcon'
+import { AppIcon } from './AppIcon'
 import { UiInsets } from '../common/Immersive'
 
 // 全局唯一标题栏：页面不再各自叠加头部，只在 onReady/onWillAppear 时改写
@@ -13,6 +14,18 @@ export interface AppBarSlots {
   onRight?: () => void
   onRight2?: () => void
   onTitle?: () => void
+}
+
+// sys.symbol.* 是 SymbolGlyph 专用资源，Image（ViaIcon 内部）加载不出来 → 槽位空图不可见；
+// app.media.* 是 PNG 位图，必须走 ViaIcon 的 SRC_IN 着色。按资源名分流渲染。
+function isSymbolResource(icon: Resource): boolean {
+  const rec = icon as object as Record<string, Object>
+  const bundle = rec['bundleName']
+  if (typeof bundle === 'string' && bundle === 'sys') {
+    return true
+  }
+  const id = rec['id']
+  return typeof id === 'number' && id >= 125830000 && id < 126000000
 }
 
 @ObservedV2
@@ -124,6 +137,15 @@ export struct AppBarHeader {
   private insets: UiInsets = UiInsets.getInstance()
   @Local dividerHeight: number = 1
 
+  @Builder
+  BarIcon(icon: Resource, size: number, fallbackColor: ResourceColor) {
+    if (isSymbolResource(icon)) {
+      AppIcon({ icon: icon, iconSize: size, iconColor: fallbackColor })
+    } else {
+      ViaIcon({ icon: icon, iconSize: size, iconColor: fallbackColor })
+    }
+  }
+
   aboutToAppear(): void {
     this.dividerHeight = this.getUIContext().px2vp(2)
   }
@@ -134,8 +156,7 @@ export struct AppBarHeader {
         Row() {
           Stack({ alignContent: Alignment.Center }) {
             ViaIcon({ icon: $r('app.media.uia_ic_back'), iconSize: 22, iconColor: $r('app.color.appbar_icon') })
-          }
-            .width(48)
+          }            .width(48)
             .height(52)
             .padding({ left: 13, right: 13 })
             .margin({ top: 1, bottom: 1 })
@@ -156,7 +177,7 @@ export struct AppBarHeader {
             .layoutWeight(1)
           if (this.bar.rightIcon2 !== null) {
             Stack({ alignContent: Alignment.Center }) {
-              ViaIcon({ icon: this.bar.rightIcon2, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+              this.BarIcon(this.bar.rightIcon2, 22, $r('app.color.appbar_icon'))
             }
               .width(48)
               .height(52)
@@ -181,7 +202,7 @@ export struct AppBarHeader {
           }
           if (this.bar.rightIcon !== null) {
             Stack({ alignContent: Alignment.Center }) {
-              ViaIcon({ icon: this.bar.rightIcon, iconSize: 22, iconColor: $r('app.color.appbar_icon') })
+              this.BarIcon(this.bar.rightIcon, 22, $r('app.color.appbar_icon'))
             }
               .width(48)
               .height(52)

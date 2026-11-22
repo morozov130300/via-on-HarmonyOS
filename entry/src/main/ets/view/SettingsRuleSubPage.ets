@@ -107,8 +107,8 @@ export struct SettingsRuleSubPage {
             ForEach(this.settings.ruleSubscriptions, (sub: RuleSubEntry) => {
               Row({ space: 12 }) {
                 Column() {
-                  // 原版 ib/g：名称 MIDDLE 省略
-                  Text(sub.name)
+                  // 原版 ib/g：名称 MIDDLE 省略；标题为空时回退 url 去 scheme
+                  Text(this.displayName(sub))
                     .fontSize(15)
                     .fontColor($r('app.color.fg'))
                     .maxLines(1)
@@ -124,20 +124,19 @@ export struct SettingsRuleSubPage {
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
-                // 原版 a6.o.f124k：CheckBox 启用控件
+                // 原版 a6.o.f124k：CheckBox 仅作显示（a6.o.c 中 setClickable(false)/setFocusable(false)），
+                // 点击由整行 F3 处理，避免 Checkbox 自身再触发一次导致取反相消
                 Checkbox()
                   .select(sub.enabled)
                   .selectedColor($r('app.color.accent'))
-                  .onChange((value: boolean) => {
-                    if (value === sub.enabled) {
-                      return
-                    }
-                    this.toggleSub(sub)
-                  })
+                  .height(20)
+                  .hitTestBehavior(HitTestMode.None)
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 11, bottom: 11 })
+              // 原版 a6.o.a()：setPadding(16dp, 20dp, 16dp, 20dp)
+              .padding({ left: 16, right: 16, top: 20, bottom: 20 })
               .alignItems(VerticalAlign.Center)
+              // 原版 z7/q0.F3：整行单击 → cVar.h(!f()) 取反 + notifyItemChanged
               .onClick(() => {
                 this.toggleSub(sub)
               })
@@ -180,6 +179,16 @@ export struct SettingsRuleSubPage {
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
+  }
+
+  // 原版 ib/g.b()：标题为空时取 url 去掉 scheme 的前缀（仅用于展示，不改数据）
+  private displayName(sub: RuleSubEntry): string {
+    if (sub.name !== '') {
+      return sub.name
+    }
+    const url = sub.url
+    const cut = url.indexOf('://')
+    return cut >= 0 ? url.substring(cut + 3) : url
   }
 
   private autoUpdateLabel(): string {
@@ -321,6 +330,7 @@ export struct SettingsRuleSubPage {
   }
 
   // 原版 z7/q0.F3：点击仅切换启用（无自动下载超集行为）
+  // 原版 cVar.h(!f()) + notifyItemChanged；本版 RuleSubEntry 已 @ObservedV2 + @Trace，写属性即刷新
   private toggleSub(sub: RuleSubEntry): void {
     this.settings.setRuleSubEnabled(sub.key, !sub.enabled)
     this.reloadBlocker()
@@ -441,8 +451,9 @@ export struct SettingsRuleSubPage {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0z'), duration: TOAST_SHORT })
       return false
     }
+    // 原版 D3：equalsIgnoreCase 比较 url
     for (let i = 0; i < this.settings.ruleSubscriptions.length; i++) {
-      if (this.settings.ruleSubscriptions[i].url === url) {
+      if (this.settings.ruleSubscriptions[i].url.toLowerCase() === url.toLowerCase()) {
         this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_jd'), duration: TOAST_SHORT })
         return false
       }
@@ -551,7 +562,8 @@ export struct SettingsRuleSubPage {
           const others: RuleSubEntry[] = this.settings.ruleSubscriptions.filter((s: RuleSubEntry): boolean => s.key !== this.editKey)
           let dup = false
           for (let i = 0; i < others.length; i++) {
-            if (others[i].url === url) {
+            // 原版 D3：equalsIgnoreCase
+            if (others[i].url.toLowerCase() === url.toLowerCase()) {
               dup = true
             }
           }
