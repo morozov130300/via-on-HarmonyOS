@@ -48,6 +48,9 @@ export function relativeUpdateTime(ts: number): string {
 export struct SettingsRuleSubPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // ForEach 数据源必须是本页可观测状态：settings 是普通成员（非 @Param/@Local），
+  // 数组整体替换不会触发本页重建。故页面持有一份镜像，所有增删改后同步回写。
+  @Local subs: RuleSubEntry[] = []
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
   @Local updating: boolean = false
@@ -104,7 +107,7 @@ export struct SettingsRuleSubPage {
               .width('100%')
               .padding({ left: 16, right: 16, top: 12, bottom: 4 })
 
-            ForEach(this.settings.ruleSubscriptions, (sub: RuleSubEntry) => {
+            ForEach(this.subs, (sub: RuleSubEntry) => {
               Row({ space: 12 }) {
                 Column() {
                   // 原版 ib/g：名称 MIDDLE 省略；标题为空时回退 url 去 scheme
@@ -124,13 +127,14 @@ export struct SettingsRuleSubPage {
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
-                // 原版 a6.o.f124k：CheckBox 仅作显示（a6.o.c 中 setClickable(false)/setFocusable(false)），
-                // 点击由整行 F3 处理，避免 Checkbox 自身再触发一次导致取反相消
-                Checkbox()
-                  .select(sub.enabled)
-                  .selectedColor($r('app.color.accent'))
-                  .height(20)
-                  .hitTestBehavior(HitTestMode.None)
+                // 原版 a6.o.c：CheckBox setClickable(false)/setFocusable(false) —— 纯显示。
+                // ArkUI Checkbox 无法禁用自身点击（设备 dump 中恒 clickable=true，点击仅切视觉不回写数据），
+                // 故同 SettingCheckRow 用纯绘制圆点，与原版 x8.h.d 的 16dp 圆形 drawable 一致；
+                // 交互唯一入口为整行 onClick（原版 z7/q0.F3）。
+                Circle({ width: 16, height: 16 })
+                  .fill(sub.enabled ? $r('app.color.accent') : Color.Transparent)
+                  .stroke(sub.enabled ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+                  .strokeWidth(2)
               }
               .width('100%')
               // 原版 a6.o.a()：setPadding(16dp, 20dp, 16dp, 20dp)
@@ -168,17 +172,31 @@ export struct SettingsRuleSubPage {
     })
     .onReady((ctx: NavDestinationContext) => {
       this.navPathStack = ctx.pathStack
+      this.syncFromSettings()
       this.bindAppBar()
     })
     .onWillAppear(() => {
+      this.syncFromSettings()
       this.bindAppBar()
     })
     .onShown(() => {
+      this.syncFromSettings()
       this.bindAppBar()
     })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
     })
+  }
+
+  // settings 侧数组变更后同步为本页可观测副本（触发 ForEach 重建）
+  private syncFromSettings(): void {
+    const src = this.settings.ruleSubscriptions
+    const next: RuleSubEntry[] = []
+    for (let i = 0; i < src.length; i++) {
+      const s = src[i]
+      next.push(new RuleSubEntry(s.key, s.name, s.url, s.enabled, s.ruleCount, s.lastUpdate, s.isPreset))
+    }
+    this.subs = next
   }
 
   // 原版 ib/g.b()：标题为空时取 url 去掉 scheme 的前缀（仅用于展示，不改数据）
@@ -278,6 +296,7 @@ export struct SettingsRuleSubPage {
     this.updating = true
     RuleSubManager.getInstance().updateSubscription(context, sub).then((count: number) => {
       this.settings.updateRuleSubEntry(sub.key, count, Date.now())
+      this.syncFromSettings()
       this.reloadBlocker()
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.orig_a0k'), duration: TOAST_SHORT })
     }).catch((error: BusinessError) => {
@@ -312,6 +331,7 @@ export struct SettingsRuleSubPage {
       const sub = targets[i]
       manager.updateSubscription(context, sub).then((count: number) => {
         this.settings.updateRuleSubEntry(sub.key, count, Date.now())
+        this.syncFromSettings()
         succeeded++
       }).catch((error: BusinessError) => {
         console.error(`update sub failed: ${sub.key}, ${error.message}`)
@@ -330,9 +350,12 @@ export struct SettingsRuleSubPage {
   }
 
   // 原版 z7/q0.F3：点击仅切换启用（无自动下载超集行为）
-  // 原版 cVar.h(!f()) + notifyItemChanged；本版 RuleSubEntry 已 @ObservedV2 + @Trace，写属性即刷新
+  // 原版 cVar.h(!f()) + notifyItemChanged：按 key 回查当前值再取反，避免闭包持有过期套接字
   private toggleSub(sub: RuleSubEntry): void {
-    this.settings.setRuleSubEnabled(sub.key, !sub.enabled)
+    const current = this.settings.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === sub.key)
+    const enabled = current !== undefined ? current.enabled : sub.enabled
+    this.settings.setRuleSubEnabled(sub.key, !enabled)
+    this.syncFromSettings()
     this.reloadBlocker()
   }
 
@@ -361,6 +384,7 @@ export struct SettingsRuleSubPage {
       return
     }
     this.settings.removeRuleSub(sub.key)
+    this.syncFromSettings()
     RuleSubManager.getInstance().removeSubFiles(context, sub.key)
     this.reloadBlocker()
   }
@@ -400,6 +424,7 @@ export struct SettingsRuleSubPage {
         title: preset.name,
         action: (): void => {
           this.settings.addRuleSub(preset.name, preset.url)
+          this.syncFromSettings()
         }
       })
     }
@@ -521,6 +546,7 @@ export struct SettingsRuleSubPage {
           const url = this.newUrl.trim()
           if (this.applyUrl(url)) {
             this.settings.addRuleSub(this.hostOf(url), url)
+            this.syncFromSettings()
             this.closeAddDialog()
           }
         } })
@@ -578,6 +604,7 @@ export struct SettingsRuleSubPage {
           if (sub !== undefined) {
             sub.url = url
             this.settings.saveRuleSubs()
+            this.syncFromSettings()
             this.reloadBlocker()
           }
           this.closeEditDialog()

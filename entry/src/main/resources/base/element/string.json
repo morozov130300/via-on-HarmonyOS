@@ -3091,6 +3091,30 @@
     {
       "name": "orig_bold_italic",
       "value": "粗体 斜体"
+    },
+    {
+      "name": "orig_ab",
+      "value": "修改"
+    },
+    {
+      "name": "orig_zq",
+      "value": "%1$s按钮 · 长按：%2$s"
+    },
+    {
+      "name": "orig_zr",
+      "value": "%1$s：%2$s"
+    },
+    {
+      "name": "orig_zs",
+      "value": "向左滑动"
+    },
+    {
+      "name": "orig_zt",
+      "value": "向右滑动"
+    },
+    {
+      "name": "orig_it",
+      "value": "向上、下、左、右拖动悬浮球可设置对应动作"
     }
   ]
 }

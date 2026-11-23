@@ -235,6 +235,14 @@
     {
       "name": "dialog_btn_pressed",
       "value": "#30808080"
+    },
+    {
+      "name": "palette_selected",
+      "value": "#40808080"
+    },
+    {
+      "name": "palette_stroke",
+      "value": "#9f9f9f"
     }
   ]
 }

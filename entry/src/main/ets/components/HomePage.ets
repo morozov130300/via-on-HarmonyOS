@@ -4,6 +4,7 @@ import { BrowserDb } from '../common/Database'
 import { HomeFavRec } from '../common/Types'
 import { AppSettings } from '../common/Settings'
 import { UiInsets } from '../common/Immersive'
+import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 import {
   HOME_ADV_AREAS,
   HOME_FAV_ICON_STYLES,
@@ -15,6 +16,10 @@ import {
   homeFavColor
 } from '../common/HomeStyle'
 import { HomeFavEditor } from './HomeFavEditor'
+// 原版 GestureTouchEvent 横滑前进/后退：主页是同一 WebView 的内部页，触摸同喂
+// 一个状态机（k6.java:4104），故主页覆盖层与 TabWeb 共用同一套横滑实现
+import { SwipeNavGesture } from '../common/SwipeNavGesture'
+import { SwipeNavIndicator } from './SwipeNavIndicator'
 import {
   HomeCssDecls,
   HomeRowCssModifier,
@@ -50,6 +55,14 @@ export struct HomePage {
   // （e8/i.java:124 OnTouchListener 挂 WebView 本体，主页不过滤）
   @Param onAutoHideTouch: (action: number, x: number, y: number) => void =
     (_action: number, _x: number, _y: number): void => {}
+  // 横滑前进/后退状态机 + 指示层状态（原版主页与网页共用一个 GestureTouchEvent 实例）
+  @Local swipeIndicatorVisible: boolean = false
+  @Local swipeIndicatorShift: number = 0
+  @Local swipeIndicatorAlpha: number = 1
+  @Local swipeIndicatorForward: boolean = false
+  private swipeNavWidth: number = 0
+  private swipeNavHeight: number = 0
+  private swipeNav: SwipeNavGesture = new SwipeNavGesture(4, px2vp(500))
   @Local favs: HomeFavRec[] = []
   @Local favColors: Record<string, string> = {}
   @Local searchShift: number = 0
@@ -134,6 +147,57 @@ export struct HomePage {
   }
 
   aboutToAppear(): void {
+    // 原版 k6.java:4104 状态机宿主绑定（主页触点：TabStore 用当前标签导航）
+    // （ArkTS 禁无类型对象字面量，用 lambda 字段逐项绑定，与 TabWeb 同款）
+    this.swipeNav.onNavigate = (action: number): void => {
+      // 原版 k6.a.h(i10)：1=后退（U8，退到底关标签）、2=前进（V8，到底重开最近关闭）
+      const tab = this.tabStore.current()
+      if (action === 1) {
+        this.tabStore.goBack(tab)
+      } else if (action === 2) {
+        this.tabStore.goForward(tab)
+      }
+    }
+    this.swipeNav.onSetIcon = (forward: boolean): void => {
+      this.swipeIndicatorForward = forward
+    }
+    this.swipeNav.indicatorWidth = (): number => 72
+    this.swipeNav.viewportWidth = (): number => this.swipeNavWidth
+    this.swipeNav.edgeGapVp = (): number => px2vp(10)
+    this.swipeNav.setIndicatorAlpha = (alpha: number): void => {
+      if (alpha === 0) {
+        // 原版 e()：ALPHA 1→0 300ms 加速减速插值器，结束复位（防 alpha=0 残留）
+        this.getUIContext().animateTo({
+          duration: 300,
+          curve: ACCELERATE_DECELERATE_CURVE,
+          onFinish: (): void => {
+            this.swipeIndicatorVisible = false
+            this.swipeIndicatorAlpha = 1
+            this.swipeIndicatorShift = 0
+          }
+        }, () => {
+          this.swipeIndicatorAlpha = 0
+        })
+      } else {
+        this.swipeIndicatorAlpha = alpha
+      }
+    }
+    this.swipeNav.setIndicatorTranslationX = (x: number): void => {
+      this.swipeIndicatorShift = x
+    }
+    this.swipeNav.setIndicatorVisible = (visible: boolean): void => {
+      this.swipeIndicatorVisible = visible
+    }
+    this.swipeNav.animateIndicatorBack = (targetX: number, durationMs: number): void => {
+      this.getUIContext().animateTo({ duration: durationMs, curve: ACCELERATE_DECELERATE_CURVE }, () => {
+        this.swipeIndicatorShift = targetX
+      })
+    }
+    this.swipeNav.resetIndicator = (): void => {
+      this.swipeIndicatorVisible = false
+      this.swipeIndicatorAlpha = 1
+      this.swipeIndicatorShift = 0
+    }
     try {
       const d = display.getDefaultDisplaySync()
       this.screenW = d.width / d.densityPixels
@@ -142,6 +206,36 @@ export struct HomePage {
       console.error('get display failed')
     }
     this.reload()
+  }
+
+  // 原版 k6.a.f(view)（371-383）方向位（主页触点，实时查询当前标签）：
+  //   bit1 后退 = V7()（可后退 || 非主页）；bit2 前进 = W7()（可前进 || 有最近关闭）。
+  // 原版主页即 WebView 内部页：从网页退回主页时 canGoBack=true，右滑回网页；
+  // 有最近关闭标签时左滑重开。canScrollHorizontally 位 ArkWeb 无等价接口，不实现。
+  private directionBits(): number {
+    if (!this.settings.swipeSwitchTab) {
+      return 0
+    }
+    const tab = this.tabStore.current()
+    let bits = 0
+    if (this.tabStore.canNavigateBack(tab)) {
+      bits |= 1
+    }
+    if (this.tabStore.canNavigateForward(tab)) {
+      bits |= 2
+    }
+    return bits
+  }
+
+  // 取手势触点屏幕绝对坐标（TabWeb.gestureGlobalPoint 同款）：
+  // ArkUI 把 globalX/globalY 放在 GestureEvent.fingerList[i]；原版 GestureTouchEvent
+  // 用 MotionEvent.getRawX/getRawY，语义等同。fingerList 为空时退回 0,0。
+  private gestureGlobalPoint(event: GestureEvent): number[] {
+    const fingers = event.fingerList
+    if (fingers !== undefined && fingers.length > 0) {
+      return [fingers[0].globalX, fingers[0].globalY]
+    }
+    return [0, 0]
   }
 
   private reload(): void {
@@ -395,6 +489,15 @@ export struct HomePage {
         }
         this.atTop = this.scrollY <= 0
       })
+      // 原版 y7.f2940p 横滑指示层（主页触点，与 TabWeb 同款，见 SwipeNavIndicator.ets）：
+      // 必须是 Stack 子节点（Scroll 之后），position 覆盖布局浮于主页之上
+      SwipeNavIndicator({
+        visible: this.settings.swipeSwitchTab && this.swipeIndicatorVisible,
+        forward: this.swipeIndicatorForward,
+        shiftX: this.swipeIndicatorShift,
+        alpha: this.swipeIndicatorAlpha,
+        centerY: this.swipeNavHeight / 2 - 30
+      })
     }
     .width('100%')
     .height('100%')
@@ -402,7 +505,11 @@ export struct HomePage {
     .onAreaChange((_old: Area, area: Area) => {
       this.vpW = Number(area.width)
       this.vpH = Number(area.height)
+      // 原版 f9565t 左滑分支用 WebView 宽度；指示层垂直居中用容器高度
+      this.swipeNavWidth = Number(area.width)
+      this.swipeNavHeight = Number(area.height)
     })
+    // 根容器的背景/CSS/弹层/手势属性链（原版 media query 挂 WebView 视口，同位）
     .backgroundColor(this.homeBackground())
     // 用户 CSS body/html/#content { background(-color)/opacity }：追加在默认背景之后
     .attributeModifier(this.rootCssModifier)
@@ -423,16 +530,22 @@ export struct HomePage {
     //   此时下滑只走原生竖滑状态机恢复工具栏；工具栏显示时下拉搜索照常。
     //   本端以 toolbarShown 标志等价 cmd(515)：隐藏态下不再累积下拉位移、
     //   不触发搜索，仅喂状态机。
+    // 原版主页与网页走同一 OnTouchListener → 同一 GestureTouchEvent：竖滑
+    // （onAutoHideTouch）与横滑（swipeNav）在 down/move/up 全程并行喂入。
     .parallelGesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
       .onActionStart((event: GestureEvent) => {
-        this.onAutoHideTouch(0, event.offsetX, event.offsetY)
+        const startPoint = this.gestureGlobalPoint(event)
+        this.onAutoHideTouch(0, startPoint[0], startPoint[1])
+        this.swipeNav.onDown(startPoint[0], startPoint[1], 0, this.directionBits())
         if (!this.atTop || this.searchOpen || !this.toolbarShownForGesture()) {
           return
         }
         this.applyPull(event.offsetY)
       })
       .onActionUpdate((event: GestureEvent) => {
-        this.onAutoHideTouch(2, event.offsetX, event.offsetY)
+        const movePoint = this.gestureGlobalPoint(event)
+        this.onAutoHideTouch(2, movePoint[0], movePoint[1])
+        this.swipeNav.onMove(movePoint[0], movePoint[1], event.velocityX, event.velocityY)
         if (!this.atTop || this.searchOpen || !this.toolbarShownForGesture()) {
           return
         }
@@ -440,6 +553,7 @@ export struct HomePage {
       })
       .onActionEnd(() => {
         this.onAutoHideTouch(1, 0, 0)
+        this.swipeNav.onFinish()
         const shift = this.pullShift
         // 原版 i6/o.java:45 initGesture 的 touchend 分支：
         //   if(0!==a){ if(88.2<a) callNativeSearch();
@@ -463,6 +577,10 @@ export struct HomePage {
       })
       .onActionCancel(() => {
         this.onAutoHideTouch(3, 0, 0)
+        // 原版 i() → j()：取消动画、alpha=1、translationX=0
+        this.swipeNav.onCancel()
+        this.swipeIndicatorVisible = false
+        this.swipeIndicatorAlpha = 1
       }))
   }
 
@@ -728,20 +846,25 @@ export struct HomePage {
   }
 
   private pillBorder(): BorderOptions {
-    // 原版 i6/o.java:305/401/503/582 字面（字符串常量三元，四处一致，无取反歧义）：
-    //   sb.append(!config.p() ? "border-bottom" : "border")
-    // p() = searchBarLineEnabled（i9/e bit24；e9/v.java 条目5 isOn=true 数值行显示「线条」）。
-    // ⇒ 线条 = 四边 border；矩形 = 仅底边 border-bottom。
-    // 与 r8/d.java:139/142 自洽：线条态强制背景 α=0 + 圆角 q()=0 → 透明方角纯线框；
-    // 矩形态默认 searchinfo=0x260064（透明底 + 底边线 + 圆角）即经典底线观感。
+    // 原版语义（用户真机对照原版确认，abaeddc）：矩形=四边线框、线条=仅底边一条线。
+    // jadx 字面 !p()?"border-bottom":"border"（o.java:305 等 4 处）不可信：b() 方法整体
+    // 标注 "Code decompiled incorrectly"（o.java:105）且布满控制流重建残渣（52-103 行
+    // duplicated region 警告），字符串常量三元在搅碎的方法里分支被 jadx 装配反——
+    // 四处同反 = 同一份复制代码的同一伪影，不是独立铁证。
+    // 非损坏方法全链反向印证：i9/e.toString() usingLine=bit24（线条）；e9/v.java 显示
+    // 映射 bit24=1→「线条」；r8/d.java:139/142 线条强制 α=0+圆角 0。语义自洽：
+    // 线条=透明方角+仅底边线（本义）；矩形=圆角+四边框（本义，默认 0x260064 全圆+
+    // 透明底+四边淡描边 = Via 经典圆角描边框）。
     if (HOME_PILL_STYLES[this.settings.homePillStyle] === '线条') {
+      // EdgeWidths 是部分更新语义：{bottom:x} 不覆盖其余边（undefined 跳过旧值），
+      // 矩形态先写入的四边 width 会残留 → 必须四边显式写全（0,0,sw,0）。
       return {
-        width: this.settings.homePillStrokeWidth,
+        width: { top: 0, right: 0, bottom: this.settings.homePillStrokeWidth, left: 0 },
         color: this.strokeColor()
       }
     }
     return {
-      width: { bottom: this.settings.homePillStrokeWidth },
+      width: { top: this.settings.homePillStrokeWidth, right: this.settings.homePillStrokeWidth, bottom: this.settings.homePillStrokeWidth, left: this.settings.homePillStrokeWidth },
       color: this.strokeColor()
     }
   }

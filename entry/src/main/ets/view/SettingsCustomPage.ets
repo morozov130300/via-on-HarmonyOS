@@ -37,6 +37,12 @@ import {
 
 const KIND_SLIDER: string = 'slider'
 const KIND_ACTION: string = 'action'
+// 分类索引（原版 q.xml RadioGroup 子项顺序：Logo / 搜索框 / 背景 / 收藏 / 高级）
+const TAB_BG: number = 2
+// 背景色板单元格类型（原版 g9.b / g9.c 两态）
+const PALETTE_DEFAULT: number = 0
+const PALETTE_IMAGE: number = 1
+const PALETTE_COLOR: number = 2
 
 // 原版 d9/q.java z3(-1)/z3(id) 收起/展开参数面板：x.r.c(...).d(200).e(x8.h.b())，
 // b() = z.b.a(0.2f,0.2f,0.8f,0.8f)；收起位移 = 面板自身高度（滑到 TabBar 背后），
@@ -97,7 +103,12 @@ export struct SettingsCustomPage {
   @Local tabHighlight: number = 0
   @Local activeSlider: string = ''
   @Local sliderPos: number = 0
-  @Local paletteKey: string = ''
+  // 面板实际宽度（vp）：原版色板每格宽 = ceil(容器宽 / 56dp) 再摊平
+  @Local panelWidth: number = 0
+  // 原版 e9.i：背景分类不是「参数条目」，而是把整块 RecyclerView 换成色板适配器
+  // （无背景图 → k3() 直接上色板；有背景图 → 先上参数条目，点「背景」条目 k3() 再换色板）。
+  // 两个视图互斥，不是叠加。
+  @Local bgPalette: boolean = false
   @Local logoDialogShow: boolean = false
   @Local confirmKind: string = ''
   @Local textDraft: string = ''
@@ -166,7 +177,7 @@ export struct SettingsCustomPage {
           // 盖住（无淡出），展开从 160 滑回 0。收起态保持挂载，动画才不跳变。
           Column() {
             this.SliderRail()
-            if (this.paletteKey !== '') {
+            if (this.activeTab === TAB_BG && this.bgPalette) {
               this.PaletteRow()
             } else {
               this.ParamStrip()
@@ -175,6 +186,9 @@ export struct SettingsCustomPage {
           .width('100%')
           .translate({ y: this.panelShift })
           .visibility(this.panelVisible ? Visibility.Visible : Visibility.None)
+          .onAreaChange((_old: Area, area: Area) => {
+            this.panelWidth = Number(area.width)
+          })
           this.TabBar()
         }
         .width('100%')
@@ -290,7 +304,7 @@ export struct SettingsCustomPage {
 
   private bgParams(): CustomParam[] {
     const params: CustomParam[] = []
-    // 原版 e9/i.java:144：条目名「背景」，点击展开色板；图标 x7.o.f13762s=a1
+    // 原版 e9/i.java:144：条目名「背景」，点击展开色板（k3()）；图标 x7.o.f13762s=a1
     // （=b4 空心圆角矩形经 <rotate 90°> → 竖向）
     const bgColor = new CustomParam('bg_color', $r('app.media.uia_ic_c_rect_outline'), $r('app.string.orig_ub'), KIND_ACTION)
     bgColor.rotateDeg = 90
@@ -307,7 +321,6 @@ export struct SettingsCustomPage {
     }
     return params
   }
-
   private favParams(): CustomParam[] {
     const params: CustomParam[] = []
     // 原版 e9/l.java：宽度 x7.o.M1=e_、高度 x7.o.f13745m0=a4（e_ 旋转 90°）
@@ -331,7 +344,19 @@ export struct SettingsCustomPage {
     return params
   }
 
-  // 原版 d9/q.java z3()：200ms、插值器 z.b.a(0.2,0.2,0.8,0.8)（x8.h.b()）。
+  // 原版 e9/i.java:207-216：进「背景」分类时按有无背景图二选一，
+  //   有背景图（g9.c）→ 先显示参数条目 [背景=图片 / 主题色 / 不透明度]，点「背景」条目再切色板；
+  //   无背景图        → 直接上色板（k3()）。
+  // 原版是切换 RecyclerView 的 adapter，同一时刻只显示一个视图。
+  private syncBgPalette(): void {
+    if (this.activeTab === TAB_BG) {
+      this.bgPalette = this.settings.homeBgImage === ''
+    } else {
+      this.bgPalette = false
+    }
+  }
+
+  // 原版 d9/q.java:448-480 z3()：200ms、插值器 z.b.a(0.2,0.2,0.8,0.8)（x8.h.b()）。
   // 收起 = translationY → 面板高度（136dp 固定容器，滑进 TabBar 底下）；
   // 展开 = 从 160dp 处滑回 0（q.xml 初始 translationY=160dp）。
   // 切换分类时内容直接换、面板不重演入场（原版 z3(id) 同样只补位）。
@@ -348,11 +373,14 @@ export struct SettingsCustomPage {
       setTimeout(() => {
         this.panelVisible = false
         this.activeTab = -1
+        this.syncBgPalette()
       }, PANEL_ANIM_MS)
       return
     }
     this.activeTab = target
     this.panelTab = target
+    // 原版 X1 里进分类即决定 adapter（e9/i.java:207-216），切换分类同步决定
+    this.syncBgPalette()
     if (!this.panelVisible) {
       // 展开：置于下方 160dp（q.xml 初始值）滑回 0
       this.panelVisible = true
@@ -378,7 +406,8 @@ export struct SettingsCustomPage {
       return this.searchParams()
     }
     if (this.activeTab === 2) {
-      return this.bgParams()
+      // 原版背景分类切到色板时 adapter 已被换成色板，参数条目列表不存在
+      return this.bgPalette ? [] : this.bgParams()
     }
     if (this.activeTab === 3) {
       return this.favParams()
@@ -601,7 +630,6 @@ export struct SettingsCustomPage {
   }
 
   private onParamTap(param: CustomParam): void {
-    this.paletteKey = ''
     if (param.kind === KIND_SLIDER) {
       if (this.activeSlider === param.id) {
         this.activeSlider = ''
@@ -628,7 +656,9 @@ export struct SettingsCustomPage {
         this.settings.setHomePillStyle((this.settings.homePillStyle + 1) % HOME_PILL_STYLES.length)
         break
       case 'bg_color':
-        this.paletteKey = this.paletteKey === 'bg' ? '' : 'bg'
+        // 原版 e9/i.java:158-160 W2()：iB==1 → k3() 切到色板适配器（单向，无 toggle）。
+        // 色板切回参数条目只有一条路径：选图成功（e3() 末尾 l3()）。
+        this.bgPalette = true
         break
       case 'theme_color':
         this.settings.setHomeThemeColor(this.settings.homeThemeColor === 'light' ? 'dark' : 'light')
@@ -743,82 +773,101 @@ export struct SettingsCustomPage {
     .padding({ left: 6, right: 6 })
   }
 
-  // 背景色/主题色调色板（视频 71-80s）
+  // 原版背景色板（e9/i.java:219-246 i3() 的 24 项 + f9/a.java 绘制）
+  //   项 0 = 默认（g9.b(0, R.string.Y2) → 点选写 -1 清空自设背景色）
+  //   项 1 = 图片（g9.c → 跳相册选图）
+  //   项 2..23 = 22 个色块（HOME_BG_COLORS，与原版 int 字面量逐一对应）
+  // 布局：r.xml RecyclerView 固定 96dp、paddingBottom 12dp；每格宽 = round(容器宽/列数)，
+  // 列数 = max(1, ceil(容器宽/56dp))（e9/i.java:284 + LinearLayoutPagerManager）。
   @Builder
   PaletteRow() {
     Scroll() {
-      Row({ space: 14 }) {
+      Row() {
+        // 项 0：默认
+        this.PaletteCell('', PALETTE_DEFAULT, this.paletteSelectedDefault())
+        // 项 1：图片
+        this.PaletteCell('', PALETTE_IMAGE, false)
         ForEach(HOME_BG_COLORS, (colorHex: string) => {
-          this.PaletteDot(colorHex, colorHex)
+          this.PaletteCell(colorHex, PALETTE_COLOR, this.paletteSelectedColor(colorHex))
         }, (colorHex: string) => colorHex)
-        // 原版背景调色板尾部：选择图片色块（点按跳相册选图，与「背景图片」行同一入口）
-        if (this.paletteKey === 'bg') {
-          Stack() {
-            Column()
-              .width(30)
-              .height(30)
-              .borderRadius(6)
-              .backgroundColor($r('app.color.surface'))
-              .border({ width: 1, color: $r('app.color.fg_tertiary') })
-            UiaIcon({ icon: $r('app.media.uia_ic_c_adv_area'), iconSize: 16, iconColor: $r('app.color.fg_secondary') })
-            if (this.settings.homeBgImage !== '') {
-              Circle({ width: 40, height: 40 })
-                .fill(Color.Transparent)
-                .stroke($r('app.color.fg'))
-                .strokeWidth(1.5)
-            }
-          }
-          .width(44)
-          .height(44)
-          .onClick(() => {
-            this.pickImage(false)
-          })
-        }
       }
-      .padding({ left: 16, right: 16 })
     }
     .scrollable(ScrollDirection.Horizontal)
     .width('100%')
-    .height(64)
+    .height(96)
+    .padding({ bottom: 12 })
     .align(Alignment.Center)
   }
 
+  // 原版 f9/a.java:83-98 r()（b6/f.java:176-184 的 e(context) 条目）：
+  //   条目 = 48dp 见方的 ImageView，padding 6dp → 内容区 36dp；
+  //   GradientDrawable 圆角恒 32dp（m() 的 y.h(32)），36dp 见方自然成圆。
+  //   选中态不是描边：y.O 把 ImageView 背景换成 l(context, @color/a8=#40808080)
+  //   → 48dp 实心圆，色块 36dp 压在上面露出一圈半透明灰环；未选中为 drawable/o 按压反馈。
+  //   默认项 src = m(context, 0, attr/a9, 1)：透明填充 + attr/a9 1dp 描边。
+  //   图片项 src = n(context)：透明底 attr/a9 2dp 描边 + 内缩的相册图标（attr/a9 着色）。
   @Builder
-  PaletteDot(colorHex: string, key: string) {
+  PaletteCell(colorHex: string, kind: number, selected: boolean) {
     Stack() {
-      if (this.paletteDotSelected(colorHex, key)) {
-        Circle({ width: 40, height: 40 })
-          .fill(Color.Transparent)
-          .stroke($r('app.color.fg'))
-          .strokeWidth(1.5)
-      }
-      if (colorHex === '') {
-        Circle({ width: 30, height: 30 })
-          .fill(Color.Transparent)
-          .stroke($r('app.color.fg_secondary'))
-          .strokeWidth(1)
+      // 选中背景环（48dp，色块/圆环 36dp 压在上面露一圈）
+      Column()
+        .width(48)
+        .height(48)
+        .borderRadius(24)
+        .backgroundColor(selected ? $r('app.color.palette_selected') : Color.Transparent)
+      if (kind === PALETTE_IMAGE) {
+        // 原版 n()：LayerDrawable = 透明圆(attr/a9 描边 2dp) + 相册图标(attr/a9 着色)
+        Column()
+          .width(36)
+          .height(36)
+          .borderRadius(18)
+          .backgroundColor(Color.Transparent)
+          .border({ width: 2, color: $r('app.color.palette_stroke') })
+        UiaIcon({ icon: $r('app.media.uia_ic_c_image_pick'), iconSize: 16, iconColor: $r('app.color.palette_stroke') })
       } else {
-        Circle({ width: 30, height: 30 })
-          .fill(colorHex)
+        // 色块本体（36dp）/ 默认项（透明底 + attr/a9 1dp 描边）
+        Column()
+          .width(36)
+          .height(36)
+          .borderRadius(18)
+          .backgroundColor(colorHex === '' ? Color.Transparent : colorHex)
+          .border({
+            width: colorHex === '' ? 1 : 0,
+            color: $r('app.color.palette_stroke')
+          })
       }
     }
-    .width(44)
-    .height(44)
+    .width(this.paletteCellWidth())
+    .height('100%')
+    .alignContent(Alignment.Center)
     .onClick(() => {
-      if (this.paletteKey === 'bg') {
-        this.settings.setHomeBgColor(colorHex)
-        this.settings.setHomeBgImage('')
-      } else {
-        this.settings.setHomeThemeColor(colorHex)
+      if (kind === PALETTE_IMAGE) {
+        this.pickImage(false)
+        return
       }
+      // 原版 j3()：g9.b 点选 → F1("") 清图片路径、b0(color)（默认项写 -1 即「未设」），
+      // 末尾 m3() 只刷新参数适配器的数据，RecyclerView 仍是色板适配器 → 留在色板。
+      // 只有选图片成功后 e3() 的 l3() 才把 adapter 换回参数条目（见 pickImage）。
+      this.settings.setHomeBgImage('')
+      this.settings.setHomeBgColor(colorHex)
+      this.bgPalette = true
     })
   }
 
-  private paletteDotSelected(colorHex: string, key: string): boolean {
-    if (this.paletteKey === 'bg') {
-      return this.settings.homeBgImage === '' && this.settings.homeBgColor === colorHex
-    }
-    return this.settings.homeThemeColor === colorHex
+  // 原版 LinearLayoutPagerManager.N2()：round(容器宽 / 列数)；
+  // 列数由 e9/i.java:284 的 ceil(容器宽 / y.h(56dp)) 给出，下限 1。
+  private paletteCellWidth(): number {
+    const w = this.panelWidth > 0 ? this.panelWidth : 360
+    const cells = Math.max(1, Math.ceil(w / 56))
+    return Math.round(w / cells)
+  }
+
+  private paletteSelectedDefault(): boolean {
+    return this.settings.homeBgImage === '' && this.settings.homeBgColor === ''
+  }
+
+  private paletteSelectedColor(colorHex: string): boolean {
+    return this.settings.homeBgImage === '' && this.settings.homeBgColor === colorHex
   }
 
   @Builder
@@ -838,7 +887,7 @@ export struct SettingsCustomPage {
               // 原版 d9/q.java class a：点已选中的分类 = z3(-1) 面板下滑收起并 clearCheck；
               // 点其它分类 z3(id) 面板从下方滑回并切换内容。activeTab=-1 表示收起态。
               this.activeSlider = ''
-              this.paletteKey = ''
+              this.dragValue = -1
               if (this.activeTab === index) {
                 this.animatePanel(-1)
               } else {
@@ -990,7 +1039,7 @@ export struct SettingsCustomPage {
             }
             this.confirmKind = ''
             this.activeSlider = ''
-            this.paletteKey = ''
+            this.bgPalette = false
             // 重置后回到默认分类并确保面板展开（原版 d9.t.q() 末尾触发整页刷新，
             // 面板保持展开态、内容回到默认值）
             this.panelVisible = true
@@ -998,6 +1047,7 @@ export struct SettingsCustomPage {
             this.panelTab = 0
             this.tabHighlight = 0
             this.activeTab = 0
+            this.syncBgPalette()
           } })
         }
         .width('100%')
@@ -1058,8 +1108,11 @@ export struct SettingsCustomPage {
           this.settings.setHomeLogoHeight(80)
           this.settings.setHomeLogoCorner(100)
         } else {
+          // 原版 e9/i.java:74-82：取图片左上角像素写入 b0()（界面主色取样），
+          // 清空自设背景色、写图片路径，随后 m3() 把列表换回参数条目。
           this.settings.setHomeBgColor('')
           this.settings.setHomeBgImage(dest)
+          this.bgPalette = false
         }
       }).catch((error: BusinessError) => {
         console.error(`pick image failed: ${error.message}`)

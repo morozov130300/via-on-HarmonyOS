@@ -1,0 +1,21 @@
+* text=auto
+
+# 二进制资源保持原始字节，禁止行尾转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.p12 binary
+*.cer binary
+*.p7b binary
+*.app binary
+*.hap binary
+*.jar binary
+*.dex binary
+*.so binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.pptx binary
+*.docx binary
+*.xlsx binary

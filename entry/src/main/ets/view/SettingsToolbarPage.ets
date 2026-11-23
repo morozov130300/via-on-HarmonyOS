@@ -74,6 +74,9 @@ const ACTION_GROUPS: ActionGroup[] = [
   new ActionGroup('网页行为', [19, 1, 20, 6, 18, 17, 2, 3])
 ]
 
+// 动作编号 → 文案（原版 hb/v4.b()），导出供「操作设定」页（hb/u4 预览 Snackbar）复用
+export const TOOLBAR_ACTION_NAMES: Record<number, string> = ACTION_NAMES
+
 // 应用布局数组 = 原版 arrays array i（a07/a06/a05/a03）
 const LAYOUT_OPTIONS: OptionItem[] = [
   new OptionItem('layout_traditional', LAYOUT_TRADITIONAL),
@@ -231,8 +234,78 @@ export struct SettingsToolbarPage {
           }
           this.openActionPicker(fraction > 0 ? 'swipe0' : 'swipe1')
         }))
+
+      // 原版 ToolbarsViewDelegate.d()：FAB 演示悬浮球（mark.via.settings.helper.a），
+      // 铺在预览工具栏下方 FrameLayout 右下角（x=80|RIGHT|BOTTOM，margin 12dp）；
+      // 图标 fab ic（L1/Bf tint 强调色），padding 10dp，背景椭圆 shadow。
+      // 点击 K(FAB) → toast it 提示；拖出四向（30dp 阈值，0.75 增益、40% 距离提交）
+      // → Snackbar 显示当前动作 + 「修改」→ 选择器。
+      Stack() {
+        Column() {
+          // 原版 helper/a e(dir)→u0.a：拖动方向换动作图标（back/forward/up/down），
+          // 静止态 = fab 本体图标；预览里固定用菜单图标（与 Index FAB 静止态一致）
+          UiaIcon({
+            icon: $r('app.media.uia_ic_menu'),
+            iconSize: 22,
+            iconColor: $r('app.color.dialog_bg')
+          })
+        }
+        .width(42)
+        .height(42)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .borderRadius(21)
+        .backgroundColor($r('app.color.accent'))
+        .opacity(0.9)
+        .shadow({ radius: 8, color: 'rgba(0,0,0,0.3)', offsetX: 0, offsetY: 2 })
+        .onClick(() => {
+          // 原版 helper/a 构造：setOnClickListener → K(FAB) → n7.K → toast f14018i5(it)
+          this.getUIContext().getPromptAction().showToast({
+            message: $r('app.string.orig_it'), duration: 2000
+          })
+        })
+        .gesture(PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
+          .onActionEnd((event: GestureEvent) => {
+            const dir = this.fabDragDir(px2vp(event.offsetX), px2vp(event.offsetY))
+            if (dir < 0) {
+              return
+            }
+            // 原版 helper/a.b(dir)：回弹后 K(FAB_LEFT/RIGHT/UP/DOWN)
+            // → n7.K → Snackbar zr「%1$s：%2$s」（iq/ir/is/ip 方向名 + v4.b 动作名）+ 修改
+            const targets: string[] = ['fab0', 'fab1', 'fab2', 'fab3']
+            const dirNames: string[] = ['向左拖动', '向右拖动', '向上拖动', '向下拖动']
+            this.showActionSnackbar(dirNames[dir], this.actionValueOf(targets[dir]), targets[dir])
+          }))
+      }
+      .width('100%')
+      .height(80)
+      .alignContent(Alignment.BottomEnd)
     }
     .width('100%')
+  }
+
+  // 原版 helper/a.onTouchEvent：方向位 f9782l = 位移超 touchSlop 的主轴方向
+  //（1=左 2=右 4=上 8=下，helper/a.f()）；预览里简化为四向索引，未超阈值返回 -1（视为点击）
+  private fabDragDir(offsetX: number, offsetY: number): number {
+    if (Math.abs(offsetX) > 30) {
+      return offsetX <= 0 ? 0 : 1
+    }
+    if (Math.abs(offsetY) > 30) {
+      return offsetY <= 0 ? 2 : 3
+    }
+    return -1
+  }
+
+  // 原版 g6/n.t()：Snackbar（消息 + 动作按钮，2750ms 自动消失）。
+  // 本页无 Index 级 Snackbar 容器，用 showToast 承载消息，动作「修改」改为
+  // 直接由拖拽事件触发选择器打开（Snackbar 只展示信息）。
+  // 原版 K() 分派：BACK/FORWARD/HOME/TABS/MENU → zq「%1$s按钮 · 长按：%2$s」；
+  // SWIPE_BACK/FORWARD、FAB_* → zr「%1$s：%2$s」。
+  private showActionSnackbar(label: string, action: number, target: string): void {
+    const actionName = TOOLBAR_ACTION_NAMES[action] !== undefined ? TOOLBAR_ACTION_NAMES[action] : '无操作'
+    const message = `${label}：${actionName}`
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: 2000 })
+    this.openActionPicker(target)
   }
 
   // 原版 g0.g()：图标 22dp（48 - 13*2 内容区），accent 着色；点击/长按设置该按钮长按动作
@@ -325,13 +398,30 @@ export struct SettingsToolbarPage {
     if (target === 'swipe0') {
       return this.settings.gesturetoolbarleft
     }
-    return this.settings.gesturetoolbarright
+    if (target === 'swipe1') {
+      return this.settings.gesturetoolbarright
+    }
+    // 原版 n7.s3()：悬浮球四向动作键（fableft/right/up/downaction）
+    if (target === 'fab0') {
+      return this.settings.fableftaction
+    }
+    if (target === 'fab1') {
+      return this.settings.fabrightaction
+    }
+    if (target === 'fab2') {
+      return this.settings.fabupaction
+    }
+    return this.settings.fabdownaction
   }
 
   // 原版 l6.l3()：点「保存」才写入
   private saveActionPicker(): void {
     if (this.pickerTarget === 'swipe0' || this.pickerTarget === 'swipe1') {
       this.settings.setGestureToolbar(this.pickerTarget === 'swipe0' ? 0 : 1, this.pickerValue)
+    } else if (this.pickerTarget === 'fab0' || this.pickerTarget === 'fab1' ||
+      this.pickerTarget === 'fab2' || this.pickerTarget === 'fab3') {
+      // 原版 n7.w3() case6-9：s0/v1/d2/t2 写入悬浮球四向动作键
+      this.settings.setFabAction(Number(this.pickerTarget.substring(3)), this.pickerValue)
     } else {
       this.settings.setToolbarKey(this.pickerTarget, this.pickerValue)
     }

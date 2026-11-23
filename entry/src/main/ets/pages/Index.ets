@@ -534,7 +534,7 @@ struct Index {
         break
       // z8/b0.Q "log" → s1(6)：log.html → netLog
       case UiaCmdKind.LOG:
-        this.openPage('netLog')
+        this.mainNavStack.pushPathByName('netLog', '', true)
         break
       // z8/b0.Q "offline" → s1(7)：save.html 离线页面
       case UiaCmdKind.OFFLINE:
@@ -2687,6 +2687,10 @@ struct Index {
           },
           onSavePage: () => {
             this.showSavePageDialog()
+          },
+          onOpenMedia: (urls: string[]) => {
+            this.mediaList = urls
+            this.showMediaList = true
           },
           onOpenAi: () => {
             this.openAi()

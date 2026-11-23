@@ -138,27 +138,23 @@ export struct SettingsNightPage {
   @Builder
   FilterDialog() {
     UiaDialogCard() {
-      // 原版 p4.m3()：预览 FrameLayout（margin 22/16/22/16）内 TextView（padding 32/0/32/0、
-      // 字号 dimen ae=18、居中、色 fg=ac）+ 黑色蒙版（Color.argb(progress,0,0,0) 实时刷）；
-      // SeekBar margin 16/0/16/16、padding 16/0/16/16、最小轨高 2dp、max 154（k3）。
-      // SeekBar 自绘样式 z8.r3.g → x8.h.n/w：轨道 5dp 圆角 #40808080 + accent 进度、
-      // 滑块 12dp 圆点 accent；抬起时 Y0 保存（onStopTrackingTouch）。
+      // 原版 p4.m3()：预览 FrameLayout（margin 左右16/上下22）内 TextView（padding 上下32、
+      // 字号 dimen ae=18、居中、色 fg=ac）+ SeekBar（margin 16/0/16/16、padding 16/0/16/16、
+      // max 154，k3）。
+      // 蒙版合成等价实现：原版是 FrameLayout foreground 黑色层（Color.argb(progress,0,0,0)），
+      // 盖在预览上 = 每像素 RGB×(1−a)、alpha 不变。直译两种都翻不了——Stack+height('100%')
+      // 被弹窗不定高约束撑满全屏（滑杆挤出屏外），overlay 百分比在该约束下解析为 0（蒙版
+      // 不渲染，真机已踩坑）。故改背景涂抹：容器背景 = 蒙版色，文字 RGB 乘 (1−a) 后叠加
+      // 在其上 —— 与 foreground 层逐像素等价，无独立图层。
       Column({ space: 0 }) {
-        // 原版蒙版是 FrameLayout foreground（Color.argb(progress,0,0,0) 实时刷），
-        // 不参与布局；这里用 overlay 挂在文字上 —— 若放进 Stack 且 height('100%')，
-        // 百分比会参考弹窗可用高度把 Stack 撑满全屏、滑杆被挤出屏外（真机已踩坑）
         Text(this.previewText())
           .fontSize(18)
-          .fontColor($r('app.color.fg'))
+          .fontColor(this.previewDimmedColor())
           .textAlign(TextAlign.Center)
           .width('100%')
-          .padding({ top: 32, bottom: 32, left: 0, right: 0 })
-          .overlay(() => {
-            Column()
-              .backgroundColor(`rgba(0,0,0,${(this.filterDraft / 255).toFixed(3)})`)
-              .width('100%')
-              .height('100%')
-          })
+          .padding({ top: 32, bottom: 32, left: 22, right: 22 })
+          .backgroundColor(this.maskRgba())
+          .margin({ top: 22, left: 16, right: 16 })
 
         Slider({
           value: this.filterDraft,
@@ -175,6 +171,7 @@ export struct SettingsNightPage {
           .blockSize({ width: 12, height: 12 })
           .width('100%')
           .padding({ left: 16, right: 16 })
+          .margin({ bottom: 16 })
           .onChange((value: number, mode: SliderChangeMode) => {
             const v = Math.round(value)
             this.filterDraft = v
@@ -189,6 +186,24 @@ export struct SettingsNightPage {
       }
       .width('100%')
     }
+  }
+
+  // 预览底色 = 黑色蒙版（alpha = 滑杆值，0~154 对应 0~0.604）
+  private maskRgba(): string {
+    const a = Math.max(0, Math.min(255, this.filterDraft)) / 255
+    return `rgba(0,0,0,${a.toFixed(3)})`
+  }
+
+  // 原版蒙版盖在文字上：合成结果 = 文字 RGB×(1−a) 叠在黑底上（alpha 通道不变）。
+  // 文字原色 fg=#DE000000（夜间 efefef），此处按 RGB 通道直接乘。
+  private previewDimmedColor(): string {
+    const base = this.settings.isNightActive() ? [0xef, 0xef, 0xef] : [0x00, 0x00, 0x00]
+    const a = Math.max(0, Math.min(255, this.filterDraft)) / 255
+    const to2 = (v: number): string => {
+      const h = Math.round(v).toString(16)
+      return h.length === 1 ? `0${h}` : h
+    }
+    return `#${to2(base[0] * (1 - a))}${to2(base[1] * (1 - a))}${to2(base[2] * (1 - a))}`
   }
 }
 

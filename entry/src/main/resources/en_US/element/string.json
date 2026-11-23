@@ -3091,6 +3091,30 @@
     {
       "name": "orig_bold_italic",
       "value": "Bold Italic"
+    },
+    {
+      "name": "orig_ab",
+      "value": "Modify"
+    },
+    {
+      "name": "orig_zq",
+      "value": "%1$s button · Long press: %2$s"
+    },
+    {
+      "name": "orig_zr",
+      "value": "%1$s: %2$s"
+    },
+    {
+      "name": "orig_zs",
+      "value": "Swipe left"
+    },
+    {
+      "name": "orig_zt",
+      "value": "Swipe right"
+    },
+    {
+      "name": "orig_it",
+      "value": "Drag the floating button up, down, left or right to set an action"
     }
   ]
 }

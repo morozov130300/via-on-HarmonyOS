@@ -13,6 +13,25 @@ export enum DownloadStatus {
 }
 
 @ObservedV2
+export class NetworkLogEntry {
+  id: number
+  url: string
+  resourceType: string
+  media: boolean
+  blocked: boolean
+  timestamp: number
+
+  constructor(id: number, url: string, resourceType: string, media: boolean, blocked: boolean, timestamp: number) {
+    this.id = id
+    this.url = url
+    this.resourceType = resourceType
+    this.blocked = blocked
+    this.media = media
+    this.timestamp = timestamp
+  }
+}
+
+@ObservedV2
 export class TabItem {
   readonly id: number
   @Trace incognito: boolean
@@ -29,6 +48,8 @@ export class TabItem {
   @Trace matchOrdinal: number
   @Trace matchCount: number
   @Trace sniffedMedia: string[]
+  @Trace networkLogs: NetworkLogEntry[]
+  @Trace networkLogSequence: number
   // 原版 k6.g 拖动实时预览：onProgressChanged 直接对当前 WebView setTextZoom，
   // 不落库；页面跳转后由 e8/i.M() 重新应用正式缩放（此处 onPageBegin 清零）
   @Trace liveZoom: number = 0
@@ -54,6 +75,8 @@ export class TabItem {
     this.matchOrdinal = 0
     this.matchCount = 0
     this.sniffedMedia = []
+    this.networkLogs = []
+    this.networkLogSequence = 0
     this.icon = null
     this.controller = new webview.WebviewController()
   }

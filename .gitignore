@@ -1,6 +1,5 @@
 /node_modules
 /oh_modules
-/local.properties
 /.idea
 **/build
 /.hvigor
@@ -12,15 +11,10 @@
 /.appanalyzer
 /.cache
 /.deveco
-.env
+# 私有主仓库（via.git）保留全部源码、签名材料、本机配置与图片素材，仅排除构建/缓存/依赖等中间产物
 # 临时诊断产物（AGENTS.md：临时文件用完必清，禁止入库）
 /.diag/
 /screenshots/
-# 隐私保护：签名材料与智能体记忆文件禁止入库
-/signing/
-/AGENTS.md
-# 本机签名密码配置（含加密密码串，协作者用 signature generate 自建）
-/build-profile.json5
 _shot*
 _screenshot*
 screenshot_*
@@ -28,3 +22,9 @@ screenshot_*
 *.jpg
 !resources/**/*.jpg
 !resources/**/*.jpeg
+# 根目录参考截图属于素材，非中间产物，入库
+!/uia_screen.jpeg
+# 本机 DevEco 路径配置（无敏感值）入库
+!/local.properties
+# 反编译包内的 Android 构建元数据属于构建垃圾
+**/META-INF/com/android/build/

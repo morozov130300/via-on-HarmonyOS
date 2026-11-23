@@ -200,10 +200,10 @@ export class AppSettings {
   @Trace homeLogoType: number = 0
   @Trace homeLogoSize: number = 28
   @Trace homeLogoStyle: number = 1
-  // 原版 searchinfo 缺省 0x260064（w9/k.java:650 → i9.e 位域）：
-  // radius bits0-6=0（直角）、opacity bits7-13=100（不透明）、描边不透明度 24、描边宽 1
-  @Trace homePillCorner: number = 0
-  @Trace homePillOpacity: number = 100
+  // 原版 searchinfo 缺省 0x260064（w9/k.java:650 → i9.e 位域，BackupSettings 同映射）：
+  // radius bits0-6=100（全圆角）、opacity bits7-13=0（透明底）、描边不透明度 24、描边宽 1、矩形
+  @Trace homePillCorner: number = 100
+  @Trace homePillOpacity: number = 0
   @Trace homePillStrokeWidth: number = 1
   @Trace homePillStrokeOpacity: number = 24
   @Trace homePillStyle: number = 0
@@ -479,8 +479,8 @@ export class AppSettings {
       this.homeLogoType = await this.readNumber('homeLogoType', 0)
       this.homeLogoSize = await this.readNumber('homeLogoSize', 28)
       this.homeLogoStyle = await this.readNumber('homeLogoStyle', 1)
-      this.homePillCorner = await this.readNumber('homePillCorner', 0)
-      this.homePillOpacity = await this.readNumber('homePillOpacity', 100)
+      this.homePillCorner = await this.readNumber('homePillCorner', 100)
+      this.homePillOpacity = await this.readNumber('homePillOpacity', 0)
       this.homePillStrokeWidth = await this.readNumber('homePillStrokeWidth', 1)
       this.homePillStrokeOpacity = await this.readNumber('homePillStrokeOpacity', 24)
       this.homePillStyle = await this.readNumber('homePillStyle', 0)
@@ -1129,10 +1129,23 @@ export class AppSettings {
     this.flushKey('ruleSubscriptions', JSON.stringify(payload))
   }
 
+  // 原版 z7/q0.F3：cVar.h(!cVar.f()) 改单条后 notifyItemChanged。
+  // ArkUI 侧 ForEach 靠数组引用变更感知列表刷新，故按 updateRuleSubEntry 同样方式重建数组，
+  // 不原地改属性（原地写不触发 ForEach 重建，会留下陈旧条目导致后续点击失效）。
   setRuleSubEnabled(key: string, enabled: boolean): void {
-    const sub = this.ruleSubscriptions.find((s: RuleSubEntry): boolean => s.key === key)
-    if (sub !== undefined) {
-      sub.enabled = enabled
+    const next: RuleSubEntry[] = []
+    let changed = false
+    for (let i = 0; i < this.ruleSubscriptions.length; i++) {
+      const sub = this.ruleSubscriptions[i]
+      if (sub.key === key && sub.enabled !== enabled) {
+        next.push(new RuleSubEntry(sub.key, sub.name, sub.url, enabled, sub.ruleCount, sub.lastUpdate, sub.isPreset))
+        changed = true
+      } else {
+        next.push(sub)
+      }
+    }
+    if (changed) {
+      this.ruleSubscriptions = next
       this.saveRuleSubs()
     }
   }
@@ -1319,6 +1332,24 @@ export class AppSettings {
     } else {
       this.gesturetoolbarright = action
       this.flushKey('gesturetoolbarright', action)
+    }
+  }
+
+  // 原版 w9.k.s0/v1/d2/t2：悬浮球四向动作写入（0=左 1=右 2=上 3=下；
+  // 对应键 fableftaction/fabrightaction/fabupaction/fabdownaction）
+  setFabAction(dir: number, action: number): void {
+    if (dir === 0) {
+      this.fableftaction = action
+      this.flushKey('fableftaction', action)
+    } else if (dir === 1) {
+      this.fabrightaction = action
+      this.flushKey('fabrightaction', action)
+    } else if (dir === 2) {
+      this.fabupaction = action
+      this.flushKey('fabupaction', action)
+    } else {
+      this.fabdownaction = action
+      this.flushKey('fabdownaction', action)
     }
   }
 
@@ -1917,9 +1948,9 @@ export class AppSettings {
     this.setHomeLogoCorner(50)
     this.setHomeLogoImage('')
     this.setHomeLogoHtml('')
-    // 原版 searchinfo 缺省 0x260064：直角 + 不透明（与字段声明处缺省一致）
-    this.setHomePillCorner(0)
-    this.setHomePillOpacity(100)
+    // 原版 searchinfo 缺省 0x260064：圆角 100 + 透明底（与字段声明处缺省一致）
+    this.setHomePillCorner(100)
+    this.setHomePillOpacity(0)
     this.setHomePillStrokeWidth(1)
     this.setHomePillStrokeOpacity(24)
     this.setHomePillStyle(0)

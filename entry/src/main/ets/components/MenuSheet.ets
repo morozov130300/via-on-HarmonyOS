@@ -99,6 +99,7 @@ export struct MenuSheet {
   @Event onFindInPage: () => void = () => {}
   @Event onShare: () => void = () => {}
   @Event onSavePage: () => void = () => {}
+  @Event onOpenMedia: (urls: string[]) => void = (_urls: string[]) => {}
   @Event onOpenAi: () => void = () => {}
   @Event onOpenReader: () => void = () => {}
 
@@ -1858,7 +1859,19 @@ export struct MenuSheet {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_unsupported'), duration: 2500 })
       return
     }
+    const urls: string[] = []
+    const start = Math.max(0, tab.networkLogs.length - 64)
+    for (let i = tab.networkLogs.length - 1; i >= start; i--) {
+      const entry = tab.networkLogs[i]
+      if (entry.media && urls.indexOf(entry.url) < 0) {
+        urls.push(entry.url)
+      }
+    }
     this.onClose()
+    if (urls.length > 0) {
+      this.onOpenMedia(urls)
+      return
+    }
     this.getUIContext().getPromptAction().showToast({ message: $r('app.string.res_sniffer_empty'), duration: 2500 })
   }
 
