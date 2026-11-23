@@ -1,0 +1,3 @@
+#!/bin/sh
+# 私有主仓库提交后自动同步公开仓（剔除敏感路径，见 public-sync.js）
+node "$(git rev-parse --show-toplevel)/.githooks/public-sync.js" || true
