@@ -29,6 +29,7 @@ if (drop.length === 0) {
 const tree = git(['write-tree'], { env }).toString().trim()
 try { fs.unlinkSync(idx) } catch (e) {}
 
+try { git(['fetch', '-q', 'public']) } catch (e) {}
 const parent = git(['rev-parse', 'public/main']).toString().trim()
 const parentTree = git(['rev-parse', parent + '^{tree}']).toString().trim()
 if (tree === parentTree) {
