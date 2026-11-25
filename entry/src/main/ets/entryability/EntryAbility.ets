@@ -309,17 +309,17 @@ export default class EntryAbility extends UIAbility {
       if (trimmed === '') {
         return
       }
-      if (cold) {
-        AppStorage.setOrCreate('uia_launch_url', trimmed)
-        AppStorage.setOrCreate('uia_launch_external', false)
-        AppStorage.setOrCreate('uia_shared_text', true)
-      } else {
-        emitter.emit(
-          { eventId: EXTERNAL_LINK_EVENT_ID },
-          { data: { 'linkUrl': trimmed, 'external': false, 'sharedText': true } }
-        )
-      }
-    }).catch(() => {
+      // getSharedData 是异步的：冷启动时它可能在 Index 订阅 emitter 之前或之后完成，
+      // 两条通道都写（AppStorage 兜底 + emitter 立即消费），由 Index 侧统一「取走即清」去重。
+      AppStorage.setOrCreate('uia_launch_url', trimmed)
+      AppStorage.setOrCreate('uia_launch_external', false)
+      AppStorage.setOrCreate('uia_shared_text', true)
+      emitter.emit(
+        { eventId: EXTERNAL_LINK_EVENT_ID },
+        { data: { 'linkUrl': trimmed, 'external': false, 'sharedText': true } }
+      )
+    }).catch((error: BusinessError) => {
+      hilog.error(DOMAIN, 'testTag', 'getSharedData failed: %{public}s', JSON.stringify(error));
     })
   }
 

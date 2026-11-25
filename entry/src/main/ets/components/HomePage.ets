@@ -263,7 +263,9 @@ export struct HomePage {
   build() {
     Stack() {
       if (this.settings.homeBgImage !== '') {
-        Image(this.settings.homeBgImage)
+        // Image 的 string 源必须带 file:// scheme 才能加载本地文件（裸绝对路径
+        // 解析失败 → 图不渲染、根容器透明露出深色底）。与 UiaIcon 皮肤位图同口径。
+        Image(this.toFileUrl(this.settings.homeBgImage))
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)
@@ -274,7 +276,7 @@ export struct HomePage {
       } else if (this.cssBgUrl !== '') {
         // 用户 CSS：body/html background: url(...) → 主页背景图
         // （原版 config.c() backgroundPath 同位；遮罩仍走 bginfo 不透明度）
-        Image(this.cssBgUrl)
+        Image(this.toFileUrl(this.cssBgUrl))
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)
@@ -314,7 +316,7 @@ export struct HomePage {
                 .attributeModifier(this.logoCssModifier)
             } else if (HOME_LOGO_TYPES[this.settings.homeLogoType] === '图片'
               && this.settings.homeLogoImage !== '') {
-              Image(this.settings.homeLogoImage)
+              Image(this.toFileUrl(this.settings.homeLogoImage))
                 .width(this.logoWidth())
                 .height(this.logoHeight())
                 .borderRadius(this.logoRadius())
@@ -643,6 +645,11 @@ export struct HomePage {
         this.contentFade = savedFade
       })
     }, 120)
+  }
+
+  // 本地文件路径 → Image 可加载的 file:// URI（裸路径解析失败，见 build 内注释）
+  private toFileUrl(path: string): string {
+    return path.startsWith('file://') ? path : `file://${path}`
   }
 
   private homeBackground(): ResourceColor {

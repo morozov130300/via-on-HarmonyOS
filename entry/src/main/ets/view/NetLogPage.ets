@@ -101,7 +101,7 @@ export struct NetLogPage {
         }
         if (this.tab.networkLogs.length === 0) {
           Column() {
-            Text($r('app.string.empty_page_placeholder'))
+            Text($r('app.string.net_log_empty'))
               .fontSize(14)
               .fontColor($r('app.color.fg_secondary'))
           }
@@ -118,8 +118,11 @@ export struct NetLogPage {
                       Text(entry.blocked ? 'block' : 'load')
                         .fontSize(12)
                         .fontColor(Color.White)
-                        .backgroundColor(entry.blocked ? '#CD8282' : '#5C91CB')
+                        .backgroundColor('#CD8282')
                         .padding({ left: 6, right: 6, top: 1, bottom: 1 })
+                      Text(this.formatTime(entry.timestamp))
+                        .fontSize(15)
+                        .fontColor($r('app.color.fg'))
                       if (entry.resourceType !== '') {
                         Text(entry.resourceType)
                           .fontSize(12)
@@ -127,21 +130,21 @@ export struct NetLogPage {
                           .backgroundColor('#5C91CB')
                           .padding({ left: 6, right: 6, top: 1, bottom: 1 })
                       }
-                      Blank()
-                      Text(this.formatTime(entry.timestamp))
-                        .fontSize(11)
-                        .fontColor($r('app.color.fg_tertiary'))
                     }
                     .width('100%')
-                    Text(entry.url)
+                    Text() {
+                      Span(entry.urlHostPrefix).fontColor($r('app.color.fg'))
+                      Span(entry.urlHost).fontColor($r('app.color.fg')).fontWeight(FontWeight.Bold)
+                      Span(entry.urlHostSuffix).fontColor($r('app.color.fg'))
+                    }
                       .fontSize(13)
-                      .fontColor($r('app.color.fg'))
-                      .maxLines(3)
+                      .maxLines(4)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .width('100%')
                   }
                   .width('100%')
                   .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+                  .margin({ top: 12, bottom: 12 })
                   .opacity(entry.blocked ? 0.5 : 1)
                   .onClick(() => {
                     this.navPathStack.pop()
@@ -158,6 +161,9 @@ export struct NetLogPage {
       }
       .width('100%')
       .height('100%')
+      // 原版 u9/d.g(…,6) body{width:600px;max-width:100%;margin:auto}
+      .constraintSize({ maxWidth: 600 })
+      .align(Alignment.Top)
     }
     .hideTitleBar(true)
     .backgroundColor($r('app.color.page_bg'))

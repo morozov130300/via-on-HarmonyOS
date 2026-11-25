@@ -193,6 +193,10 @@
       "value": "网络日志"
     },
     {
+      "name": "net_log_empty",
+      "value": "这个页面没有网络日志。"
+    },
+    {
       "name": "reader_mode",
       "value": "阅读模式"
     },
@@ -1181,6 +1185,10 @@
       "value": "仅支持 “http” 或 “https” 开头的网址"
     },
     {
+      "name": "view_source_http_only",
+      "value": "仅支持 “http” 或 “https” 开头的网址"
+    },
+    {
       "name": "fullscreen_toast_on",
       "value": "全屏 已开启"
     },
@@ -1907,6 +1915,10 @@
     {
       "name": "translate_exit",
       "value": "退出"
+    },
+    {
+      "name": "translate_wait",
+      "value": "稍等片刻…"
     },
     {
       "name": "scripts_for_host",

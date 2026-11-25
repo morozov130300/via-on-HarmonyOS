@@ -73,36 +73,45 @@ export function dialogTransition(): TransitionEffect {
       .animation({ duration: 240, curve: BOUNCE_CURVE }))
 }
 
-// 底部菜单（i8/k.T1：gravity 含 80 → style r，进场 @anim/k、退场 @anim/n）：
-//   原版解码值（resources/res/anim/k.xml、n.xml，integer/d=160，插值器 accelerate 0x010a0005）：
-//     anim/k 进场：alpha 0→1；translate fromYDelta=-120.0 → toYDelta=0
-//     anim/n 退场：alpha 1→0；translate fromYDelta=0 → toYDelta=-120.0
+// —— 贴底/贴顶的动画归属（关键，此前接反过）——
+// 原版选择处：i8/k.T1（菜单）与 b9/g.u3（AI 面板）同一行代码：
+//   `attributes.windowAnimations = (gravity & 48) == 48 ? x7.v.f14258e : x7.v.f14257d;`
+//   x7.v.f14258e = 0x7f110013 = style "r" → anim/k(进) / anim/n(出)
+//   x7.v.f14257d = 0x7f110012 = style "q" → anim/m(进) / anim/l(出)
+// 即：(gravity & 48) == 48 → **贴顶（含 48）用 style r = anim/k = -120**；
+//     否则 → **贴底（80）用 style q = anim/m = +120**。
+// 另一处独立印证：f8/c.java A1() 的 z11 = (gravity & 80) == 80，
+//   进场 translationY (z11 ? +120 : -120) → 0，退场 0 → (z11 ? +120 : -120)。
+// 两处口径一致：贴底一律 +120（从下方升起）、贴顶一律 -120（从上方落下），且进场退场同号。
+//
+// 底部菜单（gravity 含 80 → style q，进场 @anim/m、退场 @anim/l）：
+//   原版解码值（resources/res/anim/m.xml、l.xml，integer/d=160，插值器 accelerate 0x010a0005）：
+//     anim/m 进场：alpha 0→1；translate fromYDelta=+120.0 → toYDelta=0（从下方滑入）
+//     anim/l 退场：alpha 1→0；translate fromYDelta=0 → toYDelta=+120.0（向下滑出）
 // ★ ArkUI 的 TransitionEffect.translate(t) 表示「组件在过渡两端的偏移量」：
-//   插入时是起始偏移、删除时是结束偏移。故进场传 -120（从上方滑入），退场也必须传 -120
-//   （滑向 -120 再消失）。旧实现让进场/退场都传 -slide，退场等于「从 -120 跳回 0 再淡出」，
-//   方向与原版相反——这就是菜单弹出/收起动画看起来反了的原因。
+//   插入时是起始偏移、删除时是结束偏移。原版进场/退场同号，故两段传同一个 +slide。
 export function menuTransition(): TransitionEffect {
   const slide = animPxToVp(120)
   const enter = TransitionEffect.OPACITY.animation({ duration: 160, curve: Curve.Linear })
-    .combine(TransitionEffect.translate({ y: -slide })
+    .combine(TransitionEffect.translate({ y: slide })
       .animation({ duration: 160, curve: ACCELERATE_CURVE }))
   const exit = TransitionEffect.OPACITY.animation({ duration: 160, curve: Curve.Linear })
-    .combine(TransitionEffect.translate({ y: -slide })
+    .combine(TransitionEffect.translate({ y: slide })
       .animation({ duration: 160, curve: ACCELERATE_CURVE }))
   return TransitionEffect.asymmetric(enter, exit)
 }
 
-// 顶部菜单（gravity 含 48 → style q，进场 @anim/m、退场 @anim/l）：
-//   原版解码值：
-//     anim/m 进场：alpha 0→1；translate fromYDelta=+120.0 → toYDelta=0（从下方滑入）
-//     anim/l 退场：alpha 1→0；translate fromYDelta=0 → toYDelta=+120.0（向下滑出）
+// 顶部菜单（gravity 含 48 → style r，进场 @anim/k、退场 @anim/n）：
+//   原版解码值（anim/k.xml、n.xml）：
+//     anim/k 进场：alpha 0→1；translate fromYDelta=-120.0 → toYDelta=0（从上方落下）
+//     anim/n 退场：alpha 1→0；translate fromYDelta=0 → toYDelta=-120.0（向上收走）
 export function menuTransitionTop(): TransitionEffect {
   const slide = animPxToVp(120)
   const enter = TransitionEffect.OPACITY.animation({ duration: 160, curve: Curve.Linear })
-    .combine(TransitionEffect.translate({ y: slide })
+    .combine(TransitionEffect.translate({ y: -slide })
       .animation({ duration: 160, curve: ACCELERATE_CURVE }))
   const exit = TransitionEffect.OPACITY.animation({ duration: 160, curve: Curve.Linear })
-    .combine(TransitionEffect.translate({ y: slide })
+    .combine(TransitionEffect.translate({ y: -slide })
       .animation({ duration: 160, curve: ACCELERATE_CURVE }))
   return TransitionEffect.asymmetric(enter, exit)
 }

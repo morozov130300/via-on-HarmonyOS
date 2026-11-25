@@ -1085,9 +1085,12 @@ export struct SettingsCustomPage {
         if (result.photoUris.length === 0) {
           return
         }
-        // 原版 z8.b.c()：把 Picker Uri 拷贝为应用私有 png 再落盘，避免临时授权失效
+        // 原版 z8.b.c()：把 Picker Uri 拷贝为应用私有 png 再落盘，避免临时授权失效。
+        // 文件名带时间戳：固定 bg.png/logo.png 会让 homeBgImage/homeLogoImage 字符串
+        // 不变 → @Trace 不触发刷新，且 Image 按 URL 缓存旧图 → 新图不实时生效。
+        const old = isLogo ? this.settings.homeLogoImage : this.settings.homeBgImage
         const dir = `${context.filesDir}/home`
-        const dest = `${dir}/${isLogo ? 'logo' : 'bg'}.png`
+        const dest = `${dir}/${isLogo ? 'logo' : 'bg'}_${Date.now()}.png`
         try {
           if (!fileIo.accessSync(dir)) {
             fileIo.mkdirSync(dir, true)
@@ -1113,6 +1116,14 @@ export struct SettingsCustomPage {
           this.settings.setHomeBgColor('')
           this.settings.setHomeBgImage(dest)
           this.bgPalette = false
+        }
+        // 新路径已生效并驱动重渲染后再删旧文件（旧文件已不在组件树）
+        if (old !== '' && old !== dest) {
+          try {
+            fileIo.unlinkSync(old)
+          } catch (error) {
+            // 旧文件不存在/已清理：忽略
+          }
         }
       }).catch((error: BusinessError) => {
         console.error(`pick image failed: ${error.message}`)

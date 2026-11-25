@@ -39,6 +39,14 @@ import { SslWhitelistStore, SSL_BIT_UNTRUSTED, SSL_BIT_DATE_INVALID, SSL_BIT_ID_
 // 原版 i6/i0.s()：严格 http:// 或 https://（blocker/jump 守卫，与 k6.u/DeepLink 共用）
 import { isStrictHttp } from '../common/DeepLink'
 
+// 原版 i6/i0.r()：媒体类资源扩展名白名单（75 项，由 dex 哈希常量反推验证）
+const MEDIA_EXTENSIONS: string[] = ['aa', 'aac', 'aax', 'act', 'aiff', 'amr', 'amv', 'ape', 'asf', 'au',
+  'avi', 'awb', 'dat', 'dct', 'drc', 'dss', 'dvf', 'f4a', 'f4b', 'f4p', 'f4v', 'flac', 'flv', 'gsm',
+  'iklax', 'ivs', 'm2ts', 'm2v', 'm3u8', 'm4a', 'm4b', 'm4p', 'm4v', 'mkv', 'mmf', 'mng', 'mogg', 'mov',
+  'mp2', 'mp3', 'mp4', 'mpc', 'mpe', 'mpeg', 'mpg', 'mpv', 'msv', 'mts', 'mxf', 'nsf', 'nsv', 'oga',
+  'ogg', 'ogv', 'opus', 'qt', 'ra', 'raw', 'rm', 'rmvb', 'roq', 'sln', 'svi', 'tta', 'vob', 'vox',
+  'wav', 'webm', 'wma', 'wmv', 'wv', 'yuv', '3g2', '3gp', '8svx']
+
 // 1x1 GIF 占位（原版 u4/a.f12819d base64 1:1 解码）
 const GIF_PLACEHOLDER: Uint8Array = new Uint8Array([
   0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0xFF,
@@ -154,6 +162,16 @@ export struct TabWeb {
   // 首个页面加载完成时清一次历史：抵消 ArkWeb 初始 about:blank 入栈导致的
   // 「新标签第一个页面就显示可后退」。原版 WebView 构造后空白不入历史栈。
   private clearHistoryOnce: boolean = false
+  // 组件自带 about:blank 文档（Web({ src: 'about:blank' })）的生命周期窗口。
+  // 原版 WebView（e8/i.C）建好后是纯空白文档，且**不给宿主发页面回调**；
+  // ArkWeb 则会为它完整回调 onPageBegin/onPageEnd。这段窗口内的回调必须忽略，
+  // 否则会把已恢复的 tab.url 顶成 about:blank（主页覆盖层闪出、快照写成空 URL）。
+  // 该文档落定（onPageEnd）后才是真正的首屏加载时机，见 loadInitialUrl。
+  private builtinDocAlive: boolean = true
+  // 组件属性回调之外的兜底计时器：初始空白文档若不回调 onPageEnd，也要能推进首屏
+  private builtinDocTimer: number = -1
+  // 首屏 initialUrl 只加载一次（onPageEnd 与兜底计时器谁先到谁执行）
+  private initialUrlLoaded: boolean = false
   // 本组件持有指示层的可视载体与横滑状态机实例。
   @Local swipeIndicatorVisible: boolean = false
   @Local swipeIndicatorShift: number = 0
@@ -377,6 +395,48 @@ export struct TabWeb {
     return false
   }
 
+  // 组件自带 about:blank 文档落定后加载首屏。原版 e8/i.C 建好 WebView 后由 na 决定何时
+  // loadUrl；ArkWeb 的初始 src 提交是异步排队的，在 onControllerAttached 里抢先 loadUrl
+  // 会被它 abort（真机日志：LoadUrl 目标页 → LoadUrl about:blank → ERR_ABORTED），
+  // 表现为恢复的标签闪一下又回到空白。
+  private loadInitialUrl(): void {
+    if (this.initialUrlLoaded) {
+      return
+    }
+    this.initialUrlLoaded = true
+    // 空白主页（主页模式=空白页/普通主页）无需加载，HomePage 覆盖层直接呈现
+    if (this.tab.initialUrl === '' || this.tab.initialUrl === 'about:blank') {
+      return
+    }
+    try {
+      if (this.settings.dataSaver) {
+        this.tab.controller.loadUrl(this.tab.initialUrl, [{ headerKey: 'Save-Data', headerValue: 'on' }])
+      } else {
+        this.tab.controller.loadUrl(this.tab.initialUrl)
+      }
+      // Web 组件的初始 src 是 about:blank，首次 loadUrl 会让它进入历史栈，
+      // 使新标签第一个页面就「可后退」到空白页。原版 WebView 构造后为空白且不入栈，
+      // 首个页面 canGoBack() 为 false（后退到底走 U8 的关标签分支）。
+      // 故首个页面落定后清一次历史，与原版首屏一致。
+      this.clearHistoryOnce = true
+    } catch (error) {
+      console.error('restore tab loadUrl failed')
+    }
+  }
+
+  // 初始空白文档落定（onPageEnd）与兜底计时器共用的收敛点
+  private settleBuiltinDoc(): void {
+    if (!this.builtinDocAlive) {
+      return
+    }
+    this.builtinDocAlive = false
+    if (this.builtinDocTimer !== -1) {
+      clearTimeout(this.builtinDocTimer)
+      this.builtinDocTimer = -1
+    }
+    this.loadInitialUrl()
+  }
+
   build() {
     Stack() {
       Web({ src: 'about:blank', controller: this.tab.controller, incognitoMode: this.tab.incognito })
@@ -445,35 +505,39 @@ export struct TabWeb {
           // ArkWeb 属性式 javaScriptProxy 仅支持注册一个对象，via_gm 走 controller 注册
           try {
             this.tab.controller.registerJavaScriptProxy(this.gmBridge, 'uia_gm', ['call'])
-            // 空白主页无需 refresh：刷新 about:blank 会触发 onPageBegin 造成假加载进度条。
-            if (this.tab.initialUrl !== '') {
-              this.tab.controller.refresh()
-            }
           } catch (error) {
             console.error('register via_gm proxy failed')
           }
-          if (this.tab.initialUrl !== '') {
-            try {
-              if (this.settings.dataSaver) {
-                this.tab.controller.loadUrl(this.tab.initialUrl, [{ headerKey: 'Save-Data', headerValue: 'on' }])
-              } else {
-                this.tab.controller.loadUrl(this.tab.initialUrl)
-              }
-              // Web 组件的初始 src 是 about:blank，首次 loadUrl 会让它进入历史栈，
-              // 使新标签第一个页面就「可后退」到空白页。原版 WebView 构造后为空白且不入栈，
-              // 首个页面 canGoBack() 为 false（后退到底走 U8 的关标签分支）。
-              // 故首个页面落定后清一次历史，与原版首屏一致。
-              this.clearHistoryOnce = true
-            } catch (error) {
-              console.error('restore tab loadUrl failed')
-            }
+          // 此处**不得** loadUrl/refresh。真机日志（2026-11-25）：
+          //   LoadUrl url:<目标页>          ← 本回调里抢先 loadUrl（navigationId:1）
+          //   LoadUrl url:about:blank       ← 组件构造时 src 的提交，滞后到这里（navigationId:2）
+          //   OnLoadError ERR_ABORTED url:<目标页>
+          // 组件的初始 src 提交是异步排队的，谁先谁后不可控，抢先的 loadUrl 必被它 abort；
+          // refresh() 同样只是再排一次空白文档提交，问题一样。
+          // 原版 WebView（e8/i.C）建好后就是纯空白文档、由 na 决定何时 loadUrl，
+          // 故本端也改为等初始空白文档落定（onPageEnd）后再加载，见 loadInitialUrl。
+          // 兜底：初始空白文档万一不回调 onPageEnd，400ms 后也强行推进首屏，避免卡在空白
+          if (this.builtinDocTimer === -1) {
+            this.builtinDocTimer = setTimeout((): void => {
+              this.builtinDocTimer = -1
+              this.settleBuiltinDoc()
+            }, 400)
           }
         })
         .onPageBegin((event: OnPageBeginEvent) => {
+          // 组件自带 about:blank 文档的页面回调一律忽略：原版 WebView 建好后是纯空白、
+          // 不给宿主发页面回调；ArkWeb 会发，不过滤就会把已恢复的 tab.url 顶成主页。
+          if (this.builtinDocAlive) {
+            return
+          }
           this.tab.url = event.url
           this.tab.loading = event.url !== 'about:blank' && event.url !== ''
           this.tab.isError = false
           this.tab.sniffedMedia = []
+          // 原版 e8/j.D（onPageStarted 位掩码含 1）→ d8/d.i(tabId, resourceId, url)：
+          // 清空该标签网络日志、切换资源代次、按新页 URL 重设 wlr 标记
+          this.tab.networkLogs = []
+          this.tab.networkLogSequence = 0
           // 原版 e8/i.M() 页面开始重新应用正式缩放，qb 预览值失效
           this.tab.liveZoom = 0
           this.refreshPrivacyScripts()
@@ -495,6 +559,11 @@ export struct TabWeb {
           this.onPageThemeColor()
         })
         .onPageEnd((event: OnPageEndEvent) => {
+          // 组件自带 about:blank 文档落定：此后才是首屏加载时机，本回调本身不推进 UI
+          if (this.builtinDocAlive) {
+            this.settleBuiltinDoc()
+            return
+          }
           this.tab.url = event.url
           this.tab.loading = false
           this.tab.progress = 100
@@ -731,10 +800,11 @@ export struct TabWeb {
         .onInterceptRequest((event: OnInterceptRequestEvent) => {
           const request = event.request
           const requestUrl = request.getRequestUrl()
+          // 原版 e8/j.F：blocked = 拦截器返回的响应非 null（字体替换同样计入）
           // 原版 na.E0 首段：字体请求（后缀 = URL 编码字体名）优先于一切拦截
           const fontResponse = this.interceptFont(requestUrl)
           if (fontResponse !== null) {
-            this.recordNetworkRequest(requestUrl, false)
+            this.recordNetworkRequest(requestUrl, true)
             return fontResponse
           }
           // 原版 na.U1：内部页/非 http 放行
@@ -742,8 +812,6 @@ export struct TabWeb {
             return null
           }
           if (request.isMainFrame()) {
-            this.tab.networkLogs = []
-            this.tab.networkLogSequence = 0
             // 主文档（na.E0 主文档分支）：先匹配计数（U1），会话放行后再放行页面
             const filter = this.adBlocker.matchFilter(requestUrl, TYPE_DOCUMENT, requestUrl)
             if (filter === null || filter.isException()) {
@@ -1460,6 +1528,10 @@ export struct TabWeb {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return
     }
+    // 原版 na.E0 → 拦截器出口：内部页（file:// 内部 html）与注入 CSS 不进日志
+    if (url.endsWith('via_inject_blocker.css')) {
+      return
+    }
     const lower = url.toLowerCase()
     const queryIndex = lower.indexOf('?')
     const hashIndex = lower.indexOf('#')
@@ -1476,7 +1548,13 @@ export struct TabWeb {
     if (dotIndex > path.lastIndexOf('/') && dotIndex >= path.lastIndexOf(':') + 3) {
       resourceType = path.substring(dotIndex + 1)
     }
-    const mediaTypes: string[] = ['mp4', 'm3u8', 'mp3', 'm4a', 'webm', 'flv', 'mov', 'aac', 'ogg', 'mpd']
+    const mediaTypes: string[] = MEDIA_EXTENSIONS
+    // 原版 d8/c.a：wlr 白名单页（v.qq/youku/iqiyi/mgtv/bilibili/ximalaya/film.qq）
+    // 已置 wlr 标记（d8/d.i 于页开始按当前页 URL 设置）时不记录媒体类资源
+    const inWlr = RemoteConfig.getInstance().isInWlr(this.tab.url)
+    if (inWlr && mediaTypes.indexOf(resourceType) >= 0) {
+      return
+    }
     this.tab.networkLogSequence = this.tab.networkLogSequence + 1
     this.tab.networkLogs.push(new NetworkLogEntry(this.tab.networkLogSequence, url, resourceType,
       mediaTypes.indexOf(resourceType) >= 0, blocked, Date.now()))

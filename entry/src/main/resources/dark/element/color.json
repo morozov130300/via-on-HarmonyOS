@@ -213,6 +213,14 @@
       "value": "#30111111"
     },
     {
+      "name": "translate_btn_bg",
+      "value": "#617AC1"
+    },
+    {
+      "name": "translate_btn_pressed",
+      "value": "#48598B"
+    },
+    {
       "name": "hc_4c6fff",
       "value": "#4C6FFF"
     },

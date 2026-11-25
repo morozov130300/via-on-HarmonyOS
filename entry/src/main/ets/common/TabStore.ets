@@ -315,6 +315,21 @@ export class TabStore {
     return true
   }
 
+  // 原版 na.y（c8/na.java:595-619）：外部入口打开链接前先查同 URL 是否已在某个标签中，
+  // 命中则直接切换到该标签（X1(index)），不重复开新标签。
+  // 仅在 URL 为严格 http(s) 时做此判定（原版 i0.s()），其他 scheme 一律新开。
+  indexOfUrl(url: string): number {
+    if (url === '') {
+      return -1
+    }
+    for (let i = 0; i < this.tabs.length; i++) {
+      if (this.tabs[i].url === url) {
+        return i
+      }
+    }
+    return -1
+  }
+
   newTabAt(url: string, background: boolean): boolean {
     const tab = new TabItem(this.nextTabId, false)
     this.nextTabId = this.nextTabId + 1
@@ -324,6 +339,21 @@ export class TabStore {
     if (!background) {
       this.currentIndex = this.tabs.length - 1
     }
+    return true
+  }
+
+  // 原版 na.i2() → g1(url, true, L0() + 1)：查看源码的新标签插在**当前标签之后**并选中。
+  // 原版加载的是 "view-source:"+原URL；ArkWeb 未提供 view-source 协议渲染（WebView 族同
+  // 限制），故正文由调用方以纯文本 HTML 生成后传入 file:// 地址，插入位置与原版一致。
+  newTabAtAfterCurrent(url: string): boolean {
+    const tab = new TabItem(this.nextTabId, false)
+    this.nextTabId = this.nextTabId + 1
+    tab.initialUrl = url
+    tab.url = url
+    // 原版 g1(str, true, L0() + 1)：插入到当前标签之后并选中
+    const insertAt = Math.min(this.currentIndex + 1, this.tabs.length)
+    this.tabs.splice(insertAt, 0, tab)
+    this.currentIndex = insertAt
     return true
   }
 

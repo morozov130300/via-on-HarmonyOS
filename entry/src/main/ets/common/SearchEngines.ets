@@ -341,6 +341,76 @@ export function normalizeHostDots(text: string): string {
   return result
 }
 
+// 原版 i6/g0.a（i6/g0.java:13-27）定界符配对表：
+// ''""{}()[]<>「」『』【】〔〕〖〗〘〙〚〛（）［］｛｝＜＞〈〉《》‘’“”
+const URL_DELIMITER_PAIRS: string =
+  "''\"\"{}()[]<>「」『』【】〔〕〖〗〘〙〚〛（）［］｛｝＜＞〈〉《》‘’“”"
+
+// 原版 i6/g0.a：按起始定界符取配对闭合符（非起始符或未命中 → 空格）
+function urlCloserOf(openChar: string): string {
+  const i = URL_DELIMITER_PAIRS.indexOf(openChar)
+  if (i < 0 || i % 2 !== 0) {
+    return ' '
+  }
+  return URL_DELIMITER_PAIRS.charAt(i + 1)
+}
+
+// 原版 i6/f.e：空白判定
+function isUrlBlankChar(ch: string): boolean {
+  return ch === ' ' || ch === '\n' || ch === '\t' || ch === '\u00a0' || /\s/.test(ch)
+}
+
+// 原版 i6/g0.e（i6/g0.java:75-120）1:1：
+//   以 "://" 为锚点向前取 4/5 字符窗口比 http/https；段尾按配对闭合符或空白截断；
+//   候选再经 i0.t（h0.s）合法性校验后入表。只认完整 http(s)，不补全裸 "ttp://"。
+export function extractUrlsFromText(text: string): string[] {
+  const urls: string[] = []
+  if (text.length < 8) {
+    return urls
+  }
+  const s = text.trim()
+  let i = 0
+  while (i < s.length) {
+    const w = s.indexOf('://', i)
+    if (w < 0) {
+      break
+    }
+    let start = -1
+    if (w >= 5 && s.substring(w - 5, w).toLowerCase() === 'https') {
+      start = w - 5
+    } else if (w >= 4 && s.substring(w - 4, w).toLowerCase() === 'http') {
+      start = w - 4
+    } else {
+      i = w + 3
+      continue
+    }
+    const closer = urlCloserOf(start > 0 ? s.charAt(start - 1) : ' ')
+    let end = w + 3
+    while (end < s.length) {
+      const ch = s.charAt(end)
+      if (ch === closer || isUrlBlankChar(ch)) {
+        break
+      }
+      end++
+    }
+    let stop = end
+    if (stop >= s.length) {
+      if (start === 0) {
+        return urls
+      }
+      stop = s.length
+    }
+    if (stop > w + 3) {
+      const url = s.substring(start, stop)
+      if (isUrlLike(url) && urls.indexOf(url) < 0) {
+        urls.push(url)
+      }
+    }
+    i = stop + 1
+  }
+  return urls
+}
+
 export function isUrlLike(input: string): boolean {
   const text = normalizeHostDots(input.trim())
   if (text === '') {

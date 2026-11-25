@@ -20,6 +20,10 @@ export class NetworkLogEntry {
   media: boolean
   blocked: boolean
   timestamp: number
+  // 原版 u9/c.h 内联 boldDomain 脚本：URL 中 host 段加粗。此处预先拆好三段供 UI 渲染
+  urlHostPrefix: string
+  urlHost: string
+  urlHostSuffix: string
 
   constructor(id: number, url: string, resourceType: string, media: boolean, blocked: boolean, timestamp: number) {
     this.id = id
@@ -28,6 +32,31 @@ export class NetworkLogEntry {
     this.blocked = blocked
     this.media = media
     this.timestamp = timestamp
+    const schemeEnd = url.indexOf('://')
+    if (schemeEnd < 0) {
+      this.urlHostPrefix = url
+      this.urlHost = ''
+      this.urlHostSuffix = ''
+    } else {
+      const hostStart = schemeEnd + 3
+      let hostEnd = url.length
+      for (let i = hostStart; i < url.length; i++) {
+        const ch = url.charAt(i)
+        if (ch === '/' || ch === '?' || ch === '#') {
+          hostEnd = i
+          break
+        }
+      }
+      if (hostEnd <= hostStart) {
+        this.urlHostPrefix = url
+        this.urlHost = ''
+        this.urlHostSuffix = ''
+      } else {
+        this.urlHostPrefix = url.substring(0, hostStart)
+        this.urlHost = url.substring(hostStart, hostEnd)
+        this.urlHostSuffix = url.substring(hostEnd)
+      }
+    }
   }
 }
 

@@ -339,7 +339,9 @@ export struct Toolbar {
         })
       }
       if (!this.hidden('tabs')) {
-        // 原版 g0.h()：栈叠图标 + 加粗标签数叠加（>99 显示 :)）；隐身时 g0.l 置 alpha 0.15
+        // 原版 g0.h()：栈叠图标 + 加粗标签数叠加（>99 显示 :)）
+        // g0.l(cur,total) 只由 k6.W4 横滑预览分支调用（k6.java:2471/2480），
+        // 隐身进出 A8/l8 只触发 g0.j() 位移回弹，不置 alpha。
         // 图标与数字色 = setAccentColor 三分支（k6.Z7）：夜间 #9F9F9F / 亮背景 #232323 / 其余白
         Stack() {
           ViaIcon({
@@ -357,7 +359,7 @@ export struct Toolbar {
         .layoutWeight(1)
         .height('100%')
         .alignContent(Alignment.Center)
-        .opacity(this.tab.incognito || this.swipePreviewCur >= 0 ? 0.15 : 1)
+        .opacity(this.swipePreviewCur >= 0 ? 0.15 : 1)
         // 原版 mark/via/common/widget/g0.java:181-185 g0.j()：
         //   ObjectAnimator.ofFloat(标签栈 f9648m, "translationY", 0f, -0.3f*height, 0f)
         //   .setDuration(280L) + setInterpolator(x8.h.b()) 即 PathInterpolator(0.2,0.2,0.8,0.8)。

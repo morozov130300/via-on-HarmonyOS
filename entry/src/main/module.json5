@@ -132,6 +132,10 @@
             ]
           },
           {
+            // 原版 AndroidManifest Trampoline 的 ACTION_SEND(intent-filter #3, mimeType=text/plain)
+            // 鸿蒙 Share Kit 按 utd 匹配目标应用，不认 type/maxFileSupported=0（=不支持该类分享），
+            // 故此处按官方规范声明 utd：general.text 已覆盖 general.plain-text / general.hyperlink /
+            // general.html 全部子类型，等价于原版接收 text/plain 的全部 ACTION_SEND 文本/链接分享。
             "entities": [
               "entity.system.browsable"
             ],
@@ -139,7 +143,7 @@
               "ohos.want.action.sendData"
             ],
             "uris": [
-              { "type": "text/plain" }
+              { "scheme": "file", "utd": "general.text", "maxFileSupported": 1 }
             ]
           },
           {

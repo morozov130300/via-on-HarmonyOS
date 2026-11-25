@@ -3,7 +3,7 @@ import { pasteboard, emitter } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { ViaIcon } from './ViaIcon'
-import { hostOf, getBuiltinEngines, isUrlLike } from '../common/SearchEngines'
+import { hostOf, getBuiltinEngines, isUrlLike, extractUrlsFromText } from '../common/SearchEngines'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -19,25 +19,8 @@ const ICON_MARGIN: number = 13
 // 原版 n0.j()：图标视图宽 48dp（dimens bi=48dp）
 const ICON_SLOT: number = 48
 
-// 原版 i6/g0.a（i6/g0.java:13-27）定界符配对表：
-// ''""{}()[]<>「」『』【】〔〕〖〗〘〙〚〛（）［］｛｝＜＞〈〉《》‘’“”
-// 偶数位=起始定界符，其后一位=对应闭合符；非起始定界符（含未命中）按空格处理
-const URL_DELIMITER_PAIRS: string =
-  "''\"\"{}()[]<>「」『』【】〔〕〖〗〘〙〚〛（）［］｛｝＜＞〈〉《》‘’“”"
-
-// 原版 i6/g0.a：按起始定界符取配对闭合符（非起始符/未命中 → 空格）
-function urlCloserOf(openChar: string): string {
-  const i = URL_DELIMITER_PAIRS.indexOf(openChar)
-  if (i < 0 || i % 2 !== 0) {
-    return ' '
-  }
-  return URL_DELIMITER_PAIRS.charAt(i + 1)
-}
-
-// 原版 i6/f.e（i6/f.java:92-94）：' '/换行/制表/不间断空格/Character.isWhitespace|isSpaceChar
-function isUrlBlankChar(ch: string): boolean {
-  return ch === ' ' || ch === '\n' || ch === '\t' || ch === '\u00a0' || /\s/.test(ch)
-}
+// 原版 i6/g0.e 抽 URL 逻辑已移入 SearchEngines.extractUrlsFromText，
+// 供「粘贴并前往」与「系统分享文本」两个入口共用同一实现（原版两处都调 g0.e）。
 
 // 原版标题长按菜单项（k6.h.onLongClick：复制/粘贴/粘贴并前往）
 class TitleMenuItem {
@@ -340,77 +323,13 @@ export struct AddressBar {
       if (text === '') {
         return
       }
-      const urls = this.extractUrls(text)
+      const urls = extractUrlsFromText(text)
       if (urls.length > 1) {
         this.showMultiUrlDialog(text, urls)
         return
       }
       this.tabStore.navigate(urls.length === 1 ? urls[0] : text)
     }).catch(() => {})
-  }
-
-  // 原版 i6/g0.e（i6/g0.java:75-120）1:1 移植：
-  //   1) text 去首尾空白（v7.m.I）；长度 < 8 直接返回空
-  //   2) 循环以 "://" 为锚点：向前取 5 字符窗口（"https"）或 4 字符窗口（"http"），
-  //      命中即得起点 start = w - 窗口长；未命中则 i = w + 3 继续找下一个 "://"
-  //   3) 段尾：从 w+3 起用 g0.a(str, 起点前一个字符, w+3) 扫描，遇「配对闭合符」或空白即止；
-  //      无结果时：start==0 → 整段放弃；否则取到串尾
-  //   4) 候选 substring(start, end) 经 i0.t（h0 解析器 s()：URL 合法性）校验后入表；
-  //      i = end + 1 继续
-  // 注：原版只认完整 "http"/"https" 窗口，剪贴板里脱离 scheme 的 "ttp://x" 不会被补全。
-  private extractUrls(text: string): string[] {
-    const urls: string[] = []
-    if (text.length < 8) {
-      return urls
-    }
-    const s = text.trim()
-    let i = 0
-    while (i < s.length) {
-      const w = s.indexOf('://', i)
-      if (w < 0) {
-        break
-      }
-      // 原版 g0.e:85-99：先取 :// 前 5 字符窗口忽略大小写比 "https"，
-      // 否则取前 4 字符窗口比 "http"；两者都不中则只把游标推到 iW+3 继续找下一个 "://"
-      // （实测原版**不**识别裸 "ttp://"、"ttps://"，只有完整 http(s) 才成立）
-      let start = -1
-      if (w >= 5 && s.substring(w - 5, w).toLowerCase() === 'https') {
-        start = w - 5
-      } else if (w >= 4 && s.substring(w - 4, w).toLowerCase() === 'http') {
-        start = w - 4
-      } else {
-        i = w + 3
-        continue
-      }
-      // 原版 g0.a(str, 前一个字符, iW+3)：按起点前一个字符决定配对闭合符，
-      // 遇配对闭合符或空白即止；找不到（-1）时 start==0 放弃整段，否则取到串尾
-      const closer = urlCloserOf(start > 0 ? s.charAt(start - 1) : ' ')
-      let end = w + 3
-      while (end < s.length) {
-        const ch = s.charAt(end)
-        if (ch === closer || isUrlBlankChar(ch)) {
-          break
-        }
-        end++
-      }
-      let stop = end
-      if (stop >= s.length) {
-        if (start === 0) {
-          return urls
-        }
-        stop = s.length
-      }
-      // 原版 substring(start, end)，仅当 end > iW+3（段非空）且 i0.t 校验通过才收集
-      // （i0.t → h0.s()；项目内 isUrlLike 为同一判定的等价实现）
-      if (stop > w + 3) {
-        const url = s.substring(start, stop)
-        if (isUrlLike(url) && urls.indexOf(url) < 0) {
-          urls.push(url)
-        }
-      }
-      i = stop + 1
-    }
-    return urls
   }
 
   private showMultiUrlDialog(text: string, urls: string[]): void {

@@ -18,6 +18,7 @@ import { FindBar } from '../components/FindBar'
 // 原版 a8/k.java：书签快捷选择对话框（W9()）
 import { BookmarkPickerDialog } from '../components/BookmarkPickerDialog'
 import { Reader, READER_THEME_COLORS } from '../common/Reader'
+import { ViewSource } from '../common/ViewSource'
 import { ReadAloudController, ReadAloudTask, ReadAloudListener, sentencesFromJson } from '../common/ReadAloud'
 import { ReadAloudEngine } from '../common/Tts'
 import { ReadAloudPanel } from '../components/ReadAloudPanel'
@@ -37,7 +38,7 @@ import { BusinessError, emitter, pasteboard } from '@kit.BasicServicesKit'
 import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit'
 import { util } from '@kit.ArkTS'
 import { scanBarcode } from '@kit.ScanKit'
-import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl } from '../common/SearchEngines'
+import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl, extractUrlsFromText } from '../common/SearchEngines'
 import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible, applySystemBarContentColor, applyWindowBackgroundColor } from '../common/Immersive'
@@ -362,6 +363,11 @@ struct Index {
       if (typeof linkUrl === 'string' && linkUrl !== '') {
         // 原版 b0.A ACTION_SEND → i0.v：分享文本走 URL 判定/搜索，不走外链确认
         if (data['sharedText'] === true) {
+          // EntryAbility 侧同时写了 AppStorage 兜底（getSharedData 异步，可能在订阅前完成），
+          // 这里立即消费并清空，避免 bootstrap 末尾再重复打开一次
+          AppStorage.setOrCreate('uia_launch_url', '')
+          AppStorage.setOrCreate('uia_launch_external', false)
+          AppStorage.setOrCreate('uia_shared_text', false)
           this.openReceivedText(linkUrl)
           return
         }
@@ -532,8 +538,14 @@ struct Index {
       case UiaCmdKind.SKINS:
         this.openPage('skinPage')
         break
-      // z8/b0.Q "log" → s1(6)：log.html → netLog
+      // z8/b0.Q "log" → s1(6)：log.html → netLog（na.r1 空记录守卫）
       case UiaCmdKind.LOG:
+        if (this.tabStore.current().networkLogs.length === 0) {
+          this.getUIContext().getPromptAction().showToast({
+            message: $r('app.string.net_log_empty'), duration: 2500
+          })
+          break
+        }
         this.mainNavStack.pushPathByName('netLog', '', true)
         break
       // z8/b0.Q "offline" → s1(7)：save.html 离线页面
@@ -758,18 +770,87 @@ struct Index {
     }
   }
 
-  // 原版 z8/b0.A ACTION_SEND 分支 → i6.i0.v：文本为 URL 直接打开，否则默认引擎搜索
+  // 原版 z8/b0.A ACTION_SEND 分支 → i6.i0.v 产出候选串 → na.l（c8/na.java:435-520）：
+  //   1) i0.t(str) 为真（严格 URL）→ i0.p(str)（javascript:）则按引擎搜索，否则直开；
+  //   2) 否则用 i6.g0.e 从文本中抽 URL：0 条 → 按引擎搜索；1 条 → 直开该条；
+  //      多条 → 弹选择框（k6.P，标题「提示」+ 正文原文 + 逐条 + 「打开全部」）。
+  // 直开统一走 na.y（c8/na.java:595-619）：严格 http(s) 且已有同 URL 标签时切过去，不重复开。
   private openReceivedText(text: string): void {
     const trimmed = text.trim()
     if (trimmed === '') {
       return
     }
     if (isUrlLike(trimmed)) {
-      this.tabStore.navigate(trimmed)
+      if (isJavaScriptUrl(trimmed)) {
+        this.navigateBySearch(trimmed)
+        return
+      }
+      this.openIncomingUrl(trimmed)
       return
     }
+    const found = extractUrlsFromText(trimmed)
+    if (found.length === 0) {
+      this.navigateBySearch(trimmed)
+      return
+    }
+    if (found.length === 1) {
+      this.openIncomingUrl(found[0])
+      return
+    }
+    this.showIncomingUrlChooser(trimmed, found)
+  }
+
+  private navigateBySearch(query: string): void {
     this.tabStore.navigate(
-      buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), trimmed))
+      buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), query))
+  }
+
+  // 原版 na.y：严格 http(s) 且已有同 URL 标签 → 切换；否则新开标签。
+  // 其余 scheme（file:/data:/about: 等）不比重复，直接新开。
+  private openIncomingUrl(url: string): void {
+    if (isStrictHttp(url)) {
+      const index = this.tabStore.indexOfUrl(url)
+      if (index >= 0) {
+        this.tabStore.switchTo(index)
+        return
+      }
+    }
+    this.openExternalLink(url, false)
+  }
+
+  // 原版 k6.P（c8/k6.java:7972-7994）：多条 URL 选择框。
+  // 标题 x7.u.g6「提示」，正文为原文；点单条 = na.i1(url, true)（后台新标签，留在弹窗继续挑）；
+  // 确定钮 x7.u.oy「打开全部」= k6.j3 逐条新标签、最后一条前台。
+  private showIncomingUrlChooser(text: string, urls: string[]): void {
+    const sheets: SheetInfo[] = []
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i]
+      sheets.push({
+        title: url,
+        action: (): void => {
+          this.openIncomingUrlInNewTab(url, true)
+        }
+      })
+    }
+    sheets.push({
+      title: $r('app.string.orig_oy'),
+      action: (): void => {
+        for (let i = 0; i < urls.length; i++) {
+          this.openIncomingUrlInNewTab(urls[i], i < urls.length - 1)
+        }
+      }
+    })
+    ActionSheet.show({
+      title: '提示',
+      message: text,
+      sheets: sheets
+    })
+  }
+
+  // 原版 na.i1(url, background) → g1(str, background, L0()+1)：新标签，
+  // background=true 时不切前台（用户可继续在弹窗里挑下一条）
+  private openIncomingUrlInNewTab(url: string, background: boolean): void {
+    this.tabStore.newTabAt(url, background)
   }
 
   // 原版 z8/b0.A() VIEW 分支 → k6.c0 → k6.u()：外部链接先过内部命令分发器。
@@ -2406,33 +2487,20 @@ struct Index {
       case 'savePage':
         this.showSavePageDialog()
         break
-      case 'viewSource':
-        try {
-          tab.controller.runJavaScript('document.documentElement.outerHTML',
-            (error: BusinessError, result: string) => {
-              if (error) {
-                console.error(`get source failed: ${error.code}`)
-                return
-              }
-              const context = this.getUIContext().getHostContext()
-              if (context === undefined) {
-                return
-              }
-              try {
-                const path = `${context.cacheDir}/via_view_source.html`
-                const file = fileIo.openSync(path,
-                  fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
-                fileIo.writeSync(file.fd, result)
-                fileIo.closeSync(file)
-                this.tabStore.newTabAt(`file://${path}`, false)
-              } catch (ioError) {
-                console.error('write view source failed')
-              }
-            })
-        } catch (error) {
-          console.error('runJavaScript view source failed')
+      case 'viewSource': {
+        // 原版 na.i2()：URL 为空 → toast（M1）；否则按原版骨架落盘快照并插到当前标签之后
+        const sourceContext = this.getUIContext().getHostContext() as common.UIAbilityContext
+        if (sourceContext === undefined) {
+          break
+        }
+        const opened: boolean = ViewSource.open(sourceContext, tab, this.tabStore)
+        if (!opened) {
+          this.getUIContext().getPromptAction().showToast({
+            message: $r('app.string.view_source_http_only'), duration: 2000
+          })
         }
         break
+      }
       case 'tts':
         this.startReadAloud()
         break
@@ -2660,6 +2728,13 @@ struct Index {
             this.showTabPanel = false
           }
         })
+          // 原版 f8/c.java:57-70 A1()（标签面板 f8/l0 继承的 Fragment 转场，代码驱动，非窗口 anim）：
+          //   z11 = (gravity & 80) == 80，即贴底布局 → true；贴顶（布局 1，gravity 48）→ false。
+          //   进场：translationY (z11 ? +120 : -120) → 0
+          //   退场：translationY 0 → (z11 ? +120 : -120)
+          // ★ 进场与退场**同号**：贴底从 +120 升起、收起再沉回 +120；贴顶从 -120 落下、
+          //   收起再升回 -120。ArkUI 的 TransitionEffect.translate(t) 在插入时是起始偏移、
+          //   删除时是结束偏移，因此两段必须传同一个值。此前退场取了反号，收起方向完全相反。
           .transition(TransitionEffect.asymmetric(
             TransitionEffect.OPACITY.animation({ duration: 160, curve: ACCELERATE_CURVE })
               .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP
@@ -2667,7 +2742,7 @@ struct Index {
                 .animation({ duration: 160, curve: ACCELERATE_CURVE })),
             TransitionEffect.OPACITY.animation({ duration: 160, curve: ACCELERATE_CURVE })
               .combine(TransitionEffect.translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP
-                ? px2vp(120) : -px2vp(120) })
+                ? -px2vp(120) : px2vp(120) })
                 .animation({ duration: 160, curve: ACCELERATE_CURVE }))))
       }
       if (this.showMenu) {

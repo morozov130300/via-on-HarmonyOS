@@ -6,9 +6,9 @@ import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets } from '../common/Immersive'
 import { DECELERATE_CURVE } from '../common/Transitions'
 
-// 原版 com.tuyafeng.support.widget.w 构造：
+// 原版 com.tuyafeng.support.widget.w 构造（w.java:113-121）：
 //   ProgressBar 初始 max=100（y7/g.java:119 setMax(100)）→ w 内部 max = 100*10 = 1000，
-//   并 setMax(1000)，80% 阈值 f4375c = (1000/10)*8 = 800
+//   并 setMax(1000)；80% 阈值 f4375c = (1000/10)*8 = 800
 const PROG_MAX: number = 1000
 const PROG_THRESHOLD: number = 800
 
@@ -22,18 +22,16 @@ const PROG_KIND_QUAD: number = 1   // w$b（二次方冲到阈值）
 const PROG_KIND_LINEAR: number = 2 // w$c（线性走到目标）
 const PROG_KIND_FADE: number = 3   // w$d（到 max 且 alpha 渐隐，结束隐藏归零）
 
-// 原版 f8.w0 划词翻译面板（1:1 移植）：
-// - 布局 r/f/t.xml：EditText 7/5/1 行 + 48dp 清除/退出图标 + 2dp 分割线/进度条
-//   + 结果 TextView 1/5 行 + 48dp 复制图标 + 48dp 语言行（源 | 交换 | 目标 | 40dp 触发）
-// - 尺寸：文字 14sp（dimen a_）、语言 12sp（dimen aa）、内边距 12dp、进度条 2dp、
-//   触发按钮 40dp + margin 4dp + padding 9dp
-// - 主题：面板底 ?attr/a3（日 #EBFFFFFF / 夜 #CC000000）、文字 ?attr/ac（日 #DE000000 / 夜 #BEFFFFFF）、
-//   图标 ?attr/a9（日 #232323 / 夜 #9F9F9F）、分割线 ?attr/i（日 #30EEEEEE / 夜 #30111111），
-//   圆角 18dp（dimen ae）竖屏圆下侧、横屏圆上侧（f8.c C1）
-// - k6.Eb：竖屏 TOP|RIGHT、横屏 BOTTOM|RIGHT，宽 N8()，已有面板时 setText + 重译
-// - 进度条 com.tuyafeng.support.widget.w：请求随机 10-44%，完成 f(100) 渐隐归零，
-//   渐变 x8.h.x（#FF59C2E5→#FFA687E0）
-// - Google 翻译 oa.a.j：GET translate_a/single?dj=1…，UA Chrome/83.0.4103.116
+// 原版 f8.w0 划词翻译面板（1:1 移植，行号均指 f8/w0.java）：
+// - 布局 res/layout/t.xml：EditText(az) 7/5/1 行 + 48dp 图标(cf) + 2dp 分割线 + 2dp ProgressBar(d5)
+//   + 结果 TextView(fl) 1/5 行 + 48dp 复制图标(c0) + 48dp 语言行(fe | cn 48dp/padding14 | fj | cp 40dp)
+// - 尺寸：文字 14sp（dimen a_）、语言 12sp（aa）、内边距 12dp、触发按钮 40dp + margin 4dp + padding 9dp
+// - 主题（styles.xml a7/a9/a3/ac/i）：面板底 #EBFFFFFF/#CC000000、文字 #DE000000/#BEFFFFFF、
+//   图标 #232323/#9F9F9F、分割线 #30EEEEEE/#30111111、触发按钮圆形底 #6F8DE1/#617AC1（按下 #5B73B5/#48598B）
+// - 圆角 18dp（dimen ae）：f8/c.C1 → 贴顶时圆下侧、贴底时圆上侧，主页时四角全圆
+// - k6.Eb：布局 1 → TOP|RIGHT，其余 → BOTTOM|RIGHT；宽 = N8()
+// - 进度条 com.tuyafeng.support.widget.w：请求随机 10-44%（nextInt(35)+10，强制），完成 f(100) 渐隐归零
+// - 翻译 oa.a.j：GET translate_a/single?dj=1…，UA Chrome/83.0.4103.116
 // - 缓存 v5.b TRANSLATE_CACHE：关闭时存 QUERY/SOURCE/TARGET，180s 有效（w0.t3/u3）
 
 interface TrLangEntry {
@@ -42,7 +40,7 @@ interface TrLangEntry {
   zh: string
 }
 
-// oa.a.h()：auto + 32 语言（顺序 1:1）
+// oa.a.h()：自动 + 32 语言，顺序 1:1
 const TR_LANGS: TrLangEntry[] = [
   { code: 'auto', en: 'Auto', zh: '检测语言' },
   { code: 'ar', en: 'Arabic', zh: '阿拉伯语' },
@@ -79,7 +77,7 @@ const TR_LANGS: TrLangEntry[] = [
   { code: 'zh-TW', en: 'Chinese (Traditional)', zh: '繁体中文' }
 ]
 
-// oa.b.b()：本地化显示名（原版 getDisplayLanguage(deviceLocale)）
+// 应用语言是否为中文（oa.a.i() 里 zh-TW 走「繁體中文」的那一支）
 function trIsZh(): boolean {
   try {
     return i18n.System.getAppPreferredLanguage().startsWith('zh')
@@ -88,11 +86,32 @@ function trIsZh(): boolean {
   }
 }
 
+// oa.a.i()：名称 = new Locale(code).getDisplayLanguage(设备 Locale)，与 code 相同则不覆盖。
+// 这里直接用系统 i18n 取显示名，保证与系统语言一致（而非硬编码中英两套）。
 function trLangName(entry: TrLangEntry): string {
-  return trIsZh() ? entry.zh : entry.en
+  if (entry.code === 'auto') {
+    // w0.X1：C0.c(Z0(x7.u.f14167t3))，g3 = Detect language
+    try {
+      return i18n.System.getDisplayLanguage('auto', i18n.System.getAppPreferredLanguage(), true)
+    } catch (error) {
+      return trIsZh() ? entry.zh : entry.en
+    }
+  }
+  if (entry.code === 'zh-TW') {
+    // oa.a.i()：zh-TW 特例——设备是中文显示「繁體中文」，否则英文全称
+    return trIsZh() ? '繁體中文' : 'Chinese (Traditional)'
+  }
+  try {
+    const name = i18n.System.getDisplayLanguage(entry.code, i18n.System.getAppPreferredLanguage(), true)
+    // getDisplayLanguage 未收录时原样返回 code，与原版「不覆盖默认名」等价
+    return name === '' || name === entry.code ? (trIsZh() ? entry.zh : entry.en) : name
+  } catch (error) {
+    return trIsZh() ? entry.zh : entry.en
+  }
 }
 
-function trFindLang(code: string): TrLangEntry {
+// oa.a.e()：按 code 查源语言表（含 auto），未命中回表首
+function trSourceLang(code: string): TrLangEntry {
   for (let i = 0; i < TR_LANGS.length; i++) {
     if (TR_LANGS[i].code === code) {
       return TR_LANGS[i]
@@ -101,34 +120,40 @@ function trFindLang(code: string): TrLangEntry {
   return TR_LANGS[0]
 }
 
-// w0.X1 默认目标：t1.m(t1.n(locale))（语言码），zh 且 country==TW → "zh_HANT"（w0:213-214），
-// oa.a.a() 查表未命中回退表首（ar）；语言码列表 oa/a.java h(false) 首项为 ar
-function trDefaultTargetCode(): string {
-  let lang = ''
-  try {
-    lang = i18n.System.getAppPreferredLanguage()
-  } catch (error) {
-    lang = ''
-  }
-  const parts = lang.split('-')
-  const m = parts.length > 0 ? parts[0] : ''
-  const region = parts.length > 1 ? parts[parts.length - 1].toUpperCase() : ''
-  // w0.X1:213-216：zh + TW → "zh_HANT" → oa.a.a() 未命中 → 表首 'ar'
-  if (m === 'zh' && region === 'TW') {
-    return 'ar'
-  }
-  if (m === '') {
-    return 'ar'
-  }
+// oa.a.a()：按 code 查目标语言表（不含 auto），未命中回表首
+function trTargetLang(code: string): TrLangEntry {
   for (let i = 1; i < TR_LANGS.length; i++) {
-    if (TR_LANGS[i].code === m) {
-      return m
+    if (TR_LANGS[i].code === code) {
+      return TR_LANGS[i]
     }
   }
-  return 'ar'
+  return TR_LANGS[1]
 }
 
-// com.tuyafeng.support.widget.w 动画回调：value < 100 走 g()（随机段），100 走 f()（渐隐归零）
+// w0.X1:213-216：默认目标 = B0.a(t1.m(t1.n(locale)))；
+// 其中 t1.m 取 '-' 前主语言码，zh 且地区 TW 时改写成 zh_HANT（表里没有 → 回表首 ar = TR_LANGS[1]）
+function trDefaultTargetCode(): string {
+  let tag = ''
+  try {
+    tag = i18n.System.getSystemLanguage()
+  } catch (error) {
+    tag = ''
+  }
+  const parts = tag.split('-')
+  const primary = parts.length > 0 ? parts[0].toLowerCase() : ''
+  let region = ''
+  for (let i = 1; i < parts.length; i++) {
+    if (parts[i].length === 2) {
+      region = parts[i].toUpperCase()
+    }
+  }
+  if (primary === 'zh' && region === 'TW') {
+    return TR_LANGS[1].code
+  }
+  return trTargetLang(primary).code
+}
+
+// com.tuyafeng.support.widget.w 动画回调：value 为 0-100 域进度，finished 表示「已完成」
 export type TrProgressAnim = (value: number, finished: boolean) => void
 
 @ObservedV2
@@ -145,7 +170,7 @@ export class TranslateState {
   // ---- 渲染状态（w0 字段映射）----
   // k6.Eb：面板是否已展示
   @Trace visible: boolean = false
-  // f6037s0 输入
+  // f6037s0 输入框文本
   @Trace inputText: string = ''
   // f6038t0 结果文本（E0.d()）
   @Trace resultText: string = ''
@@ -153,7 +178,7 @@ export class TranslateState {
   @Trace hasResult: boolean = false
   // A0：1 输入态 / 2 结果态（s3）
   @Trace mode: number = 1
-  // f6044z0 进度（0-100）
+  // f6044z0 进度（0-100 显示域，内部 0-1000）
   @Trace progressValue: number = 0
   @Trace progressVisible: boolean = false
   @Trace progressAlpha: number = 1.0
@@ -171,13 +196,17 @@ export class TranslateState {
   private lastSl: string = 'auto'
   // w 动画回调（组件注册）
   progressAnimator: TrProgressAnim | null = null
+  // 进入结果态回调（组件注册：s3(2) 隐藏输入法 + 结果获焦）
+  enterResultListener: (() => void) | null = null
+  // 关闭时取消进度动画（组件注册）
+  cancelProgressListener: (() => void) | null = null
   // v5.b TRANSLATE_CACHE（180s TTL，u3 存 / t3 取）
   private cachedAt: number = -1
   private cachedQuery: string = ''
   private cachedSource: string = 'auto'
   private cachedTarget: string = ''
 
-  // k6.Eb：已有面板 = setText + performClick；未开 = 恢复缓存 + 可选 text 自动翻译
+  // k6.Eb：面板已开 → setText + 点触发按钮；未开 → t3() 恢复缓存 + s3(1) + 文本自动翻译
   open(text: string): void {
     if (this.visible) {
       this.inputText = text
@@ -204,7 +233,7 @@ export class TranslateState {
     }
   }
 
-  // w0.F1/u3：关闭存缓存
+  // w0.u3（F1 销毁时落缓存）+ 进度归零：原版 Fragment 连同进度动画一并销毁
   close(): void {
     this.cachedQuery = this.inputText
     this.cachedSource = this.sourceCode
@@ -212,17 +241,26 @@ export class TranslateState {
     this.cachedAt = Date.now()
     this.requestSeq++
     this.visible = false
+    if (this.cancelProgressListener !== null) {
+      this.cancelProgressListener()
+    }
+    this.progressVisible = false
+    this.progressValue = 0
+    this.progressAlpha = 1.0
   }
 
-  // w0.s3：1=输入态（无结果 7 行/有结果 5 行，结果行隐藏/1 行），2=结果态（输入 1 行、结果 5 行）
+  // w0.s3：1=输入态（无结果 7 行 / 有结果 5 行 + 结果 1 行），2=结果态（输入 1 行、结果 5 行）
   setMode(mode: number): void {
     if (this.mode === mode) {
       return
     }
     this.mode = mode
+    if (mode === 2 && this.enterResultListener !== null) {
+      this.enterResultListener()
+    }
   }
 
-  // w0.y3：空 → f(100)+E0=null+s3(1)；非空 → 随机进度 + 请求
+  // w0.y3：空 → f(100) + E0=null + s3(1)；非空 → 随机进度 + 请求
   translate(): void {
     this.requestSeq++
     const query = this.inputText.trim()
@@ -232,6 +270,7 @@ export class TranslateState {
       this.setMode(1)
       return
     }
+    // w0.y3：this.f6044z0.g(this.G0.nextInt(35) + 10, true)
     this.onProgress(Math.floor(Math.random() * 35) + 10, false)
     const sl = this.sourceCode === '' ? 'auto' : this.sourceCode
     this.lastSl = sl
@@ -250,7 +289,7 @@ export class TranslateState {
       if (seq !== this.requestSeq) {
         return
       }
-      // w0.i3：f(100)，失败 E0=null+s3(1)，成功 setE0+隐藏键盘+s3(2)
+      // w0.i3：f(100)，失败 E0=null + s3(1)，成功 setE0 + 隐藏键盘 + s3(2)
       this.onProgress(100, true)
       if (trans === null) {
         this.hasResult = false
@@ -283,7 +322,7 @@ export class TranslateState {
     this.resultText = input
   }
 
-  // w0.b（清除/退出图标）：有文本清除 + s3(1)，无文本关闭面板
+  // w0.b（清除/退出图标）：有文本清除 + s3(1)，无文本退出面板（l0().onBackPressed()）
   clearOrExit(): void {
     if (this.inputText.length > 0) {
       this.inputText = ''
@@ -293,11 +332,8 @@ export class TranslateState {
     }
   }
 
-  // com.tuyafeng.support.widget.w：g(v)=显示并走动画，f(100)=到 100 渐隐归零（隐藏时 no-op）
+  // com.tuyafeng.support.widget.w：g(v) 显示并走动画，f(100) 到 100 渐隐归零
   private onProgress(value: number, finished: boolean): void {
-    if (finished && !this.progressVisible) {
-      return
-    }
     if (this.progressAnimator !== null) {
       this.progressAnimator(value, finished)
     }
@@ -343,23 +379,40 @@ export class TranslateState {
   }
 }
 
-// k6.N8()：min(屏宽,屏高)；大屏（g6.y.E）竖屏时 min(该值-96, 384)
-function trPanelWidthVp(): number {
+// k6.N8() 兜底：容器（窗口）短边；大屏且布局≠0 时 min(短边-96, 384)。
+// 主路径由 Index.publishMenuMetrics() 发布 'uia_menu_size_vp'，此处仅首帧未发布时兜底。
+function trPanelWidthFallback(): number {
   try {
+    let wPx = 0
+    let hPx = 0
+    const win = AppStorage.get<Object>('mainWindow')
+    if (win) {
+      const props = (win as object as Record<string, Object>)['getWindowProperties']
+      if (typeof props === 'function') {
+        const rect = (props as () => Object).call(win) as Record<string, Object>
+        const r = rect['windowRect'] as Record<string, Object> | undefined
+        if (r !== undefined) {
+          wPx = Number(r['width'])
+          hPx = Number(r['height'])
+        }
+      }
+    }
     const d = display.getDefaultDisplaySync()
     const density = d.densityPixels
     if (density <= 0) {
       return 360
     }
-    const wVp = d.width / density
-    const hVp = d.height / density
-    const base = Math.min(wVp, hVp)
-    const isLargeScreen = wVp >= 600
-    const isPortrait = hVp >= wVp
-    if (!isLargeScreen || !isPortrait) {
-      return base
+    if (wPx <= 0 || hPx <= 0) {
+      wPx = d.width
+      hPx = d.height
     }
-    return Math.min(base - 96, 384)
+    const shortVp = Math.min(wPx, hPx) / density
+    const layout = AppStorage.get<number>('uia_menu_layout')
+    const large = shortVp >= 600
+    if (!large || layout === 0 || layout === undefined) {
+      return shortVp
+    }
+    return Math.min(shortVp - 96, 384)
   } catch (error) {
     return 360
   }
@@ -369,7 +422,8 @@ function trPanelWidthVp(): number {
 export struct TranslatePanel {
   private state: TranslateState = TranslateState.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
-  // 语言选择弹窗（w5.k.l().e0(标题).b0(列表,已选,监听).f0()，layout v.xml 单选行）
+  private inputController: TextAreaController = new TextAreaController()
+  // 语言选择弹窗（w5.k.l().e0(标题).b0(列表,已选,监听).f0()，行布局 res/layout/v.xml）
   @Local pickerTitle: ResourceStr = ''
   @Local pickerOptions: string[] = []
   @Local pickerCodes: string[] = []
@@ -379,46 +433,61 @@ export struct TranslatePanel {
   private pickerDialogId: number = -1
 
   aboutToAppear(): void {
-    // w0.X1 绑定 com.tuyafeng.support.widget.w（进度动画）
+    // w0.X1：f6044z0 = new com.tuyafeng.support.widget.w(progressBar)
     this.state.progressAnimator = (value: number, finished: boolean): void => {
       this.animateProgress(value, finished)
+    }
+    // s3(2)：请求结果获焦 + 收起输入法（z8.f.e(f6037s0)）
+    this.state.enterResultListener = (): void => {
+      try {
+        this.inputController.stopEditing()
+      } catch (error) {
+        console.error('stop editing failed')
+      }
+    }
+    this.state.cancelProgressListener = (): void => {
+      if (this.progAnimator !== null) {
+        this.progAnimator.cancel()
+        this.progAnimator = null
+      }
+      this.progValue = 0
+      this.progShown = 0
     }
   }
 
   aboutToDisappear(): void {
     this.state.progressAnimator = null
-    // 原版 w 生命周期随 f8/w0 Fragment 销毁：取消动画、进度与显示态归零
+    this.state.enterResultListener = null
+    this.state.cancelProgressListener = null
     if (this.progAnimator !== null) {
       this.progAnimator.cancel()
       this.progAnimator = null
     }
-    this.progValue = 0
-    this.progShown = 0
-    this.state.progressValue = 0
-    this.state.progressVisible = false
-    this.state.progressAlpha = 1.0
   }
 
-  private isLandscape(): boolean {
-    try {
-      const d = display.getDefaultDisplaySync()
-      return d.width > d.height
-    } catch (error) {
-      return false
+  // k6.Eb 的 gravity：布局 1 → TOP|RIGHT，其余（0/2/3）→ BOTTOM|RIGHT
+  private isTopAnchored(): boolean {
+    const layout = AppStorage.get<number>('uia_menu_layout')
+    return layout === 1
+  }
+
+  private panelWidthVp(): number {
+    const published = AppStorage.get<number>('uia_menu_size_vp')
+    if (published !== undefined && published > 0) {
+      return published
     }
+    return trPanelWidthFallback()
   }
 
-  // ── 原版 com.tuyafeng.support.widget.w 的 g()/f()/e() 逐行复刻 ──────────────────────
+  // ── 原版 com.tuyafeng.support.widget.w 的 g()/f()/e() 逐行复刻（w.java）────────────
   // 调用点（f8/w0.java）：
-  //   w0.java:391  请求开始 → g(G0.nextInt(35) + 10, true)   强制推进
-  //   w0.java:410  空输入   → f(100)  = g(100, false)
-  //   w0.java:175  请求完成 → f(100)  = g(100, false)
-  // 原版 g(int i10, boolean z10)：i11 = i10 * 10（ProgressBar max 已被 w 构造改成 1000）
+  //   w0:389 请求开始 → g(G0.nextInt(35) + 10, true)
+  //   w0:410 空输入   → f(100) = g(100, false)
+  //   w0:175 请求完成 → f(100) = g(100, false)
+  // g(i10, z10)：i11 = i10*10（ProgressBar max 已被 w 构造改成 1000）
   //   if (f4377e == 0 && i11 < f4374b) { setAlpha(1); setVisibility(0); f4377e = 1; }
-  //   if (f4377e != 0) e(i11, progressBar.getProgress(), z10);
-  // 即：e 的第一个参数是「目标」，第二个是「当前」。
+  //   if (f4377e != 0) e(i11, progressBar.getProgress(), z10)
   private animateProgress(value: number, finished: boolean): void {
-    // 原版 f(100) 走 g(100, false)：force=false
     this.wG(value * 10, !finished)
   }
 
@@ -441,40 +510,38 @@ export struct TranslatePanel {
   }
 
   // 原版 w.e(int i10=目标, int i11=当前, boolean z10=强制)
-  // w.java:141 守卫：只有满足其一才启动新动画（否则保持现状、什么都不做）
+  // 守卫：目标未到 max 且当前非 0 且间距 < max/8 → 不启动新动画
   private wE(target: number, current: number, force: boolean): void {
     if (target < PROG_MAX && current !== 0 && Math.abs(target - current) < PROG_MAX / 8) {
       return
     }
-    // w.java:142-147：先取消上一个动画并把 alpha 复位成 1
+    // 先取消上一个动画并把 alpha 复位成 1
     if (this.progAnimator !== null) {
       this.progAnimator.cancel()
       this.progAnimator = null
     }
     this.state.progressAlpha = 1.0
-    // w.java:149 long jAbs = Math.abs(i11 - i10) → |当前 - 目标|
     let duration = Math.abs(current - target)
     const threshold = PROG_THRESHOLD
-    // w.java:150 int i12 = f4375c(800)；按「目标」判定分支
     if (target < threshold) {
       if (force || current < target) {
-        // 分支 a（w.java:153-155）：时长 = |800-目标|*30 + |当前-目标|
+        // 分支 a：时长 = |800-目标|*30 + |当前-目标|
         const rush = Math.abs(threshold - target) * 30 + duration
         const ratio = duration === 0 ? 0 : rush / duration
         this.startProgAnimator(target, current, rush, PROG_KIND_RUSH, threshold, ratio)
         return
       }
-      // 分支 b（w.java:157-158）：时长 = |800-当前|*30，二次方插值
+      // 分支 b：时长 = |800-当前|*30，二次方插值
       duration = Math.abs(threshold - current) * 30
       this.startProgAnimator(target, current, duration, PROG_KIND_QUAD, threshold, 0)
       return
     }
     if (target < PROG_MAX) {
-      // 分支 c（w.java:160-161）：时长 = |当前-目标|，线性插值
+      // 分支 c：时长 = |当前-目标|，线性插值
       this.startProgAnimator(target, current, duration, PROG_KIND_LINEAR, threshold, 0)
       return
     }
-    // 分支 d（w.java:162-165）：目标已到 max，时长减半，进度冲到 max 且 alpha 1→0
+    // 分支 d：目标已到 max，时长减半，进度冲到 max 且 alpha 1→0，结束后隐藏归零
     this.startProgAnimator(target, current, duration / 2, PROG_KIND_FADE, threshold, 0)
   }
 
@@ -489,10 +556,9 @@ export struct TranslatePanel {
     const options: AnimatorOptions = {
       duration: duration,
       // ArkUI 原生 animator 的 easing 是字符串曲线，无法直接传 ICurve。
-      // 这里显式设 'linear' 让 onFrame 的 progress 为 [begin,end] 的线性原始值，
-      // 再在回调里手动叠加一次 DECELERATE_CURVE（1-(1-t)²），
-      // 等价复刻原版 w.java:167 的 `setInterpolator(new DecelerateInterpolator())`。
-      // 若此处省略手动插值或把 easing 设成 'ease'，都会与原版曲线不符。
+      // 显式 'linear' 让 onFrame 的 progress 为 [begin,end] 线性原值，
+      // 再在回调里手动叠加 DECELERATE_CURVE（1-(1-t)²），
+      // 等价复刻 w.java:167 的 setInterpolator(new DecelerateInterpolator())。
       easing: 'linear',
       delay: 0,
       fill: 'forwards',
@@ -504,7 +570,6 @@ export struct TranslatePanel {
     const animator = this.getUIContext().createAnimator(options)
     this.progAnimator = animator
     animator.onFrame = (progress: number): void => {
-      // 原版 ValueAnimator 的 DecelerateInterpolator 作用在 0→1 上：1-(1-t)²
       const t = DECELERATE_CURVE.interpolate(progress)
       this.applyProgFrame(target, current, t, kind, threshold, ratio)
     }
@@ -521,16 +586,16 @@ export struct TranslatePanel {
     threshold: number, ratio: number): void {
     let next = 0
     if (kind === PROG_KIND_RUSH) {
-      // a.java:49  current + min(ratio*f, 1)*(target-current) + f*|threshold-target|
+      // a：current + min(ratio*f, 1)*(target-current) + f*|threshold-target|
       next = current + Math.min(ratio * f, 1.0) * (target - current) + f * Math.abs(threshold - target)
     } else if (kind === PROG_KIND_QUAD) {
-      // b.java:71  current + f²*|threshold-current|
+      // b：current + f²*|threshold-current|
       next = current + f * f * Math.abs(threshold - current)
     } else if (kind === PROG_KIND_LINEAR) {
-      // c.java:92  current + f*(target-current)
+      // c：current + f*(target-current)
       next = current + f * (target - current)
     } else {
-      // d.java:109-110  current + (max-current)*f，同时 setAlpha(1-f)
+      // d：current + (max-current)*f，同时 setAlpha(1-f)
       next = current + (PROG_MAX - current) * f
       this.state.progressAlpha = 1.0 - f
     }
@@ -540,7 +605,7 @@ export struct TranslatePanel {
     this.state.progressValue = clamped / 10
   }
 
-  // e.java:121-123  onAnimationEnd → setVisibility(8) + setProgress(0) + progress = 0
+  // e（AnimatorListenerAdapter）：onAnimationEnd → setVisibility(8) + setProgress(0) + f4377e = 0
   private finishProgFrame(kind: number): void {
     if (kind !== PROG_KIND_FADE) {
       return
@@ -551,7 +616,7 @@ export struct TranslatePanel {
     this.progShown = 0
   }
 
-  // w0.v3/w3/x3：语言选择（w5.d 单选列表，radio 左 + 文字 14sp，标题 16sp 加粗）
+  // w0.v3/w3/x3：语言单选列表（标题 16sp 加粗；行 = 复选框 + 文字，padding 左右 16 / 上下 8）
   private openLangPicker(title: ResourceStr, includeAuto: boolean, current: string,
     onSelect: (code: string) => void): void {
     const options: string[] = []
@@ -597,7 +662,7 @@ export struct TranslatePanel {
     this.pickerDialogId = -1
   }
 
-  // w0.b3：结果非空才复制，toast zc「已复制文本」
+  // w0.b3：结果非空才复制，toast zc「Text copied successfully」（本端 copied＝已复制文本）
   private copyResult(): void {
     if (this.state.resultText.length === 0) {
       return
@@ -610,25 +675,52 @@ export struct TranslatePanel {
     })
   }
 
+  @Styles
+  normalBtn() {
+    .backgroundColor($r('app.color.translate_btn_bg'))
+  }
+
+  @Styles
+  pressedBtn() {
+    .backgroundColor($r('app.color.translate_btn_pressed'))
+  }
+
+  // res/layout/v.xml：FrameLayout 左右 padding 16dp + CheckBox（左 padding 12dp、上下 8dp、
+  // drawablePadding 24dp、单行、中间省略），文字 14sp（?attr/ac）
   @Builder
   LangPickerItem(label: string, index: number) {
     Row({ space: 24 }) {
-      Circle({ width: 16, height: 16 })
-        .fill(this.pickerChecked === index ? $r('app.color.accent') : Color.Transparent)
-        .stroke(this.pickerChecked === index ? Color.Transparent : $r('app.color.dialog_border'))
-        .strokeWidth(2)
+      Stack() {
+        if (this.pickerChecked === index) {
+          Circle({ width: 16, height: 16 })
+            .fill($r('app.color.accent'))
+          Image($r('app.media.uia_ic_find'))
+            .width(16)
+            .height(16)
+            .visibility(Visibility.None)
+        } else {
+          Circle({ width: 16, height: 16 })
+            .fill(Color.Transparent)
+            .stroke($r('app.color.dialog_border'))
+            .strokeWidth(2)
+        }
+      }
+      .width(16)
+      .height(16)
       Text(label)
         .fontSize(14)
-        .fontColor($r('app.color.fg'))
+        .fontColor($r('app.color.translate_text'))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .padding({ left: 12, right: 0, top: 8, bottom: 8 })
+    .margin({ left: 16, right: 16 })
     .onClick(() => {
       const select = this.pickerOnSelect
       const code = this.pickerCodes[index]
+      this.pickerChecked = index
       this.closeLangPicker()
       select(code)
     })
@@ -664,13 +756,15 @@ export struct TranslatePanel {
 
   build() {
     if (this.state.visible) {
-      // f8.c A1：进出 alpha + translateY ±120，160ms Accelerate（近似 EaseIn）
-      Stack({ alignContent: this.isLandscape() ? Alignment.BottomEnd : Alignment.TopEnd }) {
+      // f8.c.A1：进出 alpha + translateY ±120，160ms Accelerate；贴底(+80) 从 +120 起、贴顶从 -120 起
+      Stack({
+        alignContent: this.isTopAnchored() ? Alignment.TopEnd : Alignment.BottomEnd
+      }) {
         Column() {
-          // 输入行：EditText(az) + 48dp 清除/退出图标(u0)
+          // 输入行：EditText(az) + 48dp 图标(cf)
           Row() {
             // 原版 EditText：14sp、?attr/ac、padding 12dp、hint y9「文字」、
-            // inputType 0xa0001（text + noSuggestions，单行语义：换行截断）
+            // inputType textNoSuggestions（单行语义：换行不进文本）
             TextArea({ text: this.state.inputText, placeholder: $r('app.string.translate_hint') })
               .fontSize(14)
               .fontColor($r('app.color.translate_text'))
@@ -685,7 +779,6 @@ export struct TranslatePanel {
               .layoutWeight(1)
               .constraintSize({ minHeight: 24 + this.inputLineCount() * 20 })
               .onChange((value: string) => {
-                // 原版单行输入：换行不进文本
                 this.state.inputText = value.replace(/\n/g, '')
               })
               .onFocus(() => {
@@ -693,12 +786,12 @@ export struct TranslatePanel {
                 this.state.setMode(1)
               })
               .onBlur(() => {
-                // w0.a3：失焦且有结果 s3(2)
+                // w0.a3：失焦且 E0 != null → s3(2)
                 if (this.state.hasResult) {
                   this.state.setMode(2)
                 }
               })
-            // u0：有文本 = b8 清除（desc fq「清除文本」），无文本 = bk 退出（desc i9「退出」）
+            // cf：TextWatcher（w0$a）切换图标——有文本 b8(ic_close) / 无文本 bk(ic_exit)
             Image(this.state.inputText.length > 0 ? $r('app.media.uia_ic_stop') : $r('app.media.uia_tr_exit'))
               .width(48)
               .height(48)
@@ -708,11 +801,12 @@ export struct TranslatePanel {
               .accessibilityText(this.state.inputText.length > 0
                 ? $r('app.string.translate_clear_text') : $r('app.string.translate_exit'))
               .onClick(() => {
+                // w0$b：有文本 → setText("") + s3(1)；无文本 → onBackPressed
                 this.state.clearOrExit()
               })
           }
           .width('100%')
-          // 分割线 View（?attr/i 2dp）+ 进度条 d5（2dp，渐变 #FF59C2E5→#FFA687E0）
+          // 2dp 分割线(?attr/i) + 2dp 进度条(d5)，二者同层叠放
           Stack() {
             Row()
               .width('100%')
@@ -740,7 +834,7 @@ export struct TranslatePanel {
                 .height(24 + this.resultLineCount() * 20)
                 .maxLines(this.resultLineCount())
                 .lineHeight(20)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .copyOption(CopyOptions.LocalDevice)
                 .layoutWeight(1)
                 .onClick(() => {
                   this.state.setMode(2)
@@ -751,109 +845,128 @@ export struct TranslatePanel {
                 .padding(12)
                 .objectFit(ImageFit.Contain)
                 .fillColor($r('app.color.translate_icon'))
+                .accessibilityText($r('app.string.copy_text'))
                 .onClick(() => {
                   this.copyResult()
                 })
             }
             .width('100%')
           }
-          // 语言行：fe 源 | cn 交换 | fj 目标 | cp 触发（48dp 高）
+          // 语言行：fe 源 | cn 交换(48dp/padding 14) | fj 目标 | cp 触发(40dp + margin 4dp + padding 9dp)
           Row() {
-            Text(trLangName(trFindLang(this.state.sourceCode)))
+            Text(trLangName(trSourceLang(this.state.sourceCode)))
               .fontSize(12)
               .fontColor($r('app.color.translate_text'))
               .textAlign(TextAlign.Center)
               .maxLines(1)
               .layoutWeight(1)
               .onClick(() => {
+                // w0.w3：源语言列表（含「检测语言」）
                 this.openLangPicker($r('app.string.translate_source_language'), true,
                   this.state.sourceCode, (code: string): void => {
+                    if (code === this.state.sourceCode) {
+                      return
+                    }
                     this.state.sourceCode = code
                   })
               })
             Image($r('app.media.uia_tr_swap'))
               .width(48)
               .height(48)
-              .padding(9)
+              .padding(14)
               .objectFit(ImageFit.Contain)
               .fillColor($r('app.color.translate_icon'))
+              .accessibilityText($r('app.string.translate_swap_language'))
               .onClick(() => {
                 this.state.swap()
               })
-            Text(trLangName(trFindLang(this.state.targetCode)))
+            Text(trLangName(trTargetLang(this.state.targetCode)))
               .fontSize(12)
               .fontColor($r('app.color.translate_text'))
               .textAlign(TextAlign.Center)
               .maxLines(1)
               .layoutWeight(1)
               .onClick(() => {
+                // w0.x3：目标语言列表（不含 auto）
                 this.openLangPicker($r('app.string.translate_target_language'), false,
                   this.state.targetCode, (code: string): void => {
+                    if (code === this.state.targetCode) {
+                      return
+                    }
                     this.state.targetCode = code
                   })
               })
-            // cp 触发：40dp、margin 4dp、padding 9dp、accent tint
-            Image($r('app.media.uia_tr_translate'))
-              .width(40)
-              .height(40)
-              .margin(4)
-              .padding(9)
-              .objectFit(ImageFit.Contain)
-              .fillColor($r('app.color.accent'))
-              .onClick(() => {
-                this.state.translate()
-              })
+            // cp 触发：圆形底 ?attr/a7（日 #6F8DE1 / 夜 #617AC1）+ 按下 ?attr/a8，白色 e3 图标
+            Stack() {
+              Image($r('app.media.uia_tr_translate'))
+                .width(22)
+                .height(22)
+                .objectFit(ImageFit.Contain)
+                .fillColor(Color.White)
+            }
+            .width(40)
+            .height(40)
+            .margin(4)
+            .borderRadius(20)
+            .stateStyles({
+              normal: this.normalBtn,
+              pressed: this.pressedBtn
+            })
+            .accessibilityText($r('app.string.translate'))
+            .onClick(() => {
+              this.state.translate()
+            })
           }
           .width('100%')
           .height(48)
         }
-        .width(trPanelWidthVp())
-        .padding({
-          left: 0,
-          right: 0,
-          top: this.isLandscape() ? 12 : 0,
-          bottom: this.isLandscape() ? 0 : 12
-        })
+        .width(this.panelWidthVp())
+        .padding({ left: 0, right: 0, top: 0, bottom: 0 })
         .backgroundColor($r('app.color.translate_panel_bg'))
-        .borderRadius({
-          topLeft: this.isLandscape() ? 18 : 0,
-          topRight: this.isLandscape() ? 18 : 0,
-          bottomLeft: this.isLandscape() ? 0 : 18,
-          bottomRight: this.isLandscape() ? 0 : 18
-        })
+        // f8/c.C1：z11=主页 → 四角全圆；否则贴底圆上侧、贴顶圆下侧
+        .borderRadius(this.panelRadius())
         .clip(true)
         // 原版 f8/c.A1（f8.w0 继承）：AnimatorSet.play(alpha).with(translationY)
         //   .setDuration(160).setInterpolator(new AccelerateInterpolator())
-        // —— 插值器设在 AnimatorSet 上，对 alpha 和 translationY **两个子动画同时生效**，
-        //    所以 alpha 段也是 Accelerate（不是 Linear、不是 EaseIn）。
-        // 方向（f8/c.java:60,63 z11=(gravity&80)==80）：
-        //   进场 translationY (z11 ? +120 : -120) → 0；退场 0 → (z11 ? +120 : -120)。
-        //   即贴底(gravity 含 80)从 +120 升起，贴顶(gravity 含 48)从 -120 落下。
-        // 原版 k6.Eb 的 gravity = (W0==1 ? 48 : 80) | 8388613，W0 是安卓布局号；
-        // 本端无 W0 直接对应，沿用既有布局判定 isLandscape()（竖屏贴顶 TopEnd / 横屏贴底 BottomEnd，
-        // 见本文件 L668），方向随之取竖屏 -120 / 横屏 +120，与"贴哪边就从哪边来"一致。
-        // ⚠️ 判据与原版 W0/gravity 不完全同源，属已知的布局层差异，待按 effectiveLayout() 统一时一并校正；
-        //    动画时长/曲线/幅度（160ms Accelerate、±120px）则与原版 1:1。
+        // 插值器设在 AnimatorSet 上，对 alpha 与 translationY 两个子动画同时生效。
         .transition(TransitionEffect.asymmetric(
           TransitionEffect.OPACITY.animation({ duration: 160, curve: PROG_ACCELERATE_CURVE })
-            .combine(TransitionEffect.translate({ y: this.isLandscape() ? 120 : -120 })
+            .combine(TransitionEffect.translate({ y: this.isTopAnchored() ? -120 : 120 })
               .animation({ duration: 160, curve: PROG_ACCELERATE_CURVE })),
           TransitionEffect.OPACITY.animation({ duration: 160, curve: PROG_ACCELERATE_CURVE })
-            .combine(TransitionEffect.translate({ y: this.isLandscape() ? 120 : -120 })
+            .combine(TransitionEffect.translate({ y: this.isTopAnchored() ? -120 : 120 })
               .animation({ duration: 160, curve: PROG_ACCELERATE_CURVE }))))
       }
       .width('100%')
       .height('100%')
-      // k6.Eb 竖屏 TOP|RIGHT / 横屏 BOTTOM|RIGHT：避开顶栏/底栏 + 安全区
+      // k6.Eb：gravity 只做贴边，原版不加任何栏高偏移；这里仅让开状态栏/导航条避免压住系统内容
       .padding({
-        top: this.isLandscape() ? 0 : this.insets.top + 48,
-        bottom: this.isLandscape() ? this.insets.bottom : 0
+        top: this.isTopAnchored() ? this.insets.top : 0,
+        bottom: this.isTopAnchored() ? 0 : this.insets.bottom
       })
       .hitTestBehavior(HitTestMode.Transparent)
     }
   }
 
-  // w0.s3(1)：无结果输入 7 行、有结果输入 5 行；s3(2)：输入 1 行
+  // f8/c.C1：d((homepage || 贴底) ? ae : 0, (homepage || 贴顶) ? ae : 0)
+  private panelRadius(): BorderRadiuses {
+    const r = 18
+    if (this.isHomePage()) {
+      return { topLeft: r, topRight: r, bottomLeft: r, bottomRight: r }
+    }
+    if (this.isTopAnchored()) {
+      return { topLeft: 0, topRight: 0, bottomLeft: r, bottomRight: r }
+    }
+    return { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 }
+  }
+
+  // 原版 k6.Eb 的 homepage 参数 = this.V0 && b9()（V0 为夜间态、b9() 为是否主页）
+  private isHomePage(): boolean {
+    const flag = AppStorage.get<boolean>('uia_translate_home_page')
+    return flag === true
+  }
+
+  // w0.s3(1)：无结果 7 行、有结果 5 行；s3(2)：输入 1 行
   private inputLineCount(): number {
     if (this.state.mode === 2) {
       return 1

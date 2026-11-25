@@ -22,6 +22,7 @@ import { TranslateState } from './TranslatePanel'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { dialogTransition, menuTransition, menuTransitionTop, dimTransition } from '../common/Transitions'
+import { ViewSource } from '../common/ViewSource'
 
 export const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translator__){window.__via_translator__.showBanner(true);return;}`
   + `window.googleTranslateElementInit=function(){if(!window.__via_translator__){window.__via_translator__=new google.translate.TranslateElement({autoDisplay:false,floatPosition:0,multilanguagePage:true,includedLanguages:"af,sq,am,ar,hy,az,eu,be,bn,bs,bg,ca,ceb,ny,zh-CN,zh-TW,co,hr,cs,da,nl,en,eo,et,tl,fi,fr,fy,gl,ka,de,el,gu,ht,ha,haw,he,hi,hmn,hu,is,id,ga,it,ja,jv,kn,kk,km,ky,ko,ku,lo,la,lv,lt,lb,mk,mg,ms,ml,mt,mi,mr,mn,my,ne,no,ps,fa,pl,pt,pa,ro,ru,sr,st,sd,si,sk,sl,so,sm,es,su,sw,sv,tg,ta,te,th,tr,uk,ur,uz,vi,cy,xh,yi,yo,zu",pageLanguage:"auto"});}`
@@ -250,9 +251,6 @@ export struct MenuSheet {
       if (this.showAddHomeFavDialog) {
         this.AddHomeFavDialog()
       }
-      if (this.showTranslateMenuDialog) {
-        this.TranslateMenuDialog()
-      }
       if (this.showAddBookmarkDialog) {
         this.AddBookmarkDialog()
       }
@@ -406,8 +404,8 @@ export struct MenuSheet {
       }, () => {
         this.onClose()
         this.onOpenPage('settingsNight')
-      }, this.settings.isNightActive() ? $r('app.color.accent') : $r('app.color.menu_icon'),
-      null, this.settings.isNightActive() ? $r('app.color.accent') : null,
+      }, this.settings.isNightActive() ? this.menuAccent() : $r('app.color.menu_icon'),
+      null, this.settings.isNightActive() ? this.menuAccent() : null,
       this.nightAccessibilityText(), menuSkinIconName(id))
     } else if (id === 'image_mode') {
       // 原版 id=17：点击弹三选一弹窗（k6.O9 case17:5224-5234，标题 kt「图像」，
@@ -416,18 +414,18 @@ export struct MenuSheet {
       this.GridCellBody(menuIcon(id), this.imageModeLabel(), true, () => {
         this.menuAction(id)
       }, () => {
-      }, this.settings.noImage || this.settings.wifiOnlyImages ? $r('app.color.accent') : $r('app.color.menu_icon'),
+      }, this.settings.noImage || this.settings.wifiOnlyImages ? this.menuAccent() : $r('app.color.menu_icon'),
       null, null, '', menuSkinIconName(id))
     } else if (id === 'add_bookmark' && this.bookmarkUrls.indexOf(this.tabStore.current().url) >= 0) {
       // 原版 i8/k:363-368：已收藏时条目文案变「已添加」（x7.u.A1）并染强调色
       this.GridCellBody(menuIcon(id), $r('app.string.bookmark_added_state'), true, () => {
       }, () => {
-      }, $r('app.color.accent'), null, null, '', menuSkinIconName(id))
+      }, this.menuAccent(), null, this.menuAccent(), '', menuSkinIconName(id))
     } else if (id === 'add_home_fav' && this.homeFavUrls.indexOf(this.tabStore.current().url) >= 0) {
       // 原版 i8/k x3 id40：已收藏时文案变「已添加」（x7.u.f14060l5）并染强调色
       this.GridCellBody(menuIcon(id), $r('app.string.bookmark_added_state'), true, () => {
       }, () => {
-      }, $r('app.color.accent'), null, null, '', menuSkinIconName(id))
+      }, this.menuAccent(), null, this.menuAccent(), '', menuSkinIconName(id))
     } else if (id === 'script') {
       // 原版 i8/k x3 id27（i8/k:419-423）：文案随勾选态变「脚本 已开启/已关闭」
       // （a1(lr/lq, uc)）并染强调色；勾选 = i0.s(url) && m2().D() && !wls(url) && p5.C(url)
@@ -435,49 +433,55 @@ export struct MenuSheet {
         this.scriptMenuAction()
       }, () => {
         this.menuLongPress(id)
-      }, this.scriptMenuChecked() ? $r('app.color.accent') : $r('app.color.menu_icon'),
-      this.scriptMenuChecked() ? '脚本 已开启' : '脚本 已关闭', null, '', menuSkinIconName(id))
+      }, this.scriptMenuChecked() ? this.menuAccent() : $r('app.color.menu_icon'),
+      this.scriptMenuChecked() ? '脚本 已开启' : '脚本 已关闭',
+      this.scriptMenuChecked() ? this.menuAccent() : null, '', menuSkinIconName(id))
     } else {
       // 原版 i8/k x3：开启态条目染强调色（电脑模式/全屏/浏览器标识/字体大小/广告拦截/游戏模式/隐身）
+      // 原版 h8/c.java:49-57 激活态图标与文案**同时**染 colorPrimary，二者必须同色
       this.GridCellBody(menuIcon(id), menuLabel(id), true, () => {
         this.menuAction(id)
       }, () => {
         this.menuLongPress(id)
-      }, this.menuItemColor(id), null, null, '', menuSkinIconName(id))
+      }, this.menuItemColor(id), null,
+      this.isMenuItemActive(id) ? this.menuAccent() : null, '', menuSkinIconName(id))
     }
   }
 
   // 原版 x8/h.j：条目激活态染 colorPrimary（#6f8de1/#617ac1）
   private menuItemColor(id: string): ResourceColor {
+    return this.isMenuItemActive(id) ? this.menuAccent() : $r('app.color.menu_icon')
+  }
+
+  // 原版 i8/k x3 的 f() 激活判定（逐项取自反编译 switch）
+  private isMenuItemActive(id: string): boolean {
     const tab = this.tabStore.current()
-    let active = false
     switch (id) {
       case 'incognito':
-        active = this.tabStore.sessionIncognito
-        break
+        return this.tabStore.sessionIncognito
       case 'pc_mode':
-        active = (this.settings.getSiteSetting(hostOf(tab.url)) ?? new SiteSetting('')).pcMode
-        break
+        return (this.settings.getSiteSetting(hostOf(tab.url)) ?? new SiteSetting('')).pcMode
       case 'fullscreen':
-        active = this.settings.fullScreen
-        break
+        return this.settings.fullScreen
       case 'ua':
-        active = this.settings.uaMode !== UA_MODE_DEFAULT || this.settings.uaKey !== 'default'
-        break
+        return this.settings.uaMode !== UA_MODE_DEFAULT || this.settings.uaKey !== 'default'
       case 'font_size':
-        active = this.settings.textZoom !== 100
-        break
+        return this.settings.textZoom !== 100
       case 'adblock':
-        active = this.settings.adBlockOn
-        break
+        return this.settings.adBlockOn
       case 'game_mode':
-        active = this.settings.gameMode
-        break
+        return this.settings.gameMode
       default:
-        active = false
-        break
+        return false
     }
-    return active ? $r('app.color.accent') : $r('app.color.menu_icon')
+  }
+
+  // 原版 h8/c.java:49-52 激活态 = x8.h.j(context) = attr colorPrimary 纯色直染
+  // （res/values/colors.xml p=#6f8de1，values-night q=#617ac1），不经过任何资源解析。
+  // 用字面 hex 而非 $r('app.color.accent') 是为了绕开 ViaIcon 的运行时解析链路：
+  // getColorSync 一旦失败会回退 0xFFFFFFFF（纯白），把强调色显示成白图标。
+  private menuAccent(): ResourceColor {
+    return this.settings.isNightActive() ? '#617AC1' : '#6F8DE1'
   }
 
   // 原版 k6.P9（k6.java:5454-5556）：长按直达对应页面/弹窗（O9/P9 由 i8/k X2 按 flags 分发）
@@ -572,7 +576,7 @@ export struct MenuSheet {
         break
       // 原版 k6.P9 case14 → Db(true)：翻译菜单弹窗（微软/百度/谷歌页内/谷歌/谷歌文本）
       case 'translate':
-        this.showTranslateMenuDialog = true
+        openTranslateMenu(true)
         break
       // 原版 k6.P9 case16 → hb.n7：工具栏设置页
       case 'fullscreen':
@@ -1156,75 +1160,6 @@ export struct MenuSheet {
     })
   }
 
-  // 原版 k6.Db(true)（k6.java:4070-4096）：长按「翻译」弹翻译菜单。
-  // 选项与动作 1:1 对齐 y3（k6.java:3536）：
-  // 微软翻译(Ng)→b2()：translate.js client.edge 页内；百度翻译(Jg)→i1(f0.a)：百度翻译网页新标签；
-  // 谷歌页内翻译(Lg)→a2()：Google element.js 页内；谷歌翻译(Kg)→i1(f0.c)：谷歌翻译网页新标签；
-  // 谷歌文本翻译(Mg)→Eb(null)：f8.w0 文本翻译面板。
-  // 标题 = aw「翻译」（f13985g0）；页内翻译后 toast Nh「稍等片刻…」（na.a2/b2）
-  @Builder
-  TranslateMenuDialog() {
-    Stack({ alignContent: Alignment.Center }) {
-      Column() {
-        Text($r('app.string.translate'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.fg'))
-          .width('100%')
-          .padding({ left: 20, top: 18, bottom: 8 })
-        Column() {
-          this.TranslateMenuRow('微软翻译', (): void => {
-            this.translateViaEdgeJs()
-          })
-          this.TranslateMenuRow('百度翻译', (): void => {
-            this.translateBaiduPage()
-          })
-          this.TranslateMenuRow('谷歌页内翻译', (): void => {
-            this.translatePage()
-            this.showTranslateMenuDialog = false
-            this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
-          })
-          this.TranslateMenuRow('谷歌翻译', (): void => {
-            this.translateGooglePage()
-          })
-          this.TranslateMenuRow('谷歌文本翻译', (): void => {
-            this.showTranslateMenuDialog = false
-            TranslateState.getInstance().open('')
-            this.onClose()
-          })
-        }
-        .width('100%')
-        .padding({ bottom: 12 })
-      }
-      .width('100%')
-      .constraintSize({ maxHeight: '70%' })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
-      .transition(dialogTransition())
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor('rgba(0,0,0,0.2)')
-    .transition(dimTransition(240))
-    .onClick(() => {
-      this.showTranslateMenuDialog = false
-    })
-  }
-
-  @Builder
-  TranslateMenuRow(label: string, action: () => void) {
-    Text(label)
-      .fontSize(15)
-      .fontColor($r('app.color.fg'))
-      .width('100%')
-      .height(44)
-      .padding({ left: 20, right: 20 })
-      .onClick(() => {
-        action()
-      })
-  }
-
   // 原版 a8.u1 添加书签弹窗：标题/网址可编辑，确认入库（Xa → a8.u1.x3）
   @Builder
   AddBookmarkDialog() {
@@ -1453,7 +1388,8 @@ export struct MenuSheet {
         this.onOpenPage('offlinePage')
         break
       case 'translate':
-        this.translatePage()
+        // 原版 k6.P9 case14 → Db(true)：翻译菜单弹窗
+        openTranslateMenu(true)
         break
       case 'add_to_desktop':
         this.addToDesktop()
@@ -1473,6 +1409,14 @@ export struct MenuSheet {
         this.printPage()
         break
       case 'netlog':
+        // 原版 na.r1：F0(tabId)==-1 或 d8.d.f(tabId) 为空 → toast u.R8 不打开日志页
+        if (this.tabStore.current().networkLogs.length === 0) {
+          this.onClose()
+          this.getUIContext().getPromptAction().showToast({
+            message: $r('app.string.net_log_empty'), duration: 2500
+          })
+          break
+        }
         this.onOpenPage('netLog')
         break
       case 'ua':
@@ -1700,59 +1644,27 @@ export struct MenuSheet {
     return true
   }
 
-  // 原版 z8.t1.g()：系统语言 BCP-47（如 zh-Hans-CN）
-  private translateTargetLang(): string {
-    let lang = 'zh-CN'
-    try {
-      lang = i18n.System.getSystemLanguage()
-    } catch (error) {
-      lang = 'zh-CN'
-    }
-    return lang
-  }
-
   // 原版 y3 case6 → na.b2() → i6/f0.g → e0.b：translate.js client.edge 页内翻译（微软翻译）
   private translateViaEdgeJs(): void {
     if (!this.translateHttpGuard()) {
       return
     }
-    const lang = this.translateTargetLang()
-    const js = '(function(){var e="uia-translate-bridge",t=document.getElementById(e);' +
-      `if(t)if("undefined"!=typeof translate)"${lang}"!=translate.to&&translate.changeLanguage("${lang}");` +
-      'else{var n=document.createElement("script");n.id=e;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t)}' +
-      'else{(t=document.createElement("script")).id=e;' +
-      't.src="https://fastly.jsdelivr.net/gh/xnx3/translate@v3.14.0/translate.js/translate.min.js";' +
-      't.onload=function(){translate.selectLanguageTag.show=!1;translate.service.use("client.edge");' +
-      `translate.changeLanguage("${lang}")};document.head.appendChild(t)}})();`
     try {
-      this.tabStore.current().controller.runJavaScript(js)
+      this.tabStore.current().controller.runJavaScript(buildEdgePageTranslateJs())
       this.showTranslateMenuDialog = false
-      this.getUIContext().getPromptAction().showToast({ message: '稍等片刻…', duration: 1500 })
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.translate_wait'), duration: 1500 })
       this.onClose()
     } catch (error) {
       console.error('inject edge translate failed')
     }
   }
 
-  // 原版 y3 case1 → i1(f0.a)：百度翻译网页（新标签）。
-  // i6/f0.a：query=Uri.encode(url)&from=auto&to=e(lang)（'-' 前主语言码）
+  // 原版 y3 case1 → i1(f0.a)：百度翻译网页（新标签，to 用短语言码）
   private translateBaiduPage(): void {
     if (!this.translateHttpGuard()) {
       return
     }
-    const tab = this.tabStore.current()
-    let encoded = tab.url
-    try {
-      encoded = encodeURIComponent(tab.url)
-    } catch (error) {
-      encoded = tab.url
-    }
-    const lang = this.translateTargetLang()
-    const dash = lang.indexOf('-')
-    const shortLang = dash > 0 ? lang.substring(0, dash) : lang
-    this.tabStore.newTabAt(
-      `https://fanyi.baidu.com/transpage?query=${encoded}&source=url&ie=utf8&from=auto&to=${shortLang}&render=1`,
-      false)
+    this.tabStore.newTabAt(buildBaiduPageTranslateUrl(this.tabStore.current().url), false)
     this.showTranslateMenuDialog = false
     this.onClose()
   }
@@ -1762,16 +1674,7 @@ export struct MenuSheet {
     if (!this.translateHttpGuard()) {
       return
     }
-    const tab = this.tabStore.current()
-    let encoded = tab.url
-    try {
-      encoded = encodeURIComponent(tab.url)
-    } catch (error) {
-      encoded = tab.url
-    }
-    const lang = this.translateTargetLang()
-    this.tabStore.newTabAt(
-      `https://translate.google.com/translate?sl=auto&tl=${lang}&u=${encoded}`, false)
+    this.tabStore.newTabAt(buildGooglePageTranslateUrl(this.tabStore.current().url), false)
     this.showTranslateMenuDialog = false
     this.onClose()
   }
@@ -1863,7 +1766,7 @@ export struct MenuSheet {
     const start = Math.max(0, tab.networkLogs.length - 64)
     for (let i = tab.networkLogs.length - 1; i >= start; i--) {
       const entry = tab.networkLogs[i]
-      if (entry.media && urls.indexOf(entry.url) < 0) {
+      if (entry.media) {
         urls.push(entry.url)
       }
     }
@@ -2009,39 +1912,22 @@ export struct MenuSheet {
     }
   }
 
-  // 查看源码：outerHTML 落盘 cache 后新标签 file:// 打开（原版 SDK<21 同款方案）
+  // 原版 na.i2()：查看源码。URL 为空 → toast（M1「仅支持 http/https 开头的网址」）；
+  // 否则 outerHTML 快照按原版 SDK<21 骨架落盘，新标签插入当前标签之后并选中。
   private viewSource(): void {
     const tab = this.tabStore.current()
-    if (tab.isHomePage()) {
-      this.homePageGuard()
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext
+    if (context === undefined) {
       return
     }
-    try {
-      tab.controller.runJavaScript('document.documentElement.outerHTML',
-        (error: BusinessError, result: string) => {
-          if (error) {
-            console.error(`get source failed: ${error.code}`)
-            return
-          }
-          const context = this.getUIContext().getHostContext()
-          if (context === undefined) {
-            return
-          }
-          try {
-            const path = `${context.cacheDir}/via_view_source.html`
-            const file = fileIo.openSync(path,
-              fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
-            fileIo.writeSync(file.fd, result)
-            fileIo.closeSync(file)
-            this.tabStore.newTabAt(`file://${path}`, false)
-            this.onClose()
-          } catch (ioError) {
-            console.error('write view source failed')
-          }
-        })
-    } catch (error) {
-      console.error('runJavaScript view source failed')
+    const opened: boolean = ViewSource.open(context, tab, this.tabStore)
+    if (!opened) {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.view_source_http_only'), duration: 2000
+      })
+      return
     }
+    this.onClose()
   }
 
   // 全屏：切换沉浸（隐藏状态栏），toast「全屏 已开启/已关闭」

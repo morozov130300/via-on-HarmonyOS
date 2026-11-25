@@ -193,6 +193,10 @@
       "value": "Network log"
     },
     {
+      "name": "net_log_empty",
+      "value": "The page has no network log."
+    },
+    {
       "name": "reader_mode",
       "value": "Reader mode"
     },
@@ -1181,6 +1185,10 @@
       "value": "Only URLs starting with \"http\" or \"https\" are supported"
     },
     {
+      "name": "view_source_http_only",
+      "value": "Only URLs starting with \"http\" or \"https\" are supported"
+    },
+    {
       "name": "fullscreen_toast_on",
       "value": "Fullscreen enabled"
     },
@@ -1907,6 +1915,10 @@
     {
       "name": "translate_exit",
       "value": "Exit"
+    },
+    {
+      "name": "translate_wait",
+      "value": "Wait a moment…"
     },
     {
       "name": "scripts_for_host",
