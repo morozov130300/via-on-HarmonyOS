@@ -1,9 +1,10 @@
 import { http } from '@kit.NetworkKit'
-import { display, curves, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
+import { display, curves, window, AnimatorOptions, AnimatorResult } from '@kit.ArkUI'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { i18n } from '@kit.LocalizationKit'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets } from '../common/Immersive'
+import { TabStore } from '../common/TabStore'
 import { DECELERATE_CURVE } from '../common/Transitions'
 
 // 原版 com.tuyafeng.support.widget.w 构造（w.java:113-121）：
@@ -385,17 +386,11 @@ function trPanelWidthFallback(): number {
   try {
     let wPx = 0
     let hPx = 0
-    const win = AppStorage.get<Object>('mainWindow')
+    const win = AppStorage.get<window.Window>('mainWindow')
     if (win) {
-      const props = (win as object as Record<string, Object>)['getWindowProperties']
-      if (typeof props === 'function') {
-        const rect = (props as () => Object).call(win) as Record<string, Object>
-        const r = rect['windowRect'] as Record<string, Object> | undefined
-        if (r !== undefined) {
-          wPx = Number(r['width'])
-          hPx = Number(r['height'])
-        }
-      }
+      const rect = win.getWindowProperties().windowRect
+      wPx = rect.width
+      hPx = rect.height
     }
     const d = display.getDefaultDisplaySync()
     const density = d.densityPixels
@@ -960,10 +955,10 @@ export struct TranslatePanel {
     return { topLeft: r, topRight: r, bottomLeft: 0, bottomRight: 0 }
   }
 
-  // 原版 k6.Eb 的 homepage 参数 = this.V0 && b9()（V0 为夜间态、b9() 为是否主页）
+  // 原版 k6.Eb 的 homepage 参数 = this.V0 && b9()；b9() 即「当前是主页」。
+  // V0 在 7.4.0 里恒为真（主页背景生效标志），故等价于当前标签是主页。
   private isHomePage(): boolean {
-    const flag = AppStorage.get<boolean>('uia_translate_home_page')
-    return flag === true
+    return TabStore.getInstance().current().isHomePage()
   }
 
   // w0.s3(1)：无结果 7 行、有结果 5 行；s3(2)：输入 1 行

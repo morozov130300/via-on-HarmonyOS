@@ -24,6 +24,8 @@ import { ClosedTabsStore } from '../common/ClosedTabsStore';
 import { SslWhitelistStore } from '../common/SslWhitelist';
 import { webview } from '@kit.ArkWeb';
 import { fileIo } from '@kit.CoreFileKit';
+import { clearAllCache } from '../common/DiskCleaner';
+import { pruneScriptCaches } from '../common/GmRuntime';
 
 const DOMAIN = 0x0000;
 const EXTERNAL_LINK_EVENT_ID = 10002;
@@ -532,11 +534,18 @@ export default class EntryAbility extends UIAbility {
           lastCleanTime = now;
         }
         if ((mask & 1) !== 0 || now - lastCleanTime >= 432000000) {
+          // 原版 z8/h0.c:83-90 bit1 清理组：b0.k(Http缓存) + b0.o(内核缓存目录)
+          // + lVar.Y(更新时间) + cVar.t(脚本资源白名单清理)。移植前只调了 removeAllCache，
+          // 内核 ServiceWorker/CacheStorage、GPUCache 与脚本资源缓存长期不清 → 落盘膨胀。
           try {
             webview.WebviewController.removeAllCache(true);
           } catch (err) {
             hilog.error(DOMAIN, 'testTag', 'Failed to clear web cache. Cause: %{public}s', JSON.stringify(err));
           }
+          // b0.o(context)：递归清空 cacheDir（含 ArkWeb cache/web 全部子目录）
+          this.clearAppCache();
+          // cVar.t()：按已装脚本 require/resource URL 白名单清理 gm_requires/gm_resources
+          pruneScriptCaches(this.context);
           store.putSync('lastcleantime', now);
           store.flush();
         }
@@ -576,23 +585,6 @@ export default class EntryAbility extends UIAbility {
   }
 
   private clearAppCache(): void {
-    try {
-      const cacheDir = this.context.cacheDir;
-      const names = fileIo.listFileSync(cacheDir);
-      for (let i = 0; i < names.length; i++) {
-        const path = `${cacheDir}/${names[i]}`;
-        try {
-          fileIo.rmdirSync(path);
-        } catch (err) {
-          try {
-            fileIo.unlinkSync(path);
-          } catch (innerErr) {
-            hilog.error(DOMAIN, 'testTag', 'Failed to clear cache entry. Cause: %{public}s', names[i]);
-          }
-        }
-      }
-    } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to clear app cache. Cause: %{public}s', JSON.stringify(err));
-    }
+    clearAllCache(this.context);
   }
 }

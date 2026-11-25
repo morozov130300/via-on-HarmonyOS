@@ -24,6 +24,7 @@ import { RemoteConfig } from '../common/RemoteConfig'
 import { ThemeColorCache } from '../common/ThemeColorCache'
 import { VideoOverlayState } from './VideoPlayerOverlay'
 import { TranslateState } from './TranslatePanel'
+import { openTranslateMenu } from './TranslateMenu'
 import { MARK_AD_INJECT_JS } from './MenuSheet'
 import { AppIcon } from './AppIcon'
 // 原版横滑指示层（via_ic_back 图标 rotate180 复用）
@@ -1429,10 +1430,19 @@ export struct TabWeb {
   // 与 localX/localY（相对组件）。原版 GestureTouchEvent.l()/k() 用 MotionEvent.getRawX/getRawY，
   // 语义等同 FingerInfo.globalX/globalY。
   // 返回 [x, y]；fingerList 为空（键盘/手柄触发）时退回 0,0，与原版无触点时行为一致。
+  // ★ 捏合缩放（Pinch）期间系统会做未处理触摸的补偿分发（CompensateTouchMoveEvent），
+  //   此时 fingerList 可能长度>0 但首元素为 undefined；真机日志（2026-11-25）：
+  //   Cannot read property globalX of undefined → JS_ERROR 进程退出（闪退）。
+  //   故除判空数组外还必须逐元素校验，取到 undefined 即退回 0,0，绝不可直接读属性。
   private gestureGlobalPoint(event: GestureEvent): number[] {
     const fingers = event.fingerList
-    if (fingers !== undefined && fingers.length > 0) {
-      return [fingers[0].globalX, fingers[0].globalY]
+    if (fingers !== undefined) {
+      for (let i = 0; i < fingers.length; i++) {
+        const finger = fingers[i]
+        if (finger !== undefined && finger !== null) {
+          return [finger.globalX, finger.globalY]
+        }
+      }
     }
     return [0, 0]
   }
@@ -2293,12 +2303,15 @@ export struct TabWeb {
     return mime !== '' ? mime : 'text/html'
   }
 
-  // k6:1487-1512：window.via.postMessage action 101 → 主线程分发注入
+  // k6:1487-1512：window.via.postMessage 分发（101=注入用户脚本；108=翻译脚本被 CSP 拦截 → 弹翻译菜单）
   private onViaMessage(msg: string): void {
     try {
       const parsed = JSON.parse(msg) as ScriptRunMsg
       if (parsed.action === 101) {
         this.runUserScripts(parsed.runAt, parsed.from)
+      } else if (parsed.action === 108) {
+        // 原版 k6 postMessage case108 → break → Db(false)：不含微软/谷歌页内两项的翻译菜单
+        openTranslateMenu(false)
       }
     } catch (error) {
     }

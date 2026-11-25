@@ -546,6 +546,31 @@ class ScriptResourceCache {
     }
     return metaStoreLoadScript(this.metaPrefs, id)
   }
+
+  // 原版 p5/b.u(Set)：按 URL 白名单（MD5 文件名）清理资源目录中的过期项。
+  // 与 p5/a.t() 配套：bit1 清理组把「所有已安装脚本的 @require/@resource URL」传入，
+  // 不在白名单的缓存文件一律删除。移植前 gm_resources 只覆盖不删除，长期残留。
+  prune(keepNames: Set<string>): void {
+    if (this.dir === '' || !fileIo.accessSync(this.dir)) {
+      return
+    }
+    try {
+      const names = fileIo.listFileSync(this.dir)
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i]
+        // .tmp 是下载中断残留，一律清掉
+        if (name.endsWith(RESOURCE_TMP_SUFFIX) || !keepNames.has(name)) {
+          try {
+            fileIo.unlinkSync(`${this.dir}/${name}`)
+          } catch (error) {
+            hilog.error(DOMAIN, TAG, 'prune resource failed: %{public}s', name)
+          }
+        }
+      }
+    } catch (error) {
+      hilog.error(DOMAIN, TAG, 'prune resource dir failed')
+    }
+  }
 }
 
 // EntryAbility.onCreate（GmRuntime.initGmRuntime）初始化入口
@@ -570,6 +595,11 @@ export function prefetchScriptResources(rec: UserScriptRec): void {
   for (let i = 0; i < urls.length; i++) {
     ensureScriptResourceCached(urls[i])
   }
+}
+
+// p5/a.t()/p5/b.u()：资源缓存白名单清理，供 bit1 清理组调用（传入 keep 集合）
+export function pruneScriptResources(keepNames: Set<string>): void {
+  ScriptResourceCache.getInstance().prune(keepNames)
 }
 
 // p5/a.E（GM_getResourceText 底层）：缺失 null / 空内容 ''

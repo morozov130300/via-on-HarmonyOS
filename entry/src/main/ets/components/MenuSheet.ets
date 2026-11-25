@@ -18,21 +18,13 @@ import { isMenuId, MENU_DEFAULT_ORDER, menuIcon, menuLabel, menuSkinIconName } f
 import { CustomUaEntry } from '../common/UaTable'
 import { ViaIcon } from './ViaIcon'
 import { ZoomSlider } from './ZoomSlider'
-import { TranslateState } from './TranslatePanel'
+import { openTranslateMenu } from './TranslateMenu'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { dialogTransition, menuTransition, menuTransitionTop, dimTransition } from '../common/Transitions'
 import { ViewSource } from '../common/ViewSource'
-
-export const TRANSLATE_INJECT_JS: string = `(function(){if(window.__via_translator__){window.__via_translator__.showBanner(true);return;}`
-  + `window.googleTranslateElementInit=function(){if(!window.__via_translator__){window.__via_translator__=new google.translate.TranslateElement({autoDisplay:false,floatPosition:0,multilanguagePage:true,includedLanguages:"af,sq,am,ar,hy,az,eu,be,bn,bs,bg,ca,ceb,ny,zh-CN,zh-TW,co,hr,cs,da,nl,en,eo,et,tl,fi,fr,fy,gl,ka,de,el,gu,ht,ha,haw,he,hi,hmn,hu,is,id,ga,it,ja,jv,kn,kk,km,ky,ko,ku,lo,la,lv,lt,lb,mk,mg,ms,ml,mt,mi,mr,mn,my,ne,no,ps,fa,pl,pt,pa,ro,ru,sr,st,sd,si,sk,sl,so,sm,es,su,sw,sv,tg,ta,te,th,tr,uk,ur,uz,vi,cy,xh,yi,yo,zu",pageLanguage:"auto"});}`
-  + `window.__via_translator__.showBanner(true);};`
-  + `var s=document.createElement("script");s.src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";document.getElementsByTagName("head")[0].appendChild(s);`
-  + `document.addEventListener("securitypolicyviolation",function onCsp(e){document.removeEventListener("securitypolicyviolation",onCsp);`
-  + `var id="uia-translate-bridge";var t=document.getElementById(id);`
-  + `if(t){if(typeof translate!=="undefined"){if("zh-CN"!==translate.to){translate.changeLanguage("zh-CN");}}else{var n=document.createElement("script");n.id=id;n.src=t.src;n.onload=t.onload;t.parentNode.replaceChild(n,t);}}`
-  + `else{t=document.createElement("script");t.id=id;t.src="https://fastly.jsdelivr.net/gh/xnx3/translate@v3.14.0/translate.js/translate.min.js";`
-  + `t.onload=function(){translate.selectLanguageTag.show=false;translate.service.use("client.edge");translate.changeLanguage("zh-CN");};document.head.appendChild(t);}});})();`
+import { clearAllCache } from '../common/DiskCleaner'
+import { pruneScriptCaches } from '../common/GmRuntime'
 
 // 「浏览器标识」弹窗选项：文案与原版录屏逐字一致
 class UaChoice {
@@ -119,8 +111,6 @@ export struct MenuSheet {
   @Local showReportDialog: boolean = false
   @Local showOrientationDialog: boolean = false
   @Local showAddHomeFavDialog: boolean = false
-  // 原版 k6.Db(true)：长按「翻译」的翻译菜单弹窗
-  @Local showTranslateMenuDialog: boolean = false
   // 原版 k6.P9 case7 → Wa() → Xa → a8.u1：添加书签弹窗（标题/网址可编辑）
   @Local showAddBookmarkDialog: boolean = false
   @Local reportFlag1: boolean = false
@@ -1253,12 +1243,17 @@ export struct MenuSheet {
 
   private applyClearData(): void {
     const selected = this.clearDataSelection
-    // 缓存
+    // 缓存（原版 h0.a bit1：b0.k Http缓存 + b0.o 内核缓存目录 + cVar.t 脚本资源白名单）
     if (selected[0]) {
       try {
         webview.WebviewController.removeAllCache(true)
       } catch (error) {
         console.error('clear web cache failed')
+      }
+      this.clearAppCache()
+      const ctx = this.getUIContext().getHostContext()
+      if (ctx !== undefined) {
+        pruneScriptCaches(ctx)
       }
     }
     // 历史
@@ -1307,24 +1302,7 @@ export struct MenuSheet {
     if (context === undefined) {
       return
     }
-    try {
-      const cacheDir = context.cacheDir
-      const names = fileIo.listFileSync(cacheDir)
-      for (let i = 0; i < names.length; i++) {
-        const path = `${cacheDir}/${names[i]}`
-        try {
-          fileIo.rmdirSync(path)
-        } catch (error) {
-          try {
-            fileIo.unlinkSync(path)
-          } catch (innerError) {
-            console.error(`clear app cache entry failed: ${names[i]}`)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('clear app cache failed')
-    }
+    clearAllCache(context)
   }
 
   private menuAction(id: string): void {
@@ -1615,68 +1593,6 @@ export struct MenuSheet {
     }).then(() => {
       return Promise.resolve()
     })
-  }
-
-  private translatePage(): void {
-    const tab = this.tabStore.current()
-    if (tab.isHomePage()) {
-      this.homePageGuard()
-      return
-    }
-    try {
-      tab.controller.runJavaScript(TRANSLATE_INJECT_JS)
-      this.onClose()
-    } catch (error) {
-      console.error('inject translator failed')
-    }
-  }
-
-  // 原版 k6.Db 首段：非 http(s) 页 toast dc「仅支持 http/https 开头的网址」
-  private translateHttpGuard(): boolean {
-    const tab = this.tabStore.current()
-    if (!tab.url.startsWith('http://') && !tab.url.startsWith('https://')) {
-      this.getUIContext().getPromptAction().showToast({
-        message: $r('app.string.mark_ad_http_only'),
-        duration: 1500
-      })
-      return false
-    }
-    return true
-  }
-
-  // 原版 y3 case6 → na.b2() → i6/f0.g → e0.b：translate.js client.edge 页内翻译（微软翻译）
-  private translateViaEdgeJs(): void {
-    if (!this.translateHttpGuard()) {
-      return
-    }
-    try {
-      this.tabStore.current().controller.runJavaScript(buildEdgePageTranslateJs())
-      this.showTranslateMenuDialog = false
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.translate_wait'), duration: 1500 })
-      this.onClose()
-    } catch (error) {
-      console.error('inject edge translate failed')
-    }
-  }
-
-  // 原版 y3 case1 → i1(f0.a)：百度翻译网页（新标签，to 用短语言码）
-  private translateBaiduPage(): void {
-    if (!this.translateHttpGuard()) {
-      return
-    }
-    this.tabStore.newTabAt(buildBaiduPageTranslateUrl(this.tabStore.current().url), false)
-    this.showTranslateMenuDialog = false
-    this.onClose()
-  }
-
-  // 原版 y3 case3 → i1(f0.c)：谷歌翻译网页（新标签，tl 用完整语言码）
-  private translateGooglePage(): void {
-    if (!this.translateHttpGuard()) {
-      return
-    }
-    this.tabStore.newTabAt(buildGooglePageTranslateUrl(this.tabStore.current().url), false)
-    this.showTranslateMenuDialog = false
-    this.onClose()
   }
 
   // 原版 k6.P9 case7 → Wa() → Xa → a8.u1：添加书签弹窗

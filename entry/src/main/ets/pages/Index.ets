@@ -13,7 +13,9 @@ import { SearchOverlay } from '../components/SearchOverlay'
 import { SearchToolbar } from '../components/SearchToolbar'
 import { TabPanel } from '../components/TabPanel'
 import { AppBarHeader } from '../components/AppBar'
-import { MenuSheet, TRANSLATE_INJECT_JS } from '../components/MenuSheet'
+import { MenuSheet } from '../components/MenuSheet'
+import { TranslateMenuDialog, openTranslateMenu } from '../components/TranslateMenu'
+import { buildAutoPageTranslateJs } from '../common/TranslateInject'
 import { FindBar } from '../components/FindBar'
 // 原版 a8/k.java：书签快捷选择对话框（W9()）
 import { BookmarkPickerDialog } from '../components/BookmarkPickerDialog'
@@ -2464,6 +2466,29 @@ struct Index {
     this.fabCenterV = !bottom
   }
 
+  // 原版 na.Z1()（c8/na.java:47524）：k6.ra case15 页内翻译按搜索引擎分流——
+  //   M1()（引擎 id）== -1（谷歌）→ a2() element.js；否则 b2() translate.js client.edge。
+  // 二者均先过 isNetworkUrl 判定（失败 toast x7.u.M1），成功后 toast Nh「稍等片刻…」。
+  private autoPageTranslate(): void {
+    const tab = this.tabStore.current()
+    if (!tab.url.startsWith('http://') && !tab.url.startsWith('https://')) {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.mark_ad_http_only'),
+        duration: 1500
+      })
+      return
+    }
+    try {
+      tab.controller.runJavaScript(buildAutoPageTranslateJs(this.settings.engineKey))
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.translate_wait'),
+        duration: 1500
+      })
+    } catch (error) {
+      console.error('inject page translate failed')
+    }
+  }
+
   private handleToolbarCommand(cmd: string): void {
     const tab = this.tabStore.current()
     switch (cmd) {
@@ -2478,11 +2503,9 @@ struct Index {
         this.showFindBar = true
         break
       case 'translate':
-        try {
-          tab.controller.runJavaScript(TRANSLATE_INJECT_JS)
-        } catch (error) {
-          console.error('inject translator failed')
-        }
+        // 原版 k6.ra(15) → na.Z1()：按当前搜索引擎分流页内翻译
+        //   （谷歌 element.js / 其余 translate.js client.edge），完成后 toast「稍等片刻…」
+        this.autoPageTranslate()
         break
       case 'savePage':
         this.showSavePageDialog()
@@ -2921,8 +2944,11 @@ struct Index {
         })
       }
 
-      // 原版 k6.Eb/f8.w0：划词翻译浮层（竖屏 TOP|RIGHT / 横屏 BOTTOM|RIGHT，宽 N8()）
+      // 原版 k6.Eb/f8.w0：划词翻译浮层
       TranslatePanel()
+
+      // 原版 k6.Db(boolean)：翻译菜单弹窗（菜单长按/长按翻译键；CSP 回落时仅 3 项）
+      TranslateMenuDialog()
 
       // 原版 g6.n.r：Snackbar（底部深色条 + 动作按钮）
       if (this.snackbarText !== '') {

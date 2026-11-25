@@ -115,56 +115,55 @@ export struct TranslateMenuDialog {
   }
 
   build() {
-    if (!this.state.visible) {
-      return
-    }
     Stack({ alignContent: Alignment.Center }) {
-      Column()
-        .width('100%')
-        .height('100%')
-        .backgroundColor('rgba(0,0,0,0.2)')
-        .transition(dimTransition(240))
-        .onClick(() => {
-          this.state.close()
-        })
-      Column() {
-        Text($r('app.string.translate'))
-          .fontSize(17)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.fg'))
+      if (this.state.visible) {
+        Column()
           .width('100%')
-          .padding({ left: 20, top: 18, bottom: 8 })
+          .height('100%')
+          .backgroundColor('rgba(0,0,0,0.2)')
+          .transition(dimTransition(240))
+          .onClick(() => {
+            this.state.close()
+          })
         Column() {
-          // 原版数组顺序：微软、百度、谷歌页内、谷歌、谷歌文本
-          if (this.state.full) {
-            this.MenuRow($r('app.string.orig_a01'), (): void => {
-              this.edgeInPage()
+          Text($r('app.string.translate'))
+            .fontSize(17)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.fg'))
+            .width('100%')
+            .padding({ left: 20, top: 18, bottom: 8 })
+          Column() {
+            // 原版数组顺序：微软、百度、谷歌页内、谷歌、谷歌文本
+            if (this.state.full) {
+              this.MenuRow($r('app.string.orig_a01'), (): void => {
+                this.edgeInPage()
+              })
+            }
+            this.MenuRow($r('app.string.orig_zx'), (): void => {
+              this.baiduPage()
+            })
+            if (this.state.full) {
+              this.MenuRow($r('app.string.orig_zz'), (): void => {
+                this.googleInPage()
+              })
+            }
+            this.MenuRow($r('app.string.orig_zy'), (): void => {
+              this.googlePage()
+            })
+            this.MenuRow($r('app.string.orig_a00'), (): void => {
+              this.textPanel()
             })
           }
-          this.MenuRow($r('app.string.orig_zx'), (): void => {
-            this.baiduPage()
-          })
-          if (this.state.full) {
-            this.MenuRow($r('app.string.orig_zz'), (): void => {
-              this.googleInPage()
-            })
-          }
-          this.MenuRow($r('app.string.orig_zy'), (): void => {
-            this.googlePage()
-          })
-          this.MenuRow($r('app.string.orig_a00'), (): void => {
-            this.textPanel()
-          })
+          .width('100%')
+          .padding({ bottom: 12 })
         }
         .width('100%')
-        .padding({ bottom: 12 })
+        .constraintSize({ maxHeight: '70%' })
+        .borderRadius(20)
+        .backgroundColor($r('app.color.menu_bg'))
+        .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
+        .transition(dialogTransition())
       }
-      .width('100%')
-      .constraintSize({ maxHeight: '70%' })
-      .borderRadius(20)
-      .backgroundColor($r('app.color.menu_bg'))
-      .shadow({ radius: 24, color: 'rgba(0,0,0,0.5)', offsetY: 4 })
-      .transition(dialogTransition())
     }
     .width('100%')
     .height('100%')

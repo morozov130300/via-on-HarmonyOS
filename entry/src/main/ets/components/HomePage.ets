@@ -229,11 +229,17 @@ export struct HomePage {
 
   // 取手势触点屏幕绝对坐标（TabWeb.gestureGlobalPoint 同款）：
   // ArkUI 把 globalX/globalY 放在 GestureEvent.fingerList[i]；原版 GestureTouchEvent
-  // 用 MotionEvent.getRawX/getRawY，语义等同。fingerList 为空时退回 0,0。
+  // 用 MotionEvent.getRawX/getRawY，语义等同。fingerList 为空或元素 undefined
+  // （捏合缩放的补偿分发会出现）时退回 0,0——直接读属性会 JS_ERROR 闪退。
   private gestureGlobalPoint(event: GestureEvent): number[] {
     const fingers = event.fingerList
-    if (fingers !== undefined && fingers.length > 0) {
-      return [fingers[0].globalX, fingers[0].globalY]
+    if (fingers !== undefined) {
+      for (let i = 0; i < fingers.length; i++) {
+        const finger = fingers[i]
+        if (finger !== undefined && finger !== null) {
+          return [finger.globalX, finger.globalY]
+        }
+      }
     }
     return [0, 0]
   }

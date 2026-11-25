@@ -4,7 +4,7 @@ const fs = require('fs')
 const path = require('path')
 
 const SENSITIVE_EXACT = ['.env', 'AGENTS.md', 'build-profile.json5', 'local.properties']
-const SENSITIVE_DIRS = ['signing/']
+const SENSITIVE_DIRS = ['signing/', '.github/']
 
 function git(args, opts) {
   return execFileSync('git', args, Object.assign({ maxBuffer: 1 << 28 }, opts || {}))

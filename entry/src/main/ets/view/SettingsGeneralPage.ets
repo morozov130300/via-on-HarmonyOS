@@ -13,6 +13,8 @@ import { buildNavSlide } from './PageTransitions'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { UiaDialogCard, computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
+import { clearAllCache } from '../common/DiskCleaner'
+import { pruneScriptCaches } from '../common/GmRuntime'
 
 @ComponentV2
 export struct SettingsGeneralPage {
@@ -1416,11 +1418,17 @@ export struct SettingsGeneralPage {
 
   private applyClearData(): void {
     const selected = this.clearDataSelection
+    // 原版 h0.a bit1：b0.k(Http缓存) + b0.o(内核缓存目录) + cVar.t(脚本资源白名单)
     if (selected[0]) {
       try {
         webview.WebviewController.removeAllCache(true)
       } catch (error) {
         console.error('clear web cache failed')
+      }
+      this.clearAppCache()
+      const ctx = this.getUIContext().getHostContext()
+      if (ctx !== undefined) {
+        pruneScriptCaches(ctx)
       }
     }
     if (selected[1]) {
@@ -1466,24 +1474,7 @@ export struct SettingsGeneralPage {
     if (context === undefined) {
       return
     }
-    try {
-      const cacheDir = context.cacheDir
-      const names = fileIo.listFileSync(cacheDir)
-      for (let i = 0; i < names.length; i++) {
-        const path = `${cacheDir}/${names[i]}`
-        try {
-          fileIo.rmdirSync(path)
-        } catch (error) {
-          try {
-            fileIo.unlinkSync(path)
-          } catch (innerError) {
-            console.error(`clear app cache entry failed: ${names[i]}`)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('clear app cache failed')
-    }
+    clearAllCache(context)
   }
 }
 

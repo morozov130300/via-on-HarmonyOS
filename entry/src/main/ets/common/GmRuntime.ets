@@ -11,7 +11,7 @@ import { AppSettings } from './Settings'
 import { UserScriptRec, md5Hex } from './Types'
 import { startScriptsAutoUpdate } from './ScriptUpdater'
 import { initScriptResources, loadScriptMeta, readScriptResourceText, readScriptResourceDataUrl,
-  resourceUrlOf, ensureScriptResourceCached, scriptIdOf } from './ScriptResources'
+  resourceUrlOf, ensureScriptResourceCached, scriptIdOf, pruneScriptResources } from './ScriptResources'
 
 const TAG = 'GmRuntime'
 const DOMAIN = 0x0000
@@ -607,6 +607,27 @@ export class GmRequireStore {
       session.destroy()
     })
   }
+
+  // 原版 p5/b.u(Set) 等价：按 URL 白名单（requireFileName）清理 gm_requires 目录。
+  prune(keepNames: Set<string>): void {
+    if (this.dir === '' || !fileIo.accessSync(this.dir)) {
+      return
+    }
+    try {
+      const names = fileIo.listFileSync(this.dir)
+      for (let i = 0; i < names.length; i++) {
+        if (!keepNames.has(names[i])) {
+          try {
+            fileIo.unlinkSync(this.dir + '/' + names[i])
+          } catch (error) {
+            hilog.error(DOMAIN, TAG, 'prune require failed: %{public}s', names[i])
+          }
+        }
+      }
+    } catch (error) {
+      hilog.error(DOMAIN, TAG, 'prune require dir failed')
+    }
+  }
 }
 
 // 安装/保存脚本后预取 @require（sa/d1 安装路径 p5.t() 等价）
@@ -617,6 +638,49 @@ export function fetchScriptRequires(rec: UserScriptRec): void {
       GmRequireStore.getInstance().fetchAll(requires)
     }
   } catch (error) {
+  }
+}
+
+// 原版 p5/a.t()：汇总所有已安装脚本的 @require + @resource URL → 文件名白名单，
+// 交给 p5/b.u(Set) 删除两个资源缓存目录中的过期项。bit1 清理组调用。
+export function pruneScriptCaches(context: common.Context): void {
+  try {
+    const scripts = AppSettings.getInstance().userScripts
+    const requireKeep = new Set<string>()
+    const resourceKeep = new Set<string>()
+    for (let i = 0; i < scripts.length; i++) {
+      const rec = scripts[i]
+      try {
+        const requires = JSON.parse(rec.requires) as string[]
+        if (requires instanceof Array) {
+          for (let j = 0; j < requires.length; j++) {
+            if (typeof requires[j] === 'string' && requires[j] !== '') {
+              requireKeep.add(requireFileName(requires[j]))
+            }
+          }
+        }
+      } catch (error) {
+      }
+      try {
+        const parsed = JSON.parse(rec.resources) as Object
+        if (parsed instanceof Object && !(parsed instanceof Array)) {
+          const obj = parsed as Record<string, Object>
+          const keys = Object.keys(obj)
+          for (let j = 0; j < keys.length; j++) {
+            const value = obj[keys[j]]
+            if (typeof value === 'string' && (value as string) !== '') {
+              resourceKeep.add(md5Hex(value as string))
+            }
+          }
+        }
+      } catch (error) {
+      }
+    }
+    GmRequireStore.getInstance().init(context)
+    GmRequireStore.getInstance().prune(requireKeep)
+    pruneScriptResources(resourceKeep)
+  } catch (error) {
+    hilog.error(DOMAIN, TAG, 'prune script caches failed: %{public}s', `${(error as BusinessError).code}`)
   }
 }
 
