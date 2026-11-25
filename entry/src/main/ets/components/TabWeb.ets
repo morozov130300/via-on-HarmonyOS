@@ -1440,7 +1440,16 @@ export struct TabWeb {
       for (let i = 0; i < fingers.length; i++) {
         const finger = fingers[i]
         if (finger !== undefined && finger !== null) {
-          return [finger.globalX, finger.globalY]
+          try {
+            const globalX = finger.globalX
+            const globalY = finger.globalY
+            if (globalX !== undefined && globalY !== undefined) {
+              return [globalX, globalY]
+            }
+          } catch (error) {
+            // 系统补偿触摸事件可能提供失效 FingerInfo，忽略该触点并继续兜底。
+            console.error('read gesture global point failed')
+          }
         }
       }
     }
