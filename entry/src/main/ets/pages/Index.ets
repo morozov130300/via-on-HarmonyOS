@@ -7,6 +7,7 @@ import { TabStore, OPEN_BOOKMARKS_EVENT_ID } from '../common/TabStore'
 import { DownloadCoordinator, DOWNLOAD_CONFIRM_EVENT_ID } from '../common/Downloads'
 import { TabWeb } from '../components/TabWeb'
 import { HomePage } from '../components/HomePage'
+import { parseHomeCss } from '../common/HomeCss'
 import { AddressBar } from '../components/AddressBar'
 import { Toolbar, toolbarBackgroundColor } from '../components/Toolbar'
 import { SearchOverlay } from '../components/SearchOverlay'
@@ -36,7 +37,7 @@ import { common } from '@kit.AbilityKit'
 import { webview } from '@kit.ArkWeb'
 import { window, mediaquery, display } from '@kit.ArkUI'
 import { fileIo } from '@kit.CoreFileKit'
-import { BusinessError, emitter, pasteboard } from '@kit.BasicServicesKit'
+import { BusinessError, emitter, pasteboard, deviceInfo } from '@kit.BasicServicesKit'
 import { inputConsumer, KeyEvent as InputKeyEvent, KeyCode } from '@kit.InputKit'
 import { util } from '@kit.ArkTS'
 import { scanBarcode } from '@kit.ScanKit'
@@ -2551,6 +2552,16 @@ struct Index {
     // （Jb:4645 RelativeLayout.LayoutParams(-1,-1)），顶栏 f2604y0 / 底栏 f2600w0
     // 悬浮其上，db(p) 用 translationY 收放 —— 网页不位移，隐藏时自然扩到全屏。
     Stack() {
+      if (deviceInfo.sdkApiVersion >= 29 && this.settings.isSettingsBackgroundVisible()
+        && this.isSettingsStackActive()
+        && (this.settings.homeBgImage !== '' || this.homeCssBackgroundUrl() !== '')) {
+        Image(this.homeBackgroundImageUrl())
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+          .blur(this.settings.isBlurEffect() && this.isBlurSupported() ? 30 : 0)
+          .hitTestBehavior(HitTestMode.None)
+      }
       Navigation(this.mainNavStack) {
         Stack() {
           if (this.ready) {
@@ -2649,12 +2660,14 @@ struct Index {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.page_bg'))
+      .backgroundColor(this.settings.isSettingsBackgroundVisible() && this.isSettingsStackActive()
+        && deviceInfo.sdkApiVersion >= 29 ? Color.Transparent : $r('app.color.page_bg'))
       .hideTitleBar(true)
       .mode(NavigationMode.Stack)
 
       // 全局唯一标题栏：由各 NavDestination 页面在 onReady/onWillAppear 时改写其内容
-      AppBarHeader()
+      AppBarHeader({ transparentBackground: this.settings.isSettingsBackgroundVisible()
+        && this.isSettingsStackActive() })
         .position({ x: 0, y: 0 })
 
       if (this.tabStore.current().loading) {
@@ -3113,7 +3126,27 @@ struct Index {
   }
 
   private openPage(page: string): void {
+    if (page === 'settingsGeneral') {
+      this.settings.refreshSettingsBackgroundVisible()
+    }
     this.mainNavStack.pushPathByName(page, '', true)
+  }
+
+  private isSettingsStackActive(): boolean {
+    return this.mainNavStack.getAllPathName().some((name: string): boolean => name.startsWith('settings'))
+  }
+
+  private homeCssBackgroundUrl(): string {
+    return parseHomeCss(this.settings.customCss).urlValue(['body', 'html', '#content'])
+  }
+
+  private isBlurSupported(): boolean {
+    return deviceInfo.sdkApiVersion >= 31
+  }
+
+  private homeBackgroundImageUrl(): string {
+    const path = this.settings.homeBgImage !== '' ? this.settings.homeBgImage : this.homeCssBackgroundUrl()
+    return path.startsWith('file://') ? path : `file://${path}`
   }
 
   // 书签页带文件夹参数（原版 k6.u 8657/8567：?folder= 数字 id / folder://X 名称）：

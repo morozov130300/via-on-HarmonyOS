@@ -1920,9 +1920,20 @@ export class AppSettings {
     this.setLabFlag(on ? (this.labFlag | 2) : (this.labFlag & ~2))
   }
 
+  // 原版位4在设置页面创建时采样，因此切换后下次打开设置才生效。
+  @Trace settingsBackgroundVisible: boolean = false
+
   // 原版 w9.d.g()/j()：labflag 位4 = 实验页「在设置中显示背景」开关
   isShowSettingsBackground(): boolean {
     return (this.labFlag & 4) !== 0
+  }
+
+  isSettingsBackgroundVisible(): boolean {
+    return this.settingsBackgroundVisible
+  }
+
+  refreshSettingsBackgroundVisible(): void {
+    this.settingsBackgroundVisible = this.isShowSettingsBackground()
   }
 
   setShowSettingsBackground(on: boolean): void {

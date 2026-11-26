@@ -87,6 +87,7 @@ export class TabItem {
   // 原版 k6.Nb()：网页 meta theme-color，用于工具栏/地址栏配色自适应
   @Trace themeColor: string = ''
   controller: webview.WebviewController
+  private closed: boolean = false
 
   constructor(id: number, incognito: boolean) {
     this.id = id
@@ -112,6 +113,22 @@ export class TabItem {
 
   isHomePage(): boolean {
     return this.url === '' || this.url === 'about:blank'
+  }
+
+  close(): void {
+    if (this.closed) {
+      return
+    }
+    this.closed = true
+    // ArkWeb 通过移除对应 TabContent 释放 Web 节点；不可调用未提供的 controller destroy API。
+    // 主动停止关闭标签仍在进行的导航，避免移除后继续消耗资源。
+    try {
+      if (this.loading) {
+        this.controller.stop()
+      }
+    } catch (error) {
+      console.warn(`stop closed tab ${this.id} failed`)
+    }
   }
 
   displayTitle(fallback: string): string {

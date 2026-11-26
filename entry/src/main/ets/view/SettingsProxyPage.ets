@@ -1,3 +1,5 @@
+import { deviceInfo } from '@kit.BasicServicesKit'
+import { AppSettings } from '../common/Settings'
 import { ProxyManager } from '../common/ProxyConfig'
 import { dialogTransition } from '../common/Transitions'
 import { SettingNavRow, SettingCheckRow } from '../components/SettingRows'
@@ -141,7 +143,8 @@ export struct SettingsProxyPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+      ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })
     // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，

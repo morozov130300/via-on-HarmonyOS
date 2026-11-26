@@ -1,3 +1,4 @@
+import { deviceInfo } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { dialogTransition } from '../common/Transitions'
@@ -177,7 +178,8 @@ export struct SettingsToolbarPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+      ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })
     // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
@@ -225,11 +227,12 @@ export struct SettingsToolbarPage {
       }
       .width('100%')
       .height(ROW_H)
-      // 原版 ib/m.n()：拖动距离 |f10| >= 0.8（84dp 拖距）时按方向打开滑动动作设置
+      // 原版 ToolbarsViewDelegate.java:229：Math.abs(f10) <= 0.8f 直接 return，
+      // 即门槛是**严格大于** 0.8（正好 0.8 不触发）。这里必须同为 <=，不能写成 <。
       .gesture(PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 1 })
         .onActionEnd((event: GestureEvent) => {
           const fraction = px2vp(event.offsetX) / 84
-          if (Math.abs(fraction) < 0.8) {
+          if (Math.abs(fraction) <= 0.8) {
             return
           }
           this.openActionPicker(fraction > 0 ? 'swipe0' : 'swipe1')
@@ -477,7 +480,9 @@ export struct SettingsToolbarPage {
       .constraintSize({ maxHeight: 400 })
       .scrollBar(BarState.Auto)
 
-      // 底部按钮行：gravity end（保存）+ 左侧取消（w5/k layout u 顺序）
+      // 底部按钮行：确认写入 + 取消。
+      // 原版 hb/l6.java:83-88 的动作选择器只有一个确认按钮（点它才 l3()→k3() 写入并返回），
+      // 文案即「保存」，绝不是「重置」——重置语义会把用户已选动作直接丢弃。
       Row() {
         Text($r('app.string.cancel'))
           .fontSize(14)
@@ -488,7 +493,7 @@ export struct SettingsToolbarPage {
           .onClick(() => {
             this.closeActionPicker()
           })
-        Text($r('app.string.reset'))
+        Text($r('app.string.save'))
           .fontSize(14)
           .fontColor($r('app.color.dialog_action'))
           .textAlign(TextAlign.Center)

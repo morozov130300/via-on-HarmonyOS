@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { deviceInfo } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { SettingNavRow } from '../components/SettingRows'
@@ -38,8 +39,9 @@ export struct SettingsExperimentalPage {
                 this.navPathStack.pushPathByName('skinPage', '', true)
               }
             })
-            // 原版 y1.j3 case1：模糊效果（w9.d.h 位2）
-            Row() {
+            // 原版 hb/y1.i3：模糊行仅在系统 API 31+ 存在
+            if (deviceInfo.sdkApiVersion >= 31) {
+              Row() {
               Column() {
                 Text($r('app.string.orig_cy'))
                   .fontSize(15)
@@ -62,8 +64,10 @@ export struct SettingsExperimentalPage {
             .width('100%')
             .alignItems(VerticalAlign.Center)
             .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            // 原版 y1.j3 case3：在设置中显示背景（w9.d.j 位4）+ toast u.tv
-            Row() {
+            }
+            // 原版 z8.l3.f14720a：API 29+ 才显示背景开关
+            if (deviceInfo.sdkApiVersion >= 29) {
+              Row() {
               Text($r('app.string.orig_tu'))
                 .fontSize(15)
                 .fontColor($r('app.color.fg'))
@@ -80,6 +84,7 @@ export struct SettingsExperimentalPage {
             .width('100%')
             .alignItems(VerticalAlign.Center)
             .padding({ left: 16, right: 16, top: 13, bottom: 13 })
+            }
           }
           .width('100%')
         }
@@ -90,7 +95,8 @@ export struct SettingsExperimentalPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor(this.settings.isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+      ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })
     // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，

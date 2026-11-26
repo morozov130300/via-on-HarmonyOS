@@ -1,3 +1,4 @@
+import { deviceInfo } from '@kit.BasicServicesKit'
 // 定制菜单页：1:1 复刻原版 Uia 7.4.0 i8/s（定制菜单 Fragment）
 // 结构（原版 i8/s.X1）：单个 5 列 Grid，扁平列表 =
 //   [提示行「按住并拖动即可重新排列条目」(i8/x)] + 当前菜单条目 + [提示行「按住并拖动或点击来添加条目」] + 可添加条目
@@ -443,7 +444,8 @@ export struct SettingsMenuPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+      ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })
     // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，

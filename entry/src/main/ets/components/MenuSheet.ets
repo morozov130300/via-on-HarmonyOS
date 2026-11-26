@@ -1,6 +1,6 @@
 import { i18n } from '@kit.LocalizationKit'
 ﻿import { common, Want } from '@kit.AbilityKit'
-import { print, BusinessError } from '@kit.BasicServicesKit'
+import { print, BusinessError, emitter } from '@kit.BasicServicesKit'
 import { productViewManager } from '@kit.AppGalleryKit'
 import { fileIo } from '@kit.CoreFileKit'
 import { webview } from '@kit.ArkWeb'
@@ -23,6 +23,7 @@ import { computeDialogWidthVp } from './ViaDialogCard'
 import { UiInsets, applyStatusBarVisible } from '../common/Immersive'
 import { dialogTransition, menuTransition, menuTransitionTop, dimTransition } from '../common/Transitions'
 import { ViewSource } from '../common/ViewSource'
+import { TAB_BOUNCE_EVENT_ID } from './Toolbar'
 import { clearAllCache } from '../common/DiskCleaner'
 import { pruneScriptCaches } from '../common/GmRuntime'
 
@@ -1512,10 +1513,11 @@ export struct MenuSheet {
         action()
       }
     })
-    // 长按时长与 Toolbar/AddressBar 统一 400ms（原版系统默认约 400ms）
-    .gesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
+    // 工具箱切页依赖 Swiper 内建左右滑动；长按应与点击并行，避免普通点击被自定义识别器抢占。
+    .parallelGesture(LongPressGesture({ repeat: false, duration: 400 }).onAction(() => {
       longPress()
-    }))  }
+    }), GestureMask.Normal)
+  }
 
   @Builder
   BottomRow() {
@@ -1736,6 +1738,8 @@ export struct MenuSheet {
       this.tabStore.sessionIncognito = true
       this.tabStore.newTab(true)
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.entered_incognito'), duration: 1500 })
+      // 原版 k6.A8()（k6.java:3592-3601）进入隐身前调用 g0.j() 标签栈回弹
+      emitter.emit({ eventId: TAB_BOUNCE_EVENT_ID })
       return
     }
     const incognitoCount = this.tabStore.incognitoTabCount()

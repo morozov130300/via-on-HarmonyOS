@@ -1,3 +1,4 @@
+import { deviceInfo } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -43,14 +44,20 @@ export struct SettingsGesturePage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            // 原版 hb/u4.X1 列表顺序：滑动屏幕前进后退 / 使用音量键翻页 /
-            // 启用视频播放器手势（带描述 hr）/ 键盘快捷键（入口 ra.i）
-            SettingCheckRow({ rowLabel: $r('app.string.orig_cm'), isChecked: this.settings.swipeSwitchTab, onCheckRow: (isOn: boolean) => {
-              this.settings.setSwipeSwitchTab(isOn)
-            } })
-            SettingCheckRow({ rowLabel: $r('app.string.orig_a1l'), isChecked: this.settings.volumePageFlip, onCheckRow: (isOn: boolean) => {
-              this.settings.setVolumePageFlip(isOn)
-            } })
+            SettingCheckRow({
+              rowLabel: $r('app.string.orig_cm'),
+              isChecked: this.settings.swipeSwitchTab,
+              onCheckRow: (isOn: boolean) => {
+                this.settings.setSwipeSwitchTab(isOn)
+              }
+            })
+            SettingCheckRow({
+              rowLabel: $r('app.string.orig_a1l'),
+              isChecked: this.settings.volumePageFlip,
+              onCheckRow: (isOn: boolean) => {
+                this.settings.setVolumePageFlip(isOn)
+              }
+            })
             SettingCheckRow({
               rowLabel: $r('app.string.orig_hq'),
               rowDesc: $r('app.string.orig_hr'),
@@ -75,7 +82,8 @@ export struct SettingsGesturePage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+      ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })
     // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，

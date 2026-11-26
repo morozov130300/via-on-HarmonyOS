@@ -4,7 +4,13 @@ import { AppSettings } from '../common/Settings'
 import { AddressBar } from './AddressBar'
 import { ViaIcon } from './ViaIcon'
 import { common } from '@kit.AbilityKit'
+import { emitter } from '@kit.BasicServicesKit'
 import { normalizeThemeColor, toolbarBackgroundColor, resolveColorHex } from '../common/ChromeColors'
+import { BEZIER_0202_CURVE } from '../common/Transitions'
+
+// 原版 g0.j() 的触发事件：k6.A8()（进隐身）与 k6.b0()（标签事件且标签数>1）两处。
+// 退出隐身 l8() 原版不调用，禁止在此路径触发。
+export const TAB_BOUNCE_EVENT_ID: number = 30002
 
 // re-export 保持 Index 等既有 import 路径不变
 export { toolbarBackgroundColor } from '../common/ChromeColors'
@@ -44,6 +50,8 @@ export struct Toolbar {
   // 原版 DragContainer：拖拽距离 84dp，比例 |f10| > 0.8 触发（k6.W4）
   private swipeDistance: number = 84
   @Local barWidth: number = 0
+  // 原版 g0.j()：标签栈 translationY 回弹（0 → -0.3*height → 0，280ms，0.2/0.2/0.8/0.8）
+  @Local tabBounceY: number = 0
 
   private toolbarBg(): ResourceColor {
     return toolbarBackgroundColor(this.tab, this.settings)
@@ -128,6 +136,61 @@ export struct Toolbar {
   private tabCountText(): string {
     const count = this.tabStore.tabs.length
     return count <= 99 ? String(count) : ':)'
+  }
+
+  // 原版 g0.java:203/249 的 contentDescription：普通态播报标签总数，
+  // 横滑预览态播报「当前/总数」。原版用 getQuantityString 单复数，鸿蒙用「N 个标签页」。
+  private tabAccessibilityText(): string {
+    const total = this.tabStore.tabs.length
+    let unit: string = ''
+    try {
+      unit = this.getUIContext().getHostContext()!.resourceManager
+        .getStringSync($r('app.string.tab_count_unit').id)
+    } catch (error) {
+      unit = ''
+    }
+    if (this.swipePreviewCur >= 0) {
+      return `${this.swipePreviewCur}/${total}`
+    }
+    if (total > 99) {
+      return String(total)
+    }
+    return `${total} ${unit}`
+  }
+
+  // 原版 g0.j()：ObjectAnimator.ofFloat(f9648m, "translationY", 0, -0.3f*height, 0)
+  //   .setDuration(280) + PathInterpolator(0.2,0.2,0.8,0.8)。
+  // 关键帧 0 / 0.5 / 1 即两段 140ms。只动标签栈，不动整条工具栏。
+  // 触发点仅两处（原版实测）：k6.A8() 进隐身、k6.b0() 标签事件且标签数>1。
+  playTabBounce(): void {
+    const amplitude: number = BAR_HEIGHT * 0.3
+    const frames: KeyframeState[] = [
+      {
+        duration: 140,
+        curve: BEZIER_0202_CURVE,
+        event: (): void => {
+          this.tabBounceY = -amplitude
+        }
+      },
+      {
+        duration: 140,
+        curve: BEZIER_0202_CURVE,
+        event: (): void => {
+          this.tabBounceY = 0
+        }
+      }
+    ]
+    this.getUIContext().keyframeAnimateTo({ delay: 0, iterations: 1 }, frames)
+  }
+
+  aboutToAppear(): void {
+    emitter.on({ eventId: TAB_BOUNCE_EVENT_ID }, () => {
+      this.playTabBounce()
+    })
+  }
+
+  aboutToDisappear(): void {
+    emitter.off(TAB_BOUNCE_EVENT_ID)
   }
 
   // 原版 g0.l(cur, total)：cur>=0 时标签数显示 "%d/%d" 且标签图标 alpha 0.15；cur<0 恢复
@@ -340,8 +403,9 @@ export struct Toolbar {
       }
       if (!this.hidden('tabs')) {
         // 原版 g0.h()：栈叠图标 + 加粗标签数叠加（>99 显示 :)）
-        // g0.l(cur,total) 只由 k6.W4 横滑预览分支调用（k6.java:2471/2480），
-        // 隐身进出 A8/l8 只触发 g0.j() 位移回弹，不置 alpha。
+        // g0.l(cur,total) 只由 k6.W4 横滑预览分支调用（k6.java:2471/2480），不涉隐身；
+        // g0.j() 回弹的调用点只有 k6.A8()（进隐身）与 k6.b0()（标签事件且数>1）——
+        // 退出隐身 l8()（k6.java:7551-7572）全文无 j()，不要往退出路径加动画。
         // 图标与数字色 = setAccentColor 三分支（k6.Z7）：夜间 #9F9F9F / 亮背景 #232323 / 其余白
         Stack() {
           ViaIcon({
@@ -360,6 +424,10 @@ export struct Toolbar {
         .height('100%')
         .alignContent(Alignment.Center)
         .opacity(this.swipePreviewCur >= 0 ? 0.15 : 1)
+        .translate({ y: this.tabBounceY })
+        // 原版 g0.java:203/249：标签栈 contentDescription 播报标签数/预览序号
+        .accessibilityGroup(true)
+        .accessibilityText(this.tabAccessibilityText())
         // 原版 mark/via/common/widget/g0.java:181-185 g0.j()：
         //   ObjectAnimator.ofFloat(标签栈 f9648m, "translationY", 0f, -0.3f*height, 0f)
         //   .setDuration(280L) + setInterpolator(x8.h.b()) 即 PathInterpolator(0.2,0.2,0.8,0.8)。

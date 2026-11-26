@@ -133,6 +133,7 @@ export struct AppBarSpacer {
 // 图标动作宽 48dp，文字动作 14sp 全大写（左右 padding 13dp），四周 margin 1dp。
 @ComponentV2
 export struct AppBarHeader {
+  @Param transparentBackground: boolean = false
   private bar: AppBar = AppBar.getInstance()
   private insets: UiInsets = UiInsets.getInstance()
   @Local dividerHeight: number = 1
@@ -235,7 +236,7 @@ export struct AppBarHeader {
       }
       .width('100%')
       .padding({ top: this.insets.top })
-      .backgroundColor($r('app.color.page_bg'))
+      .backgroundColor(this.transparentBackground ? Color.Transparent : $r('app.color.page_bg'))
     }
   }
 }

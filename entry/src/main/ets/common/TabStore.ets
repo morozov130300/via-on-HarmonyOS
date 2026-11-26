@@ -380,6 +380,7 @@ export class TabStore {
     const closed = this.tabs[index]
     const info = this.closeInfoOf(closed)
     const wasCurrent = index === this.currentIndex
+    closed.close()
     this.tabs.splice(index, 1)
     if (this.tabs.length === 0) {
       const tab = new TabItem(this.nextTabId, false)
@@ -430,6 +431,9 @@ export class TabStore {
       }
     }
     const info = this.batchInfoOf(removed)
+    for (let i = 0; i < removed.length; i++) {
+      removed[i].close()
+    }
     this.tabs = [kept]
     this.currentIndex = 0
     this.snapshot(AppSettings.getInstance())
@@ -439,6 +443,9 @@ export class TabStore {
   // 原版 k6.j8：关闭所有标签页删除全部，随后留空白新页
   closeAll(): ClosedBatchResult | null {
     const info = this.batchInfoOf(this.tabs)
+    for (let i = 0; i < this.tabs.length; i++) {
+      this.tabs[i].close()
+    }
     this.tabs = []
     const tab = new TabItem(this.nextTabId, false)
     this.nextTabId = this.nextTabId + 1
@@ -641,6 +648,8 @@ export class TabStore {
       for (let i = 0; i < this.tabs.length; i++) {
         if (!this.tabs[i].incognito) {
           kept.push(this.tabs[i])
+        } else {
+          this.tabs[i].close()
         }
       }
       if (kept.length === 0) {

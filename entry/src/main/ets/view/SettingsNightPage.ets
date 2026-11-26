@@ -1,3 +1,4 @@
+import { deviceInfo } from '@kit.BasicServicesKit'
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { i18n } from '@kit.LocalizationKit'
 import { AppSettings } from '../common/Settings'
@@ -107,7 +108,8 @@ export struct SettingsNightPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor($r('app.color.page_bg'))
+    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+      ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })
     // 原版 g6/i.java:67 = setCustomAnimations(anim/f, anim/g, anim/h, anim/i)，
