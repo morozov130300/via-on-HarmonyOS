@@ -77,7 +77,7 @@ export struct SettingsGesturePage {
         .width('100%')
         .layoutWeight(1)
         .align(Alignment.Top)
-        .overlay(this.SnackbarHost(), { align: Alignment.Bottom })
+        this.SnackbarHost()
       }
       .width('100%')
       .height('100%')
@@ -215,8 +215,36 @@ export struct SettingsGesturePage {
   }
 
   private actionNameOf(action: number): string {
-    const name = TOOLBAR_ACTION_NAMES[action]
-    return name !== undefined ? name : '无操作'
+    return this.actionText(action)
+  }
+
+  // 资源名 → 当前语言文案（表内是资源键，绝非中文）
+  private actionText(action: number): string {
+    const key = TOOLBAR_ACTION_NAMES[action]
+    if (key === undefined) {
+      return ''
+    }
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return key
+    }
+    try {
+      return context.resourceManager.getStringByNameSync(key)
+    } catch (error) {
+      return key
+    }
+  }
+
+  private groupTitleText(key: string): string {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return key
+    }
+    try {
+      return context.resourceManager.getStringByNameSync(key)
+    } catch (error) {
+      return key
+    }
   }
 
   // 原版 u4.m3(i10)：g6.n.t(当前动作名, Z0(u.M=ab 修改), click→n3)
@@ -363,7 +391,7 @@ export struct SettingsGesturePage {
       Scroll() {
         Column() {
           ForEach(ACTION_PICKER_GROUPS, (group: ActionPickerGroup) => {
-            Text(group.title)
+            Text(this.groupTitleText(group.titleKey))
               .fontSize(14)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.dialog_action'))
@@ -372,7 +400,7 @@ export struct SettingsGesturePage {
             ForEach(group.items, (action: number) => {
               this.ActionRow(action)
             }, (action: number) => `act-${action}`)
-          }, (group: ActionPickerGroup) => `grp-${group.title}`)
+          }, (group: ActionPickerGroup) => `grp-${group.titleKey}`)
         }
         .width('100%')
       }
@@ -415,30 +443,29 @@ export struct SettingsGesturePage {
     })
   }
 
-  // 原版 hb/v4.b()：动作编号 → 文案（复用 SettingsToolbarPage 的名称表）
+  // 原版 hb/v4.b()：动作编号 → 文案（复用 SettingsToolbarPage 的名称表，表内是资源键）
   private actionPickerLabel(action: number): string {
-    const name = TOOLBAR_ACTION_NAMES[action]
-    return name !== undefined ? name : ''
+    return this.actionText(action)
   }
 }
 
 // 原版 hb/l6.i3()：无操作 + 四分组（顺序与归属逐项照搬）。
 // 「操作设定」页与「工具栏设置」页共用同一份分组数据（l6 被两处调用）。
 class ActionPickerGroup {
-  title: string
+  titleKey: string
   items: number[]
 
-  constructor(title: string, items: number[]) {
-    this.title = title
+  constructor(titleKey: string, items: number[]) {
+    this.titleKey = titleKey
     this.items = items
   }
 }
 
 const ACTION_PICKER_GROUPS: ActionPickerGroup[] = [
-  new ActionPickerGroup('标签页行为', [5, 10, 11, 12, 13, 9, 16, 27]),
-  new ActionPickerGroup('特性行为', [7, 30, 8, 23, 28, 26, 14, 15, 24, 25, 29]),
-  new ActionPickerGroup('地址栏行为', [4]),
-  new ActionPickerGroup('网页行为', [19, 1, 20, 6, 18, 17, 2, 3])
+  new ActionPickerGroup('orig_vp', [5, 10, 11, 12, 13, 9, 16, 27]),
+  new ActionPickerGroup('orig_j7', [7, 30, 8, 23, 28, 26, 14, 15, 24, 25, 29]),
+  new ActionPickerGroup('orig_bg', [4]),
+  new ActionPickerGroup('orig_a1r', [19, 1, 20, 6, 18, 17, 2, 3])
 ]
 
 @Builder

@@ -1357,6 +1357,14 @@
       "value": "关闭所有标签"
     },
     {
+      "name": "close_all_tabs_message",
+      "value": "确定要关闭所有标签页吗？"
+    },
+    {
+      "name": "close_all_tabs_confirm",
+      "value": "关闭"
+    },
+    {
       "name": "exit_incognito_confirm_msg",
       "value": "你想要在退出隐身模式前，关闭所有标签吗？"
     },

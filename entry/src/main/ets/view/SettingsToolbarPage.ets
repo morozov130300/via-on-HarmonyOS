@@ -24,59 +24,78 @@ class OptionItem {
   }
 }
 
-// 原版 hb/v4.b()：动作编号 → 文案（逐条对应 x7.u 资源）
-const ACTION_NAMES: Record<number, string> = {
-  0: '无操作',
-  1: '刷新网页',
-  2: '返回顶部',
-  3: '滑到底部',
-  4: '输入网址',
-  5: '新建标签',
-  6: '添加书签',
-  7: '打开书签',
-  8: '打开历史',
-  9: '关闭标签',
-  10: '上一个标签',
-  11: '下一个标签',
-  12: '网页后退',
-  13: '网页前进',
-  14: '页内查找',
-  15: '翻译',
-  16: '关闭所有标签页',
-  17: '向上翻页',
-  18: '向下翻页',
-  19: '保存网页',
-  20: '源码',
-  23: '显示标签面板',
-  24: '朗读网页',
-  25: '阅读模式',
-  26: '打开设置',
-  27: '复制标签页',
-  28: '打开下载',
-  29: '打开 AI 面板',
-  30: '打开书签对话框'
+// 原版 hb/v4.b()：动作编号 → 文案，值一律为 string.json 资源名（中英双语各一份），
+// 取值经 resourceText()/getStringByNameSync，禁止硬编码中文否则英文环境失效。
+// 语义逐条对应原版 x7.u：G9=无操作、M9=刷新、O9=回顶、y9=到底、D9=输入网址…
+const ACTION_NAME_KEYS: Record<number, string> = {
+  0: 'orig_pm',
+  1: 'refresh',
+  2: 'orig_pu',
+  3: 'orig_pe',
+  4: 'search_or_type_url',
+  5: 'orig_ad',
+  6: 'add_bookmark',
+  7: 'orig_po',
+  8: 'orig_pq',
+  9: 'orig_pf',
+  10: 'orig_pk',
+  11: 'orig_pl',
+  12: 'orig_pg',
+  13: 'orig_ph',
+  14: 'find_in_page',
+  15: 'translate',
+  16: 'close_all_tabs',
+  17: 'orig_qa',
+  18: 'orig_q1',
+  19: 'save',
+  20: 'view_source',
+  23: 'orig_pt',
+  24: 'read_aloud_menu',
+  25: 'reader_mode',
+  26: 'orig_pr',
+  27: 'duplicate_tab',
+  28: 'orig_pp',
+  29: 'orig_pd',
+  30: 'orig_pn'
 }
 
 class ActionGroup {
-  title: string
+  // titleKey = string.json 资源名（中英各一份），渲染时按当前语言取。
+  titleKey: string
   items: number[]
 
-  constructor(title: string, items: number[]) {
-    this.title = title
+  constructor(titleKey: string, items: number[]) {
+    this.titleKey = titleKey
     this.items = items
   }
 }
 
-// 原版 hb/l6.i3()：分组顺序与归属
+// 原版 hb/l6.i3()：分组顺序与归属（标题资源 x7.u.f14169t5/Nd/B0/Qh）
 const ACTION_GROUPS: ActionGroup[] = [
-  new ActionGroup('标签页行为', [5, 10, 11, 12, 13, 9, 16, 27]),
-  new ActionGroup('特性行为', [7, 30, 8, 23, 28, 26, 14, 15, 24, 25, 29]),
-  new ActionGroup('地址栏行为', [4]),
-  new ActionGroup('网页行为', [19, 1, 20, 6, 18, 17, 2, 3])
+  new ActionGroup('orig_vp', [5, 10, 11, 12, 13, 9, 16, 27]),
+  new ActionGroup('orig_j7', [7, 30, 8, 23, 28, 26, 14, 15, 24, 25, 29]),
+  new ActionGroup('orig_bg', [4]),
+  new ActionGroup('orig_a1r', [19, 1, 20, 6, 18, 17, 2, 3])
 ]
 
-// 动作编号 → 文案（原版 hb/v4.b()），导出供「操作设定」页（hb/u4 预览 Snackbar）复用
-export const TOOLBAR_ACTION_NAMES: Record<number, string> = ACTION_NAMES
+// 动作编号 → 资源名（原版 hb/v4.b()），导出供「操作设定」页（hb/u4 预览 Snackbar）复用
+export const TOOLBAR_ACTION_NAMES: Record<number, string> = ACTION_NAME_KEYS
+
+// 资源名 → 当前语言文案；取不到时回退为键名，绝不回退中文硬编码。
+export function toolbarActionText(context: UIContext | undefined, action: number): string {
+  const key = ACTION_NAME_KEYS[action]
+  if (key === undefined) {
+    return ''
+  }
+  if (context === undefined) {
+    return key
+  }
+  try {
+    return context.getHostContext()!.resourceManager.getStringByNameSync(key)
+  } catch (error) {
+    return key
+  }
+}
 
 // 应用布局数组 = 原版 arrays array i（a07/a06/a05/a03）
 const LAYOUT_OPTIONS: OptionItem[] = [
@@ -305,7 +324,7 @@ export struct SettingsToolbarPage {
   // 原版 K() 分派：BACK/FORWARD/HOME/TABS/MENU → zq「%1$s按钮 · 长按：%2$s」；
   // SWIPE_BACK/FORWARD、FAB_* → zr「%1$s：%2$s」。
   private showActionSnackbar(label: string, action: number, target: string): void {
-    const actionName = TOOLBAR_ACTION_NAMES[action] !== undefined ? TOOLBAR_ACTION_NAMES[action] : '无操作'
+    const actionName = this.resourceText(ACTION_NAME_KEYS[action], ACTION_NAME_KEYS[action])
     const message = `${label}：${actionName}`
     this.getUIContext().getPromptAction().showToast({ message: message, duration: 2000 })
     this.openActionPicker(target)
@@ -463,7 +482,7 @@ export struct SettingsToolbarPage {
           this.ActionRow(0)
           ForEach(ACTION_GROUPS, (group: ActionGroup) => {
             // a6/m 分组标题：14sp bold attr a7，margin 左16 右16 上12 下4
-            Text(group.title)
+            Text(this.resourceText(group.titleKey, group.titleKey))
               .fontSize(14)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('app.color.dialog_action'))
@@ -472,7 +491,7 @@ export struct SettingsToolbarPage {
             ForEach(group.items, (action: number) => {
               this.ActionRow(action)
             }, (action: number) => `act-${action}`)
-          }, (group: ActionGroup) => `grp-${group.title}`)
+          }, (group: ActionGroup) => `grp-${group.titleKey}`)
         }
         .width('100%')
       }
@@ -519,7 +538,7 @@ export struct SettingsToolbarPage {
     // a6/i 行：上下 20dp / 左右 16dp，14sp attr ac；选中 accent，未选中 fg；
     // 按压底 drawable p（#30808080），无圆角（原版全宽行）
     Row() {
-      Text(ACTION_NAMES[action])
+      Text(this.resourceText(ACTION_NAME_KEYS[action], ACTION_NAME_KEYS[action]))
         .fontSize(14)
         .fontColor(this.pickerValue === action ? $r('app.color.accent') : $r('app.color.dialog_text'))
         .maxLines(1)
@@ -541,19 +560,36 @@ export struct SettingsToolbarPage {
     })
   }
 
+  // 资源键统一走 string.json（en_US 已同步），禁止硬编码中文，否则英文环境失效。
+  private resourceText(name: string, fallback: string): string {
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      return fallback
+    }
+    try {
+      return context.resourceManager.getStringByNameSync(name)
+    } catch (error) {
+      return fallback
+    }
+  }
+
   private layoutLabel(): string {
-    const labels: string[] = ['传统', '工具栏在上', '工具栏在下', '双行工具栏']
-    return labels[this.settings.appLayout]
+    const keys: string[] = ['layout_traditional', 'layout_toolbar_top', 'layout_toolbar_bottom',
+      'layout_double_toolbar']
+    const index = Math.max(0, Math.min(keys.length - 1, this.settings.appLayout))
+    return this.resourceText(keys[index], keys[index])
   }
 
   private autoHideLabel(): string {
-    const labels: string[] = ['总是显示', '滑动来显示/隐藏', '点击来显示/隐藏']
-    return labels[this.settings.toolbarAutoHide]
+    const keys: string[] = ['auto_hide_always', 'auto_hide_swipe', 'auto_hide_tap']
+    const index = Math.max(0, Math.min(keys.length - 1, this.settings.toolbarAutoHide))
+    return this.resourceText(keys[index], keys[index])
   }
 
   private addressContentLabel(): string {
-    const labels: string[] = ['标题', '地址', '域名']
-    return labels[this.settings.addressBarContent]
+    const keys: string[] = ['content_title', 'content_address', 'content_domain']
+    const index = Math.max(0, Math.min(keys.length - 1, this.settings.addressBarContent))
+    return this.resourceText(keys[index], keys[index])
   }
 
   private toggleTabBar(isOn: boolean): void {
@@ -777,8 +813,9 @@ export struct SettingsToolbarPage {
   }
 
   private autoHideOptionText(value: number): string {
-    const labels: string[] = ['总是显示', '滑动来显示/隐藏', '点击来显示/隐藏']
-    return labels[value]
+    const keys: string[] = ['auto_hide_always', 'auto_hide_swipe', 'auto_hide_tap']
+    const index = Math.max(0, Math.min(keys.length - 1, value))
+    return this.resourceText(keys[index], keys[index])
   }
 
   // 原版 w5.k 单选对话框（layout u + w5.d 列表）：标题 16sp 粗体 + 选项行 14sp，
@@ -845,17 +882,8 @@ export struct SettingsToolbarPage {
   }
 
   private optionText(option: OptionItem): string {
-    const labels: Record<string, string> = {
-      'layout_traditional': '传统',
-      'layout_toolbar_top': '工具栏在上',
-      'layout_toolbar_bottom': '工具栏在下',
-      'layout_double_toolbar': '双行工具栏',
-      'content_title': '标题',
-      'content_address': '地址',
-      'content_domain': '域名'
-    }
-    const label = labels[option.label]
-    return label !== undefined ? label : option.label
+    // option.label 本身即 string.json 的资源名（layout_* / content_*），直接按名取。
+    return this.resourceText(option.label, option.label)
   }
 }
 

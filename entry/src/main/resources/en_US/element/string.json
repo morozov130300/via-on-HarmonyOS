@@ -1357,6 +1357,14 @@
       "value": "Close all tabs"
     },
     {
+      "name": "close_all_tabs_message",
+      "value": "Close all tabs?"
+    },
+    {
+      "name": "close_all_tabs_confirm",
+      "value": "Close"
+    },
+    {
       "name": "exit_incognito_confirm_msg",
       "value": "Do you want to close all tabs before disabling incognito mode?"
     },

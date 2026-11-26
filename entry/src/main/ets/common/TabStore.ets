@@ -527,10 +527,19 @@ export class TabStore {
     this.snapshot(AppSettings.getInstance())
   }
 
+  // 原版 k6.ra case10/11（k6.java:8286-8297）：iL0 = 当前+delta；
+  //   iL0 < 0 → 取末页，iL0 < total → 取 iL0，越上界保持原值（即回绕）。
+  // 原版此分支不发 d9()（d9 只用于标签增删回调），故此处仅切索引。
   stepTab(delta: number): void {
-    const target = this.currentIndex + delta
-    if (target < 0 || target >= this.tabs.length) {
+    const total = this.tabs.length
+    if (total <= 1) {
       return
+    }
+    let target = this.currentIndex + delta
+    if (target < 0) {
+      target = total - 1
+    } else if (target >= total) {
+      target = 0
     }
     this.currentIndex = target
   }

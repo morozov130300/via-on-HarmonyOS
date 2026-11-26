@@ -2490,6 +2490,33 @@ struct Index {
     }
   }
 
+  // 原版 k6.Da()（k6.java:4061-4068）：w5.k 居中确认框——
+  //   标题 x7.u.Pf、正文 x7.u.T7、确认按钮 x7.u.f14054l、取消 x7.u.J，
+  //   确认后 o5()（k6.java:3245-3259）从末页往前逐个 i8() 关闭全部标签。
+  private confirmCloseAllTabs(): void {
+    const count = this.tabStore.tabs.length
+    if (count <= 1) {
+      return
+    }
+    this.getUIContext().showAlertDialog({
+      title: $r('app.string.close_all_tabs_title'),
+      message: $r('app.string.close_all_tabs_message'),
+      primaryButton: {
+        value: $r('app.string.close_all_tabs_confirm'),
+        action: () => {
+          this.tabStore.closeAll()
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      cancel: () => {
+      }
+    })
+  }
+
   private handleToolbarCommand(cmd: string): void {
     const tab = this.tabStore.current()
     switch (cmd) {
@@ -2502,6 +2529,25 @@ struct Index {
         break
       case 'find':
         this.showFindBar = true
+        break
+      case 'findNext':
+        // 原版 k6.ra case21 → E8(true)
+        this.pcFindNext()
+        break
+      case 'findPrev':
+        // 原版 k6.ra case22 → E8(false)
+        this.pcFindPrev()
+        break
+      case 'inputUrl':
+        // 原版 k6.ra case4（k6.java:8269-8272）= ub() + na()：
+        // 先恢复被自动隐藏的工具栏，再打开网址输入（带当前网址预填）。
+        this.showToolbarsForPage()
+        this.searchInitialText = this.tabStore.current().isHomePage() ? '' : this.tabStore.current().url
+        this.showSearch = true
+        break
+      case 'closeAllTabs':
+        // 原版 k6.ra case16 → Da()（k6.java:4061-4068）：确认框后才关闭全部
+        this.confirmCloseAllTabs()
         break
       case 'translate':
         // 原版 k6.ra(15) → na.Z1()：按当前搜索引擎分流页内翻译
@@ -2682,7 +2728,11 @@ struct Index {
           .color(PROGRESS_GRADIENT)
           .backgroundColor(Color.Transparent)
           .position({ x: 0, y: this.effectiveInsetTop() })
-          .translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP ? -this.topBarTranslate() : 0 })
+          // 原版 k6.db（k6.java:6978-6983）：进度条 translationY = p * height2，
+          //   顶栏有子视图（布局1）时 height2 = -顶栏高 → 随顶栏上移；
+          //   否则 height2 = 底栏高 → 随底栏下移。故布局 0/2/3 必须用底栏位移。
+          .translate({ y: this.effectiveLayout() === LAYOUT_TOOLBAR_TOP
+            ? -this.topBarTranslate() : this.bottomBarTranslate() })
       }
 
       // 原版 k6.f2594t0：模式2（点击隐藏）隐藏后的悬浮钮——
