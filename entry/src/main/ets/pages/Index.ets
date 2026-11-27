@@ -2598,14 +2598,14 @@ struct Index {
     // （Jb:4645 RelativeLayout.LayoutParams(-1,-1)），顶栏 f2604y0 / 底栏 f2600w0
     // 悬浮其上，db(p) 用 translationY 收放 —— 网页不位移，隐藏时自然扩到全屏。
     Stack() {
-      if (deviceInfo.sdkApiVersion >= 29 && this.settings.isSettingsBackgroundVisible()
+      if (this.settings.isShowSettingsBackground()
         && this.isSettingsStackActive()
         && (this.settings.homeBgImage !== '' || this.homeCssBackgroundUrl() !== '')) {
         Image(this.homeBackgroundImageUrl())
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)
-          .blur(this.settings.isBlurEffect() && this.isBlurSupported() ? 30 : 0)
+          .blur(this.settings.isShowSettingsBackground() && this.settings.isBlurEffect() ? 30 : 0)
           .hitTestBehavior(HitTestMode.None)
       }
       Navigation(this.mainNavStack) {
@@ -2639,8 +2639,13 @@ struct Index {
                         this.showSearch = true
                       },
                       onScanResult: (text: string) => {
-                        this.searchInitialText = text
-                        this.showSearch = true
+                        const scanned = text.trim()
+                        if (scanned === '') {
+                          return
+                        }
+                        const target = isUrlLike(scanned) || scanned.toLowerCase().startsWith('localhost') ? normalizeUrl(scanned)
+                          : buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), scanned)
+                        this.tabStore.navigate(target)
                       },
                       onLogoTap: () => {
                         // 原版 logo 点击 via.cmd(257)→ja(true)→aa(null)：打开书签管理页（RecordContainerFragment 标签 1）
@@ -2706,13 +2711,13 @@ struct Index {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.settings.isSettingsBackgroundVisible() && this.isSettingsStackActive()
-        && deviceInfo.sdkApiVersion >= 29 ? Color.Transparent : $r('app.color.page_bg'))
+      .backgroundColor(this.settings.isShowSettingsBackground() && this.isSettingsStackActive()
+        ? Color.Transparent : $r('app.color.page_bg'))
       .hideTitleBar(true)
       .mode(NavigationMode.Stack)
 
       // 全局唯一标题栏：由各 NavDestination 页面在 onReady/onWillAppear 时改写其内容
-      AppBarHeader({ transparentBackground: this.settings.isSettingsBackgroundVisible()
+      AppBarHeader({ transparentBackground: this.settings.isShowSettingsBackground()
         && this.isSettingsStackActive() })
         .position({ x: 0, y: 0 })
 
@@ -3176,7 +3181,7 @@ struct Index {
   }
 
   private openPage(page: string): void {
-    if (page === 'settingsGeneral') {
+    if (page.startsWith('settings') && !this.isSettingsStackActive()) {
       this.settings.refreshSettingsBackgroundVisible()
     }
     this.mainNavStack.pushPathByName(page, '', true)
@@ -3191,7 +3196,7 @@ struct Index {
   }
 
   private isBlurSupported(): boolean {
-    return deviceInfo.sdkApiVersion >= 31
+    return true
   }
 
   private homeBackgroundImageUrl(): string {
@@ -3219,7 +3224,7 @@ struct Index {
       if (scanned === '') {
         return
       }
-      const target = isUrlLike(scanned) ? normalizeUrl(scanned)
+      const target = isUrlLike(scanned) || scanned.toLowerCase().startsWith('localhost') ? normalizeUrl(scanned)
         : buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), scanned)
       this.tabStore.navigate(target)
     }).catch((error: BusinessError) => {

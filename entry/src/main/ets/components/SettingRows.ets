@@ -84,16 +84,35 @@ export struct SettingRadioRow {
   }
 }
 
-// 隐私页视频同款行：右侧圆形单选点 + 按下整行高亮
-// 原版为 drawable 状态选择器（pressed 背景、CheckBox 的 buttonDrawable），均为状态直切、无过渡动画；
-// 不得插入带 .position() 的大尺寸波纹圆——该子组件会参与 Stack 布局，
-// 插入/移除时行高被撑大再缩回，导致整段列表「弹开」跳动（见 20261031 录屏问题）
+@ComponentV2
+export struct SettingCheckControl {
+  @Param @Require isChecked: boolean = false
+  @Param disabled: boolean = false
+  @Event onChange: (isOn: boolean) => void = (isOn: boolean) => {}
+
+  build() {
+    Circle({ width: 16, height: 16 })
+      .fill(this.isChecked ? $r('app.color.accent') : Color.Transparent)
+      .stroke(this.isChecked ? $r('app.color.accent') : $r('app.color.fg_secondary'))
+      .strokeWidth(2)
+      .opacity(this.disabled ? 0.4 : 1)
+      .onClick(() => {
+        if (!this.disabled) {
+          this.onChange(!this.isChecked)
+        }
+      })
+  }
+}
+
+// 原版 a6.o：整行点击切换，右侧使用 CheckBox 圆形 buttonDrawable。
 @ComponentV2
 export struct SettingCheckRow {
   @Param @Require rowLabel: ResourceStr = ''
   @Param rowDesc: ResourceStr = ''
   @Param @Require isChecked: boolean = false
+  @Param labelMaxLines: number = 1
   @Event onCheckRow: (isOn: boolean) => void = (isOn: boolean) => {}
+  @Param disabled: boolean = false
   @Local pressed: boolean = false
 
   private setPressed(on: boolean): void {
@@ -109,9 +128,9 @@ export struct SettingCheckRow {
     Row() {
       Column() {
         Text(this.rowLabel)
-          .fontSize(14)
-          .fontColor($r('app.color.fg'))
-          .maxLines(1)
+          .fontSize(15)
+          .fontColor(this.disabled ? $r('app.color.fg_secondary') : $r('app.color.fg'))
+          .maxLines(this.labelMaxLines)
         if (hasText(this.rowDesc)) {
           Text(this.rowDesc)
             .fontSize(12)
@@ -123,15 +142,17 @@ export struct SettingCheckRow {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      // 勾选是状态切换，没有动画也没有辉光，故此处不加 .shadow 与 .animation。
-      Circle({ width: 16, height: 16 })
-        .fill(this.isChecked ? $r('app.color.accent') : Color.Transparent)
-        .stroke(this.isChecked ? $r('app.color.accent') : $r('app.color.fg_secondary'))
-        .strokeWidth(2)
+      SettingCheckControl({
+        isChecked: this.isChecked,
+        disabled: this.disabled,
+        onChange: (isOn: boolean): void => {
+          this.onCheckRow(isOn)
+        }
+      })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
-    .padding({ left: 16, right: 16, top: 20, bottom: 20 })
+    .padding({ left: 16, right: 16, top: 13, bottom: 13 })
     .backgroundColor(this.pressed ? $r('app.color.dialog_btn_pressed') : Color.Transparent)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {

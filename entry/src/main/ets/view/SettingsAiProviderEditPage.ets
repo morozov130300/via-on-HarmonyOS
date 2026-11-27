@@ -1,4 +1,3 @@
-import { deviceInfo } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { util } from '@kit.ArkTS'
@@ -396,7 +395,7 @@ export struct SettingsAiProviderEditPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(AppSettings.getInstance().isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

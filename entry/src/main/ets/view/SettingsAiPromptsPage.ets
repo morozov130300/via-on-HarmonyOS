@@ -1,4 +1,3 @@
-import { deviceInfo } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { CopilotStore, AiSuggestion } from '../common/CopilotStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -107,7 +106,7 @@ export struct SettingsAiPromptsPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(AppSettings.getInstance().isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

@@ -3,12 +3,13 @@ import { pasteboard, emitter } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { ViaIcon } from './ViaIcon'
-import { hostOf, getBuiltinEngines, isUrlLike, extractUrlsFromText } from '../common/SearchEngines'
+import { hostOf, SearchEngineDef, getBuiltinEngines, isUrlLike, extractUrlsFromText } from '../common/SearchEngines'
 import { ConfigurationConstant, common } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { computeDialogWidthVp } from './ViaDialogCard'
 import { BEZIER_0202_CURVE, dialogTransition } from '../common/Transitions'
+import { SearchEngineDialog } from './SearchEngineDialog'
 import { chromeIconColor, chromeTextColor, resolveColorHex, toolbarBackgroundColor } from '../common/ChromeColors'
 
 const BAR_HEIGHT: number = 48
@@ -37,10 +38,18 @@ class TitleMenuItem {
 class EngineItem {
   key: string = ''
   name: string = ''
+  template: string = ''
+  id: number = 0
 
-  constructor(key: string, name: string) {
+  constructor(key: string, name: string, template: string, id: number) {
     this.key = key
     this.name = name
+    this.template = template
+    this.id = id
+  }
+
+  toSearchEngineDef(): SearchEngineDef {
+    return new SearchEngineDef(this.key, this.name, this.template, this.id)
   }
 }
 
@@ -274,11 +283,11 @@ export struct AddressBar {
     const items: EngineItem[] = []
     const builtins = getBuiltinEngines(isZh, isRu)
     for (const engine of builtins) {
-      items.push(new EngineItem(engine.key, engine.name))
+      items.push(new EngineItem(engine.key, engine.name, engine.template, engine.id))
     }
     for (let i = 0; i < this.settings.customEngines.length; i++) {
       const rec = this.settings.customEngines[i]
-      items.push(new EngineItem(`custom:${rec.id}`, rec.name))
+      items.push(new EngineItem(`custom:${rec.id}`, rec.name, rec.template, rec.id))
     }
     return items
   }
@@ -519,51 +528,25 @@ export struct AddressBar {
     .borderRadius(18)
   }
 
-  // 原版左图标长按：w5.k.l(I()).d0(搜索引擎) 单选列表弹窗（layout v.xml：16dp 圆形单选 + 24dp 间距）
+  // 左图标引擎单选窗：两处入口共用原版 w5.k 单选布局
   @Builder
   EngineDialog() {
-    Column() {
-      Text($r('app.string.search_engine'))
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
-        .maxLines(1)
-        .width('100%')
-        .padding({ top: 8, bottom: 8 })
-        .margin({ left: 16, right: 16, bottom: 6 })
-      Scroll() {
-        Column() {
-          ForEach(this.engineItems(), (item: EngineItem) => {
-            Row({ space: 24 }) {
-              Circle({ width: 16, height: 16 })
-                .fill(this.settings.engineKey === item.key ? $r('app.color.accent') : Color.Transparent)
-                .stroke(this.settings.engineKey === item.key ? Color.Transparent : $r('app.color.dialog_border'))
-                .strokeWidth(2)
-              Text(item.name)
-                .fontSize(14)
-                .fontColor($r('app.color.fg'))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .layoutWeight(1)
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-            .onClick(() => {
-              // 原版选中 → q3("searchengine", 引擎)
-              this.settings.setEngineKey(item.key)
-              this.closeEngineDialog()
-            })
-          }, (item: EngineItem) => item.key)
-        }
-        .width('100%')
+    SearchEngineDialog({
+      title: $r('app.string.search_engine'),
+      items: this.searchEngineDefs(),
+      selectedKey: this.settings.engineKey,
+      onSelect: (key: string): void => {
+        this.settings.setEngineKey(key)
+        this.closeEngineDialog()
       }
-      .constraintSize({ maxHeight: 384 })
+    })
+  }
+
+  private searchEngineDefs(): SearchEngineDef[] {
+    const items: SearchEngineDef[] = []
+    for (const item of this.engineItems()) {
+      items.push(item.toSearchEngineDef())
     }
-    .width('100%')
-    .padding({ top: 12, bottom: 12 })
-    .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(18)
-    .border({ width: 1, color: $r('app.color.dialog_border') })
-    .transition(dialogTransition())
+    return items
   }
 }

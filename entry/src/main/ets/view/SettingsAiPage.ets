@@ -1,4 +1,3 @@
-import { deviceInfo } from '@kit.BasicServicesKit'
 import { CopilotStore } from '../common/CopilotStore'
 import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
@@ -61,7 +60,7 @@ export struct SettingsAiPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(AppSettings.getInstance().isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

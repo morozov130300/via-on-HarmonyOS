@@ -47,20 +47,24 @@ export class SkinStore {
   list(context: common.Context): SkinEntry[] {
     const result: SkinEntry[] = []
     const dir = this.dir(context)
-    if (!fileIo.accessSync(dir)) {
-      return result
-    }
-    const names = fileIo.listFileSync(dir)
-    for (const name of names) {
-      const path = `${dir}/${name}`
-      try {
-        const stat = fileIo.statSync(path)
-        if (stat.isDirectory()) {
-          result.push(new SkinEntry(name, stat.mtime))
-        }
-      } catch (error) {
-        // 跳过无法访问的条目
+    try {
+      if (!fileIo.accessSync(dir)) {
+        return result
       }
+      const names = fileIo.listFileSync(dir)
+      for (const name of names) {
+        const path = `${dir}/${name}`
+        try {
+          const stat = fileIo.statSync(path)
+          if (stat.isDirectory()) {
+            result.push(new SkinEntry(name, stat.mtime))
+          }
+        } catch (error) {
+          // Skip inaccessible entries.
+        }
+      }
+    } catch (error) {
+      return result
     }
     result.sort((a: SkinEntry, b: SkinEntry) => {
       if (a.mtime === b.mtime) {
@@ -69,6 +73,43 @@ export class SkinStore {
       return a.mtime > b.mtime ? -1 : 1
     })
     return result
+  }
+
+  private hasSkinIcons(path: string): boolean {
+    try {
+      const names = fileIo.listFileSync(path)
+      for (const name of names) {
+        if (name.startsWith('ic_') && name.endsWith('.png')) {
+          const iconPath = `${path}/${name}`
+          if (fileIo.statSync(iconPath).isFile()) {
+            return true
+          }
+        }
+      }
+    } catch (error) {
+      return false
+    }
+    return false
+  }
+
+  private removeTree(path: string): boolean {
+    try {
+      const stat = fileIo.statSync(path)
+      if (stat.isDirectory()) {
+        const names = fileIo.listFileSync(path)
+        for (const name of names) {
+          if (!this.removeTree(`${path}/${name}`)) {
+            return false
+          }
+        }
+        fileIo.rmdirSync(path)
+      } else {
+        fileIo.unlinkSync(path)
+      }
+      return true
+    } catch (error) {
+      return false
+    }
   }
 
   // 原版 mb.b.f/e：皮肤目录绝对路径
@@ -98,7 +139,8 @@ export class SkinStore {
   // 返回 null = 失败（toast u.E7「加载皮肤失败」），否则返回新皮肤名
   importFromUri(context: common.Context, uri: string): Promise<string | null> {
     return new Promise<string | null>((resolve) => {
-      let name = uri.substring(uri.lastIndexOf('/') + 1)
+      const cleanUri = uri.split('?')[0].split('#')[0]
+      let name = cleanUri.substring(cleanUri.lastIndexOf('/') + 1)
       try {
         name = decodeURIComponent(name)
       } catch (error) {
@@ -144,25 +186,49 @@ export class SkinStore {
       } catch (error) {
         // 忽略
       }
+      const importDir = `${this.dir(context)}/.skin_import_${Date.now()}`
       const destDir = this.skinPath(context, name)
-      // 原版 e4.a：解压 zip 流到目标目录
-      zlib.decompressFile(tempZip, destDir).then(() => {
+      zlib.decompressFile(tempZip, importDir).then(() => {
         try {
           fileIo.unlinkSync(tempZip)
         } catch (error) {
-          // 忽略临时文件清理失败
+          // Ignore temporary archive cleanup failures.
         }
-        if (fileIo.accessSync(destDir)) {
+        if (!this.hasSkinIcons(importDir)) {
+          this.removeTree(importDir)
+          resolve(null)
+          return
+        }
+        const backupDir = `${this.dir(context)}/.skin_backup_${Date.now()}`
+        let hasBackup = false
+        try {
+          if (fileIo.accessSync(destDir)) {
+            fileIo.renameSync(destDir, backupDir)
+            hasBackup = true
+          }
+          fileIo.renameSync(importDir, destDir)
+          if (hasBackup) {
+            this.removeTree(backupDir)
+          }
           resolve(name)
-        } else {
+        } catch (error) {
+          if (hasBackup) {
+            try {
+              fileIo.renameSync(backupDir, destDir)
+            } catch (restoreError) {
+              // Preserve the backup when restoration fails.
+            }
+          }
+          this.removeTree(importDir)
           resolve(null)
         }
       }).catch(() => {
         try {
           fileIo.unlinkSync(tempZip)
         } catch (error) {
-          // 忽略
+          // Ignore temporary archive cleanup failures.
         }
+        this.removeTree(importDir)
         resolve(null)
       })
     })
@@ -173,16 +239,7 @@ export class SkinStore {
     if (name === '') {
       return false
     }
-    const path = this.skinPath(context, name)
-    if (!fileIo.accessSync(path)) {
-      return false
-    }
-    try {
-      fileIo.rmdirSync(path)
-      return true
-    } catch (error) {
-      return false
-    }
+    return this.removeTree(this.skinPath(context, name))
   }
 
   // 原版 z8.f.k：冷重启应用（makeRestartActivityTask + System.exit）

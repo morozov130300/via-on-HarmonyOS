@@ -1,8 +1,7 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
-import { deviceInfo } from '@kit.BasicServicesKit'
 import { AppSettings } from '../common/Settings'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
-import { SettingNavRow } from '../components/SettingRows'
+import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { buildNavSlide } from './PageTransitions'
 
 // 原版实验页（hb/y1，标题 u.R4 = 实验），行序 i3()：
@@ -39,52 +38,23 @@ export struct SettingsExperimentalPage {
                 this.navPathStack.pushPathByName('skinPage', '', true)
               }
             })
-            // 原版 hb/y1.i3：模糊行仅在系统 API 31+ 存在
-            if (deviceInfo.sdkApiVersion >= 31) {
-              Row() {
-              Column() {
-                Text($r('app.string.orig_cy'))
-                  .fontSize(15)
-                  .fontColor($r('app.color.fg'))
-                  .maxLines(1)
-                Text($r('app.string.orig_cz'))
-                  .fontSize(12)
-                  .fontColor($r('app.color.fg_secondary'))
-                  .maxLines(2)
-                  .margin({ top: 2 })
+            SettingCheckRow({
+              rowLabel: $r('app.string.orig_cy'),
+              rowDesc: $r('app.string.orig_cz'),
+              isChecked: this.settings.isBlurEffect(),
+              onCheckRow: (isOn: boolean): void => {
+                this.settings.setBlurEffect(isOn)
               }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
-
-              Toggle({ type: ToggleType.Switch, isOn: this.settings.isBlurEffect() })
-                .onChange((isOn: boolean) => {
-                  this.settings.setBlurEffect(isOn)
-                })
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Center)
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            }
-            // 原版 z8.l3.f14720a：API 29+ 才显示背景开关
-            if (deviceInfo.sdkApiVersion >= 29) {
-              Row() {
-              Text($r('app.string.orig_tu'))
-                .fontSize(15)
-                .fontColor($r('app.color.fg'))
-                .maxLines(1)
-                .layoutWeight(1)
-
-              Toggle({ type: ToggleType.Switch, isOn: this.settings.isShowSettingsBackground() })
-                .onChange((isOn: boolean) => {
-                  this.settings.setShowSettingsBackground(isOn)
-                  this.getUIContext().getPromptAction()
-                    .showToast({ message: $r('app.string.orig_tv'), duration: TOAST_SHORT })
-                })
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Center)
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            }
+            })
+            SettingCheckRow({
+              rowLabel: $r('app.string.orig_tu'),
+              isChecked: this.settings.isShowSettingsBackground(),
+              onCheckRow: (isOn: boolean): void => {
+                this.settings.setShowSettingsBackground(isOn)
+                this.getUIContext().getPromptAction()
+                  .showToast({ message: $r('app.string.orig_tv'), duration: TOAST_SHORT })
+              }
+            })
           }
           .width('100%')
         }
@@ -95,7 +65,7 @@ export struct SettingsExperimentalPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(this.settings.isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(this.settings.isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

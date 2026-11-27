@@ -817,6 +817,10 @@
       "value": "Default"
     },
     {
+      "name": "skin_default",
+      "value": "Default"
+    },
+    {
       "name": "ignore_ssl_warning",
       "value": "Ignore SSL certificate warnings"
     },

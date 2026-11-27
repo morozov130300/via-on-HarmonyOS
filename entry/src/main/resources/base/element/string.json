@@ -817,6 +817,10 @@
       "value": "默认"
     },
     {
+      "name": "skin_default",
+      "value": "默认"
+    },
+    {
       "name": "ignore_ssl_warning",
       "value": "忽略 SSL 证书警告"
     },

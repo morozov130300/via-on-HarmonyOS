@@ -7,6 +7,7 @@ import { builtinEngineId } from './SearchEngines'
 import { BrowserDb } from './Database'
 import { uaByKey, simplifyUaString, CustomUaEntry } from './UaTable'
 import { RemoteConfig } from './RemoteConfig'
+import { MENU_DEFAULT_ORDER, MENU_INITIAL_DISPLAYED, MENU_INITIAL_HIDDEN } from './MenuItems'
 
 // 原版 f4/Q0 语义：orientation 存 1..4（1=跟随系统 2=自动 3=竖屏 4=横屏）
 // 鸿蒙枚举对照（官方 bpta-multi-device-window-direction）：
@@ -242,6 +243,8 @@ export class AppSettings {
   // 原版 w9/k.K0()：language 默认 null = 跟随系统（0），1=简体中文，2=English
   @Trace appLanguage: number = 0
   @Trace menuHidden: string[] = []
+  @Trace menuOrderInitialized: boolean = false
+  private menuLayoutWrite: Promise<void> = Promise.resolve()
   // 菜单条目显示顺序（id 数组，仅含当前在菜单里的条目；
   // 空数组 = 从未定制过，使用 MenuItems.MENU_DEFAULT_ORDER 兜底）
   @Trace menuOrder: string[] = []
@@ -527,7 +530,20 @@ export class AppSettings {
       this.toolbarColorAdapt = await this.readBoolean('toolbarColorAdapt', true)
       this.appLanguage = await this.readNumber('appLanguage', 0)
       this.menuHidden = await this.readStringArray('menuHidden')
-      this.menuOrder = await this.readStringArray('menuOrder')
+      const menuOrderUnset: string = '__uia_menu_order_unset__'
+      const storedMenuOrder: string = await this.readString('menuOrder', menuOrderUnset)
+      this.menuOrderInitialized = storedMenuOrder !== menuOrderUnset
+      this.menuOrder = this.menuOrderInitialized
+        ? this.parseStringArray(storedMenuOrder, 'menuOrder') : MENU_INITIAL_DISPLAYED.slice()
+      const legacySettingsOnly: boolean = this.menuOrder.length === 1 &&
+        this.menuOrder[0] === 'settings' && this.menuHidden.length === MENU_DEFAULT_ORDER.length - 1 &&
+        this.menuHidden.indexOf('settings') < 0
+      if (!this.menuOrderInitialized || legacySettingsOnly) {
+        this.menuOrder = MENU_INITIAL_DISPLAYED.slice()
+        this.menuHidden = MENU_INITIAL_HIDDEN.slice()
+        this.menuOrderInitialized = true
+        await this.setMenuLayout(this.menuOrder, this.menuHidden)
+      }
       // 原版 hiddenctxmenus 默认 {6}（保存图片隐藏），未写入过时用默认值
       this.longPressHidden = this.parseStringArray(await this.readString('longPressHidden', '["save_image"]'), 'longPressHidden')
       this.toolbarHidden = await this.readStringArray('toolbarHidden')
@@ -1766,7 +1782,27 @@ export class AppSettings {
 
   setMenuOrder(list: string[]): void {
     this.menuOrder = list
+    this.menuOrderInitialized = true
     this.flushKey('menuOrder', JSON.stringify(list))
+  }
+
+  setMenuLayout(order: string[], hidden: string[]): Promise<void> {
+    this.menuOrder = order
+    this.menuHidden = hidden
+    this.menuOrderInitialized = true
+    const write = this.menuLayoutWrite.catch(() => {}).then(async (): Promise<void> => {
+      if (this.store === null) {
+        return
+      }
+      await this.store.put('menuOrder', JSON.stringify(order))
+      await this.store.put('menuHidden', JSON.stringify(hidden))
+      await this.store.flush()
+      if (SYNC_KEYS.indexOf('menuOrder') >= 0 || SYNC_KEYS.indexOf('menuHidden') >= 0) {
+        this.scheduleSnapshot()
+      }
+    })
+    this.menuLayoutWrite = write
+    return write
   }
 
   setLongPressHidden(list: string[]): void {
@@ -1920,16 +1956,11 @@ export class AppSettings {
     this.setLabFlag(on ? (this.labFlag | 2) : (this.labFlag & ~2))
   }
 
-  // 原版位4在设置页面创建时采样，因此切换后下次打开设置才生效。
   @Trace settingsBackgroundVisible: boolean = false
 
   // 原版 w9.d.g()/j()：labflag 位4 = 实验页「在设置中显示背景」开关
   isShowSettingsBackground(): boolean {
     return (this.labFlag & 4) !== 0
-  }
-
-  isSettingsBackgroundVisible(): boolean {
-    return this.settingsBackgroundVisible
   }
 
   refreshSettingsBackgroundVisible(): void {

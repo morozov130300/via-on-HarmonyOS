@@ -10,6 +10,7 @@ import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
+import { SettingCheckControl, SettingCheckRow } from '../components/SettingRows'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
 import { buildNavSlide } from './PageTransitions'
@@ -86,20 +87,13 @@ export struct UserScriptsPage {
         AppBarSpacer()
         Scroll() {
           Column() {
-            // a6.n(1)：启用脚本（hm）
-            Row() {
-              Text($r('app.string.enable_script'))
-                .fontSize(15)
-                .fontColor($r('app.color.fg'))
-                .layoutWeight(1)
-              Toggle({ type: ToggleType.Switch, isOn: this.settings.scriptEnabled })
-                .onChange((value: boolean) => {
-                  this.settings.setScriptEnabled(value)
-                })
-            }
-            .width('100%')
-            .height(48)
-            .padding({ left: 16, right: 16 })
+            SettingCheckRow({
+              rowLabel: $r('app.string.enable_script'),
+              isChecked: this.settings.scriptEnabled,
+              onCheckRow: (isOn: boolean): void => {
+                this.settings.setScriptEnabled(isOn)
+              }
+            })
             // a6.q(2)：自动更新（仅有带源地址脚本时显示，a0l）
             if (this.anyScriptWithUrl()) {
               Row() {
@@ -136,11 +130,14 @@ export struct UserScriptsPage {
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .layoutWeight(1)
-                  Toggle({ type: ToggleType.Switch, isOn: script.enabled })
-                    .onChange((value: boolean) => {
-                      script.enabled = value
+                  SettingCheckControl({
+                    isChecked: script.enabled,
+                    disabled: !this.settings.scriptEnabled || script.code === '',
+                    onChange: (isOn: boolean): void => {
+                      script.enabled = isOn
                       this.settings.saveScript(script)
-                    })
+                    }
+                  })
                 }
                 .width('100%')
                 .height(48)
@@ -752,6 +749,9 @@ export struct ScriptEditOverlay {
       .borderRadius(18)
       .border({ width: 1, color: $r('app.color.dialog_border') })
       .backgroundColor($r('app.color.dialog_bg'))
+      .onClick(() => {
+        // Keep taps inside the editor from reaching the full-screen dismiss layer.
+      })
       if (this.helpShow) {
         this.helpDialog()
       }

@@ -1,4 +1,3 @@
-import { deviceInfo } from '@kit.BasicServicesKit'
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { i18n } from '@kit.LocalizationKit'
 import { AppSettings } from '../common/Settings'
@@ -108,7 +107,7 @@ export struct SettingsNightPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(AppSettings.getInstance().isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

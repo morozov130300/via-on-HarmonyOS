@@ -1,4 +1,5 @@
 import { UserScriptRec } from '../common/Types'
+import { SettingCheckControl } from '../components/SettingRows'
 import { AppSettings } from '../common/Settings'
 import { TabStore } from '../common/TabStore'
 import { hostOf } from '../common/SearchEngines'
@@ -94,12 +95,14 @@ export struct WebScriptsPage {
                   .onClick(() => {
                     this.showGmCommands(script)
                   })
-                Toggle({ type: ToggleType.Switch, isOn: script.enabled })
-                  .onChange((value: boolean) => {
-                    script.enabled = value
+                SettingCheckControl({
+                  isChecked: script.enabled,
+                  onChange: (isOn: boolean): void => {
+                    script.enabled = isOn
                     this.settings.saveScript(script)
                     this.refreshTick++
-                  })
+                  }
+                })
               }
               .width('100%')
               .height(48)

@@ -228,33 +228,6 @@ export struct Toolbar {
     }
   }
 
-  // 原版 z8.b0.V（z8/b0.java:391-416）：平滑滚动，带缓动与自取消。
-  //   i10: 0=顶 1=底 2=上翻 3=下翻；翻页步长 = 视口高 4/5；时长 100 + min(1,|Δ|/3000)*400ms，
-  //   插值 AccelerateDecelerate。原版用 Animator 驱动 WebView.scrollY，网页侧等价实现为
-  //   window.scrollTo({top, behavior:'smooth'})。
-  private scrollPage(mode: number): void {
-    const js = `(function(){try{`
-      + `var vh=window.innerHeight||document.documentElement.clientHeight;`
-      + `var maxY=Math.max(0,(document.documentElement.scrollHeight||document.body.scrollHeight)-vh);`
-      + `var cur=window.pageYOffset||document.documentElement.scrollTop||0;`
-      + `var target=${mode === 0 ? '0' : mode === 1 ? 'maxY'
-    : mode === 2 ? 'Math.max(0,cur-vh*0.8)' : 'Math.min(maxY,cur+vh*0.8)'};`
-      + `target=Math.max(0,Math.min(maxY,target));`
-      + `var delta=Math.abs(target-cur);`
-      + `if(delta<1){return;}`
-      + `var dur=Math.round(100+Math.min(1,delta/3000)*400);`
-      + `try{window.scrollTo({top:target,left:0,behavior:'smooth'});}`
-      + `catch(e){window.scrollTo(0,target);}`
-      + `}catch(e){}})();`
-    try {
-      this.tab.controller.runJavaScript(js).catch((error: Error) => {
-        console.error(`smooth scroll failed: ${error.message}`)
-      })
-    } catch (error) {
-      console.error('smooth scroll failed')
-    }
-  }
-
   // 原版 hb/v4.b()：长按动作全集（v4.java:65-130）
   // 0=无 1=刷新 2=回顶部 3=到底部 4=输入网址 5=新建标签 6=添加书签 7=书签 8=历史
   // 9=关闭标签 10=上一标签 11=下一标签 12=网页后退 13=网页前进 14=页内查找 15=翻译
@@ -270,17 +243,16 @@ export struct Toolbar {
         }
         break
       case 2:
-        // 原版 k6.ra case2（k6.java:8265-8268）→ z8.b0.V(O8(), 0)：平滑滚动到顶部
-        this.scrollPage(0)
-        break
       case 3:
-        // 原版 k6.ra case3 → z8.b0.V(O8(), 1)：平滑滚动到底部
-        this.scrollPage(1)
+        try {
+          const pos = key === 2 ? '0' : 'document.body.scrollHeight'
+          this.tab.controller.runJavaScript(`window.scrollTo(0, ${pos})`)
+        } catch (error) {
+          console.error('long press scroll failed')
+        }
         break
       case 4:
-        // 原版 k6.ra case4（k6.java:8269-8272）= ub() + na()：先恢复被自动隐藏的工具栏，
-        // 再打开网址输入。只调 onOpenSearch 会漏掉恢复分支（隐藏态下地址栏不回来）。
-        this.onCommand('inputUrl')
+        this.onOpenSearch()
         break
       case 5:
         this.tabStore.newTab(false)
@@ -327,32 +299,22 @@ export struct Toolbar {
         this.onCommand('translate')
         break
       case 16:
-        // 原版 k6.ra case16（k6.java:8316-8318）→ Da()（k6.java:4061-4068）：
-        // 先弹确认框（w5.k 居中，标题 Pf、正文 T7、确认 f14054l、取消 J），
-        // 确认才 o5() 逐个 i8([...]) 关闭全部。直接 closeAll() 会误触清空。
-        this.onCommand('closeAllTabs')
+        this.tabStore.closeAll()
         break
       case 17:
-        // 原版 k6.ra case17 → z8.b0.V(O8(), 2)：向上翻约 80% 视口（带缓动）
-        this.scrollPage(2)
-        break
       case 18:
-        // 原版 k6.ra case18 → z8.b0.V(O8(), 3)：向下翻约 80% 视口（带缓动）
-        this.scrollPage(3)
+        try {
+          const dir = key === 17 ? '-' : ''
+          this.tab.controller.runJavaScript(`window.scrollBy(0, ${dir}window.innerHeight)`)
+        } catch (error) {
+          console.error('long press page scroll failed')
+        }
         break
       case 19:
         this.onCommand('savePage')
         break
       case 20:
         this.onCommand('viewSource')
-        break
-      case 21:
-        // 原版 k6.ra case21（k6.java:8329-8332）→ E8(true)：页内查找下一个
-        this.onCommand('findNext')
-        break
-      case 22:
-        // 原版 k6.ra case22 → E8(false)：页内查找上一个
-        this.onCommand('findPrev')
         break
       case 23:
         this.onTabs()

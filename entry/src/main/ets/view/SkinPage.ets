@@ -155,7 +155,7 @@ export struct SkinPage {
           // 原版 s3：首项固定默认（mb.c("", u.fd「默认」, 0)）
           ListItem() {
             SettingRadioRow({
-              rowLabel: $r('app.string.ua_default'),
+              rowLabel: $r('app.string.skin_default'),
               isSelected: this.current === '',
               onTapRow: () => {
                 this.selectSkin(new SkinEntry('', 0))
@@ -175,7 +175,7 @@ export struct SkinPage {
                 }
               })
             }
-          }, (entry: SkinEntry) => `${entry.name}_${entry.mtime}_${this.current}`)
+          }, (entry: SkinEntry) => entry.name)
         }
         .width('100%')
         .layoutWeight(1)

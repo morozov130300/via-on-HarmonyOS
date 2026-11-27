@@ -17,6 +17,9 @@ export const MENU_DEFAULT_ORDER: string[] = [
   'reading_mode', 'open_with', 'game_mode', 'add_home_fav'
 ]
 
+export const MENU_INITIAL_DISPLAYED: string[] = MENU_DEFAULT_ORDER.slice(0, 30)
+export const MENU_INITIAL_HIDDEN: string[] = MENU_DEFAULT_ORDER.slice(30)
+
 export function isMenuId(id: string): boolean {
   return MENU_DEFAULT_ORDER.indexOf(id) >= 0
 }

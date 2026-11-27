@@ -1,4 +1,3 @@
-import { deviceInfo } from '@kit.BasicServicesKit'
 // 定制菜单页：1:1 复刻原版 Uia 7.4.0 i8/s（定制菜单 Fragment）
 // 结构（原版 i8/s.X1）：单个 5 列 Grid，扁平列表 =
 //   [提示行「按住并拖动即可重新排列条目」(i8/x)] + 当前菜单条目 + [提示行「按住并拖动或点击来添加条目」] + 可添加条目
@@ -16,7 +15,7 @@ import { AppSettings } from '../common/Settings'
 import { computeDialogWidthVp, dialogTransition } from '../components/UiaDialogCard'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { UiaIcon } from '../components/UiaIcon'
-import { MENU_DEFAULT_ORDER, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
+import { MENU_DEFAULT_ORDER, MENU_INITIAL_DISPLAYED, MENU_INITIAL_HIDDEN, isMenuId, menuIcon, menuLabel, menuSkinIconName } from '../common/MenuItems'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 import { buildNavSlide } from './PageTransitions'
 
@@ -67,12 +66,12 @@ export struct SettingsMenuPage {
     this.loadFromSettings()
   }
 
-  aboutToDisappear(): void {
+  async aboutToDisappear(): Promise<void> {
     if (this.persistTimer >= 0) {
       clearTimeout(this.persistTimer)
       this.persistTimer = -1
-      this.persistNow()
     }
+    await this.persistNow()
   }
 
   // 对应 i8/s.w3()：displayedmenus(t0) 顺序构建当前菜单区；hiddenmenus(F2) 构建池区；
@@ -164,27 +163,20 @@ export struct SettingsMenuPage {
     if (index < 0) {
       return
     }
-    const range = this.activeRange()
-    const end = range[1]
-    if (item.kind === KIND_ACTIVE) {
-      // 移除后插到 sep_bottom 之后 = 池区首位（i8/s.A3: f7087v0.add(0, m)）
-      this.getUIContext().animateTo({
-        duration: MENU_MOVE_DURATION, curve: ACCELERATE_DECELERATE_CURVE
-      }, () => {
-        const tmp = this.items.splice(index, 1)[0]
-        this.items.splice(end, 0, tmp)
+    const movingToPool = item.kind === KIND_ACTIVE
+    this.getUIContext().animateTo({
+      duration: MENU_MOVE_DURATION, curve: ACCELERATE_DECELERATE_CURVE
+    }, () => {
+      const moving = this.items.splice(index, 1)[0]
+      moving.kind = movingToPool ? KIND_POOL : KIND_ACTIVE
+      const currentActiveEnd = this.activeRange()[1]
+      const targetIndex = movingToPool ? currentActiveEnd + 1 : currentActiveEnd
+      this.items.splice(Math.max(1, Math.min(targetIndex, this.items.length - 1)), 0, moving)
+      this.refreshSeparatorIndex()
+      this.persistNow().catch((error: Error) => {
+        console.error(`persist menu layout failed: ${error.message}`)
       })
-    } else {
-      // 移除后插到 sep_bottom 之前 = 菜单区末尾（i8/s.A3: f7086u0.add(m)）
-      this.getUIContext().animateTo({
-        duration: MENU_MOVE_DURATION, curve: ACCELERATE_DECELERATE_CURVE
-      }, () => {
-        const tmp = this.items.splice(index, 1)[0]
-        this.items.splice(end, 0, tmp)
-      })
-    }
-    this.refreshSeparatorIndex()
-    this.persistNow()
+    })
   }
 
   private indexOfItem(item: FlatMenuItem): number {
@@ -224,6 +216,8 @@ export struct SettingsMenuPage {
     }
     this.items.splice(from, 1)
     this.items.splice(to, 0, moving)
+    const newRange = this.activeRange()
+    moving.kind = to < newRange[1] ? KIND_ACTIVE : KIND_POOL
     this.refreshSeparatorIndex()
     this.schedulePersist()
   }
@@ -234,12 +228,14 @@ export struct SettingsMenuPage {
     }
     this.persistTimer = setTimeout(() => {
       this.persistTimer = -1
-      this.persistNow()
+      this.persistNow().catch((error: Error) => {
+        console.error(`persist menu layout failed: ${error.message}`)
+      })
     }, 300)
   }
 
   // 对应 i8/s.z3()：保存 displayedmenus / hiddenmenus（settings.p3 保证设置在菜单区）
-  private persistNow(): void {
+  private async persistNow(): Promise<void> {
     const order: string[] = []
     const hidden: string[] = []
     for (let i = 0; i < this.items.length; i++) {
@@ -253,13 +249,22 @@ export struct SettingsMenuPage {
     if (order.indexOf('settings') < 0) {
       order.push('settings')
     }
-    this.settings.setMenuOrder(order)
-    this.settings.setMenuHidden(hidden)
+    await this.persistCurrentLayout(order, hidden)
+  }
+
+  private persistCurrentLayout(order: string[], hidden: string[]): Promise<void> {
+    return this.settings.setMenuLayout(order, hidden)
   }
 
   private resetToDefault(): void {
-    this.settings.setMenuOrder(MENU_DEFAULT_ORDER.slice())
-    this.settings.setMenuHidden([])
+    const defaultOrder = MENU_INITIAL_DISPLAYED.slice()
+    const defaultHidden = MENU_INITIAL_HIDDEN.slice()
+    this.settings.menuOrder = defaultOrder
+    this.settings.menuHidden = defaultHidden
+    this.settings.menuOrderInitialized = true
+    this.persistCurrentLayout(defaultOrder, defaultHidden).catch((error: Error) => {
+      console.error(`reset menu layout failed: ${error.message}`)
+    })
     this.loadFromSettings()
   }
 
@@ -444,7 +449,7 @@ export struct SettingsMenuPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(AppSettings.getInstance().isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

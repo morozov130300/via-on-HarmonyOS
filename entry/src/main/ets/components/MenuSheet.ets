@@ -339,6 +339,9 @@ export struct MenuSheet {
         ids.push(id)
       }
     }
+    if (ids.length === 0) {
+      return MENU_DEFAULT_ORDER.slice()
+    }
     return ids
   }
 
@@ -347,19 +350,21 @@ export struct MenuSheet {
     Swiper(this.swiperController) {
       ForEach(this.chunk(this.mainItemIds(), 10), (page: string[]) => {
         Grid() {
-          ForEach(page, (id: string) => {
+          ForEach(page, (menuId: string) => {
             GridItem() {
-              this.MainCell(id)
+              this.MainCell(menuId)
             }
-          }, (id: string) => id)
+          }, (menuId: string) => menuId)
         }
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsTemplate(this.mainItemIds().length > 5 ? '1fr 1fr' : '1fr')
+        .rowsTemplate(page.length > 5 ? '1fr 1fr' : '1fr')
         .rowsGap(6)
         .width('100%')
         .height(174)
       }, (page: string[], index: number) => `page_${index}_${page.length}`)
     }
+    .width('100%')
+    .height(174)
     .loop(false)
     .indicator(false)
     .onChange((index: number) => {

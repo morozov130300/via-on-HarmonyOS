@@ -19,7 +19,7 @@ import {
 } from '../common/SearchEngines'
 import { ViaIcon } from './ViaIcon'
 import { computeDialogWidthVp } from './ViaDialogCard'
-import { dialogTransition } from '../common/Transitions'
+import { SearchEngineDialog } from './SearchEngineDialog'
 
 // 原版 tb/k0.C1：输入行高 = 图标槽 = 建议行图标 = dimen bi(48dp)
 const URL_BAR_HEIGHT: number = 48
@@ -770,60 +770,32 @@ export struct SearchOverlay {
     return getBuiltinEngines(isZh, isRu)
   }
 
-  // 原版 k0.O3：w5.k.l().d0(搜索引擎).b0(names, checked, cb).f0() 单选弹窗（layout v.xml）
+  // 原版单选引擎窗与地址栏共用同一壳和条目几何。
   @Builder
   EngineDialog() {
-    Column() {
-      Text($r('app.string.search_engine'))
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.fg'))
-        .width('100%')
-        .padding({ top: 8, bottom: 8 })
-        .margin({ left: 16, right: 16, bottom: 6 })
-      Scroll() {
-        Column() {
-          ForEach(this.builtinEngines(), (engine: SearchEngineDef) => {
-            this.EngineOption(engine.name, engine.key)
-          }, (engine: SearchEngineDef) => engine.key)
-          ForEach(this.settings.customEngines, (rec: CustomEngineRec, index: number) => {
-            this.EngineOption(rec.name, `custom:${rec.id}`)
-          }, (rec: CustomEngineRec, index: number) => `custom_${rec.id}_${index}`)
-        }
-        .width('100%')
+    SearchEngineDialog({
+      title: $r('app.string.search_engine'),
+      items: this.allEngines(),
+      selectedKey: this.settings.engineKey,
+      onSelect: (key: string): void => {
+        this.settings.setEngineKey(key)
+        this.qualifiedEngineId = 0
+        this.closeEngineDialog()
+        this.fetchSuggestions(this.inputText)
       }
-      .constraintSize({ maxHeight: 384 })
-    }
-    .width('80%')
-    .padding({ top: 12, bottom: 12 })
-    .backgroundColor($r('app.color.dialog_bg'))
-    .borderRadius(18)
-    .transition(dialogTransition())
+    })
   }
 
-  @Builder
-  EngineOption(name: string, key: string) {
-    Row({ space: 24 }) {
-      Circle({ width: 16, height: 16 })
-        .fill(this.settings.engineKey === key ? $r('app.color.accent') : Color.Transparent)
-        .stroke(this.settings.engineKey === key ? Color.Transparent : $r('app.color.dialog_border'))
-        .strokeWidth(2)
-      Text(name)
-        .fontSize(14)
-        .fontColor($r('app.color.fg'))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1)
+  private allEngines(): SearchEngineDef[] {
+    const items: SearchEngineDef[] = []
+    for (const engine of this.builtinEngines()) {
+      items.push(engine)
     }
-    .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .onClick(() => {
-      this.settings.setEngineKey(key)
-      // 原版 w3：外部默认引擎变更 → K0≠0 时 E3()（复位 chip）
-      this.qualifiedEngineId = 0
-      this.closeEngineDialog()
-      this.fetchSuggestions(this.inputText)
-    })
+    for (let i = 0; i < this.settings.customEngines.length; i++) {
+      const rec: CustomEngineRec = this.settings.customEngines[i]
+      items.push(new SearchEngineDef(`custom:${rec.id}`, rec.name, rec.template, rec.id))
+    }
+    return items
   }
 
   // 原版 resources/r/f/a1.xml：水平行、48dp 图标槽(13dp padding)、双行 14sp/11sp、

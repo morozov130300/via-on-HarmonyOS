@@ -3,7 +3,7 @@ import { AppSettings } from '../common/Settings'
 import { buildNavSlide } from './PageTransitions'
 import { SiteSetting, SITE_MODE_DEFAULT, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
 import { dialogTransition } from '../common/Transitions'
-import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
+import { SettingCheckControl, SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { UiaIcon } from '../components/UiaIcon'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -1189,11 +1189,12 @@ export struct PermissionPage {
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
-      Toggle({ type: ToggleType.Switch, isOn: isOn })
-        .selectedColor($r('app.color.accent'))
-        .onChange((state: boolean) => {
+      SettingCheckControl({
+        isChecked: isOn,
+        onChange: (state: boolean): void => {
           change(state)
-        })
+        }
+      })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 13, bottom: 13 })
@@ -1656,15 +1657,15 @@ export struct CookiesSettingPage {
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
-      Toggle({ type: ToggleType.Switch, isOn: isOn })
-        .selectedColor($r('app.color.accent'))
-        .opacity(disabled === true ? 0.4 : 1)
-        .onChange((state: boolean) => {
-          if (disabled === true) {
-            return
+      SettingCheckControl({
+        isChecked: isOn,
+        disabled: disabled,
+        onChange: (state: boolean): void => {
+          if (disabled !== true) {
+            change(state)
           }
-          change(state)
-        })
+        }
+      })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 13, bottom: 13 })
@@ -1696,31 +1697,14 @@ export struct PopupSettingPage {
         Scroll() {
           Column() {
             // n(1, qw 弹出式窗口, h3=z10 ? c8 允许 : qx，z10 = !h())
-            Row({ space: 12 }) {
-              Column() {
-                Text($r('app.string.orig_qw'))
-                  .fontSize(15)
-                  .fontColor($r('app.color.fg'))
-                  .maxLines(1)
-                Text(this.settings.popupAskFirst ? $r('app.string.orig_qx') : $r('app.string.perm_allow'))
-                  .fontSize(13)
-                  .fontColor($r('app.color.fg_secondary'))
-                  .maxLines(2)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .margin({ top: 2 })
+            SettingCheckRow({
+              rowLabel: $r('app.string.orig_qw'),
+              rowDesc: this.settings.popupAskFirst ? $r('app.string.orig_qx') : $r('app.string.perm_allow'),
+              isChecked: !this.settings.popupAskFirst,
+              onCheckRow: (isOn: boolean): void => {
+                this.settings.setPopupAskFirst(!isOn)
               }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
-              Toggle({ type: ToggleType.Switch, isOn: !this.settings.popupAskFirst })
-                .selectedColor($r('app.color.accent'))
-                .onChange((state: boolean) => {
-                  // u3.j3：J(!z) → bit32768（关 = 优先询问）
-                  this.settings.setPopupAskFirst(!state)
-                })
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            .alignItems(VerticalAlign.Center)
+            })
           }
           .width('100%')
           .padding({ bottom: 20 })
@@ -1790,22 +1774,13 @@ export struct AdBlockExceptionPage {
         Scroll() {
           Column() {
             // n(1, ct, z10 = 全局广告拦截)
-            Row({ space: 12 }) {
-              Text($r('app.string.ad_block'))
-                .fontSize(15)
-                .fontColor($r('app.color.fg'))
-                .layoutWeight(1)
-                .maxLines(1)
-              Toggle({ type: ToggleType.Switch, isOn: this.settings.adBlockOn })
-                .selectedColor($r('app.color.accent'))
-                .onChange((state: boolean) => {
-                  // i：t(!n.i) → 全局开关
-                  this.settings.setAdBlockOn(state)
-                })
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            .alignItems(VerticalAlign.Center)
+            SettingCheckRow({
+              rowLabel: $r('app.string.ad_block'),
+              isChecked: this.settings.adBlockOn,
+              onCheckRow: (isOn: boolean): void => {
+                this.settings.setAdBlockOn(isOn)
+              }
+            })
             // a6.e 添加例外网站
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })

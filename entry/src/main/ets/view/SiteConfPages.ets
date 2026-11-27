@@ -3,6 +3,7 @@ import { buildNavSlide } from './PageTransitions'
 import { SiteSetting, SITE_MODE_DEFAULT, SITE_MODE_ON, SITE_MODE_OFF, SITE_PERM_ASK } from '../common/Types'
 import { dialogTransition } from '../common/Transitions'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
+import { SettingCheckRow } from '../components/SettingRows'
 import { UiaIcon } from '../components/UiaIcon'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { ZoomSlider } from '../components/ZoomSlider'
@@ -111,24 +112,15 @@ export struct SiteConfDetailPage {
         Scroll() {
           Column() {
             // a6.n(1, ho 启用 "%1$s" 的网站设定, s())
-            Row({ space: 12 }) {
-              Text(`启用 "${this.host}" 的网站设定`)
-                .fontSize(15)
-                .fontColor($r('app.color.fg'))
-                .layoutWeight(1)
-                .maxLines(2)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-              Toggle({ type: ToggleType.Switch, isOn: this.confEnabled })
-                .selectedColor($r('app.color.accent'))
-                .onChange((state: boolean) => {
-                  // u4.Y3：S(true ^ n.i())
-                  this.confEnabled = state
-                  this.persist()
-                })
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            .alignItems(VerticalAlign.Center)
+            SettingCheckRow({
+              rowLabel: `启用 "${this.host}" 的网站设定`,
+              labelMaxLines: 2,
+              isChecked: this.confEnabled,
+              onCheckRow: (isOn: boolean): void => {
+                this.confEnabled = isOn
+                this.persist()
+              }
+            })
 
             this.SectionHeader('内容')
             // q(14, ua 字体大小, i(F0)/i(0) + fc)
@@ -966,22 +958,13 @@ export struct DesktopModePage {
         Scroll() {
           Column() {
             // n(1, aj 电脑模式, m())
-            Row({ space: 12 }) {
-              Text($r('app.string.pc_mode'))
-                .fontSize(15)
-                .fontColor($r('app.color.fg'))
-                .layoutWeight(1)
-                .maxLines(1)
-              Toggle({ type: ToggleType.Switch, isOn: this.settings.desktopAllSites === 1 })
-                .selectedColor($r('app.color.accent'))
-                .onChange((state: boolean) => {
-                  // r0：t(!n.i) → O(z)
-                  this.settings.setDesktopAllSites(state ? 1 : 0)
-                })
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            .alignItems(VerticalAlign.Center)
+            SettingCheckRow({
+              rowLabel: $r('app.string.pc_mode'),
+              isChecked: this.settings.desktopAllSites === 1,
+              onCheckRow: (isOn: boolean): void => {
+                this.settings.setDesktopAllSites(isOn ? 1 : 0)
+              }
+            })
             // a6.e 添加例外网站
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })
@@ -2339,30 +2322,14 @@ export struct JavaScriptSettingPage {
         Scroll() {
           Column() {
             // n(1, lx JavaScript, z10 ? m0 允许网页运行 JavaScript : cx, z10)
-            Row({ space: 12 }) {
-              Column() {
-                Text('JavaScript')
-                  .fontSize(15)
-                  .fontColor($r('app.color.fg'))
-                  .maxLines(1)
-                Text(this.settings.jsEnabled ? $r('app.string.orig_m0') : $r('app.string.orig_cx'))
-                  .fontSize(13)
-                  .fontColor($r('app.color.fg_secondary'))
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .margin({ top: 2 })
+            SettingCheckRow({
+              rowLabel: 'JavaScript',
+              rowDesc: this.settings.jsEnabled ? $r('app.string.orig_m0') : $r('app.string.orig_cx'),
+              isChecked: this.settings.jsEnabled,
+              onCheckRow: (isOn: boolean): void => {
+                this.settings.setJsEnabled(isOn)
               }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
-              Toggle({ type: ToggleType.Switch, isOn: this.settings.jsEnabled })
-                .selectedColor($r('app.color.accent'))
-                .onChange((state: boolean) => {
-                  this.settings.setJsEnabled(state)
-                })
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16, top: 13, bottom: 13 })
-            .alignItems(VerticalAlign.Center)
+            })
             // a6.e 添加例外网站
             Row({ space: 18 }) {
               UiaIcon({ icon: $r('app.media.uia_ic_add'), iconSize: 18, iconColor: $r('app.color.fg') })

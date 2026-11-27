@@ -1,4 +1,3 @@
-import { deviceInfo } from '@kit.BasicServicesKit'
 import { TOAST_SHORT, TOAST_MEDIUM } from '../common/ToastDuration'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo, picker } from '@kit.CoreFileKit'
@@ -153,7 +152,7 @@ export struct SettingsGeneralPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(AppSettings.getInstance().isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

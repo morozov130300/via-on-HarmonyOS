@@ -1,4 +1,3 @@
-import { deviceInfo } from '@kit.BasicServicesKit'
 import { TOAST_SHORT } from '../common/ToastDuration'
 // 定制页：与原版录屏逐帧对齐——
 // 上方实时预览（HomePage），底部「分类标签行」与「参数条目行」；
@@ -12,10 +11,11 @@ import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
 import { UiaIcon } from '../components/UiaIcon'
 import { UiaDialogButton } from '../components/UiaDialogButton'
+import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiInsets } from '../common/Immersive'
 import { buildNavSlide } from './PageTransitions'
 import { fileIo, picker } from '@kit.CoreFileKit'
-import { curves, display } from '@kit.ArkUI'
+import { curves } from '@kit.ArkUI'
 import { BusinessError } from '@kit.BasicServicesKit'
 import {
   HOME_ADV_AREAS,
@@ -133,14 +133,8 @@ export struct SettingsCustomPage {
     $r('app.string.orig_a4'), $r('app.string.orig_tl')
   ]
 
-  // 原版 w5/k.java:657：弹窗宽度 min(屏宽,屏高) - 72dp
   private dialogWidth(): number {
-    try {
-      const d = display.getDefaultDisplaySync()
-      return Math.round(Math.min(d.width / d.densityPixels, d.height / d.densityPixels)) - 72
-    } catch (error) {
-      return 280
-    }
+    return computeDialogWidthVp()
   }
 
   private bindAppBar(): void {
@@ -208,7 +202,7 @@ export struct SettingsCustomPage {
       .width('100%')
       .height('100%')
     }
-    .backgroundColor(AppSettings.getInstance().isSettingsBackgroundVisible() && deviceInfo.sdkApiVersion >= 29
+    .backgroundColor(AppSettings.getInstance().isShowSettingsBackground()
       ? Color.Transparent : $r('app.color.page_bg'))
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

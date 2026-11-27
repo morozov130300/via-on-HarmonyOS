@@ -405,6 +405,14 @@ export struct TabPanel {
           this.refreshPanelHeight()
         })
       }
+      this.MenuItem($r('app.string.delete_tab'), (): void => {
+        const info = this.tabStore.closeTab(index)
+        if (info !== null) {
+          this.showUndoSingle(info)
+        }
+        this.refreshPanelHeight()
+        this.longPressIndex = -1
+      })
       if (this.isHttpTab(index)) {
         this.MenuItem($r('app.string.duplicate_tab'), (): void => {
           this.tabStore.duplicateTab(index)
