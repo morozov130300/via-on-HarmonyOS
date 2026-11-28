@@ -1,4 +1,5 @@
 import { i18n } from '@kit.LocalizationKit'
+import { showViaConfirm } from './ViaConfirmDialog'
 ﻿import { common, Want } from '@kit.AbilityKit'
 import { print, BusinessError, emitter } from '@kit.BasicServicesKit'
 import { productViewManager } from '@kit.AppGalleryKit'
@@ -1749,7 +1750,7 @@ export struct MenuSheet {
     }
     const incognitoCount = this.tabStore.incognitoTabCount()
     if (incognitoCount > 1) {
-      this.getUIContext().showAlertDialog({
+      showViaConfirm(this.getUIContext(), {
         title: $r('app.string.close_all_tabs_title'),
         message: $r('app.string.exit_incognito_confirm_msg'),
         primaryButton: {

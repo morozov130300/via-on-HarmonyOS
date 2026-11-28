@@ -1797,12 +1797,29 @@ export class AppSettings {
       await this.store.put('menuOrder', JSON.stringify(order))
       await this.store.put('menuHidden', JSON.stringify(hidden))
       await this.store.flush()
-      if (SYNC_KEYS.indexOf('menuOrder') >= 0 || SYNC_KEYS.indexOf('menuHidden') >= 0) {
-        this.scheduleSnapshot()
-      }
+      await this.flushMenuLayoutSnapshot()
     })
     this.menuLayoutWrite = write
     return write
+  }
+
+  private async flushMenuLayoutSnapshot(): Promise<void> {
+    if (this.store === null || this.applyingSnapshot) {
+      return
+    }
+    try {
+      const kv = await this.buildSyncKv()
+      const ts = Date.now()
+      kv[SNAPSHOT_TS_KEY] = ts
+      await this.store.put(SNAPSHOT_TS_KEY, ts)
+      await this.store.flush()
+      const snapshot: Record<string, Object> = {}
+      snapshot['ts'] = ts
+      snapshot['kv'] = kv
+      await BrowserDb.getInstance().saveSettingsSnapshot(JSON.stringify(snapshot))
+    } catch (error) {
+      console.error('flush menu layout snapshot failed')
+    }
   }
 
   setLongPressHidden(list: string[]): void {
@@ -2579,6 +2596,13 @@ export class AppSettings {
   }
 
   saveTabsSnapshot(tabs: SavedTab[], activeIndex: number): void {
+    this.saveTabsSnapshotSync(tabs, activeIndex)
+  }
+
+  saveTabsSnapshotSync(tabs: SavedTab[], activeIndex: number): void {
+    if (this.store === null) {
+      return
+    }
     const payload: Record<string, Object>[] = []
     for (let i = 0; i < tabs.length; i++) {
       const entry: Record<string, Object> = {}
@@ -2587,8 +2611,9 @@ export class AppSettings {
       entry['title'] = tabs[i].title
       payload.push(entry)
     }
-    this.flushKey('tabsSnapshot', JSON.stringify(payload))
-    this.flushKey('tabsSnapshotIndex', activeIndex)
+    this.store.putSync('tabsSnapshot', JSON.stringify(payload))
+    this.store.putSync('tabsSnapshotIndex', activeIndex)
+    this.store.flushSync()
   }
 
   async readTabsSnapshot(): Promise<SavedTab[]> {

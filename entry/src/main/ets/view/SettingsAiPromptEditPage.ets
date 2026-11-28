@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { util } from '@kit.ArkTS'
 import { pasteboard } from '@kit.BasicServicesKit'
@@ -91,7 +92,7 @@ export struct SettingsAiPromptEditPage {
       return
     }
     if (fromBack) {
-      this.getUIContext().showAlertDialog({
+      showViaConfirm(this.getUIContext(), {
         title: $r('app.string.ai_unsaved_title'),
         message: $r('app.string.ai_unsaved_msg'),
         primaryButton: {

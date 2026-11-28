@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { DownloadRec, DownloadStatus } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { DownloadCoordinator } from '../common/Downloads'
@@ -370,7 +371,7 @@ export struct DownloadPage {
 
   // 原版 b1.u4/H3：重新下载确认
   private confirmRedownload(item: DownloadRec): void {
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       message: $r('app.string.redownload_confirm', baseNameOf(item.path)),
       primaryButton: {
         value: $r('app.string.cancel'),
@@ -400,7 +401,7 @@ export struct DownloadPage {
     if (stateIsCompleted(item.state)) {
       this.showDelete = true
     } else {
-      this.getUIContext().showAlertDialog({
+      showViaConfirm(this.getUIContext(), {
         message: $r('app.string.delete_task_with_file_confirm'),
         primaryButton: {
           value: $r('app.string.cancel'),

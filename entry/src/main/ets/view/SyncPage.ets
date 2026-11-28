@@ -1,4 +1,5 @@
 import { TOAST_SHORT, TOAST_MEDIUM } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { BrowserDb } from '../common/Database'
@@ -301,7 +302,7 @@ export struct SyncPage {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_not_configured'), duration: TOAST_SHORT })
       return
     }
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.read_aloud_resume'),
       message: '将从 WebDAV 服务器下载数据并覆盖当前书签、历史与设置',
       primaryButton: {

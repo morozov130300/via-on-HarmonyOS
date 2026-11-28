@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { BookmarkRec, BookmarkFolderRec, HomeFavRec } from '../common/Types'
 import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
@@ -731,7 +732,7 @@ export struct BookmarkPage {
   // 删除确认（原版 d3 case4：标题「删除」+「你确定删除 %1$s 吗？」）
   private confirmDeleteBookmark(item: BookmarkRec): void {
     const shown = item.title !== '' ? item.title : item.url
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.delete'),
       message: `你确定删除 ${shown} 吗？`,
       primaryButton: {
@@ -754,7 +755,7 @@ export struct BookmarkPage {
 
   // 原版 nz「你想要删除此文件夹吗？」：递归删除子文件夹与内含书签
   private confirmDeleteFolder(folder: BookmarkFolderRec): void {
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: folder.title,
       message: $r('app.string.delete_folder_confirm'),
       primaryButton: {
@@ -831,7 +832,7 @@ export struct BookmarkPage {
     if (this.selectedKeys.length === 0) {
       return
     }
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.delete'),
       message: $r('app.string.reset_default_msg'),
       primaryButton: {
@@ -1095,7 +1096,7 @@ export struct BookmarkPage {
             this.toastMsg('没有书签~')
             return
           }
-          AlertDialog.show({
+          showViaConfirm(this.getUIContext(), {
             title: $r('app.string.ai_unsaved_title'),
             message: `书签备份到：${uris[0]}`,
             primaryButton: {

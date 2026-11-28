@@ -10,11 +10,8 @@ import { curves } from '@kit.ArkUI'
 //   AnimatorSet.play(alpha).with(translationY).setDuration(160L).setInterpolator(new AccelerateInterpolator())
 // 注意插值器设在整个 AnimatorSet 上，alpha 段也是 Accelerate。
 // 打开方 k6.ob（c8/k6.java:7887）：gravity = ((W0 == 1 || W0 == 4) ? 48 : 80) | 8388613
-//   → 安卓布局 1/4 时贴顶（gravity 48，从 -120 落下）；其余贴底（gravity 80，从 +120 升起）。
-// 本端 Index.ets 把 FindBar 恒定位在 insets.top 贴顶（.position({x:0,y:insets.top})），
-//   无贴底分支，故 enter/exit 统一取 -120（贴顶落下/收回），与"贴哪边从哪边来"一致。
-//   ⚠️ 与原版 W0/gravity 判据不同源，属布局层差异；动画时长/曲线/幅度（160ms Accelerate、±120）1:1。
-// 查找条渲染在 insets.top 贴顶（Index.ets），对应含 48 分支。
+//   → 原版恒贴底（gravity 80，从 +120 升起）；本端 Index.ets 同样定位贴底，enter/exit 取 +120。
+// 查找条渲染在窗口底部（Index.ets：y = 窗口高 - 条高）。
 const FIND_ACCELERATE_CURVE: ICurve = curves.customCurve((t: number): number => t * t)
 
 @ComponentV2
@@ -84,14 +81,14 @@ export struct FindBar {
     .height(48)
     .padding({ left: 12, right: 12 })
     .backgroundColor($r('app.color.page_bg'))
-    // 原版 f8/c.A1：160ms Accelerate 的 alpha + translationY(-120→0) 组合转场。
+    // 原版 f8/c.A1：160ms Accelerate 的 alpha + translationY(+120→0) 组合转场。
     // alpha 与 translate 共用 AccelerateInterpolator（插值器在 AnimatorSet 上）。
     .transition(TransitionEffect.asymmetric(
       TransitionEffect.OPACITY.animation({ duration: 160, curve: FIND_ACCELERATE_CURVE })
-        .combine(TransitionEffect.translate({ y: -120 })
+        .combine(TransitionEffect.translate({ y: 120 })
           .animation({ duration: 160, curve: FIND_ACCELERATE_CURVE })),
       TransitionEffect.OPACITY.animation({ duration: 160, curve: FIND_ACCELERATE_CURVE })
-        .combine(TransitionEffect.translate({ y: -120 })
+        .combine(TransitionEffect.translate({ y: 120 })
           .animation({ duration: 160, curve: FIND_ACCELERATE_CURVE }))))
   }
 

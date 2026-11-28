@@ -209,15 +209,15 @@ export struct TabPanel {
               .height(48)
               .padding({ left: 16, right: 16 })
               .translate({ x: this.swipeOffsets[tab.id] ?? 0 })
-              .priorityGesture(GestureGroup(GestureMode.Exclusive,
-                TapGesture({ fingers: 1 }).onAction(() => {
-                  if (this.rowTapSuppressed) {
-                    this.rowTapSuppressed = false
-                    return
-                  }
-                  this.tabStore.switchTo(index)
-                  this.onClose()
-                }),
+              .onClick(() => {
+                if (this.rowTapSuppressed) {
+                  this.rowTapSuppressed = false
+                  return
+                }
+                this.tabStore.switchTo(index)
+                this.onClose()
+              })
+              .gesture(GestureGroup(GestureMode.Exclusive,
                 LongPressGesture({ repeat: false, duration: 500 }).onAction(() => {
                   this.longPressIndex = index
                 }),

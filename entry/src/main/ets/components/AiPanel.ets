@@ -1,4 +1,5 @@
 // AiPanel.ets —— 原版 b9 包 AI 面板 1:1 移植
+import { showViaConfirm } from './ViaConfirmDialog'
 //
 // 对应原版：
 // - b9/g.java  → 面板容器（ViewPager2 两页：0=主题列表、1=聊天）
@@ -821,7 +822,7 @@ export struct AiPanel {
     const message = ids.length === 1
       ? rm.getStringByNameSync('ai_confirm_delete_item', this.selectedName(ids[0]))
       : rm.getStringByNameSync('ai_confirm_delete_items', ids.length)
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: this.str('ai_delete'),
       message: message,
       primaryButton: {
@@ -850,7 +851,7 @@ export struct AiPanel {
 
   // a2.G3()：清空消息确认
   private confirmClear(): void {
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: this.str('ai_clear_messages'),
       message: this.str('ai_confirm_clear'),
       primaryButton: {
@@ -869,7 +870,7 @@ export struct AiPanel {
   // a2.I3()：删除单条确认
   private confirmDeleteMsg(id: string, preview: string): void {
     const rm = this.context().resourceManager
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: this.str('ai_delete'),
       message: rm.getStringByNameSync('ai_confirm_delete_item', truncate(preview, 50).split('\n').join(' ')),
       primaryButton: {

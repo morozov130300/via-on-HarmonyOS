@@ -1,5 +1,6 @@
 import { TabItem, RuleSubEntry, BookmarkFolderRec } from '../common/Types'
-import { AppSettings, applyOrientationSetting } from '../common/Settings'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
+import { AppSettings, SavedTab, applyOrientationSetting } from '../common/Settings'
 import { AdBlocker } from '../common/AdBlock'
 import { RuleSubManager } from '../common/RuleSubscriptions'
 import { BrowserDb } from '../common/Database'
@@ -45,7 +46,7 @@ import { hostOf, buildSearchUrl, isUrlLike, normalizeUrl, extractUrlsFromText } 
 import { parseUiaDeepLink, UiaCmdKind, UIA_CMD_EVENT_ID, isStrictHttp, isJavaScriptUrl } from '../common/DeepLink'
 import { RemoteConfig } from '../common/RemoteConfig'
 import { UiInsets, applyStatusBarVisible, applySystemBarContentColor, applyWindowBackgroundColor } from '../common/Immersive'
-import { systemBarDarkContent, resolveColorHex } from '../common/ChromeColors'
+import { systemBarDarkContent, resolveColorHex, homeWallpaperThrough } from '../common/ChromeColors'
 import { ThemeColorCache } from '../common/ThemeColorCache'
 import { computeDialogWidthVp } from '../components/ViaDialogCard'
 import { menuTransition, menuTransitionTop, dimTransition, fadeInTransition, DECELERATE_CURVE, ACCELERATE_CURVE, BEZIER_0202_CURVE } from '../common/Transitions'
@@ -695,8 +696,8 @@ struct Index {
     if (pending === '') {
       return
     }
-    AppStorage.setOrCreate('uia_pending_restore_tabs', '')
-    this.getUIContext().showAlertDialog({
+    const activeIndex = AppStorage.get<number>('uia_pending_restore_index') ?? 0
+    showViaConfirm(this.getUIContext(), {
       message: $r('app.string.restore_session_ask'),
       primaryButton: {
         value: $r('app.string.cancel'),
@@ -706,7 +707,15 @@ struct Index {
       secondaryButton: {
         value: $r('app.string.restore_btn'),
         action: () => {
-          this.tabStore.restoreFromSnapshot(this.settings)
+          try {
+            const saved = JSON.parse(pending) as SavedTab[]
+            this.tabStore.restoreSaved(saved, activeIndex)
+          } catch (error) {
+            console.error(`restore pending tabs failed: ${error instanceof Error ? error.message : String(error)}`)
+          } finally {
+            AppStorage.setOrCreate('uia_pending_restore_tabs', '')
+            AppStorage.setOrCreate('uia_pending_restore_index', 0)
+          }
         }
       },
       cancel: () => {
@@ -727,29 +736,23 @@ struct Index {
     // 原版 k6.m9（7633-7643）：Y0 = r2()==2（点击隐藏模式）→ Jb/Ya 初始化工具栏
     this.initFabPosition()
     applyOrientationSetting(context)
-    await this.db.init(context)
-    CopilotStore.getInstance().init(context)
+    this.db.init(context).catch((error: BusinessError) => {
+      console.error(`database initialization failed: ${error.message}`)
+    })
+    CopilotStore.getInstance().init(context).catch((error: BusinessError) => {
+      console.error(`copilot initialization failed: ${error.message}`)
+    })
     this.downloads.register(context)
     const adBlocker = AdBlocker.getInstance()
     adBlocker.init(this.settings)
     try {
       const rawRules = await context.resourceManager.getRawFileContent('simple.txt')
       const decoder = util.TextDecoder.create('utf-8')
-      const builtinRules = decoder.decodeToString(rawRules).split('\n')
-      adBlocker.setBuiltinRules(builtinRules)
+      adBlocker.setBuiltinRules(decoder.decodeToString(rawRules).split('\n'))
     } catch (error) {
       console.error(`load builtin ad rules failed: ${error instanceof Error ? error.message : String(error)}`)
       adBlocker.setBuiltinRules([])
     }
-    await RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, adBlocker)
-    RuleSubManager.getInstance().maybeAutoUpdate(context, this.settings.ruleSubscriptions, this.settings.ruleAutoUpdate).then((updated: RuleSubEntry[] | null) => {
-      if (updated !== null) {
-        for (let i = 0; i < updated.length; i++) {
-          this.settings.updateRuleSubEntry(updated[i].key, updated[i].ruleCount, updated[i].lastUpdate)
-        }
-        RuleSubManager.getInstance().loadEnabledInto(context, this.settings.ruleSubscriptions, adBlocker)
-      }
-    })
     await this.tabStore.init(this.settings)
     this.handleInternalCmd()
     this.askPendingRestore()
@@ -758,6 +761,7 @@ struct Index {
       this.openPage('downloads')
     }
     this.ready = true
+    this.loadPostStartupServices(context, adBlocker)
     const launchUrl = AppStorage.get<string>('uia_launch_url') ?? ''
     if (launchUrl !== '') {
       AppStorage.setOrCreate('uia_launch_url', '')
@@ -771,6 +775,29 @@ struct Index {
         this.openExternalLink(launchUrl, launchExternal)
       }
     }
+  }
+
+  private loadPostStartupServices(context: common.Context, adBlocker: AdBlocker): void {
+    CopilotStore.getInstance().init(context).catch((error: BusinessError) => {
+      console.error(`copilot initialization failed: ${error.message}`)
+    })
+    this.loadSubscriptionRules(context, adBlocker).catch((error: BusinessError) => {
+      console.error(`load subscription rules failed: ${error.message}`)
+    })
+  }
+
+  private async loadSubscriptionRules(context: common.Context, adBlocker: AdBlocker): Promise<void> {
+    const manager = RuleSubManager.getInstance()
+    await manager.loadEnabledInto(context, this.settings.ruleSubscriptions, adBlocker)
+    const updated = await manager.maybeAutoUpdate(
+      context, this.settings.ruleSubscriptions, this.settings.ruleAutoUpdate)
+    if (updated === null) {
+      return
+    }
+    for (let i = 0; i < updated.length; i++) {
+      this.settings.updateRuleSubEntry(updated[i].key, updated[i].ruleCount, updated[i].lastUpdate)
+    }
+    await manager.loadEnabledInto(context, this.settings.ruleSubscriptions, adBlocker)
   }
 
   // 原版 z8/b0.A ACTION_SEND 分支 → i6.i0.v 产出候选串 → na.l（c8/na.java:435-520）：
@@ -1611,13 +1638,27 @@ struct Index {
   // 原版 k6.c4 动画帧 + Z7 落定：底栏容器背景取动画值 animatedToolbarBg（ArgbEvaluator
   // 渐变）；未初始化（空串）回退直接计算值——与原版首帧 i13==i10 不起动画一致。
   private animatedOrComputedBg(): ResourceColor {
+    // 原版 Z7 透明分支直接 setBackgroundColor(0) 返回、不起 240ms 动画（k6.java:6626）
+    if (this.barBgThrough()) {
+      return Color.Transparent
+    }
     if (this.animatedToolbarBg !== '') {
       return this.animatedToolbarBg
     }
     return toolbarBackgroundColor(this.tabStore.current(), this.settings)
   }
 
+  // 原版 k6.Z7 z13&&zB9（k6.java:6626-6631）：主页有自定义背景图（bginfo bit7）时
+  // 底栏容器 f2600w0 / 搜索工具栏 B0 背景全透明，壁纸透出；顶栏容器同口径。
+  private barBgThrough(): boolean {
+    return homeWallpaperThrough(this.tabStore.current(), this.settings)
+  }
+
   private bottomBg(): ResourceColor {
+    // 原版 Z7 透明分支：主页背景图透出时顶栏容器同底栏一样全透明
+    if (this.barBgThrough()) {
+      return Color.Transparent
+    }
     if (this.tabStore.current().isHomePage() && this.settings.homeBgColor !== '') {
       // 原版夜间联动：自设背景色经黑滤镜后用于工具栏
       return this.settings.nightBlend(this.settings.homeBgColor)
@@ -2238,6 +2279,7 @@ struct Index {
           onTryClosePanels: (): boolean => this.closeTopPanelsForLeftIcon()
         })
       }
+      // 标题栏上沿 = 状态栏下沿：padding 恰好一个状态栏高，既不重叠也无间隙
       .padding({ top: this.effectiveInsetTop() })
       .backgroundColor(this.bottomBg())
       .translate({ y: -this.topBarTranslate() })
@@ -2248,8 +2290,8 @@ struct Index {
       Column() {
         this.ChromeToolbar(true)
       }
+      // 同上：padding = 状态栏高，标题栏贴状态栏下沿
       .padding({ top: this.effectiveInsetTop() })
-      // 背景延伸进状态栏避让区（只有组件需要避让，背景不需要）
       .backgroundColor(this.animatedOrComputedBg())
       // 原版 db(f)：f2604y0.setTranslationY(-p * height)
       .translate({ y: -this.topBarTranslate() })
@@ -2498,7 +2540,7 @@ struct Index {
     if (count <= 1) {
       return
     }
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.close_all_tabs_title'),
       message: $r('app.string.close_all_tabs_message'),
       primaryButton: {
@@ -2598,6 +2640,23 @@ struct Index {
     // （Jb:4645 RelativeLayout.LayoutParams(-1,-1)），顶栏 f2604y0 / 底栏 f2600w0
     // 悬浮其上，db(p) 用 translationY 收放 —— 网页不位移，隐藏时自然扩到全屏。
     Stack() {
+      // 原版 c8/y7：主页背景图由外壳全屏绘制（f2942r ImageView），网页透明
+      // （k6.i9 f2586p0.setBackgroundColor(0)），工具栏 Z7 透明分支直接透出同一张图。
+      // 主页场景在此全屏画一次；HomePage 不再自绘（避免 cover 裁切不一致出现接缝）。
+      if (!this.isSettingsStackActive() && homeWallpaperThrough(this.tabStore.current(), this.settings)) {
+        Image(this.homeBackgroundImageUrl())
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+          .hitTestBehavior(HitTestMode.None)
+        // 原版背景图不透明度遮罩画在壁纸 drawable 内（setWindowFilterColor → y7.b
+        // layer1，g(i10)），随壁纸铺满全窗 —— 工具栏区域与视口统一，无色带接缝。
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(`#${this.homeBgOverlayAlpha()}000000`)
+          .hitTestBehavior(HitTestMode.None)
+      }
       if (this.settings.isShowSettingsBackground()
         && this.isSettingsStackActive()
         && (this.settings.homeBgImage !== '' || this.homeCssBackgroundUrl() !== '')) {
@@ -2630,8 +2689,10 @@ struct Index {
                     }
                   })
                   // 主页是同一 WebView 的内部页（原版 u9.d.m 主页 = WebView 内 about:page），
-                  // 手势触点同样在 WebView 上——HomePage 覆盖层把手势回调透传给状态机
-                  if (tab.isHomePage()) {
+                  // 手势触点同样在 WebView 上——HomePage 覆盖层把手势回调透传给状态机。
+                  // 原版 k6.b5 给新建窗口标签打标 e8.i.f4821d，目标页落定前不按主页呈现，
+                  // 故 pendingWindow 的空 URL 标签不放出覆盖层（否则跳转新站前闪主页）
+                  if (tab.isHomePage() && !tab.pendingWindow) {
                     HomePage({
                       searchOpen: this.showSearch,
                       onSearchTap: () => {
@@ -2711,7 +2772,8 @@ struct Index {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(this.settings.isShowSettingsBackground() && this.isSettingsStackActive()
+      .backgroundColor((this.settings.isShowSettingsBackground() && this.isSettingsStackActive())
+        || (!this.isSettingsStackActive() && homeWallpaperThrough(this.tabStore.current(), this.settings))
         ? Color.Transparent : $r('app.color.page_bg'))
       .hideTitleBar(true)
       .mode(NavigationMode.Stack)
@@ -2901,7 +2963,7 @@ struct Index {
         })
       }
       if (this.showFindBar) {
-        // 原版 k6.ob（7887）：查找条 f8.h 宽 = N8()、gravity = (布局1/4?TOP:BOTTOM)|END —— 贴右缘。
+        // 原版 k6.ob（7887）：查找条 f8.h 宽 = N8()、gravity = BOTTOM|END —— 贴窗口底部、靠右缘。
         // 竖屏 N8()=全宽无差异；横屏宽受限且贴右（与菜单/标签面板同规格）。
         Row() {
           FindBar({
@@ -2913,7 +2975,10 @@ struct Index {
         }
         .width(this.menuAvailableSizeVp())
         .alignItems(VerticalAlign.Center)
-        .position({ x: this.windowWidthVp() - this.menuAvailableSizeVp(), y: this.effectiveInsetTop() })
+        .position({
+          x: this.windowWidthVp() - this.menuAvailableSizeVp(),
+          y: this.windowHeightVp() - this.bottomBarHeightVp
+        })
       }
       if (this.showAi) {
         // 原版 b9/g Dialog：b9/g.java 232-233 行 —— attributes.dimAmount = 0.2f，
@@ -3202,6 +3267,12 @@ struct Index {
   private homeBackgroundImageUrl(): string {
     const path = this.settings.homeBgImage !== '' ? this.settings.homeBgImage : this.homeCssBackgroundUrl()
     return path.startsWith('file://') ? path : `file://${path}`
+  }
+
+  // 原版背景图遮罩 alpha：bginfo 低 7 位不透明度 0-100 → 00-FF（与 HomePage 同式）
+  private homeBgOverlayAlpha(): string {
+    const alpha = Math.round(this.settings.homeBgOpacity * 2.55)
+    return alpha.toString(16).padStart(2, '0')
   }
 
   // 书签页带文件夹参数（原版 k6.u 8657/8567：?folder= 数字 id / folder://X 名称）：

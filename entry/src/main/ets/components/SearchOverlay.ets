@@ -1,4 +1,5 @@
 import { http } from '@kit.NetworkKit'
+import { showViaConfirm } from './ViaConfirmDialog'
 import { util } from '@kit.ArkTS'
 import { i18n } from '@kit.LocalizationKit'
 import { display } from '@kit.ArkUI'
@@ -899,7 +900,7 @@ export struct SearchOverlay {
 
   // 原版 k0.e3：w5.k 确认弹窗（dt/du）
   private confirmClearHistory(): void {
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.clear_search_history'),
       message: $r('app.string.url_input_confirm_clear_history'),
       primaryButton: {

@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { HistoryRec } from '../common/Types'
 import { BrowserDb } from '../common/Database'
 import { TabStore } from '../common/TabStore'
@@ -510,7 +511,7 @@ export struct HistoryPage {
     } else {
       message = `你确定删除 ${this.selectedIds.length} 个条目吗?`
     }
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.delete'),
       message: message,
       primaryButton: {
@@ -557,7 +558,7 @@ export struct HistoryPage {
 
   // 分组清除（bb.v.A：删除 visited >= boundary 的条目）
   private confirmClearGroup(group: ClearGroup): void {
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.clear_history_title'),
       message: `${group.name} (${group.count})`,
       primaryButton: {

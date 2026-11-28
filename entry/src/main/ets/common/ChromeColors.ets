@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit'
 import { TabItem } from './Types'
 import { AppSettings } from './Settings'
+import { parseHomeCss } from './HomeCss'
 
 // 原版 k6.Z7「change color」：工具栏/地址栏按背景亮度二分支，图标与文字各一套色。
 //   g6.y.C(int) = (r*0.299 + g*0.587 + b*0.114) >= 192 → 亮背景
@@ -68,6 +69,21 @@ export function resolveColorHex(color: ResourceColor, context: common.UIAbilityC
   } catch (error) {
     return '#FFFFFF'
   }
+}
+
+// 原版 k6.Z7 的 z13&&zB9 分支（k6.java:6626-6631）：主页设置了自定义背景图
+// （bginfo bit7，i9/a.java:22）时，底栏容器 f2600w0 与搜索工具栏 B0 背景
+// setBackgroundColor(0) 全透明，主页壁纸从工具栏底下透出；其余情况实色。
+// 工程口径：homeBgImage 或自定义 CSS 的 body/html/#content 背景图（与 Index
+// 壁纸渲染条件一致）。CSS 背景图属工程近似，原版仅背景图置 bit7。
+export function homeWallpaperThrough(tab: TabItem, settings: AppSettings): boolean {
+  if (!tab.isHomePage()) {
+    return false
+  }
+  if (settings.homeBgImage !== '') {
+    return true
+  }
+  return parseHomeCss(settings.customCss).urlValue(['body', 'html', '#content']) !== ''
 }
 
 // 原版 k6.Nb()：网页 theme-color 规范化为 ArkUI 可用的 #RRGGBB，无法解析返回空串

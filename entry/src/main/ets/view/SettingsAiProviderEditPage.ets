@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { util } from '@kit.ArkTS'
 import { CopilotStore, AiBackend, presetBackend, getKeyLink } from '../common/CopilotStore'
@@ -140,7 +141,7 @@ export struct SettingsAiProviderEditPage {
       return
     }
     if (fromBack) {
-      this.getUIContext().showAlertDialog({
+      showViaConfirm(this.getUIContext(), {
         title: $r('app.string.ai_unsaved_title'),
         message: $r('app.string.ai_unsaved_msg'),
         primaryButton: {
@@ -237,7 +238,7 @@ export struct SettingsAiProviderEditPage {
     engine.complete(probe, model, messages).then((result: AiChatResult) => {
       // 原版 J3：失败 → 标题「验证失败」+ p9.s.e；成功 → 标题「验证」+「验证成功」
       if (result.status === 100) {
-        this.getUIContext().showAlertDialog({
+        showViaConfirm(this.getUIContext(), {
           title: $r('app.string.ai_verify_fail'),
           message: this.verifyErrorText(result),
           primaryButton: {
@@ -247,7 +248,7 @@ export struct SettingsAiProviderEditPage {
           }
         })
       } else {
-        this.getUIContext().showAlertDialog({
+        showViaConfirm(this.getUIContext(), {
           title: $r('app.string.ai_verify'),
           message: $r('app.string.ai_verify_ok'),
           primaryButton: {

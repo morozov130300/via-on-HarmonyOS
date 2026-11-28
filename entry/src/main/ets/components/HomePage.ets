@@ -268,29 +268,9 @@ export struct HomePage {
 
   build() {
     Stack() {
-      if (this.settings.homeBgImage !== '') {
-        // Image 的 string 源必须带 file:// scheme 才能加载本地文件（裸绝对路径
-        // 解析失败 → 图不渲染、根容器透明露出深色底）。与 UiaIcon 皮肤位图同口径。
-        Image(this.toFileUrl(this.settings.homeBgImage))
-          .width('100%')
-          .height('100%')
-          .objectFit(ImageFit.Cover)
-        Column()
-          .width('100%')
-          .height('100%')
-          .backgroundColor(`#${this.bgOverlayAlpha()}000000`)
-      } else if (this.cssBgUrl !== '') {
-        // 用户 CSS：body/html background: url(...) → 主页背景图
-        // （原版 config.c() backgroundPath 同位；遮罩仍走 bginfo 不透明度）
-        Image(this.toFileUrl(this.cssBgUrl))
-          .width('100%')
-          .height('100%')
-          .objectFit(ImageFit.Cover)
-        Column()
-          .width('100%')
-          .height('100%')
-          .backgroundColor(`#${this.bgOverlayAlpha()}000000`)
-      }
+      // 原版 c8/y7：背景图与不透明度遮罩都由外壳全屏绘制（f2942r + y7.b layer1
+      // setWindowFilterColor），主页内容透明叠其上 —— 此处不再自绘背景图与遮罩，
+      // 壁纸+遮罩由 Index 根部全屏画一份，工具栏区域与视口统一无接缝。
       Scroll() {
       Column() {
       // 原版 #content top 按屏高分档（i6/o.java:374-379）：62/87/135/195/255px，低于 250px 用 25%
@@ -659,7 +639,8 @@ export struct HomePage {
   }
 
   private homeBackground(): ResourceColor {
-    if (this.settings.homeBgImage !== '') {
+    // 背景图（设置图/CSS 图）由 Index 根部绘制，此处透明露出
+    if (this.settings.homeBgImage !== '' || this.cssBgUrl !== '') {
       return Color.Transparent
     }
     if (this.settings.homeBgColor !== '') {

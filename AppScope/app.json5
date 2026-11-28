@@ -2,10 +2,10 @@
   "app": {
     "bundleName": "cn.edu.whut.uia",
     "vendor": "example",
-    // 版本号自 7.4.2 起改用 8 位规则：7.4.4 → 744 + 五位功能迭代序号，当前 74400000
-    "versionCode": 74400000,
-    "versionName": "7.4.4",
-    "buildVersion": "2",
+    // 版本号采用 8 位规则：版本名数字拼接 + 五位功能迭代序号；当前 7.4.6 / 74600009
+    "versionCode": 74600009,
+    "versionName": "7.4.6",
+    "buildVersion": "1",
     "icon": "$media:layered_image",
     "label": "$string:app_name",
     "cloudStructuredDataSyncEnabled": true

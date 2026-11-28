@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { fileIo, picker } from '@kit.CoreFileKit'
 import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
 import { preferences } from '@kit.ArkData'
@@ -11,7 +12,6 @@ import { TabStore } from '../common/TabStore'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { AppIcon } from '../components/AppIcon'
 import { SettingCheckControl, SettingCheckRow } from '../components/SettingRows'
-import { computeDialogWidthVp } from '../components/UiaDialogCard'
 import { UiaDialogButton } from '../components/UiaDialogButton'
 import { buildNavSlide } from './PageTransitions'
 
@@ -30,6 +30,14 @@ export struct UserScriptsPage {
   @Local editing: UserScriptRec | null = null
   @Local adding: boolean = false
   @Local downloadInputShow: boolean = false
+  // q4 多选弹窗状态（w5.k.L：全选初始态）
+  @Local updateSelectShow: boolean = false
+  @Local updateNames: string[] = []
+  @Local updateChecked: boolean[] = []
+  private updateTargets: UserScriptRec[] = []
+  @Local editingDirty: boolean = false
+  @Local saveRequested: number = 0
+  @Local helpRequested: number = 0
 
   // X3：z10 = 存在带下载地址的脚本（决定「更新」入口与「自动更新」行）
   private anyScriptWithUrl(): boolean {
@@ -52,20 +60,79 @@ export struct UserScriptsPage {
   }
 
   private bindAppBar(): void {
+    if (this.editing !== null || this.adding) {
+      AppBar.show({
+        title: this.scriptEditorTitle(),
+        rightText2: $r('app.string.orig_k9'),
+        rightText: $r('app.string.save'),
+        onBack: () => {
+          this.closeEditor()
+        },
+        onRight2: () => {
+          this.showScriptHelp()
+        },
+        onRight: () => {
+          this.saveEditor()
+        }
+      }, this)
+      return
+    }
     AppBar.show({
       title: $r('app.string.scripts'),
-      rightIcon2: $r('sys.symbol.plus'),
-      rightText: this.anyScriptWithUrl() ? $r('app.string.update_btn') : '',
+      rightText2: this.anyScriptWithUrl() ? $r('app.string.update_btn') : '',
+      rightIcon: $r('sys.symbol.plus'),
       onBack: () => {
         this.navPathStack.pop()
       },
       onRight2: () => {
-        this.showAddMenu()
+        this.updateAll()
       },
       onRight: () => {
-        this.updateAll()
+        this.showAddMenu()
       }
     }, this)
+  }
+
+  private scriptEditorTitle(): ResourceStr {
+    return this.editing === null ? $r('app.string.add_script') : $r('app.string.edit')
+  }
+
+  private closeEditor(): void {
+    if (!this.editingDirty) {
+      this.dismissEditor()
+      return
+    }
+    showViaConfirm(this.getUIContext(), {
+      title: $r('app.string.ai_unsaved_title'),
+      message: $r('app.string.ai_unsaved_msg'),
+      primaryButton: {
+        value: $r('app.string.exit_app'),
+        action: () => {
+          this.dismissEditor()
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.ai_save_and_exit'),
+        action: () => {
+          this.saveEditor()
+        }
+      }
+    })
+  }
+
+  private dismissEditor(): void {
+    this.editing = null
+    this.adding = false
+    this.editingDirty = false
+    this.bindAppBar()
+  }
+
+  private saveEditor(): void {
+    this.saveRequested++
+  }
+
+  private showScriptHelp(): void {
+    this.helpRequested++
   }
 
   // U3：添加菜单 [添加脚本/下载脚本/导入脚本]（sa/d1.java:533-540）
@@ -74,7 +141,7 @@ export struct UserScriptsPage {
       title: $r('app.string.scripts'),
       message: '',
       sheets: [
-        { title: $r('app.string.add_script'), action: (): void => { this.adding = true } },
+        { title: $r('app.string.add_script'), action: (): void => { this.adding = true; this.editingDirty = false; this.bindAppBar() } },
         { title: $r('app.string.orig_l_'), action: (): void => { this.downloadInputShow = true } },
         { title: $r('app.string.orig_l9'), action: (): void => { this.importScript() } }
       ]
@@ -84,9 +151,12 @@ export struct UserScriptsPage {
   build() {
     NavDestination() {
       Column() {
-        AppBarSpacer()
-        Scroll() {
-          Column() {
+        if (this.editing === null && !this.adding) {
+          AppBarSpacer()
+        }
+        if (this.editing === null && !this.adding) {
+          Scroll() {
+            Column() {
             SettingCheckRow({
               rowLabel: $r('app.string.enable_script'),
               isChecked: this.settings.scriptEnabled,
@@ -146,10 +216,10 @@ export struct UserScriptsPage {
                   Text(script.version)
                     .fontSize(12)
                     .fontColor($r('app.color.fg_secondary'))
-                    .maxLines(3)
+                    .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .width('100%')
-                    .padding({ left: 16, right: 16, bottom: 8 })
+                    .padding({ left: 16, right: 16, bottom: 4 })
                 }
               }
               .width('100%')
@@ -164,10 +234,11 @@ export struct UserScriptsPage {
             }, (script: UserScriptRec) => `${script.id}_${script.enabled}_${script.name}_${script.code.length}`)
           }
           .width('100%')
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .align(Alignment.Top)
         }
-        .layoutWeight(1)
-        .align(Alignment.Top)
-        .width('100%')
       }
       .width('100%')
       .height('100%')
@@ -177,11 +248,22 @@ export struct UserScriptsPage {
           onClose: () => {
             this.editing = null
             this.adding = false
+            this.editingDirty = false
+            this.bindAppBar()
           },
           onSaved: () => {
             this.editing = null
             this.adding = false
-          }
+            this.editingDirty = false
+            this.saveRequested = 0
+            this.helpRequested = 0
+            this.bindAppBar()
+          },
+          onDirtyChange: (dirty: boolean) => {
+            this.editingDirty = dirty
+          },
+          saveRequest: this.saveRequested,
+          helpRequest: this.helpRequested
         })
       }
       if (this.downloadInputShow) {
@@ -198,6 +280,74 @@ export struct UserScriptsPage {
             }
             this.downloadAndInstall(url, 0)
           }
+        })
+      }
+      if (this.updateSelectShow) {
+        // q4/M3：多选更新弹窗（a0j 更新标题，全选初始态，确认仅更新勾选项）
+        Column() {
+          Column({ space: 16 }) {
+            Text($r('app.string.update_btn'))
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor($r('app.color.fg'))
+            Scroll() {
+              Column() {
+                ForEach(this.updateNames, (name: string, index: number) => {
+                  Row() {
+                    Checkbox()
+                      .select(this.updateChecked[index])
+                      .selectedColor($r('app.color.accent'))
+                      .onChange((selected: boolean) => {
+                        this.updateChecked[index] = selected
+                      })
+                    Text(name)
+                      .fontSize(14)
+                      .fontColor($r('app.color.fg'))
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      .layoutWeight(1)
+                  }
+                  .width('100%')
+                  .height(36)
+                }, (name: string, index: number) => `${index}_${name}`)
+              }
+              .width('100%')
+            }
+            .constraintSize({ maxHeight: 320 })
+            .width('100%')
+            Row() {
+              Blank().layoutWeight(1)
+              UiaDialogButton({ label: $r('app.string.cancel'), onAction: () => {
+                this.updateSelectShow = false
+              } })
+              UiaDialogButton({ label: $r('app.string.confirm'), onAction: () => {
+                this.updateSelectShow = false
+                const selected: UserScriptRec[] = []
+                for (let i = 0; i < this.updateTargets.length; i++) {
+                  if (this.updateChecked[i]) {
+                    selected.push(this.updateTargets[i])
+                  }
+                }
+                if (selected.length === 0) {
+                  return
+                }
+                this.runUpdateAll(selected)
+              } })
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .padding(20)
+          .borderRadius(18)
+          .border({ width: 1, color: $r('app.color.dialog_border') })
+          .backgroundColor($r('app.color.dialog_bg'))
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor('rgba(0,0,0,0.4)')
+        .onClick(() => {
+          this.updateSelectShow = false
         })
       }
     }
@@ -223,6 +373,13 @@ export struct UserScriptsPage {
     })
     .onWillDisappear(() => {
       AppBar.maybeHide(this)
+    })
+    .onBackPressed(() => {
+      if (this.editing !== null || this.adding) {
+        this.closeEditor()
+        return true
+      }
+      return false
     })
   }
 
@@ -255,6 +412,8 @@ export struct UserScriptsPage {
       title: $r('app.string.edit'),
       action: (): void => {
         this.editing = script
+        this.editingDirty = false
+        this.bindAppBar()
       }
     })
     if (script.downloadUrl !== '') {
@@ -297,7 +456,7 @@ export struct UserScriptsPage {
   // sa/d1.D3：点击条目——不完整脚本（无内容，p5/b.w）先询问下载完整脚本（ro），其余进入编辑
   private onScriptClick(script: UserScriptRec): void {
     if (script.code === '') {
-      this.getUIContext().showAlertDialog({
+      showViaConfirm(this.getUIContext(), {
         title: script.name,
         message: $r('app.string.orig_ro'),
         primaryButton: {
@@ -316,6 +475,8 @@ export struct UserScriptsPage {
       return
     }
     this.editing = script
+    this.editingDirty = false
+    this.bindAppBar()
   }
 
   private openHomepage(script: UserScriptRec): void {
@@ -334,7 +495,7 @@ export struct UserScriptsPage {
 
   // Y3：删除确认 fl「你确定删除 %s 吗？」（R.string.ok / R.string.cancel）
   private confirmDelete(script: UserScriptRec): void {
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       message: `你确定删除 ${script.name} 吗？`,
       primaryButton: {
         value: $r('app.string.cancel'),
@@ -350,16 +511,21 @@ export struct UserScriptsPage {
     })
   }
 
-  // g4：导入脚本（文件选择 → j4 解析）
+  // g4：导入脚本（文件选择 → h3 → j4：z3 读全文 → G3 解析）
   private importScript(): void {
     try {
       const docPicker = new picker.DocumentViewPicker()
+      // sa/d1.g4：MIME 过滤 text/plain、application/javascript、text/javascript；
+      // 鸿蒙 DocumentSelectOptions 仅支持后缀过滤，取等价后缀集合
       docPicker.select({ fileSuffixFilters: ['.txt', '.js', '.user.js'] }).then((uris: Array<string>) => {
         if (uris.length === 0) {
           return
         }
         try {
           const content = fileIo.readTextSync(uris[0])
+          // j4：解析前提示 zg 解析脚本中…
+          this.toast('解析脚本中…')
+          // 原版传全文（r5.b.p 存完整内容），不做截断
           this.installFromCode(content, '', 0)
         } catch (error) {
           this.toast('解析脚本失败！')
@@ -415,7 +581,7 @@ export struct UserScriptsPage {
       title = '更新脚本'
       message = `你确定更新脚本 "${parsed.name}"(${oldVersion !== '' ? oldVersion : '0.1'} -> ${newVersion}) 吗？`
     }
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       title: title,
       message: message,
       primaryButton: {
@@ -513,22 +679,30 @@ export struct UserScriptsPage {
     if (targets.length === 0) {
       return
     }
-    this.getUIContext().showAlertDialog({
-      title: $r('app.string.update_btn'),
-      message: targets.length === 1 ? `你确认更新 ${targets[0].name} 吗？`
-        : targets.map((s: UserScriptRec): string => s.name).join('\n'),
-      primaryButton: {
-        value: $r('app.string.cancel'),
-        action: () => {
+    if (targets.length === 1) {
+      // q4 单目标：rn 你确认更新 %s 吗？ → w4
+      showViaConfirm(this.getUIContext(), {
+        title: $r('app.string.update_btn'),
+        message: `你确认更新 ${targets[0].name} 吗？`,
+        primaryButton: {
+          value: $r('app.string.cancel'),
+          action: () => {
+          }
+        },
+        secondaryButton: {
+          value: $r('app.string.confirm'),
+          action: () => {
+            this.runUpdateAll(targets)
+          }
         }
-      },
-      secondaryButton: {
-        value: $r('app.string.confirm'),
-        action: () => {
-          this.runUpdateAll(targets)
-        }
-      }
-    })
+      })
+      return
+    }
+    // q4 多目标：w5.k.L 多选列表（全选初始态，a0j 更新），确认 → M3 取所选 → w4
+    this.updateTargets = targets
+    this.updateNames = targets.map((s: UserScriptRec): string => s.name)
+    this.updateChecked = targets.map((): boolean => true)
+    this.updateSelectShow = true
   }
 
   private runUpdateAll(targets: UserScriptRec[]): void {
@@ -689,6 +863,9 @@ export struct ScriptEditOverlay {
   @Param initUrl: string = ''
   @Event onClose: () => void = () => {}
   @Event onSaved: () => void = () => {}
+  @Event onDirtyChange: (dirty: boolean) => void = (dirty: boolean) => {}
+  @Param saveRequest: number = 0
+  @Param helpRequest: number = 0
   @Local code: string = ''
   @Local helpShow: boolean = false
   private initialCode: string = ''
@@ -701,67 +878,42 @@ export struct ScriptEditOverlay {
       this.code = newScriptTemplate(this.initUrl)
     }
     this.initialCode = this.code
+    this.onDirtyChange(false)
+  }
+
+  @Monitor('saveRequest')
+  onSaveRequestChanged(): void {
+    this.save()
+  }
+
+  @Monitor('helpRequest')
+  onHelpRequestChanged(): void {
+    this.helpShow = true
   }
 
   build() {
     Column() {
-      Column({ space: 12 }) {
-        // sa/o.a3 工具栏：标题（a3 编辑 / ba 添加脚本）+ k9 帮助 + ap 保存
-        Row() {
-          Text(this.script === null ? $r('app.string.add_script') : $r('app.string.edit'))
-            .fontSize(16)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('app.color.fg'))
-            .layoutWeight(1)
-          Text($r('app.string.orig_k9'))
-            .fontSize(14)
-            .fontColor($r('app.color.accent'))
-            .padding({ left: 12, right: 4 })
-            .onClick(() => {
-              this.helpShow = true
-            })
-          Text($r('app.string.save'))
-            .fontSize(14)
-            .fontColor($r('app.color.accent'))
-            .padding({ left: 12, right: 4 })
-            .onClick(() => {
-              this.save()
-            })
-        }
+      AppBarSpacer()
+      TextArea({ text: this.code, placeholder: $r('app.string.orig_sl') })
+        .layoutWeight(1)
         .width('100%')
-        // sa/o.Z2：等宽代码编辑器（提示 sl 代码 (JavaScript)）
-        TextArea({ text: this.code, placeholder: $r('app.string.orig_sl') })
-          .layoutWeight(1)
-          .width('100%')
-          .fontSize(13)
-          .fontFamily('monospace')
-          .backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.fg'))
-          .placeholderColor($r('app.color.fg_secondary'))
-          .caretColor($r('app.color.accent'))
-          .onChange((value: string) => {
-            this.code = value
-          })
-      }
-      .width('90%')
-      .height('92%')
-      .padding(20)
-      .borderRadius(18)
-      .border({ width: 1, color: $r('app.color.dialog_border') })
-      .backgroundColor($r('app.color.dialog_bg'))
-      .onClick(() => {
-        // Keep taps inside the editor from reaching the full-screen dismiss layer.
-      })
+        .fontSize(13)
+        .fontFamily('monospace')
+        .backgroundColor(Color.Transparent)
+        .fontColor($r('app.color.fg'))
+        .placeholderColor($r('app.color.fg_secondary'))
+        .caretColor($r('app.color.accent'))
+        .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+        .onChange((value: string) => {
+          this.code = value
+          this.onDirtyChange(value !== this.initialCode)
+        })
       if (this.helpShow) {
         this.helpDialog()
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('rgba(0,0,0,0.4)')
-    .onClick(() => {
-      this.requestClose()
-    })
   }
 
   // sa/o.a：帮助弹窗（标题 k9 帮助，正文 u3 富文本，OK 关闭，m_ 了解更多打开 Tampermonkey 文档）
@@ -813,29 +965,6 @@ export struct ScriptEditOverlay {
   }
 
   // sa/o.u3：关闭路径——未改动直接关闭，否则 g6/nt 确认（sa 保存并退出 / i9 退出）
-  private requestClose(): void {
-    if (this.unchanged()) {
-      this.onClose()
-      return
-    }
-    this.getUIContext().showAlertDialog({
-      title: $r('app.string.ai_unsaved_title'),
-      message: $r('app.string.ai_unsaved_msg'),
-      primaryButton: {
-        value: $r('app.string.exit_app'),
-        action: () => {
-          this.onClose()
-        }
-      },
-      secondaryButton: {
-        value: $r('app.string.ai_save_and_exit'),
-        action: () => {
-          this.save()
-        }
-      }
-    })
-  }
-
   // sa/o.w3/v3：保存——未改动直接关闭；解析失败 → yh/mz 询问添加默认 Metadata 块；
   // 成功 → d3/b3 持久化后关闭
   private save(): void {
@@ -847,7 +976,7 @@ export struct ScriptEditOverlay {
     const baseUrl = this.script !== null ? this.script.downloadUrl : ''
     const parsed = parseUserScriptMeta(this.code, baseUrl)
     if (parsed === null) {
-      this.getUIContext().showAlertDialog({
+      showViaConfirm(this.getUIContext(), {
         title: $r('app.string.orig_yh'),
         message: $r('app.string.orig_mz'),
         primaryButton: {
@@ -860,6 +989,7 @@ export struct ScriptEditOverlay {
           action: () => {
             // sa/o.e3：在正文开头插入默认 Metadata 块
             this.code = META_BLOCK_TEMPLATE + this.code
+          this.onDirtyChange(this.code !== this.initialCode)
           }
         }
       })
@@ -882,6 +1012,8 @@ export struct ScriptEditOverlay {
     fetchScriptRequires(parsed)
     // p5.a.J：@resource 依赖预取
     prefetchScriptResources(parsed)
+    this.initialCode = this.code
+    this.onDirtyChange(false)
     this.onSaved()
   }
 

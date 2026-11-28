@@ -86,6 +86,10 @@ export class TabItem {
   @Trace icon: image.PixelMap | null
   // 原版 k6.Nb()：网页 meta theme-color，用于工具栏/地址栏配色自适应
   @Trace themeColor: string = ''
+  // 原版 k6.b5 给新建窗口 WebView 打标 e8.i.f4821d：window.open/onWindowNew 建出的
+  // 待定标签 url 为空，不代表主页——目标页落定前不呈现主页覆盖层（否则闪主页）。
+  // 首个真实页面 commit 后即清除。
+  @Trace pendingWindow: boolean = false
   controller: webview.WebviewController
   private closed: boolean = false
 

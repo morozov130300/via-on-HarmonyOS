@@ -2,6 +2,7 @@ import { TabItem } from './Types'
 import { AppSettings, SavedTab } from './Settings'
 import { ClosedTabsStore, ClosedBatchResult, ClosedSingleResult } from './ClosedTabsStore'
 import { emitter } from '@kit.BasicServicesKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 
 const BLANK_URL: string = 'about:blank'
 // 主页模式=书签：新标签打开书签页（原版 uia://bookmark）
@@ -45,7 +46,7 @@ export class TabStore {
     const flags = await ClosedTabsStore.getInstance().consumeQuitFlags()
     if (flags[0] && !flags[1]) {
       const crashed = await settings.readTabsSnapshot()
-      if (crashed.length > 0) {
+      if (this.hasRestorableTabs(crashed)) {
         this.restoreSaved(crashed, await settings.readTabsSnapshotIndex())
       }
       return
@@ -53,7 +54,7 @@ export class TabStore {
     // 原版三态：0 禁用 / 1 总是恢复 / 2 优先询问（restoreclosedtabs，默认 0）
     if (settings.restoreTabsMode === 2) {
       const saved = await settings.readTabsSnapshot()
-      if (saved.length > 0) {
+      if (this.hasRestorableTabs(saved)) {
         AppStorage.setOrCreate('uia_pending_restore_tabs', JSON.stringify(saved))
         AppStorage.setOrCreate('uia_pending_restore_index', await settings.readTabsSnapshotIndex())
       }
@@ -63,22 +64,37 @@ export class TabStore {
       return
     }
     const saved = await settings.readTabsSnapshot()
-    if (saved.length === 0) {
+    if (!this.hasRestorableTabs(saved)) {
       return
     }
     this.restoreSaved(saved, await settings.readTabsSnapshotIndex())
   }
 
+  private hasRestorableTabs(saved: SavedTab[]): boolean {
+    for (let i = 0; i < saved.length; i++) {
+      if (!saved[i].incognito && saved[i].url !== '' && saved[i].url !== 'about:blank') {
+        return true
+      }
+    }
+    return false
+  }
+
   // 原版 k6.ia()：restore_tabs 数组重建标签列表并选中 selected 项（快照已含 title）
-  restoreSaved(saved: SavedTab[], savedIndex: number): void {    const tabs: TabItem[] = []
+  restoreSaved(saved: SavedTab[], savedIndex: number): void {
+    const tabs: TabItem[] = []
+    let restoredActiveIndex = 0
     for (let i = 0; i < saved.length; i++) {
       const entry = saved[i]
+      if (entry.incognito || entry.url === '' || entry.url === 'about:blank') {
+        continue
+      }
+      if (i === savedIndex) {
+        restoredActiveIndex = tabs.length
+      }
       const tab = new TabItem(this.nextTabId, false)
       this.nextTabId = this.nextTabId + 1
-      if (entry.url !== '') {
-        tab.initialUrl = entry.url
-        tab.url = entry.url
-      }
+      tab.initialUrl = entry.url
+      tab.url = entry.url
       tab.title = entry.title
       tabs.push(tab)
     }
@@ -86,11 +102,10 @@ export class TabStore {
       return
     }
     this.tabs = tabs
-    let index = savedIndex
-    if (index < 0 || index >= tabs.length) {
-      index = 0
+    if (restoredActiveIndex < 0 || restoredActiveIndex >= tabs.length) {
+      restoredActiveIndex = 0
     }
-    this.currentIndex = index
+    this.currentIndex = restoredActiveIndex
   }
 
   async restoreFromSnapshot(settings: AppSettings): Promise<void> {
@@ -606,35 +621,41 @@ export class TabStore {
 
   // 原版快照含 url/title/selected（ic.java D1()），隐身标签不入快照
   snapshot(settings: AppSettings): void {
+    try {
+      this.saveSnapshot(settings)
+    } catch (error) {
+      const err = error as BusinessError
+      console.error(`save tab snapshot failed: ${err.message}`)
+    }
+  }
+
+  saveSnapshot(settings: AppSettings): void {
     const saved: SavedTab[] = []
     let activeIndex = 0
     const current = this.tabs[this.currentIndex]
     for (let i = 0; i < this.tabs.length; i++) {
       const tab = this.tabs[i]
-      if (tab.incognito) {
+      if (tab.incognito || tab.isHomePage() || tab.url === '' || tab.url === 'about:blank' || tab.pendingWindow) {
         continue
       }
       if (i === this.currentIndex) {
         activeIndex = saved.length
       }
-      if (tab.isHomePage()) {
-        saved.push(new SavedTab('', false, ''))
-      } else {
-        saved.push(new SavedTab(tab.url, false, tab.title))
-      }
+      saved.push(new SavedTab(tab.url, false, tab.title))
     }
-    // 原版隐身会话不入快照：当前为隐身标签时选中位置记为首个普通标签后的位置，恢复时收敛
     if (current !== undefined && current.incognito) {
       activeIndex = saved.length
     }
-    settings.saveTabsSnapshot(saved, activeIndex)
+    settings.saveTabsSnapshotSync(saved, activeIndex)
   }
 
-  // 原版 p4/c.java:55 onCreateWindow：新窗口即新标签，返回待绑定的 TabItem
+  // 原版 p4/c.java:55 onCreateWindow：新窗口即新标签，返回待绑定的 TabItem。
+  // 原版 k6.b5 会给这类标签打标 e8.i.f4821d，目标页落定前不按主页呈现，此处对齐打 pendingWindow
   openWindowTab(): TabItem {
     const current = this.tabs[this.currentIndex]
     const tab = new TabItem(this.nextTabId, current !== undefined ? current.incognito : false)
     this.nextTabId = this.nextTabId + 1
+    tab.pendingWindow = true
     this.tabs.push(tab)
     this.currentIndex = this.tabs.length - 1
     return tab

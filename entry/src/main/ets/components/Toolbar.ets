@@ -5,7 +5,7 @@ import { AddressBar } from './AddressBar'
 import { ViaIcon } from './ViaIcon'
 import { common } from '@kit.AbilityKit'
 import { emitter } from '@kit.BasicServicesKit'
-import { normalizeThemeColor, toolbarBackgroundColor, resolveColorHex } from '../common/ChromeColors'
+import { normalizeThemeColor, toolbarBackgroundColor, resolveColorHex, homeWallpaperThrough } from '../common/ChromeColors'
 import { BEZIER_0202_CURVE } from '../common/Transitions'
 
 // 原版 g0.j() 的触发事件：k6.A8()（进隐身）与 k6.b0()（标签事件且标签数>1）两处。
@@ -54,6 +54,10 @@ export struct Toolbar {
   @Local tabBounceY: number = 0
 
   private toolbarBg(): ResourceColor {
+    // 原版 Z7 z13&&zB9：主页有背景图时工具栏背景全透明，壁纸透出
+    if (homeWallpaperThrough(this.tab, this.settings)) {
+      return Color.Transparent
+    }
     return toolbarBackgroundColor(this.tab, this.settings)
   }
 

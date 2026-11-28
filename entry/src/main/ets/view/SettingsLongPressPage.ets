@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
 import { SettingCheckRow } from '../components/SettingRows'
@@ -125,7 +126,7 @@ export struct SettingsLongPressPage {
 
   // 原版 i8/w.a3()：「重置为默认设置」/「你确定继续吗？」→ U1(null) 恢复默认（仅隐藏 保存图片）
   private confirmReset(): void {
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.reset_default_title'),
       message: $r('app.string.reset_default_msg'),
       primaryButton: {

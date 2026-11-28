@@ -188,6 +188,7 @@ export default class EntryAbility extends UIAbility {
     // 这里保留 Index 双击返回的 emit 作为超集（原版菜单退出不额外清除，此处多清一次无副作用：
     // applyClearOnExit 内缓存位带 lastcleantime 5 天兜底，重复调用不会重复清历史/存储）。
     emitter.on({ eventId: EXIT_CLEAR_EVENT_ID }, () => {
+      this.persistTabsAndMarkClean()
       this.applyClearOnExit();
     });
     if (!this.openDownloadedFileFromWant(want)) {
@@ -327,6 +328,7 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
+    this.persistTabsAndMarkClean()
   }
 
   // NFC 前台分发注册状态（tag.registerForegroundDispatch / unregisterForegroundDispatch）
@@ -465,12 +467,22 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
+  private persistTabsSnapshot(): void {
+    try {
+      TabStore.getInstance().saveSnapshot(AppSettings.getInstance())
+    } catch (error) {
+      const err = error as BusinessError
+      hilog.error(DOMAIN, 'testTag', 'persist tabs snapshot failed: %{public}s', err.message)
+    }
+  }
+
+  private persistTabsAndMarkClean(): void {
+    this.persistTabsSnapshot()
+    ClosedTabsStore.getInstance().markCleanQuit()
+  }
+
   onWindowStageDestroy(): void {
-    // Main window is destroyed, release UI related resources
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');
-    // 原版 na.e（正常退出标记）：本次正常销毁写 clean 标记，下次启动读到缺失即判崩溃恢复。
-    // onBackground/onWindowStageDestroy 双保险（进程被杀时 onBackground 是最后回调）。
-    ClosedTabsStore.getInstance().markCleanQuit();
   }
 
   onForeground(): void {
@@ -495,6 +507,7 @@ export default class EntryAbility extends UIAbility {
   onBackground(): void {
     // Ability has back to background
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+    this.persistTabsSnapshot();
     if (this.nfcForegroundRegistered) {
       this.nfcForegroundRegistered = false;
       try {

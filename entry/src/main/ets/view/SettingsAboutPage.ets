@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { TOAST_SHORT } from '../common/ToastDuration'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { common, Want } from '@kit.AbilityKit'
@@ -64,7 +65,7 @@ export struct SettingsAboutPage {
               .fontColor($r('app.color.fg'))
               .margin({ top: 2 })
               .onClick(() => {
-                this.getUIContext().showAlertDialog({
+                showViaConfirm(this.getUIContext(), {
                   title: '7.4.0',
                   message: this.sloganText(),
                   confirm: {
@@ -82,11 +83,10 @@ export struct SettingsAboutPage {
           this.AboutRow('检查更新', () => {
             this.checkUpdate()
           })
-          this.AboutValueRow('QQ 群组', '无')
+          this.AboutValueRow('QQ 群组', '1137069520')
           this.AboutRow('通过邮件联系我', () => {
             this.copyEmail()
           })
-          this.AboutValueRow('使用协议', '无')
           this.AboutRow('隐私政策', () => {
             this.openLink(PRIVACY_POLICY_URL)
           })

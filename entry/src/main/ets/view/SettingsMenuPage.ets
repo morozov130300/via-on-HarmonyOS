@@ -153,30 +153,59 @@ export struct SettingsMenuPage {
     return range
   }
 
-  // 对应 i8/s.A3()：菜单区条目点击 → d(false) 移到池区首位；池区条目点击 → d(true) 加到菜单区末尾。
-  // 设置(id10)不可移出菜单区（g3 里 b()==10 直接 return）
+  // 对应 i8/s.A3()：active 移除后插入 pool 首位；pool 移除后追加 active，随后 y3() 重建列表。
+  // 设置(id10)不可移出菜单区（g3 里 b()==10 直接 return）。
   private onCellClick(item: FlatMenuItem): void {
     if (item.id === 'settings') {
       return
     }
-    const index = this.indexOfItem(item)
-    if (index < 0) {
+    const clickedIndex = this.indexOfItem(item)
+    if (clickedIndex < 0) {
       return
     }
-    const movingToPool = item.kind === KIND_ACTIVE
+    const active: string[] = []
+    const pool: string[] = []
+    for (let i = 0; i < this.items.length; i++) {
+      const row = this.items[i]
+      if (row.kind === KIND_ACTIVE) {
+        active.push(row.id)
+      } else if (row.kind === KIND_POOL) {
+        pool.push(row.id)
+      }
+    }
+    const activeIndex = active.indexOf(item.id)
+    if (activeIndex >= 0) {
+      active.splice(activeIndex, 1)
+      pool.unshift(item.id)
+    } else {
+      const poolIndex = pool.indexOf(item.id)
+      if (poolIndex < 0) {
+        return
+      }
+      pool.splice(poolIndex, 1)
+      active.push(item.id)
+    }
     this.getUIContext().animateTo({
       duration: MENU_MOVE_DURATION, curve: ACCELERATE_DECELERATE_CURVE
     }, () => {
-      const moving = this.items.splice(index, 1)[0]
-      moving.kind = movingToPool ? KIND_POOL : KIND_ACTIVE
-      const currentActiveEnd = this.activeRange()[1]
-      const targetIndex = movingToPool ? currentActiveEnd + 1 : currentActiveEnd
-      this.items.splice(Math.max(1, Math.min(targetIndex, this.items.length - 1)), 0, moving)
-      this.refreshSeparatorIndex()
+      this.rebuildItems(active, pool)
       this.persistNow().catch((error: Error) => {
         console.error(`persist menu layout failed: ${error.message}`)
       })
     })
+  }
+
+  private rebuildItems(active: string[], pool: string[]): void {
+    const rebuilt: FlatMenuItem[] = [new FlatMenuItem(KIND_SEPARATOR_TOP, '')]
+    for (let i = 0; i < active.length; i++) {
+      rebuilt.push(new FlatMenuItem(KIND_ACTIVE, active[i]))
+    }
+    rebuilt.push(new FlatMenuItem(KIND_SEPARATOR_BOTTOM, ''))
+    for (let i = 0; i < pool.length; i++) {
+      rebuilt.push(new FlatMenuItem(KIND_POOL, pool[i]))
+    }
+    this.items = rebuilt
+    this.refreshSeparatorIndex()
   }
 
   private indexOfItem(item: FlatMenuItem): number {
@@ -188,7 +217,7 @@ export struct SettingsMenuPage {
     return -1
   }
 
-  // 对应 i8/s.x3()：拖拽落位。纯数组 splice，归属由相对两条提示行的位置决定。
+  // 对应 i8/s.x3()：按原版 s3/u3/v3/o3/t3 将 adapter 目标行映射到分区数组下标。
   private onFlatMove(from: number, to: number): void {
     if (from === to || from < 0 || to < 0 || from >= this.items.length || to >= this.items.length) {
       return
@@ -197,28 +226,49 @@ export struct SettingsMenuPage {
     if (moving.kind !== KIND_ACTIVE && moving.kind !== KIND_POOL) {
       return
     }
-    const target = this.items[to]
-    // 提示行不是合法落点：吸附到相邻区（原版 ItemTouchHelper 不会把条目落在 x 提示行上）
-    if (target.kind !== KIND_ACTIVE && target.kind !== KIND_POOL) {
+    const active: string[] = []
+    const pool: string[] = []
+    for (let i = 0; i < this.items.length; i++) {
+      if (this.items[i].kind === KIND_ACTIVE) {
+        active.push(this.items[i].id)
+      } else if (this.items[i].kind === KIND_POOL) {
+        pool.push(this.items[i].id)
+      }
+    }
+    const activeIndex = active.indexOf(moving.id)
+    const poolIndex = pool.indexOf(moving.id)
+    const wasActive = activeIndex >= 0
+    if (!wasActive && poolIndex < 0) {
       return
     }
-    // 设置(id10)：不可移出菜单区（x3 中 b()==10 && i10>=s3() → -1）
-    if (moving.id === 'settings' && moving.kind === KIND_ACTIVE) {
-      const range = this.activeRange()
-      const start = range[0]
-      const end = range[1]
-      if (to > end) {
-        return
-      }
-      if (start < 0 || end < 0) {
-        return
-      }
+    const oldS3 = active.length + 1
+    if (moving.id === 'settings' && wasActive && to >= oldS3) {
+      return
     }
-    this.items.splice(from, 1)
-    this.items.splice(to, 0, moving)
-    const newRange = this.activeRange()
-    moving.kind = to < newRange[1] ? KIND_ACTIVE : KIND_POOL
-    this.refreshSeparatorIndex()
+    const newActive = active.slice()
+    const newPool = pool.slice()
+    if (wasActive) {
+      newActive.splice(activeIndex, 1)
+    } else {
+      newPool.splice(poolIndex, 1)
+    }
+    const newS3 = newActive.length + 1
+    if (to === newS3) {
+      if (wasActive) {
+        newActive.push(moving.id)
+      } else {
+        newPool.unshift(moving.id)
+      }
+    } else if (to > 0 && to < newS3) {
+      const target = Math.max(0, Math.min(to - 1, newActive.length))
+      newActive.splice(target, 0, moving.id)
+    } else if (to > newS3 && to < this.items.length) {
+      const target = Math.max(0, Math.min(to - newS3 - 1, newPool.length))
+      newPool.splice(target, 0, moving.id)
+    } else {
+      return
+    }
+    this.rebuildItems(newActive, newPool)
     this.schedulePersist()
   }
 

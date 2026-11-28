@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { RuleSubEntry, RULE_SUB_PRESETS } from '../common/Types'
 import { dialogTransition } from '../common/Transitions'
 import { AppSettings } from '../common/Settings'
@@ -362,7 +363,7 @@ export struct SettingsRuleSubPage {
 
   // 原版 l3：删除（fl 你确定删除 %s 吗？）
   private confirmRemove(sub: RuleSubEntry): void {
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       message: `你确定删除 ${sub.name} 吗？`,
       primaryButton: {
         value: $r('app.string.cancel'),

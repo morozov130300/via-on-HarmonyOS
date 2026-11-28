@@ -1,4 +1,5 @@
 import { AppSettings } from '../common/Settings'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { SslWhitelistStore } from '../common/SslWhitelist'
 import { common } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -121,7 +122,7 @@ export struct SettingsAdvancedPage {
   private toggleDebugWeb(isOn: boolean): void {
     this.settings.setAllowDebugWeb(isOn)
     if (isOn) {
-      AlertDialog.show({
+      showViaConfirm(this.getUIContext(), {
         title: $r('app.string.allow_web_debug'),
         message: $r('app.string.orig_a1o'),
         confirm: {

@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { common } from '@kit.AbilityKit'
 import { picker } from '@kit.CoreFileKit'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -86,7 +87,7 @@ export struct SkinPage {
   }
 
   private showApplyDialog(): void {
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.orig_uc'),
       message: $r('app.string.orig_s2'),
       primaryButton: {
@@ -109,7 +110,7 @@ export struct SkinPage {
     if (entry.name === '') {
       return
     }
-    AlertDialog.show({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.delete'),
       message: `你确定删除 ${entry.name} 吗？`,
       primaryButton: {

@@ -265,26 +265,25 @@ export class ClosedTabsStore {
   async consumeQuitFlags(): Promise<boolean[]> {
     const flags = await this.readQuitFlags()
     if (this.store !== null && flags[0]) {
-      this.store.put(KEY_LAST_QUIT_CLEAN, false).catch((error: BusinessError) => {
-        console.error(`reset quit flag failed: ${error.message}`)
-      })
-      this.store.flush().catch((error: BusinessError) => {
-        console.error(`reset quit flag flush failed: ${error.message}`)
-      })
+      try {
+        this.store.putSync(KEY_LAST_QUIT_CLEAN, false)
+        this.store.flushSync()
+      } catch (error) {
+        const err = error as BusinessError
+        console.error(`reset quit flag failed: ${err.code} ${err.message}`)
+      }
     }
     return flags
   }
 
-  // EntryAbility.onWindowStageDestroy 接线点：正常退出写 true（需主控接线）
-  async markCleanQuit(): Promise<void> {
-    await this.ensureInit()
+  markCleanQuit(): void {
     if (this.store === null) {
       return
     }
     try {
-      await this.store.put(KEY_QUIT_FLAG_WRITTEN, true)
-      await this.store.put(KEY_LAST_QUIT_CLEAN, true)
-      await this.store.flush()
+      this.store.putSync(KEY_QUIT_FLAG_WRITTEN, true)
+      this.store.putSync(KEY_LAST_QUIT_CLEAN, true)
+      this.store.flushSync()
     } catch (error) {
       const err = error as BusinessError
       console.error(`mark clean quit failed: ${err.code} ${err.message}`)

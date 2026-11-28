@@ -1,4 +1,5 @@
 import { pasteboard } from '@kit.BasicServicesKit'
+import { showViaConfirm } from './ViaConfirmDialog'
 import { common } from '@kit.AbilityKit'
 import { abilityAccessCtrl, Permissions, PermissionRequestResult } from '@kit.AbilityKit'
 import { webview, WebNetErrorList } from '@kit.ArkWeb'
@@ -441,6 +442,9 @@ export struct TabWeb {
   build() {
     Stack() {
       Web({ src: 'about:blank', controller: this.tab.controller, incognitoMode: this.tab.incognito })
+        // 原版 k6.i9：f2586p0.setBackgroundColor(0) —— WebView 背景透明，主页壁纸
+        // 由外壳绘制透出；普通网页自绘白底不受影响
+        .backgroundColor(Color.Transparent)
         // 原版 jb/y4.java:167 全局 JS 开关（与脚本启用 scriptEnabled 为两个独立设置）
         .javaScriptAccess(this.settings.jsEnabled)
         .domStorageAccess(true)
@@ -532,7 +536,12 @@ export struct TabWeb {
             return
           }
           this.tab.url = event.url
+          this.tabStore.snapshot(this.settings)
           this.tab.loading = event.url !== 'about:blank' && event.url !== ''
+          // 原版 k6.b5 的窗口待定标记随首个真实页面 commit 失效
+          if (this.tab.pendingWindow) {
+            this.tab.pendingWindow = false
+          }
           this.tab.isError = false
           this.tab.sniffedMedia = []
           // 原版 e8/j.D（onPageStarted 位掩码含 1）→ d8/d.i(tabId, resourceId, url)：
@@ -566,6 +575,7 @@ export struct TabWeb {
             return
           }
           this.tab.url = event.url
+          this.tabStore.snapshot(this.settings)
           this.tab.loading = false
           this.tab.progress = 100
           if (this.clearHistoryOnce) {
@@ -598,6 +608,7 @@ export struct TabWeb {
         })
         .onTitleReceive((event: OnTitleReceiveEvent) => {
           this.tab.title = event.title
+          this.tabStore.snapshot(this.settings)
           // 原版 k6.b0 → d9() → pb()：标题落定同样确保 FAB 在场
           this.onPageSettle()
         })
@@ -1907,7 +1918,7 @@ export struct TabWeb {
 
   // 原版 Q3 case22：AlertDialog 标题 ah「页面信息」，正文 标题：/页面链接：/选中链接：
   private showPageInfo(link: string): void {
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       title: '页面信息',
       message: `标题：${this.tab.title}\n\n页面链接：${this.tab.url}\n\n选中链接：${link}`,
       primaryButton: {
@@ -1959,7 +1970,7 @@ export struct TabWeb {
           return
         }
         const value = results[0].originalValue
-        this.getUIContext().showAlertDialog({
+        showViaConfirm(this.getUIContext(), {
           title: '提示',
           message: value,
           primaryButton: {

@@ -1,4 +1,5 @@
 import { TabItem } from '../common/Types'
+import { showViaConfirm } from './ViaConfirmDialog'
 import { TabStore } from '../common/TabStore'
 import { AppSettings } from '../common/Settings'
 import {
@@ -6,6 +7,8 @@ import {
 } from '../common/SearchEngines'
 import { pasteboard } from '@kit.BasicServicesKit'
 import { i18n } from '@kit.LocalizationKit'
+import { common } from '@kit.AbilityKit'
+import { chromeTextColor, resolveColorHex, toolbarBackgroundColor } from '../common/ChromeColors'
 import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 
 // 原版 mark/via/common/widget/m（k6.n9 构建传入 n9、k4 主题着色、k6.b 点击回调）：
@@ -15,7 +18,8 @@ import { ACCELERATE_DECELERATE_CURVE } from '../common/Transitions'
 // chip（m.a/l）：高 28dp、圆角 18dp（dimen ae）、描边 1dp（默认 #30808080、选中 accent、
 // 按压透明+填充 #30808080）、文字 12sp（dimen aa）、单行省略 maxWidth 96dp、水平 padding 12dp、
 // 无字重强调；文字色亮 #232323/color t、夜 #9F9F9F/color u（k4 传 m.l），选中 accent。
-// footer（m.b/h）：48dp 宽、图标 di（24dp、tint 亮 #DE000000/a1 夜 #BEFFFFFF/a2）、
+// footer（m.b/h）：48dp 宽、图标 di（24dp、tint 经 k4 随工具栏背景亮度取色：
+// 亮 #DE000000/a1、夜 #BEFFFFFF/a2、暗背景白）、
 // 背景 ripple r/m/o.xml（mask 圆角 18dp、#30808080、300ms 淡出）、内容描述「搜索设置」(t4)，
 // 点击打开搜索设置页 hb.b6。
 // 选中态（m.n/j）：在可见引擎列表上用 g0.g(url, 模板) 取首个非空词命中者，切换 URL 时滚动到选中项。
@@ -32,6 +36,32 @@ export struct SearchToolbar {
   @Local pressedKey: string = ''
   // footer 按压态（ripple：按压 #30808080，松手 300ms 淡出）
   @Local footerPressed: boolean = false
+
+  // 原版 k4 → m.l(iB, 文字色)：footer 图标 tint 随工具栏背景亮度取色——
+  // 夜间 a2 #beffffff、亮背景 a1 #de000000、暗背景白色（与顶栏 chromeTextColor 同口径）。
+  @Computed
+  get footerIconTint(): string {
+    const ctx = this.getUIContext().getHostContext() as common.UIAbilityContext
+    const bgHex = resolveColorHex(toolbarBackgroundColor(this.tab, this.settings), ctx)
+    return chromeTextColor(bgHex, this.settings.isNightActive()) as string
+  }
+
+  // fillColor 只对 SVG 生效，本图标是位图（调色板黑+α 通道承载形状），用 colorFilter
+  // 直接把 RGB 置为目标色、α 按目标 alpha 缩放源 α（保留 tRNS 抗锯齿边缘）。
+  private tintFilter(hex: string): number[] {
+    let v = hex.replace('#', '')
+    if (v.length === 3) {
+      v = `${v[0]}${v[0]}${v[1]}${v[1]}${v[2]}${v[2]}`
+    }
+    if (v.length === 6) {
+      v = `ff${v}`
+    }
+    const a = parseInt(v.substring(0, 2), 16) / 255
+    const r = parseInt(v.substring(2, 4), 16) / 255
+    const g = parseInt(v.substring(4, 6), 16) / 255
+    const b = parseInt(v.substring(6, 8), 16) / 255
+    return [0, 0, 0, 0, r, 0, 0, 0, 0, g, 0, 0, 0, 0, b, 0, 0, 0, a, 0]
+  }
 
   private settings: AppSettings = AppSettings.getInstance()
   private tabStore: TabStore = TabStore.getInstance()
@@ -178,6 +208,7 @@ export struct SearchToolbar {
               .width(24)
               .height(24)
               .fillColor($r('app.color.search_toolbar_icon_tint'))
+              .colorFilter(this.tintFilter(this.footerIconTint))
           }
           .width(48)
           .height(28)
@@ -234,7 +265,7 @@ export struct SearchToolbar {
 
   // 原版 k6.b.a L459-467：标题「无效链接」(ln)、内容新 URL、复制(R.string.copy)/取消
   private showInvalidUrl(url: string): void {
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.invalid_url'),
       message: url,
       primaryButton: {

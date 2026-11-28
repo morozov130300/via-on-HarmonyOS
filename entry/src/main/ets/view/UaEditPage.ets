@@ -1,4 +1,5 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { AppSettings } from '../common/Settings'
 import { CustomUaEntry, cleanUaInput } from '../common/UaTable'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
@@ -125,7 +126,7 @@ export struct UaEditPage {
         return
       }
     }
-    this.getUIContext().showAlertDialog({
+    showViaConfirm(this.getUIContext(), {
       title: $r('app.string.ai_unsaved_title'),
       message: $r('app.string.ai_unsaved_msg'),
       primaryButton: {
