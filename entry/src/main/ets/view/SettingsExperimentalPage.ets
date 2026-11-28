@@ -1,5 +1,7 @@
 import { TOAST_SHORT } from '../common/ToastDuration'
+import { common } from '@kit.AbilityKit'
 import { AppSettings } from '../common/Settings'
+import { LogFileService } from '../common/LogFileService'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { SettingCheckRow, SettingNavRow } from '../components/SettingRows'
 import { buildNavSlide } from './PageTransitions'
@@ -13,8 +15,42 @@ import { buildNavSlide } from './PageTransitions'
 export struct SettingsExperimentalPage {
   private settings: AppSettings = AppSettings.getInstance()
   private navPathStack: NavPathStack = new NavPathStack()
+  // 导出中状态：防止重复触发导出
+  @Local exportingLog: boolean = false
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
+
+  private toast(message: ResourceStr): void {
+    this.getUIContext().getPromptAction().showToast({ message: message, duration: TOAST_SHORT })
+  }
+
+  // 导出日志：系统文件管理器选位置 → 复制沙箱日志到用户 URI；成功后删除本地文件，
+  // 后续日志由 append 重建（取消/失败原文件不动）
+  private exportLog(): void {
+    if (this.exportingLog) {
+      return
+    }
+    const service: LogFileService = LogFileService.getInstance()
+    if (service.readAll() === '') {
+      this.toast($r('app.string.log_export_none'))
+      return
+    }
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      this.toast($r('app.string.log_export_failed'))
+      return
+    }
+    this.exportingLog = true
+    service.exportToUser(context as common.UIAbilityContext, service.defaultExportFileName())
+      .then((result: string): void => {
+        this.exportingLog = false
+        if (result === 'ok') {
+          this.toast($r('app.string.log_export_done'))
+        } else if (result === 'error') {
+          this.toast($r('app.string.log_export_failed'))
+        }
+      })
+  }
 
   private bindAppBar(): void {
     AppBar.show({
@@ -53,6 +89,32 @@ export struct SettingsExperimentalPage {
                 this.settings.setShowSettingsBackground(isOn)
                 this.getUIContext().getPromptAction()
                   .showToast({ message: $r('app.string.orig_tv'), duration: TOAST_SHORT })
+              }
+            })
+            // 日志开关：WARN/ERROR 级写盘；详细开关开启后 DEBUG/INFO 也写
+            SettingCheckRow({
+              rowLabel: $r('app.string.log_file_title'),
+              rowDesc: $r('app.string.log_file_desc'),
+              isChecked: this.settings.logFileEnabled,
+              onCheckRow: (isOn: boolean): void => {
+                LogFileService.getInstance().setEnabled(isOn)
+              }
+            })
+            SettingCheckRow({
+              rowLabel: $r('app.string.log_verbose_title'),
+              rowDesc: $r('app.string.log_verbose_desc'),
+              isChecked: this.settings.logFileEnabled && this.settings.logFileVerbose,
+              disabled: !this.settings.logFileEnabled,
+              onCheckRow: (isOn: boolean): void => {
+                LogFileService.getInstance().setVerbose(isOn)
+              }
+            })
+            // 导出日志行：与导航行同款卡片
+            SettingNavRow({
+              rowLabel: $r('app.string.log_export_title'),
+              rowDesc: $r('app.string.log_export_desc'),
+              onTapRow: (): void => {
+                this.exportLog()
               }
             })
           }

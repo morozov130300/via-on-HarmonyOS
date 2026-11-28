@@ -6,10 +6,9 @@
 //   持久化数据在 context.filesDir/__arkweb（Cookie/IndexedDB/LocalStorage，禁止整体删除）；
 //   故 clearCacheDir 递归清 cacheDir 全树即等价原版「清临时缓存」，不触碰 __arkweb。
 import { fileIo } from '@kit.CoreFileKit'
-import { hilog } from '@kit.PerformanceAnalysisKit'
+import Logger from './Logger'
 import { BusinessError } from '@kit.BasicServicesKit'
 
-const DOMAIN: number = 0x0000
 const TAG: string = 'DiskCleaner'
 
 // 原版 o0.c(File)：递归删子项 → 删自身；返回 true 表示已删除或不存在。
@@ -41,7 +40,7 @@ export function removeDirRecursive(path: string): boolean {
       fileIo.rmdirSync(path)
       return true
     } catch (error) {
-      hilog.error(DOMAIN, TAG, 'rmdir failed: %{public}s', path)
+      Logger.error(TAG, 'rmdir failed:', path)
       return false
     }
   }
@@ -49,7 +48,7 @@ export function removeDirRecursive(path: string): boolean {
     fileIo.unlinkSync(path)
     return true
   } catch (error) {
-    hilog.error(DOMAIN, TAG, 'unlink failed: %{public}s', path)
+    Logger.error(TAG, 'unlink failed:', path)
     return false
   }
 }
@@ -66,6 +65,6 @@ export function clearAllCache(context: Context): void {
       fileIo.mkdirSync(context.cacheDir)
     }
   } catch (error) {
-    hilog.error(DOMAIN, TAG, 'clear cacheDir failed: %{public}s', `${(error as BusinessError).code}`)
+    Logger.error(TAG, 'clear cacheDir failed:', `${(error as BusinessError).code}`)
   }
 }

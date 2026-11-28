@@ -64,8 +64,7 @@ export struct BookmarkPage {
   @Event onRequestPop: () => void = () => {}
   @Local items: BookmarkRec[] = []
   @Local folders: BookmarkFolderRec[] = []
-  @Local allBookmarks: BookmarkRec[] = []
-  @Local allFolders: BookmarkFolderRec[] = []
+  @Local folderItemCounts: Map<number, number> = new Map<number, number>()
   @Local query: string = ''
   @Local editing: BookmarkRec | null = null
   @Local creatingFolder: boolean = false
@@ -648,12 +647,10 @@ export struct BookmarkPage {
   // 文件夹长按打开（e0.q3 pos0/1 → a0(folder) 子书签列表 → I(list)：
   // 后台=全部 mode 2；新标签=首个 mode 1（前台并关页），其余 mode 3 后台）
   private openFolderTabs(folder: BookmarkFolderRec, background: boolean): void {
-    this.db.listAllBookmarks().then((all: BookmarkRec[]) => {
+    this.db.listBookmarks(folder.id).then((folderItems: BookmarkRec[]) => {
       const urls: string[] = []
-      for (let i = 0; i < all.length; i++) {
-        if (all[i].folderId === folder.id) {
-          urls.push(all[i].url)
-        }
+      for (let i = 0; i < folderItems.length; i++) {
+        urls.push(folderItems[i].url)
       }
       if (urls.length === 0) {
         return
@@ -889,17 +886,17 @@ export struct BookmarkPage {
   }
 
   // 多选打开（e0.t3 R0 → k1.Y/t：选中文件夹的子书签 + 选中书签，首个前台、其余后台，随后关页）
-  private openSelected(): void {
+  private async openSelected(): Promise<void> {
     const bookmarks = this.visibleBookmarks()
     const urls: string[] = []
     for (let i = 0; i < this.selectedKeys.length; i++) {
       const key = this.selectedKeys[i]
       if (key.startsWith('f')) {
         const folderId = Number(key.substring(1))
-        for (let j = 0; j < this.allBookmarks.length; j++) {
-          if (this.allBookmarks[j].folderId === folderId) {
-            urls.push(this.allBookmarks[j].url)
-          }
+        // 原版文件夹展开仅查询该目录中的书签，而非遍历全库缓存。
+        const folderBookmarks = await this.db.listBookmarks(folderId)
+        for (let j = 0; j < folderBookmarks.length; j++) {
+          urls.push(folderBookmarks[j].url)
         }
         continue
       }
@@ -923,7 +920,7 @@ export struct BookmarkPage {
 
   // 目标目录是否位于 folderId 内部（含自身）——移入自身/子孙会成环，跳过
   // （原版 k1.H：目标祖先链上的文件夹从移动列表剔除，等价效果）
-  private isFolderInsideOf(folderId: number, targetId: number): boolean {
+  private async isFolderInsideOf(folderId: number, targetId: number): Promise<boolean> {
     let current = folderId
     let guard = 0
     while (current !== 0 && guard < 64) {
@@ -931,34 +928,28 @@ export struct BookmarkPage {
       if (current === targetId) {
         return true
       }
-      let found = false
-      for (let i = 0; i < this.allFolders.length; i++) {
-        if (this.allFolders[i].id === current) {
-          current = this.allFolders[i].parentId
-          found = true
-          break
-        }
-      }
-      if (!found) {
+      const parent = await this.db.getBookmarkFolder(current)
+      if (parent === null) {
         break
       }
+      current = parent.parentId
     }
     return false
   }
 
   // 多选移动（e0.t3 Q0 → b2 选目录 → k1.j0：书签/文件夹均移入目标目录）
-  private moveSelectedTo(targetFolderId: number): void {
+  private async moveSelectedTo(targetFolderId: number): Promise<void> {
     const keys = this.selectedKeys
     if (keys.length === 0) {
       return
     }
     const folders = this.visibleFolders()
     const bookmarks = this.visibleBookmarks()
-    this.db.listAllBookmarks().then((all: BookmarkRec[]) => {
+    this.db.listBookmarks(targetFolderId).then(async (targetItems: BookmarkRec[]): Promise<void> => {
       let nextOrdering = 1
-      for (let i = 0; i < all.length; i++) {
-        if (all[i].folderId === targetFolderId && all[i].ordering >= nextOrdering) {
-          nextOrdering = all[i].ordering + 1
+      for (let i = 0; i < targetItems.length; i++) {
+        if (targetItems[i].ordering >= nextOrdering) {
+          nextOrdering = targetItems[i].ordering + 1
         }
       }
       let pending = 0
@@ -982,7 +973,8 @@ export struct BookmarkPage {
         } else {
           const folderId = Number(key.substring(1))
           // 目标在所选文件夹内部（或就是它）时跳过，避免目录成环（原版 k1.H 等价）
-          if (this.isFolderInsideOf(targetFolderId, folderId)) {
+          const createsCycle = await this.isFolderInsideOf(targetFolderId, folderId)
+          if (createsCycle) {
             continue
           }
           for (let j = 0; j < folders.length; j++) {
@@ -1218,13 +1210,7 @@ export struct BookmarkPage {
   }
 
   private folderChildCount(folderId: number): number {
-    let count = 0
-    for (let i = 0; i < this.allBookmarks.length; i++) {
-      if (this.allBookmarks[i].folderId === folderId) {
-        count++
-      }
-    }
-    return count
+    return this.folderItemCounts.get(folderId) ?? 0
   }
 
   private hostOf(url: string): string {
@@ -1360,18 +1346,15 @@ export struct BookmarkPage {
     })
     this.db.listBookmarkFolders(this.currentFolderId).then((folders: BookmarkFolderRec[]) => {
       this.folders = folders
+      const folderIds: number[] = []
+      for (let i = 0; i < folders.length; i++) {
+        folderIds.push(folders[i].id)
+      }
+      return this.db.countBookmarkItemsByFolder(folderIds)
+    }).then((counts: Map<number, number>) => {
+      this.folderItemCounts = counts
     }).catch((error: BusinessError) => {
-      console.error(`list folders failed: ${error.message}`)
-    })
-    this.db.listAllBookmarks().then((all: BookmarkRec[]) => {
-      this.allBookmarks = all
-    }).catch((error: BusinessError) => {
-      console.error(`list all bookmarks failed: ${error.message}`)
-    })
-    this.db.listAllBookmarkFolders().then((all: BookmarkFolderRec[]) => {
-      this.allFolders = all
-    }).catch((error: BusinessError) => {
-      console.error(`list all folders failed: ${error.message}`)
+      console.error(`list folder counts failed: ${error.message}`)
     })
   }
 }

@@ -1,4 +1,5 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want, bundleManager } from '@kit.AbilityKit';
+import Logger from '../common/Logger'
 import { tag } from '@kit.ConnectivityKit';
 import { Configuration } from '@ohos.app.ability.Configuration';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -141,7 +142,7 @@ function extractEntryUrl(want: Want): EntryUrl {
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+    Logger.info('testTag', 'Ability onCreate');
     initReaderContext(this.context);
     // GM_* 用户脚本运行时存储（o5 变量库 / p5 require 缓存目录）
     initGmRuntime(this.context);
@@ -208,12 +209,12 @@ export default class EntryAbility extends UIAbility {
       }
       commonEventManager.createSubscriber(info, (err, subscriber) => {
         if (err) {
-          hilog.error(DOMAIN, 'testTag', 'createSubscriber failed: %{public}s', JSON.stringify(err));
+          Logger.error('testTag', 'createSubscriber failed:', JSON.stringify(err));
           return
         }
         commonEventManager.subscribe(subscriber, (error, data) => {
           if (error) {
-            hilog.error(DOMAIN, 'testTag', 'subscribe failed: %{public}s', JSON.stringify(error));
+            Logger.error('testTag', 'subscribe failed:', JSON.stringify(error));
             return
           }
           const dataParams = data.parameters as Record<string, Object>
@@ -238,7 +239,7 @@ export default class EntryAbility extends UIAbility {
   // （原版 Shell.onNewIntent → k6.c0 → na.q1）。此前误写为不存在的 onNewEntry，
   // 导致设为默认浏览器后外部点链接全部丢失。
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewWant');
+    Logger.info('testTag', 'Ability onNewWant');
     if (!this.handleNfcWant(want, false)) {
       const entry = extractEntryUrl(want)
       if (entry.url !== '') {
@@ -322,12 +323,12 @@ export default class EntryAbility extends UIAbility {
         { data: { 'linkUrl': trimmed, 'external': false, 'sharedText': true } }
       )
     }).catch((error: BusinessError) => {
-      hilog.error(DOMAIN, 'testTag', 'getSharedData failed: %{public}s', JSON.stringify(error));
+      Logger.error('testTag', 'getSharedData failed:', JSON.stringify(error));
     })
   }
 
   onDestroy(): void {
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
+    Logger.info('testTag', 'Ability onDestroy');
     this.persistTabsAndMarkClean()
   }
 
@@ -353,7 +354,7 @@ export default class EntryAbility extends UIAbility {
       const tagInfo = tag.getTagInfo(want);
       this.consumeNdefTagInfo(tagInfo, cold);
     } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'getTagInfo failed. Cause: %{public}s', JSON.stringify(err));
+      Logger.error('testTag', 'getTagInfo failed. Cause:', JSON.stringify(err));
     }
     return true;
   }
@@ -391,7 +392,7 @@ export default class EntryAbility extends UIAbility {
     ndefTag.readNdef().then((msg: tag.NdefMessage) => {
       this.dispatchNfcUri(parseNdefUriRecords(msg.getNdefRecords()), cold);
     }).catch((error: BusinessError) => {
-      hilog.error(DOMAIN, 'testTag', 'readNdef failed. Cause: %{public}s', JSON.stringify(error));
+      Logger.error('testTag', 'readNdef failed. Cause:', JSON.stringify(error));
     });
   }
 
@@ -421,14 +422,14 @@ export default class EntryAbility extends UIAbility {
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
     // Main window is created, set main page for this ability
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
+    Logger.info('testTag', 'Ability onWindowStageCreate');
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
-        hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+        Logger.error('testTag', 'Failed to load the content. Cause:', JSON.stringify(err));
         return;
       }
-      hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      Logger.info('testTag', 'Succeeded in loading the content.');
       this.setupWindow(windowStage);
       // 原版 k6.i9()（k6.java:6261，X1/onViewCreated，即每次启动）→ na.r0() → z8/h0.c：
       // 退出时清除数据在「启动时」执行。放在 loadContent 成功后，确保 Web 缓存/Cookie
@@ -444,7 +445,7 @@ export default class EntryAbility extends UIAbility {
         this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
       }
     } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
+      Logger.error('testTag', 'Failed to set colorMode. Cause:', JSON.stringify(err));
     }
   }
 
@@ -463,7 +464,7 @@ export default class EntryAbility extends UIAbility {
       applyImmersiveWindow(win, AppSettings.getInstance().showStatusBar,
         systemBarDarkContent(undefined, AppSettings.getInstance(), this.context));
     } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to setup immersive window. Cause: %{public}s', JSON.stringify(err));
+      Logger.error('testTag', 'Failed to setup immersive window. Cause:', JSON.stringify(err));
     }
   }
 
@@ -472,7 +473,7 @@ export default class EntryAbility extends UIAbility {
       TabStore.getInstance().saveSnapshot(AppSettings.getInstance())
     } catch (error) {
       const err = error as BusinessError
-      hilog.error(DOMAIN, 'testTag', 'persist tabs snapshot failed: %{public}s', err.message)
+      Logger.error('testTag', 'persist tabs snapshot failed:', err.message)
     }
   }
 
@@ -482,12 +483,12 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageDestroy(): void {
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');
+    Logger.info('testTag', 'Ability onWindowStageDestroy');
   }
 
   onForeground(): void {
     // Ability has brought to foreground
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
+    Logger.info('testTag', 'Ability onForeground');
     // NFC 前台优先分发：应用前台时碰一碰 NDEF 标签直接交由本应用处理
     if (this.nfcElementName !== null && !this.nfcForegroundRegistered) {
       try {
@@ -499,14 +500,14 @@ export default class EntryAbility extends UIAbility {
           });
         this.nfcForegroundRegistered = true;
       } catch (err) {
-        hilog.error(DOMAIN, 'testTag', 'registerForegroundDispatch failed. Cause: %{public}s', JSON.stringify(err));
+        Logger.error('testTag', 'registerForegroundDispatch failed. Cause:', JSON.stringify(err));
       }
     }
   }
 
   onBackground(): void {
     // Ability has back to background
-    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+    Logger.info('testTag', 'Ability onBackground');
     this.persistTabsSnapshot();
     if (this.nfcForegroundRegistered) {
       this.nfcForegroundRegistered = false;
@@ -515,7 +516,7 @@ export default class EntryAbility extends UIAbility {
           tag.unregisterForegroundDispatch(this.nfcElementName);
         }
       } catch (err) {
-        hilog.error(DOMAIN, 'testTag', 'unregisterForegroundDispatch failed. Cause: %{public}s', JSON.stringify(err));
+        Logger.error('testTag', 'unregisterForegroundDispatch failed. Cause:', JSON.stringify(err));
       }
     }
   }
@@ -553,7 +554,7 @@ export default class EntryAbility extends UIAbility {
           try {
             webview.WebviewController.removeAllCache(true);
           } catch (err) {
-            hilog.error(DOMAIN, 'testTag', 'Failed to clear web cache. Cause: %{public}s', JSON.stringify(err));
+            Logger.error('testTag', 'Failed to clear web cache. Cause:', JSON.stringify(err));
           }
           // b0.o(context)：递归清空 cacheDir（含 ArkWeb cache/web 全部子目录）
           this.clearAppCache();
@@ -576,24 +577,24 @@ export default class EntryAbility extends UIAbility {
           try {
             webview.WebStorage.deleteAllData();
           } catch (err) {
-            hilog.error(DOMAIN, 'testTag', 'Failed to clear web storage. Cause: %{public}s', JSON.stringify(err));
+            Logger.error('testTag', 'Failed to clear web storage. Cause:', JSON.stringify(err));
           }
         }
         if ((mask & 16) !== 0) {
           try {
             webview.WebCookieManager.clearAllCookies();
           } catch (err) {
-            hilog.error(DOMAIN, 'testTag', 'Failed to clear cookies. Cause: %{public}s', JSON.stringify(err));
+            Logger.error('testTag', 'Failed to clear cookies. Cause:', JSON.stringify(err));
           }
         }
         if ((mask & 32) !== 0) {
           this.clearAppCache();
         }
       } catch (err) {
-        hilog.error(DOMAIN, 'testTag', 'Failed to clear on exit. Cause: %{public}s', JSON.stringify(err));
+        Logger.error('testTag', 'Failed to clear on exit. Cause:', JSON.stringify(err));
       }
     }).catch((error: BusinessError) => {
-      hilog.error(DOMAIN, 'testTag', 'Failed to open preferences on exit. Cause: %{public}s', JSON.stringify(error.code));
+      Logger.error('testTag', 'Failed to open preferences on exit. Cause:', JSON.stringify(error.code));
     });
   }
 

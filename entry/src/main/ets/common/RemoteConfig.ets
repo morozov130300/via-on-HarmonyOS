@@ -227,22 +227,11 @@ function channelChecksum(): string {
   return (sum % 256).toString(16).toUpperCase()
 }
 
-// r9/k.java：单例实现（17 个配置字段，t(a) 注入配置源）
+// r9/k.java：单例实现（17 个配置字段，t(a) 注入配置源）；
+// 引擎渠道计费参数（bd/sg/tt/sm/hs/bn/gg/yh/mt）已移除，仅保留白名单与功能开关
 @ObservedV2
 export class RemoteConfig {
   private static instance: RemoteConfig | null = null
-  // 引擎参数（k.t 顺序 1:1；默认值 1:1）
-  private baiduFrom: string = '1022282z'
-  private sogouParam: string | null = null
-  private toutiaoParam: string | null = null
-  private shenmaParam: string | null = null
-  private so360Param: string | null = null
-  private bingParam: string | null = null
-  private googleParam: string | null = null
-  private yahooParam: string | null = null
-  private metasoParam: string = 's=nyzav&referrer_s=nyzav'
-  private desktopSearchEngine: string = 'gg'
-  private defaultSearchEngineName: string = 'bd'
   // 白名单（k.u：远程值 + 内置 base64 默认，逗号分割去重小写）
   private wlbHosts: string[] | null = null
   private wlrHosts: string[] | null = null
@@ -265,19 +254,8 @@ export class RemoteConfig {
     return RemoteConfig.instance
   }
 
-  // r9/k.java t(a)：按配置源刷新全部 17 键
+  // r9/k.java t(a)：按配置源刷新配置键（引擎计费键已移除）
   apply(source: ConfigSource): void {
-    this.baiduFrom = source.getString('bd', '1022282z') ?? '1022282z'
-    this.sogouParam = source.getString('sg', null)
-    this.toutiaoParam = source.getString('tt', null)
-    this.shenmaParam = source.getString('sm', null)
-    this.so360Param = source.getString('hs', null)
-    this.bingParam = source.getString('bn', null)
-    this.googleParam = source.getString('gg', null)
-    this.yahooParam = source.getString('yh', null)
-    this.metasoParam = source.getString('mt', 's=nyzav&referrer_s=nyzav') ?? 's=nyzav&referrer_s=nyzav'
-    this.desktopSearchEngine = source.getString('ds_u', 'gg') ?? 'gg'
-    this.defaultSearchEngineName = source.getString('ds_g', 'bd') ?? 'bd'
     this.buildWhitelists(source)
     this.fl1Bits = source.getInt('fl1', 0)
     this.autoExpandSwitchVisible = (this.fl1Bits & 1) === 0
@@ -289,53 +267,6 @@ export class RemoteConfig {
     this.wlrHosts = splitWhitelist((source.getString('wlr', '') ?? '') + ',' + decodeBase64(WLR_B64))
     this.wlsHosts = splitWhitelist((source.getString('wls', '') ?? '') + ',' + decodeBase64(WLS_B64))
     this.wldHosts = splitWhitelist(source.getString('wld', '') ?? '')
-  }
-
-  // 引擎参数访问器（r9/e 接口方法 → k 字段）
-  getBaiduFrom(): string {
-    return this.baiduFrom
-  }
-
-  getSogouParam(): string | null {
-    return this.sogouParam
-  }
-
-  getToutiaoParam(): string | null {
-    return this.toutiaoParam
-  }
-
-  getShenmaParam(): string | null {
-    return this.shenmaParam
-  }
-
-  getSo360Param(): string | null {
-    return this.so360Param
-  }
-
-  getBingParam(): string | null {
-    return this.bingParam
-  }
-
-  getGoogleParam(): string | null {
-    return this.googleParam
-  }
-
-  getYahooParam(): string | null {
-    return this.yahooParam
-  }
-
-  getMetasoParam(): string {
-    return this.metasoParam
-  }
-
-  // k.o()：ds_u（本包 z8/v2.a 中 c0.i()=false，分支不生效）
-  getDesktopSearchEngine(): string {
-    return this.desktopSearchEngine
-  }
-
-  // k.b()：ds_g，默认搜索引擎名（原版 z8/v2.a 消费）
-  getDefaultSearchEngineName(): string {
-    return this.defaultSearchEngineName
   }
 
   // r9/k.java r(String)：取 host（无 '/' 原样返回；有 scheme 截到首 '/'；小写）

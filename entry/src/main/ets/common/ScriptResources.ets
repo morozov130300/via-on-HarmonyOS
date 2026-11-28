@@ -10,18 +10,17 @@
 //   在鸿蒙侧 Settings.persistScripts 不序列化，故按脚本 id 存 preferences 'script_meta'，
 //   安装/保存/更新时由 metaStoreSaveScript 同步刷新 last_updated_at（r5/a.f:231-232）
 import { http } from '@kit.NetworkKit'
+import Logger from './Logger'
 import { preferences } from '@kit.ArkData'
 import { fileIo } from '@kit.CoreFileKit'
 import { util } from '@kit.ArkTS'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
-import { hilog } from '@kit.PerformanceAnalysisKit'
 import { cryptoFramework } from '@kit.CryptoArchitectureKit'
 import { UserScriptRec, md5Hex } from './Types'
 import { hostOf } from './SearchEngines'
 
 const TAG = 'ScriptResources'
-const DOMAIN = 0x0000
 // p5/b.W:91：资源缓存新鲜期 15 天（1296000000ms）
 const RESOURCE_FRESH_MS: number = 1296000000
 const RESOURCE_DIR_NAME: string = 'gm_resources'
@@ -369,7 +368,7 @@ class ScriptResourceCache {
           fileIo.mkdirSync(this.dir)
         }
       } catch (error) {
-        hilog.error(DOMAIN, TAG, 'init gm resource dir failed')
+        Logger.error(TAG, 'init gm resource dir failed')
       }
     }
     if (this.metaPrefs === null) {
@@ -378,7 +377,7 @@ class ScriptResourceCache {
           ScriptResourceCache.getInstance().metaPrefs = store
         })
         .catch((error: BusinessError): void => {
-          hilog.error(DOMAIN, TAG, 'init script meta store failed: %{public}s', error.message)
+          Logger.error(TAG, 'init script meta store failed:', error.message)
         })
     }
   }
@@ -402,7 +401,7 @@ class ScriptResourceCache {
     this.pendingUrls.add(url)
     return this.download(url)
       .catch((error: BusinessError): boolean => {
-        hilog.error(DOMAIN, TAG, 'download resource failed: %{public}s %{public}s', url, error.message)
+        Logger.error(TAG, 'download resource failed:', url, error.message)
         return false
       })
       .finally(() => {
@@ -563,12 +562,12 @@ class ScriptResourceCache {
           try {
             fileIo.unlinkSync(`${this.dir}/${name}`)
           } catch (error) {
-            hilog.error(DOMAIN, TAG, 'prune resource failed: %{public}s', name)
+            Logger.error(TAG, 'prune resource failed:', name)
           }
         }
       }
     } catch (error) {
-      hilog.error(DOMAIN, TAG, 'prune resource dir failed')
+      Logger.error(TAG, 'prune resource dir failed')
     }
   }
 }

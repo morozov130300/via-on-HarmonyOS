@@ -268,6 +268,25 @@ await this.addColumnIfMissing('bookmark_folders', 'updated_at', 'INTEGER DEFAULT
     return result
   }
 
+  async countBookmarkItemsByFolder(folderIds: number[]): Promise<Map<number, number>> {
+    const counts: Map<number, number> = new Map<number, number>()
+    if (this.rdb === null || folderIds.length === 0) {
+      return counts
+    }
+    const ids: string[] = []
+    for (let i = 0; i < folderIds.length; i++) {
+      ids.push(Math.floor(folderIds[i]).toString())
+    }
+    const resultSet = await this.rdb.querySql(
+      `SELECT folder_id, COUNT(*) AS item_count FROM bookmarks WHERE folder_id IN (${ids.join(',')}) GROUP BY folder_id`)
+    while (resultSet.goToNextRow()) {
+      counts.set(resultSet.getDouble(resultSet.getColumnIndex('folder_id')),
+        resultSet.getDouble(resultSet.getColumnIndex('item_count')))
+    }
+    resultSet.close()
+    return counts
+  }
+
   // 备份导出用：全量书签（o9/g.java k() + u() 全表查询）
   async listAllBookmarks(): Promise<BookmarkRec[]> {
     const result: BookmarkRec[] = []
@@ -515,15 +534,31 @@ await this.addColumnIfMissing('bookmark_folders', 'updated_at', 'INTEGER DEFAULT
     await this.rdb.insert('bookmarks', bucket)
   }
 
-  // 原版 ga/b.java:169：全量查询历史，无条数上限
-  async listHistory(): Promise<HistoryRec[]> {
+  private historyWhere(query: string): string {
+    const keyword = query.trim()
+    if (keyword === '') {
+      return ''
+    }
+    const escaped = keyword.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_').replace(/'/g, "''")
+    const lower = keyword.toLowerCase()
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      return ` WHERE url LIKE '${escaped}%' ESCAPE '\\'`
+    }
+    const contains = `%_${escaped}%`
+    return ` WHERE title LIKE '${contains}' ESCAPE '\\' OR url LIKE '${contains}' ESCAPE '\\' OR url LIKE '${escaped}%' ESCAPE '\\'`
+  }
+
+  // 原版 db.v 每页 120 条，搜索结果最多 1024 条。
+  async listHistory(offset: number = 0, limit: number = 120, query: string = ''): Promise<HistoryRec[]> {
     const result: HistoryRec[] = []
     if (this.rdb === null) {
       return result
     }
-    const predicates = new relationalStore.RdbPredicates('history')
-    predicates.orderByDesc('visited')
-    const resultSet = await this.rdb.query(predicates)
+    const safeOffset = Math.max(0, Math.floor(offset))
+    const safeLimit = Math.min(1024, Math.max(1, Math.floor(limit)))
+    let sql = `SELECT id, title, url, visited FROM history${this.historyWhere(query)}`
+    sql += ` ORDER BY visited DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`
+    const resultSet = await this.rdb.querySql(sql)
     while (resultSet.goToNextRow()) {
       const rec = new HistoryRec()
       rec.id = resultSet.getDouble(resultSet.getColumnIndex('id'))
@@ -565,6 +600,57 @@ await this.addColumnIfMissing('bookmark_folders', 'updated_at', 'INTEGER DEFAULT
     const predicates = new relationalStore.RdbPredicates('history')
     predicates.equalTo('id', id)
     await this.rdb.delete(predicates)
+  }
+
+  async deleteHistoryByQuery(query: string): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    const keyword = query.trim()
+    if (keyword === '') {
+      return
+    }
+    await this.rdb.executeSql(`DELETE FROM history${this.historyWhere(keyword)}`)
+  }
+
+  async deleteHistoryByBoundary(boundary: number): Promise<void> {
+    if (this.rdb === null) {
+      return
+    }
+    await this.rdb.executeSql(`DELETE FROM history WHERE visited * 1000 >= ${Math.floor(boundary)}`)
+  }
+
+  async countHistory(query: string = ''): Promise<number> {
+    if (this.rdb === null) {
+      return 0
+    }
+    const sql = `SELECT COUNT(*) AS item_count FROM history${this.historyWhere(query)}`
+    const resultSet = await this.rdb.querySql(sql)
+    let count = 0
+    if (resultSet.goToNextRow()) {
+      count = resultSet.getDouble(resultSet.getColumnIndex('item_count'))
+    }
+    resultSet.close()
+    return count
+  }
+
+  async countHistoryGroups(boundaries: number[]): Promise<number[]> {
+    const counts: number[] = []
+    if (this.rdb === null || boundaries.length === 0) {
+      return counts
+    }
+    const expressions: string[] = []
+    for (let i = 0; i < boundaries.length; i++) {
+      expressions.push(`SUM(CASE WHEN visited * 1000 >= ${Math.floor(boundaries[i])} THEN 1 ELSE 0 END) AS c${i}`)
+    }
+    const resultSet = await this.rdb.querySql(`SELECT ${expressions.join(', ')} FROM history`)
+    if (resultSet.goToNextRow()) {
+      for (let i = 0; i < boundaries.length; i++) {
+        counts.push(resultSet.getDouble(resultSet.getColumnIndex(`c${i}`)))
+      }
+    }
+    resultSet.close()
+    return counts
   }
 
   async clearHistory(): Promise<void> {

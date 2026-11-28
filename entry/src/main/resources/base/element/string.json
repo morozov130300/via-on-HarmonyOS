@@ -3139,6 +3139,42 @@
     {
       "name": "orig_it",
       "value": "向上、下、左、右拖动悬浮球可设置对应动作"
+    },
+    {
+      "name": "log_file_title",
+      "value": "开启日志"
+    },
+    {
+      "name": "log_file_desc",
+      "value": "开启后 WARN/ERROR 级日志追加写入本地日志文件，可随时导出，导出后自动删除本地日志。"
+    },
+    {
+      "name": "log_verbose_title",
+      "value": "详细日志"
+    },
+    {
+      "name": "log_verbose_desc",
+      "value": "开启后记录 DEBUG/INFO 等全部等级日志，日志文件体积可能较大。"
+    },
+    {
+      "name": "log_export_title",
+      "value": "导出日志"
+    },
+    {
+      "name": "log_export_desc",
+      "value": "将本地日志文件导出到系统文件管理器，导出成功后删除本地日志。"
+    },
+    {
+      "name": "log_export_none",
+      "value": "暂无日志可导出"
+    },
+    {
+      "name": "log_export_done",
+      "value": "日志导出成功"
+    },
+    {
+      "name": "log_export_failed",
+      "value": "日志导出失败"
     }
   ]
 }

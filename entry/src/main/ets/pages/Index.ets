@@ -1,6 +1,8 @@
 import { TabItem, RuleSubEntry, BookmarkFolderRec } from '../common/Types'
 import { showViaConfirm } from '../components/ViaConfirmDialog'
 import { AppSettings, SavedTab, applyOrientationSetting } from '../common/Settings'
+import { LogFileService } from '../common/LogFileService'
+import Logger from '../common/Logger'
 import { AdBlocker } from '../common/AdBlock'
 import { RuleSubManager } from '../common/RuleSubscriptions'
 import { BrowserDb } from '../common/Database'
@@ -733,6 +735,12 @@ struct Index {
       return
     }
     await this.settings.init(context)
+    // 日志文件服务：开关状态读自 AppSettings，注入 Logger 的写盘 sink 与详细日志判定
+    LogFileService.getInstance().init(context as common.UIAbilityContext)
+    Logger.setFileSink((level: string, tag: string, message: string): void => {
+      LogFileService.getInstance().append(level, tag, message)
+    })
+    Logger.setVerboseGate((): boolean => LogFileService.getInstance().isVerbose())
     this.syncVolumeKeyConsumers()
     this.setupImmersiveWindow()
     // 原版 k6.m9（7633-7643）：Y0 = r2()==2（点击隐藏模式）→ Jb/Ya 初始化工具栏

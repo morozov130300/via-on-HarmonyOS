@@ -1273,7 +1273,7 @@ export class DownloadEngine {
   private appContext: common.Context | null = null
   private saveDir: string = ''
   private started: boolean = false
-  private taskChangeListeners: (() => void)[] = []
+  private taskChangeListeners: ((task: DownloadRec) => void)[] = []
 
   static getInstance(): DownloadEngine {
     if (DownloadEngine.instance === null) {
@@ -1316,13 +1316,22 @@ export class DownloadEngine {
     return this.saveDir
   }
 
-  addTaskChangeListener(listener: () => void): void {
-    this.taskChangeListeners.push(listener)
+  addTaskChangeListener(listener: (task: DownloadRec) => void): void {
+    if (this.taskChangeListeners.indexOf(listener) < 0) {
+      this.taskChangeListeners.push(listener)
+    }
+  }
+
+  removeTaskChangeListener(listener: (task: DownloadRec) => void): void {
+    const index = this.taskChangeListeners.indexOf(listener)
+    if (index >= 0) {
+      this.taskChangeListeners.splice(index, 1)
+    }
   }
 
   notifyTaskChanged(task: EngineTask): void {
     for (let i = 0; i < this.taskChangeListeners.length; i++) {
-      this.taskChangeListeners[i]()
+      this.taskChangeListeners[i](task.rec)
     }
   }
 

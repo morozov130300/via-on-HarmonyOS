@@ -58,6 +58,16 @@ export struct HistoryPage {
   // 容器页注入：请求弹出整个容器页（原版容器 N0().e1() 的等价动作）
   @Event onRequestPop: () => void = () => {}
   @Local items: HistoryRec[] = []
+  @Local rows: HistoryRow[] = []
+  // 原版 db.v 每次初始/重置读取 120 条；搜索最多读取 1024 条。
+  private static readonly PAGE_SIZE: number = 120
+  private static readonly SEARCH_LIMIT: number = 1024
+  private nextOffset: number = 0
+  private loadingPage: boolean = false
+  private hasMore: boolean = true
+  private totalItemCount: number = 0
+  private reloadGeneration: number = 0
+  private searchTimer: number = -1
   // 原版历史页搜索框（sz 搜索历史同款交互）
   @Local query: string = ''
   // 多选（原版 b6.a + N0「编辑」）
@@ -67,6 +77,7 @@ export struct HistoryPage {
   @Local menuRowId: number = -1
   // 分组清除菜单（n.Y2）
   @Local clearMenuOpen: boolean = false
+  @Local clearGroupsCache: ClearGroup[] = []
   // favicon 加载失败回退
   @Local faviconFailed: Record<number, boolean> = {}
   private insets: UiInsets = UiInsets.getInstance()
@@ -81,11 +92,19 @@ export struct HistoryPage {
       }
       if (this.query.length > 0) {
         this.query = ''
+        this.reload()
         return true
       }
       return false
     })
     this.reload()
+  }
+
+  aboutToDisappear(): void {
+    if (this.searchTimer >= 0) {
+      clearTimeout(this.searchTimer)
+      this.searchTimer = -1
+    }
   }
 
   build() {
@@ -102,6 +121,13 @@ export struct HistoryPage {
           .margin({ left: 12, right: 12, top: 5, bottom: 5 })
           .onChange((value: string) => {
             this.query = value
+            if (this.searchTimer >= 0) {
+              clearTimeout(this.searchTimer)
+            }
+            this.searchTimer = setTimeout(() => {
+              this.searchTimer = -1
+              this.reload()
+            }, 100)
           })
         if (this.visibleItems().length === 0) {
           Column() {
@@ -114,27 +140,35 @@ export struct HistoryPage {
           .justifyContent(FlexAlign.Center)
         } else {
           List({ space: 1 }) {
-            ForEach(this.buildRows(), (row: HistoryRow) => {
-              if (row.isHeader) {
-                ListItem() {
-                  Text(row.header)
-                    .fontSize(12)
-                    .fontColor($r('app.color.fg_secondary'))
-                    .width('100%')
-                    .height(32)
-                    .padding({ left: 16, right: 16 })
-                    .textAlign(TextAlign.Start)
+            Repeat<HistoryRow>(this.rows)
+              .each((entry: RepeatItem<HistoryRow>) => {
+                if (entry.item.isHeader) {
+                  ListItem() {
+                    Text(entry.item.header)
+                      .fontSize(12)
+                      .fontColor($r('app.color.fg_secondary'))
+                      .width('100%')
+                      .height(32)
+                      .padding({ left: 16, right: 16 })
+                      .textAlign(TextAlign.Start)
+                  }
+                } else if (entry.item.item !== null) {
+                  ListItem() {
+                    this.ItemRow(entry.item.item)
+                  }
                 }
-              } else if (row.item !== null) {
-                ListItem() {
-                  this.ItemRow(row.item)
-                }
-              }
-            }, (row: HistoryRow) => row.isHeader ? `h${row.header}` : `r${row.item === null ? 0 : row.item.id}`)
+              })
+              .key((entry: HistoryRow, index: number): string => entry.isHeader ?
+                `h${entry.header}` : `r${entry.item === null ? 0 : entry.item.id}`)
+              .virtualScroll({ totalCount: this.rows.length })
           }
           .width('100%')
           .layoutWeight(1)
+          .cachedCount(5)
           .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
+          .onReachEnd(() => {
+            this.loadNextPage()
+          })
         }
         this.BottomBar()
       }
@@ -327,11 +361,18 @@ export struct HistoryPage {
             this.openClosedTabs()
           }, false)
           Blank()
-          this.BarButton('编辑', this.items.length === 0, (): void => {
+          this.BarButton('编辑', this.totalItemCount === 0, (): void => {
             this.enterSelection()
           }, false)
-          this.BarButton('清空', this.items.length === 0, (): void => {
+          this.BarButton('清空', this.totalItemCount === 0, (): void => {
+            if (this.query.trim() !== '') {
+              this.confirmDeleteQuery()
+              return
+            }
             this.clearMenuOpen = !this.clearMenuOpen
+            if (this.clearMenuOpen) {
+              this.loadClearGroups()
+            }
           }, false)
         }
       }
@@ -447,7 +488,7 @@ export struct HistoryPage {
   }
 
   private allSelected(): boolean {
-    return this.selectedIds.length > 0 && this.selectedIds.length === this.visibleItems().length
+    return this.selectedIds.length > 0 && this.selectedIds.length === this.items.length
   }
 
   private toggleSelectAll(): void {
@@ -456,9 +497,8 @@ export struct HistoryPage {
       return
     }
     const ids: number[] = []
-    const items = this.visibleItems()
-    for (let i = 0; i < items.length; i++) {
-      ids.push(items[i].id)
+    for (let i = 0; i < this.items.length; i++) {
+      ids.push(this.items[i].id)
     }
     this.selectedIds = ids
   }
@@ -556,6 +596,26 @@ export struct HistoryPage {
     return null
   }
 
+  private confirmDeleteQuery(): void {
+    const keyword = this.query.trim()
+    if (keyword === '') {
+      return
+    }
+    showViaConfirm(this.getUIContext(), {
+      title: $r('app.string.delete'),
+      message: `删除匹配“${keyword}”的历史记录？`,
+      primaryButton: { value: $r('app.string.cancel'), action: () => {} },
+      secondaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+          this.db.deleteHistoryByQuery(keyword).then(() => this.reload()).catch((error: BusinessError) => {
+            console.error(`delete queried history failed: ${error.message}`)
+          })
+        }
+      }
+    })
+  }
+
   // 分组清除（bb.v.A：删除 visited >= boundary 的条目）
   private confirmClearGroup(group: ClearGroup): void {
     showViaConfirm(this.getUIContext(), {
@@ -569,13 +629,12 @@ export struct HistoryPage {
       secondaryButton: {
         value: $r('app.string.confirm'),
         action: () => {
-          const ids: number[] = []
-          for (let i = 0; i < this.items.length; i++) {
-            if (this.items[i].visited * 1000 >= group.boundary) {
-              ids.push(this.items[i].id)
-            }
-          }
-          this.deleteByIds(ids)
+          this.db.deleteHistoryByBoundary(group.boundary).then(() => {
+            this.clearGroupsCache = []
+            this.reload()
+          }).catch((error: BusinessError) => {
+            console.error(`clear history group failed: ${error.message}`)
+          })
         }
       }
     })
@@ -584,25 +643,12 @@ export struct HistoryPage {
   // ===== 分组与过滤 =====
 
   private visibleItems(): HistoryRec[] {
-    const keyword = this.query.trim().toLowerCase()
-    if (keyword === '') {
-      return this.items
-    }
-    const result: HistoryRec[] = []
-    for (let i = 0; i < this.items.length; i++) {
-      const item = this.items[i]
-      if (item.title.toLowerCase().includes(keyword) || item.url.toLowerCase().includes(keyword)) {
-        result.push(item)
-      }
-    }
-    return result
+    return this.items
   }
 
   // 日期分组行（v8.b/v8.a：按自然日分组；今天/昨天/同年「MM月dd日 EEE」/跨年「yyyy年MM月dd日 EEE」）
-  private buildRows(): HistoryRow[] {
-    const items = this.visibleItems()
+  private buildRows(items: HistoryRec[], lastDayStart: number = -1): HistoryRow[] {
     const rows: HistoryRow[] = []
-    let lastDayStart = -1
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
     for (let i = 0; i < items.length; i++) {
@@ -640,31 +686,29 @@ export struct HistoryPage {
 
   // 分组清除数据（bb.v.t：5 个边界 [过去一小时/今天/今天和昨天/过去 7 天/所有时间]，倒序展示）
   private clearGroups(): ClearGroup[] {
+    return this.clearGroupsCache
+  }
+
+  private loadClearGroups(): void {
     const now = Date.now()
-    const nd = new Date(now)
-    const todayStart = new Date(nd.getFullYear(), nd.getMonth(), nd.getDate()).getTime()
-    const boundaries: ClearGroup[] = [
-      new ClearGroup('过去一小时', now - 3600000, 0),
-      new ClearGroup('今天', todayStart, 0),
-      new ClearGroup('今天和昨天', todayStart - 86400000, 0),
-      new ClearGroup('过去 7 天', todayStart - 6 * 86400000, 0),
-      new ClearGroup('所有时间', 0, 0)
-    ]
-    for (let i = 0; i < this.items.length; i++) {
-      const visited = this.items[i].visited * 1000
-      for (let j = 0; j < boundaries.length; j++) {
-        if (visited >= boundaries[j].boundary) {
-          boundaries[j].count++
-        }
+    const day = new Date(now)
+    const todayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
+    const boundaries: number[] = [now - 3600000, todayStart, todayStart - 86400000,
+      todayStart - 6 * 86400000, 0]
+    this.db.countHistoryGroups(boundaries).then((counts: number[]) => {
+      if (counts.length !== boundaries.length) {
+        return
       }
-    }
-    const result: ClearGroup[] = []
-    for (let j = boundaries.length - 1; j >= 0; j--) {
-      if (boundaries[j].count > 0) {
-        result.push(boundaries[j])
-      }
-    }
-    return result
+      this.clearGroupsCache = [
+        new ClearGroup('过去一小时', boundaries[0], counts[0]),
+        new ClearGroup('今天', boundaries[1], counts[1]),
+        new ClearGroup('今天和昨天', boundaries[2], counts[2]),
+        new ClearGroup('过去 7 天', boundaries[3], counts[3]),
+        new ClearGroup('所有时间', boundaries[4], counts[4])
+      ]
+    }).catch((error: BusinessError) => {
+      console.error(`count clear history groups failed: ${error.message}`)
+    })
   }
 
   private faviconUrl(url: string): string {
@@ -700,10 +744,67 @@ export struct HistoryPage {
   }
 
   private reload(): void {
-    this.db.listHistory().then((items: HistoryRec[]) => {
-      this.items = items
+    const generation = this.reloadGeneration + 1
+    this.reloadGeneration = generation
+    this.nextOffset = 0
+    this.hasMore = true
+    this.loadingPage = false
+    this.items = []
+    this.rows = []
+    this.clearGroupsCache = []
+    const keyword = this.query.trim()
+    this.db.countHistory(keyword).then((count: number) => {
+      if (generation === this.reloadGeneration) {
+        this.totalItemCount = keyword === '' ? count : Math.min(count, HistoryPage.SEARCH_LIMIT)
+      }
+    }).catch((error: BusinessError) => {
+      console.error(`count history failed: ${error.message}`)
+    })
+    this.loadNextPage(generation)
+  }
+
+  private loadNextPage(generation: number = this.reloadGeneration): void {
+    if (this.loadingPage || !this.hasMore || generation !== this.reloadGeneration) {
+      return
+    }
+    const keyword = this.query.trim()
+    const searching = keyword !== ''
+    const limit = searching ? HistoryPage.SEARCH_LIMIT : HistoryPage.PAGE_SIZE
+    const offset = searching ? 0 : this.nextOffset
+    this.loadingPage = true
+    this.db.listHistory(offset, limit, keyword).then((items: HistoryRec[]) => {
+      if (generation !== this.reloadGeneration) {
+        return
+      }
+      if (searching) {
+        this.items = items
+        this.rows = this.buildRows(items)
+        this.nextOffset = items.length
+        this.hasMore = false
+      } else {
+        const previousItems = this.items
+        const lastItem = previousItems.length > 0 ? previousItems[previousItems.length - 1] : null
+        const lastDayStart = lastItem === null ? -1 : this.dayStartOf(lastItem.visited * 1000)
+        const newRows = this.buildRows(items, lastDayStart)
+        const mergedItems = previousItems.slice()
+        for (let i = 0; i < items.length; i++) {
+          mergedItems.push(items[i])
+        }
+        const mergedRows = this.rows.slice()
+        for (let i = 0; i < newRows.length; i++) {
+          mergedRows.push(newRows[i])
+        }
+        this.items = mergedItems
+        this.rows = mergedRows
+        this.nextOffset += items.length
+        this.hasMore = items.length === limit
+      }
     }).catch((error: BusinessError) => {
       console.error(`list history failed: ${error.message}`)
+    }).finally(() => {
+      if (generation === this.reloadGeneration) {
+        this.loadingPage = false
+      }
     })
   }
 }

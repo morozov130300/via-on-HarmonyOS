@@ -1,12 +1,12 @@
 // GM_* 用户脚本运行时 1:1 移植（原版 i6/j0.js 生成器、o5/a.java 分派桥、o5/b+c.java
 // GM_xmlhttpRequest、n5/a.java 注入入口、p5 变量存储语义）
 import { util } from '@kit.ArkTS'
+import Logger from './Logger'
 import { http } from '@kit.NetworkKit'
 import { preferences } from '@kit.ArkData'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { common } from '@kit.AbilityKit'
 import { fileIo } from '@kit.CoreFileKit'
-import { hilog } from '@kit.PerformanceAnalysisKit'
 import { AppSettings } from './Settings'
 import { UserScriptRec, md5Hex } from './Types'
 import { startScriptsAutoUpdate } from './ScriptUpdater'
@@ -14,7 +14,6 @@ import { initScriptResources, loadScriptMeta, readScriptResourceText, readScript
   resourceUrlOf, ensureScriptResourceCached, scriptIdOf, pruneScriptResources } from './ScriptResources'
 
 const TAG = 'GmRuntime'
-const DOMAIN = 0x0000
 
 // 原版 n5/a.f10198c：进程级 secret（UUID），桥校验用
 const GM_SECRET: string = util.generateRandomUUID(false)
@@ -541,7 +540,7 @@ export class GmRequireStore {
         fileIo.mkdirSync(this.dir)
       }
     } catch (error) {
-      hilog.error(DOMAIN, TAG, 'init gm_requires dir failed')
+      Logger.error(TAG, 'init gm_requires dir failed')
     }
   }
 
@@ -598,11 +597,11 @@ export class GmRequireStore {
           fileIo.writeSync(file.fd, body)
           fileIo.closeSync(file)
         } catch (error) {
-          hilog.error(DOMAIN, TAG, 'save require failed: %{public}s', url)
+          Logger.error(TAG, 'save require failed:', url)
         }
       }
     }).catch((error: BusinessError) => {
-      hilog.error(DOMAIN, TAG, 'fetch require failed: %{public}s %{public}s', url, error.message)
+      Logger.error(TAG, 'fetch require failed:', url, error.message)
     }).finally(() => {
       session.destroy()
     })
@@ -620,12 +619,12 @@ export class GmRequireStore {
           try {
             fileIo.unlinkSync(this.dir + '/' + names[i])
           } catch (error) {
-            hilog.error(DOMAIN, TAG, 'prune require failed: %{public}s', names[i])
+            Logger.error(TAG, 'prune require failed:', names[i])
           }
         }
       }
     } catch (error) {
-      hilog.error(DOMAIN, TAG, 'prune require dir failed')
+      Logger.error(TAG, 'prune require dir failed')
     }
   }
 }
@@ -680,14 +679,14 @@ export function pruneScriptCaches(context: common.Context): void {
     GmRequireStore.getInstance().prune(requireKeep)
     pruneScriptResources(resourceKeep)
   } catch (error) {
-    hilog.error(DOMAIN, TAG, 'prune script caches failed: %{public}s', `${(error as BusinessError).code}`)
+    Logger.error(TAG, 'prune script caches failed:', `${(error as BusinessError).code}`)
   }
 }
 
 // EntryAbility.onCreate 初始化入口
 export function initGmRuntime(context: common.Context): void {
   GmValueStore.getInstance().init(context).catch((error: BusinessError) => {
-    hilog.error(DOMAIN, TAG, 'init gm store failed: %{public}s', error.message)
+    Logger.error(TAG, 'init gm store failed:', error.message)
   })
   GmRequireStore.getInstance().init(context)
   // @resource 缓存目录 + 脚本元数据旁路存储（p5/b 资源目录构造）
@@ -970,7 +969,7 @@ export class GmHttpRequest {
         this.anonymous = anonymous
       }
     } catch (error) {
-      hilog.error(DOMAIN, TAG, 'parse details failed')
+      Logger.error(TAG, 'parse details failed')
     }
   }
 
@@ -1093,7 +1092,7 @@ export class GmHttpRequest {
         }
         header['Authorization'] = 'Basic ' + new util.Base64Helper().encodeToStringSync(authBytes)
       } catch (error) {
-        hilog.error(DOMAIN, TAG, 'basic auth encode failed')
+        Logger.error(TAG, 'basic auth encode failed')
       }
     }
     // o5/b.e:325-326：optInt("timeout") 原样透传，缺省 0 = 无限。
@@ -1164,7 +1163,7 @@ export class GmHttpRequest {
       }
       if (loaded + chunk.byteLength > GmHttpRequest.MAX_SIZE) {
         aborted = true
-        hilog.error(DOMAIN, TAG, 'Response is too large')
+        Logger.error(TAG, 'Response is too large')
         try {
           session.destroy()
         } catch (error) {
@@ -1202,7 +1201,7 @@ export class GmHttpRequest {
       state.finalUrl = this.url
       state.hasFinalUrl = true
       if (responseCode < 200 || responseCode >= 300) {
-        hilog.error(DOMAIN, TAG, 'HTTP error from url: %{public}s, HTTP Response %{public}d', this.url, responseCode)
+        Logger.error(TAG, 'HTTP error from url: , HTTP Response', this.url, responseCode)
         this.fireError(state)
         return
       }
@@ -1230,11 +1229,11 @@ export class GmHttpRequest {
       }
       aborted = true
       if (error.code === 2300028) {
-        hilog.error(DOMAIN, TAG, 'Timeout issuing GM_xmlhttpRequest for: %{public}s', this.url)
+        Logger.error(TAG, 'Timeout issuing GM_xmlhttpRequest for:', this.url)
         this.fireTimeout()
         return
       }
-      hilog.error(DOMAIN, TAG, 'Exception issuing GM_xmlhttpRequest for: %{public}s: %{public}s', this.url,
+      Logger.error(TAG, 'Exception issuing GM_xmlhttpRequest for: :', this.url,
         error.message)
       state.readyState = 4
       this.fireError(state)
@@ -1413,7 +1412,7 @@ export class GmBridge {
             return null
           }
           const message = argsMap['message']
-          hilog.info(DOMAIN, TAG, '%{public}s', typeof message === 'string' ? `${identifier}: ${message}` : identifier)
+          Logger.info(TAG, typeof message === 'string' ? `${identifier}: ${message}` : identifier)
           return null
         }
         case 'setValue': {
@@ -1504,7 +1503,7 @@ export class GmBridge {
           const request = new GmHttpRequest(typeof details === 'string' ? details : '{}',
             this.evaluateJs, this.userAgent())
           request.start().catch((error: BusinessError) => {
-            hilog.error(DOMAIN, TAG, 'gm http request failed: %{public}s', error.message)
+            Logger.error(TAG, 'gm http request failed:', error.message)
           })
           return null
         }
@@ -1530,7 +1529,7 @@ export class GmBridge {
           // o5/a.n：原版仅记录日志（假 Tampermonkey openOptions 无实际动作），无 grant 校验
           const optName = argsMap['name']
           const optNamespace = argsMap['namespace']
-          hilog.info(DOMAIN, TAG, 'open options, name: %{public}s, namespace: %{public}s',
+          Logger.info(TAG, 'open options, name: , namespace:',
             typeof optName === 'string' ? optName : '',
             typeof optNamespace === 'string' ? optNamespace : '')
           return null
@@ -1565,7 +1564,7 @@ export class GmBridge {
           return null
       }
     } catch (error) {
-      hilog.error(DOMAIN, TAG, 'dispatch failed')
+      Logger.error(TAG, 'dispatch failed')
       return null
     }
   }

@@ -1,12 +1,76 @@
 import camera from '@ohos.multimedia.camera'
 import image from '@ohos.multimedia.image'
-import { BarcodeFormat, decodeFromYUV } from '@ohos/zxing'
+import {
+  BarcodeFormat,
+  BinaryBitmap,
+  DecodeHintType,
+  GlobalHistogramBinarizer,
+  HybridBinarizer,
+  InvertedLuminanceSource,
+  MultiFormatReader,
+  RGBLuminanceSource
+} from '@ohos/zxing'
 import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { taskpool } from '@kit.ArkTS'
 
-// OpenHarmony 设备专用扫码器：预览流经 ImageReceiver 直取 Y 平面，taskpool 后台解码；
-// 库内 decodeFromYUV 覆盖 Hybrid/Global 二值化 × 正/反色 × 旋转，无需自行管理读码器
+// 扫码专用轻量解码（taskpool 后台执行）：
+// - TRY_HARDER 单次解码即覆盖 4 个旋转方向，不像库级联把旋转放在最后逐向白跑
+// - 宽幅帧取中心方裁剪（码在取景中心），≥720 宽再 2× 降采样，二值化开销最低
+// - Global 先行（快），Hybrid 兜底（光照不均时 Global 整帧失败靠它救）
+// - 反色码极罕见：仅按帧序每 3 帧试一次反色，砍掉多数无码帧的第二遍全图解码
+@Concurrent
+function decodeQrFast(y: Uint8ClampedArray, width: number, height: number, stride: number,
+  tryInverted: boolean): string {
+  let src = y
+  let w = width
+  let h = height
+  let st = stride
+  if (w >= 720) {
+    const dw = w >> 1
+    const dh = h >> 1
+    const out = new Uint8ClampedArray(dw * dh)
+    for (let dy = 0; dy < dh; dy++) {
+      const r0 = dy * 2 * st
+      const r1 = r0 + st
+      const dst = dy * dw
+      for (let dx = 0; dx < dw; dx++) {
+        const c0 = dx * 2
+        const c1 = c0 + 1
+        out[dst + dx] = (src[r0 + c0] + src[r0 + c1] + src[r1 + c0] + src[r1 + c1]) >> 2
+      }
+    }
+    src = out
+    w = dw
+    h = dh
+    st = dw
+  }
+  const lum = new RGBLuminanceSource(src, w, h, st, h)
+  const reader = new MultiFormatReader()
+  const hints: Map<DecodeHintType, Object> = new Map()
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE])
+  hints.set(DecodeHintType.TRY_HARDER, [])
+  reader.setHints(hints)
+  try {
+    return reader.decodeWithState(new BinaryBitmap(new GlobalHistogramBinarizer(lum))).getText()
+  } catch (_error) {
+    try {
+      return reader.decodeWithState(new BinaryBitmap(new HybridBinarizer(lum))).getText()
+    } catch (_error2) {
+      if (!tryInverted) {
+        return ''
+      }
+      const inv = new InvertedLuminanceSource(lum)
+      try {
+        return reader.decodeWithState(new BinaryBitmap(new GlobalHistogramBinarizer(inv))).getText()
+      } catch (_error3) {
+        return reader.decodeWithState(new BinaryBitmap(new HybridBinarizer(inv))).getText()
+      }
+    }
+  }
+}
+
+// OpenHarmony 设备专用扫码器：预览流经 ImageReceiver 直取 Y 平面，taskpool 后台解码
 @ComponentV2
 export struct OpenHarmonyQrScanner {
   @Param @Require context: common.UIAbilityContext
@@ -26,6 +90,7 @@ export struct OpenHarmonyQrScanner {
   private cameraStarting: boolean = false
   private reading: boolean = false
   private lastDecodeAt: number = 0
+  private frameSeq: number = 0
   private permissionGranted: boolean = false
   private zoomRange: number[] = [1, 1]
   private systemZoom: boolean = false
@@ -117,6 +182,11 @@ export struct OpenHarmonyQrScanner {
       await this.session.commitConfig()
       stage = '启动相机预览'
       await this.session.start()
+      // 连续自动对焦：对焦拉胯会让识别整段拖慢，支持就开
+      try {
+        this.session.setFocusMode(camera.FocusMode.FOCUS_MODE_CONTINUOUS_AUTO)
+      } catch (_error) {
+      }
       // 变焦范围（会话级）：硬件支持则走相机变焦，否则解码/显示层软件变焦兜底
       try {
         this.zoomRange = this.session.getZoomRatioRange()
@@ -178,16 +248,33 @@ export struct OpenHarmonyQrScanner {
     return out
   }
 
+  // 排空最新帧：节流/解码占用时不读帧会让接收队列积满、预览流帧率崩塌
+  private async drainFrame(): Promise<void> {
+    try {
+      const img = await this.imageReceiver?.readLatestImage()
+      try {
+        await img?.release()
+      } catch (_error) {
+      }
+    } catch (_error) {
+    }
+  }
+
   // 帧到达即读最新帧投递后台解码；reading 防重入，节流控制解码频率
   private async onFrameArrival(): Promise<void> {
-    if (this.stopped || this.reading || this.imageReceiver === undefined) {
+    if (this.stopped || this.imageReceiver === undefined) {
+      return
+    }
+    if (this.reading) {
+      await this.drainFrame()
       return
     }
     this.reading = true
     let captured: image.Image | undefined = undefined
     try {
       const now = Date.now()
-      if (now - this.lastDecodeAt < 100) {
+      if (now - this.lastDecodeAt < 50) {
+        await this.drainFrame()
         return
       }
       this.lastDecodeAt = now
@@ -206,10 +293,13 @@ export struct OpenHarmonyQrScanner {
         ? this.cropYPlane(yuv, width, height, stride) : yuv
       const planeWidth = plane === yuv ? width : Math.floor(width / this.zoomRatio)
       const planeHeight = plane === yuv ? height : Math.floor(height / this.zoomRatio)
-      const task = new taskpool.Task(decodeFromYUV, plane, planeWidth, planeHeight,
-        plane === yuv ? stride : planeWidth, [BarcodeFormat.QR_CODE])
+      const task = new taskpool.Task(decodeQrFast, plane, planeWidth, planeHeight,
+        plane === yuv ? stride : planeWidth, this.frameSeq % 3 === 0)
+      this.frameSeq++
       task.setTransferList([plane.buffer])
+      const decodeStart = Date.now()
       const text = await taskpool.execute(task) as string
+      console.info(`OH scan decode ${Date.now() - decodeStart}ms plane=${planeWidth}x${planeHeight} hit=${text !== ''}`)
       if (!this.stopped && text !== '') {
         this.stopCamera()
         this.onResult(text)

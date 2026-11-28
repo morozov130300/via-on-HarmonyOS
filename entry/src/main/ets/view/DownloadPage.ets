@@ -26,7 +26,6 @@ import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor as utd } from '@kit.ArkData'
 import { detectBarcode, scanBarcode } from '@kit.ScanKit'
 
-const DOWNLOAD_REFRESH_MS: number = 500
 const SEARCH_DEBOUNCE_MS: number = 100
 
 // 原版 b1.x3 tab 顺序：全部/文档/压缩包/安装包/图片/视频/音频/其它 → 分类 0/6/5/3/7/2/1/8
@@ -150,11 +149,14 @@ export struct DownloadPage {
   private qrRec: DownloadRec | null = null
   // 二维码解码缓存（原版 b1.J0）
   private qrCache: Map<number, string> = new Map<number, string>()
-  private refreshTimer: number = -1
   private searchTimer: number = -1
   private searchPending: string = ''
-  private changeListener: () => void = (): void => {
-    this.reload()
+  private visibleTaskIds: Set<number> = new Set<number>()
+  private visibleStart: number = 0
+  private visibleEnd: number = -1
+  private loadedOnce: boolean = false
+  private changeListener: (task: DownloadRec) => void = (task: DownloadRec): void => {
+    this.refreshVisibleTask(task)
   }
 
   aboutToAppear(): void {
@@ -163,25 +165,33 @@ export struct DownloadPage {
   }
 
   aboutToDisappear(): void {
-    this.stopAutoRefresh()
     this.clearSearchDebounce()
+    this.engine.removeTaskChangeListener(this.changeListener)
   }
 
-  // 原版下载进度经通知/回调实时更新；页面以 500ms 轮询 + 引擎变更回调近似
-  private startAutoRefresh(): void {
-    if (this.refreshTimer >= 0) {
+  private refreshVisibleTaskIds(): void {
+    const visibleItems = this.visibleItems()
+    const nextIds: Set<number> = new Set<number>()
+    const start = Math.min(this.visibleStart, visibleItems.length)
+    const end = Math.min(this.visibleEnd, visibleItems.length - 1)
+    for (let i = start; i <= end; i++) {
+      nextIds.add(visibleItems[i].id)
+    }
+    this.visibleTaskIds = nextIds
+  }
+
+  private refreshVisibleTask(task: DownloadRec): void {
+    if (!this.loadedOnce || !this.visibleTaskIds.has(task.id)) {
       return
     }
-    this.refreshTimer = setInterval(() => {
-      this.reload()
-    }, DOWNLOAD_REFRESH_MS)
-  }
-
-  private stopAutoRefresh(): void {
-    if (this.refreshTimer >= 0) {
-      clearInterval(this.refreshTimer)
-      this.refreshTimer = -1
+    const next = this.items.slice()
+    const index = next.findIndex((item: DownloadRec): boolean => item.id === task.id)
+    if (index < 0) {
+      return
     }
+    next[index] = task
+    this.items = next
+    this.decodeQr(task)
   }
 
   // 原版 b1.X1：搜索 100ms 防抖（u8.c.B(1).f(100ms)）
@@ -193,6 +203,7 @@ export struct DownloadPage {
     this.searchTimer = setTimeout(() => {
       this.searchTimer = -1
       this.searchText = this.searchPending.trim()
+      this.refreshVisibleTaskIds()
     }, SEARCH_DEBOUNCE_MS)
   }
 
@@ -230,8 +241,10 @@ export struct DownloadPage {
   }
 
   private reload(): void {
+    this.loadedOnce = false
     this.db.listDownloads().then((items: DownloadRec[]) => {
       this.items = items
+      this.loadedOnce = true
       for (let i = 0; i < items.length; i++) {
         this.decodeQr(items[i])
       }
@@ -818,6 +831,7 @@ export struct DownloadPage {
       .onClick(() => {
         if (this.tab !== cat) {
           this.tab = cat
+          this.refreshVisibleTaskIds()
         }
       })
   }
@@ -1007,11 +1021,16 @@ export struct DownloadPage {
                 ListItem() {
                   this.ItemRow(item)
                 }
-              }, (item: DownloadRec) => `${item.id}_${item.state}_${item.received}_${item.speed}`)
+              }, (item: DownloadRec) => item.id.toString())
             }
             .width('100%')
             .layoutWeight(1)
             .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
+            .onScrollIndex((start: number, end: number) => {
+              this.visibleStart = start
+              this.visibleEnd = end
+              this.refreshVisibleTaskIds()
+            })
             .scrollBar(BarState.Off)
             .edgeEffect(EdgeEffect.Spring)
           }
@@ -1074,13 +1093,12 @@ export struct DownloadPage {
     .onShown(() => {
       this.bindAppBar()
       this.reload()
-      this.startAutoRefresh()
     })
     .onHidden(() => {
-      this.stopAutoRefresh()
+      this.visibleTaskIds.clear()
     })
     .onWillDisappear(() => {
-      this.stopAutoRefresh()
+      this.visibleTaskIds.clear()
       AppBar.maybeHide(this)
     })
     .onBackPressed(() => {

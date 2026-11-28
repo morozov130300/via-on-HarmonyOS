@@ -107,14 +107,9 @@ export class CustomEngineRec {
   }
 }
 
-// 原版 z8/v2.a()：默认搜索引擎 = CN（中文）环境百度，否则谷歌
+// 默认搜索引擎固定为必应（原版按 locale 百度/谷歌，已去除）
 export function defaultEngineKeyForSystem(): string {
-  try {
-    const lang = i18n.System.getSystemLanguage()
-    return lang.startsWith('zh') ? 'baidu' : 'google'
-  } catch (error) {
-    return 'baidu'
-  }
+  return 'bing'
 }
 
 @ObservedV2
@@ -194,6 +189,10 @@ export class AppSettings {
   @Trace dataSaver: boolean = false
   @Trace autoSniffButton: boolean = false
   @Trace allowDebugWeb: boolean = false
+  // 实验页「开启日志」：WARN/ERROR 级日志追加写入沙箱日志文件（详细开关开启时 DEBUG/INFO 也写）
+  @Trace logFileEnabled: boolean = false
+  // 实验页「详细日志」：仅基础开关开启时生效，DEBUG/INFO 也写盘
+  @Trace logFileVerbose: boolean = false
   @Trace disableSafeBrowsing: boolean = false
   @Trace ignoreSslWarning: boolean = false
   @Trace homeBgColor: string = ''
@@ -475,6 +474,8 @@ export class AppSettings {
       this.dataSaver = await this.readBoolean('dataSaver', false)
       this.autoSniffButton = await this.readBoolean('autoSniffButton', false)
       this.allowDebugWeb = await this.readBoolean('allowDebugWeb', false)
+      this.logFileEnabled = await this.readBoolean('logFileEnabled', false)
+      this.logFileVerbose = await this.readBoolean('logFileVerbose', false)
       this.disableSafeBrowsing = await this.readBoolean('disableSafeBrowsing', false)
       this.ignoreSslWarning = await this.readBoolean('ignoreSslWarning', false)
       this.homeBgColor = await this.readString('homeBgColor', '')
@@ -1601,6 +1602,16 @@ export class AppSettings {
   setAllowDebugWeb(on: boolean): void {
     this.allowDebugWeb = on
     this.flushKey('allowDebugWeb', on)
+  }
+
+  setLogFileEnabled(on: boolean): void {
+    this.logFileEnabled = on
+    this.flushKey('logFileEnabled', on)
+  }
+
+  setLogFileVerbose(on: boolean): void {
+    this.logFileVerbose = on
+    this.flushKey('logFileVerbose', on)
   }
 
   setDisableSafeBrowsing(on: boolean): void {

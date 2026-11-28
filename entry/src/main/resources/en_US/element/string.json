@@ -3139,6 +3139,42 @@
     {
       "name": "orig_it",
       "value": "Drag the floating button up, down, left or right to set an action"
+    },
+    {
+      "name": "log_file_title",
+      "value": "Enable logging"
+    },
+    {
+      "name": "log_file_desc",
+      "value": "Append WARN/ERROR-level logs to a local log file; export it anytime, the local file is removed after export."
+    },
+    {
+      "name": "log_verbose_title",
+      "value": "Verbose logging"
+    },
+    {
+      "name": "log_verbose_desc",
+      "value": "Also record DEBUG/INFO logs of all levels; the log file may grow large."
+    },
+    {
+      "name": "log_export_title",
+      "value": "Export log"
+    },
+    {
+      "name": "log_export_desc",
+      "value": "Export the local log file via the system file manager; the local log is removed after a successful export."
+    },
+    {
+      "name": "log_export_none",
+      "value": "No log to export"
+    },
+    {
+      "name": "log_export_done",
+      "value": "Log exported"
+    },
+    {
+      "name": "log_export_failed",
+      "value": "Log export failed"
     }
   ]
 }
