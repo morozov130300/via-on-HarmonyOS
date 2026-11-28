@@ -6,6 +6,7 @@ import { productViewManager } from '@kit.AppGalleryKit'
 import { fileIo } from '@kit.CoreFileKit'
 import { webview } from '@kit.ArkWeb'
 import { scanBarcode } from '@kit.ScanKit'
+import { deviceInfo } from '@kit.BasicServicesKit'
 import { http } from '@kit.NetworkKit'
 import { window } from '@kit.ArkUI'
 import { AppSettings, applyOrientationSetting, UA_MODE_DEFAULT } from '../common/Settings'
@@ -84,6 +85,7 @@ export const MARK_AD_INJECT_JS: string = `(function(){if(window.__uia_mark_ad__)
 @ComponentV2
 export struct MenuSheet {
   @Event onClose: () => void = () => {}
+  @Event onOpenHarmonyScan: () => void = () => {}
   @Event onOpenPage: (page: string) => void = (page: string) => {}
   // 保留给 Index 的既有接线（Index 侧仍传入）。原版 a8/k 选中书签走 k6.K3 → k6.Ra
   // → Ta/Ua（k6.java:5994-6023）：当前标签存在时**在当前标签打开**，故 MenuSheet 内
@@ -1230,6 +1232,10 @@ export struct MenuSheet {
 
   // 原版同款：扫码结果按网址/搜索词分流
   private startScan(): void {
+    if (deviceInfo.osFullName.startsWith('OpenHarmony')) {
+      this.onOpenHarmonyScan()
+      return
+    }
     const context = this.getUIContext().getHostContext()
     if (context === undefined) {
       return

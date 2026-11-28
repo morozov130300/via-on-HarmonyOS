@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "cn.edu.whut.uia",
     "vendor": "example",
-    // 版本号采用 8 位规则：版本名数字拼接 + 五位功能迭代序号；当前 7.4.6 / 74600009
-    "versionCode": 74600009,
+    // 版本号采用 8 位规则：版本名数字拼接 + 五位功能迭代序号；当前 7.4.6 / 74600013
+    "versionCode": 74600013,
     "versionName": "7.4.6",
     "buildVersion": "1",
     "icon": "$media:layered_image",

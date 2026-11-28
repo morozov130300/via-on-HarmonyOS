@@ -151,10 +151,33 @@ export struct UserScriptsPage {
   build() {
     NavDestination() {
       Column() {
-        if (this.editing === null && !this.adding) {
+        if (this.editing !== null || this.adding) {
+          ScriptEditOverlay({
+            script: this.editing,
+            onClose: () => {
+              this.editing = null
+              this.adding = false
+              this.editingDirty = false
+              this.saveRequested = 0
+              this.helpRequested = 0
+              this.bindAppBar()
+            },
+            onSaved: () => {
+              this.editing = null
+              this.adding = false
+              this.editingDirty = false
+              this.saveRequested = 0
+              this.helpRequested = 0
+              this.bindAppBar()
+            },
+            onDirtyChange: (dirty: boolean) => {
+              this.editingDirty = dirty
+            },
+            saveRequest: this.saveRequested,
+            helpRequest: this.helpRequested
+          })
+        } else {
           AppBarSpacer()
-        }
-        if (this.editing === null && !this.adding) {
           Scroll() {
             Column() {
             SettingCheckRow({
@@ -234,38 +257,13 @@ export struct UserScriptsPage {
             }, (script: UserScriptRec) => `${script.id}_${script.enabled}_${script.name}_${script.code.length}`)
           }
           .width('100%')
-          }
-          .width('100%')
           .layoutWeight(1)
           .align(Alignment.Top)
+        }
         }
       }
       .width('100%')
       .height('100%')
-      if (this.editing !== null || this.adding) {
-        ScriptEditOverlay({
-          script: this.editing,
-          onClose: () => {
-            this.editing = null
-            this.adding = false
-            this.editingDirty = false
-            this.bindAppBar()
-          },
-          onSaved: () => {
-            this.editing = null
-            this.adding = false
-            this.editingDirty = false
-            this.saveRequested = 0
-            this.helpRequested = 0
-            this.bindAppBar()
-          },
-          onDirtyChange: (dirty: boolean) => {
-            this.editingDirty = dirty
-          },
-          saveRequest: this.saveRequested,
-          helpRequest: this.helpRequested
-        })
-      }
       if (this.downloadInputShow) {
         ScriptDownloadOverlay({
           onClose: () => {
@@ -868,6 +866,7 @@ export struct ScriptEditOverlay {
   @Param helpRequest: number = 0
   @Local code: string = ''
   @Local helpShow: boolean = false
+  private codeController: TextAreaController = new TextAreaController()
   private initialCode: string = ''
   private settings: AppSettings = AppSettings.getInstance()
 
@@ -894,7 +893,7 @@ export struct ScriptEditOverlay {
   build() {
     Column() {
       AppBarSpacer()
-      TextArea({ text: this.code, placeholder: $r('app.string.orig_sl') })
+      TextArea({ text: $$this.code, placeholder: $r('app.string.orig_sl'), controller: this.codeController })
         .layoutWeight(1)
         .width('100%')
         .fontSize(13)

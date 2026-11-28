@@ -77,6 +77,11 @@ export function resolveColorHex(color: ResourceColor, context: common.UIAbilityC
 // 工程口径：homeBgImage 或自定义 CSS 的 body/html/#content 背景图（与 Index
 // 壁纸渲染条件一致）。CSS 背景图属工程近似，原版仅背景图置 bit7。
 export function homeWallpaperThrough(tab: TabItem, settings: AppSettings): boolean {
+  // 原版 k6.b5 窗口待定标签（target=_blank）目标页落定前不按主页呈现，
+  // 壁纸透出分支同样不放行，否则新开标签跳转前整屏闪主页壁纸。
+  if (tab.pendingWindow) {
+    return false
+  }
   if (!tab.isHomePage()) {
     return false
   }
@@ -131,7 +136,8 @@ export function toolbarBackgroundColor(tab: TabItem, settings: AppSettings): Res
       return themed
     }
   }
-  if (tab.isHomePage() && settings.homeBgColor !== '') {
+  // pendingWindow 标签（target=_blank）目标页落定前不按主页呈现自设背景色
+  if (tab.isHomePage() && !tab.pendingWindow && settings.homeBgColor !== '') {
     return settings.nightBlend(settings.homeBgColor)
   }
   return $r('app.color.home_bg')

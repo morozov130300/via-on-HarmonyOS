@@ -16,6 +16,7 @@ import { SearchToolbar } from '../components/SearchToolbar'
 import { TabPanel } from '../components/TabPanel'
 import { AppBarHeader } from '../components/AppBar'
 import { MenuSheet } from '../components/MenuSheet'
+import { OpenHarmonyQrScanner } from '../components/OpenHarmonyQrScanner'
 import { TranslateMenuDialog, openTranslateMenu } from '../components/TranslateMenu'
 import { buildAutoPageTranslateJs } from '../common/TranslateInject'
 import { FindBar } from '../components/FindBar'
@@ -128,6 +129,7 @@ struct Index {
   @Local searchInitialText: string = ''
   @Local showTabPanel: boolean = false
   @Local showMenu: boolean = false
+  @Local showOpenHarmonyScanner: boolean = false
   @Local showFindBar: boolean = false
 
   @Local showAi: boolean = false
@@ -1659,7 +1661,9 @@ struct Index {
     if (this.barBgThrough()) {
       return Color.Transparent
     }
-    if (this.tabStore.current().isHomePage() && this.settings.homeBgColor !== '') {
+    // pendingWindow 标签（target=_blank）目标页落定前不按主页呈现自设背景色
+    if (this.tabStore.current().isHomePage() && !this.tabStore.current().pendingWindow
+      && this.settings.homeBgColor !== '') {
       // 原版夜间联动：自设背景色经黑滤镜后用于工具栏
       return this.settings.nightBlend(this.settings.homeBgColor)
     }
@@ -2898,10 +2902,35 @@ struct Index {
                 ? -px2vp(120) : px2vp(120) })
                 .animation({ duration: 160, curve: ACCELERATE_CURVE }))))
       }
+      if (this.showOpenHarmonyScanner) {
+        OpenHarmonyQrScanner({
+          context: this.getUIContext().getHostContext() as common.UIAbilityContext,
+          onResult: (scanned: string): void => {
+            this.showOpenHarmonyScanner = false
+            const value = scanned.trim()
+            if (value === '') {
+              return
+            }
+            const target = isUrlLike(value) || value.toLowerCase().startsWith('localhost')
+              ? normalizeUrl(value)
+              : buildSearchUrl(this.settings.engineKey, this.settings.activeEngineTemplate(), value)
+            this.tabStore.navigate(target)
+          },
+          onClose: (): void => {
+            this.showOpenHarmonyScanner = false
+          }
+        })
+          .width('100%')
+          .height('100%')
+          .zIndex(40)
+      }
       if (this.showMenu) {
         MenuSheet({
           onClose: () => {
             this.showMenu = false
+          },
+          onOpenHarmonyScan: (): void => {
+            this.startScan()
           },
           onOpenPage: (page: string) => {
             this.showMenu = false
@@ -3286,6 +3315,11 @@ struct Index {
 
   // 原版 k6.ga()：扫码结果按网址/搜索词分流（与 MenuSheet.startScan 同一管线）
   private startScan(): void {
+    if (deviceInfo.osFullName.startsWith('OpenHarmony')) {
+      this.showMenu = false
+      this.showOpenHarmonyScanner = true
+      return
+    }
     const context = this.getUIContext().getHostContext()
     if (context === undefined) {
       return

@@ -21,6 +21,8 @@ export struct WebScriptsPage {
   @Local slideOffset: string = '0'
   @Local adding: boolean = false
   @Local refreshTick: number = 0
+  @Local saveRequested: number = 0
+  @Local helpRequested: number = 0
   // ua.t:202-203：标题 z4「作用于 %1$s 的脚本」/ uc「脚本」，走资源以支持语言切换
   @Local pageTitleText: string = ''
 
@@ -66,6 +68,24 @@ export struct WebScriptsPage {
   }
 
   private bindAppBar(): void {
+    if (this.adding) {
+      AppBar.show({
+        title: $r('app.string.add_script'),
+        rightText2: $r('app.string.orig_k9'),
+        rightText: $r('app.string.save'),
+        onBack: () => {
+          this.adding = false
+          this.bindAppBar()
+        },
+        onRight2: () => {
+          this.helpRequested++
+        },
+        onRight: () => {
+          this.saveRequested++
+        }
+      }, this)
+      return
+    }
     AppBar.show({
       title: this.pageTitle(),
       rightIcon2: $r('sys.symbol.plus'),
@@ -74,6 +94,9 @@ export struct WebScriptsPage {
       },
       onRight2: () => {
         this.adding = true
+        this.saveRequested = 0
+        this.helpRequested = 0
+        this.bindAppBar()
       }
     }, this)
   }
@@ -81,9 +104,29 @@ export struct WebScriptsPage {
   build() {
     NavDestination() {
       Column() {
-        AppBarSpacer()
-        Scroll() {
-          Column() {
+        if (this.adding) {
+          ScriptEditOverlay({
+            script: null,
+            initUrl: this.pageUrl(),
+            onClose: () => {
+              this.adding = false
+              this.bindAppBar()
+            },
+            onSaved: () => {
+              this.adding = false
+              this.refreshTick++
+              this.saveRequested = 0
+              this.helpRequested = 0
+              this.bindAppBar()
+            },
+            onDirtyChange: (dirty: boolean): void => {},
+            saveRequest: this.saveRequested,
+            helpRequest: this.helpRequested
+          })
+        } else {
+          AppBarSpacer()
+          Scroll() {
+            Column() {
             ForEach(this.matchedScripts(), (script: UserScriptRec) => {
               Row() {
                 Text(script.name)
@@ -109,27 +152,15 @@ export struct WebScriptsPage {
               .padding({ left: 16, right: 16 })
             }, (script: UserScriptRec) => `${script.id}_${script.enabled}_${script.name}_${this.refreshTick}`)
           }
+            .width('100%')
+          }
+          .layoutWeight(1)
+          .align(Alignment.Top)
           .width('100%')
         }
-        .layoutWeight(1)
-        .align(Alignment.Top)
-        .width('100%')
       }
       .width('100%')
       .height('100%')
-      if (this.adding) {
-        ScriptEditOverlay({
-          script: null,
-          initUrl: this.pageUrl(),
-          onClose: () => {
-            this.adding = false
-          },
-          onSaved: () => {
-            this.adding = false
-            this.refreshTick++
-          }
-        })
-      }
     }
     .hideTitleBar(true)
     .translate({ x: this.slideOffset })

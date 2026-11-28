@@ -606,6 +606,9 @@ export class TabStore {
     tab.isError = false
     tab.errorDesc = ''
     tab.initialUrl = ''
+    // 原版 na 加载新址时 url 即刻落定（u9.d.m 主页判断随之失效），主页覆盖层当场切走，
+    // 视口先呈空白/背景色，不等 onPageBegin —— 否则导航发起至加载开始之间会闪主页。
+    tab.url = url
     try {
       const settings = AppSettings.getInstance()
       if (settings.dataSaver) {
