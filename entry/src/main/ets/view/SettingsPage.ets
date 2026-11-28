@@ -2,9 +2,11 @@ import { AppSettings } from '../common/Settings'
 import { SettingNavRow } from '../components/SettingRows'
 import { AppBar, AppBarSpacer } from '../components/AppBar'
 import { buildNavSlide } from './PageTransitions'
+import { SettingsIndexEntry, searchSettingsEntries } from '../common/SettingsSearchIndex'
 
 // 设置根页。原版 hb/o6：标题五连点（500ms 内第 5 次）切换 labflag 位1，
 // 控制「实验」入口（hb/y1）的显隐；入口位于「关于」之前
+// 顶部搜索框：输入关键词过滤全部设置条目（common/SettingsSearchIndex.ets），点击结果跳对应设置页
 @ComponentV2
 export struct SettingsPage {
   private settings: AppSettings = AppSettings.getInstance()
@@ -13,6 +15,9 @@ export struct SettingsPage {
   private titleTapCount: number = 0
   // g6/i.java:67 的 anim/f..i 左右推入转场：本页横向偏移由转场 delegate 驱动
   @Local slideOffset: string = '0'
+  // 设置内搜索
+  @Local searchKeyword: string = ''
+  @Local searchResults: SettingsIndexEntry[] = []
 
   private bindAppBar(): void {
     AppBar.show({
@@ -42,37 +47,94 @@ export struct SettingsPage {
     }
   }
 
+  private onSearchChange(value: string): void {
+    this.searchKeyword = value
+    if (value.trim() === '') {
+      this.searchResults = []
+      return
+    }
+    const context = this.getUIContext().getHostContext()
+    if (context === undefined) {
+      this.searchResults = []
+      return
+    }
+    this.searchResults = searchSettingsEntries(context, value)
+  }
+
+  private openEntry(entry: SettingsIndexEntry): void {
+    this.navPathStack.pushPathByName(entry.route, entry.params !== undefined ? entry.params : '', true)
+  }
+
   build() {
     NavDestination() {
       Column() {
         AppBarSpacer()
+        // 顶部搜索框（原版设置页搜索条目入口，文案取 search：搜索/Search）
+        Row() {
+          TextInput({ placeholder: $r('app.string.search'), text: this.searchKeyword })
+            .width('100%')
+            .height(40)
+            .fontSize(14)
+            .backgroundColor($r('app.color.surface'))
+            .borderRadius(20)
+            .onChange((value: string) => {
+              this.onSearchChange(value)
+            })
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
         Scroll() {
-          Column() {
-            SettingNavRow({ rowLabel: $r('app.string.general'), onTapRow: () => {
-              this.navPathStack.pushPathByName('settingsGeneral', '', true)
-            } })
-            SettingNavRow({ rowLabel: $r('app.string.customize'), onTapRow: () => {
-              this.navPathStack.pushPathByName('settingsCustom', '', true)
-            } })
-            SettingNavRow({ rowLabel: $r('app.string.privacy'), onTapRow: () => {
-              this.navPathStack.pushPathByName('settingsPrivacy', '', true)
-            } })
-            SettingNavRow({ rowLabel: $r('app.string.advanced'), onTapRow: () => {
-              this.navPathStack.pushPathByName('settingsAdvanced', '', true)
-            } })
-            SettingNavRow({ rowLabel: $r('app.string.scripts'), onTapRow: () => {
-              this.navPathStack.pushPathByName('userScripts', '', true)
-            } })
-            if (this.settings.isLabEntryVisible()) {
-              SettingNavRow({ rowLabel: $r('app.string.orig_ic'), onTapRow: () => {
-                this.navPathStack.pushPathByName('settingsExperimental', '', true)
+          if (this.searchKeyword.trim() === '') {
+            Column() {
+              SettingNavRow({ rowLabel: $r('app.string.general'), onTapRow: () => {
+                this.navPathStack.pushPathByName('settingsGeneral', '', true)
+              } })
+              SettingNavRow({ rowLabel: $r('app.string.customize'), onTapRow: () => {
+                this.navPathStack.pushPathByName('settingsCustom', '', true)
+              } })
+              SettingNavRow({ rowLabel: $r('app.string.privacy'), onTapRow: () => {
+                this.navPathStack.pushPathByName('settingsPrivacy', '', true)
+              } })
+              SettingNavRow({ rowLabel: $r('app.string.advanced'), onTapRow: () => {
+                this.navPathStack.pushPathByName('settingsAdvanced', '', true)
+              } })
+              SettingNavRow({ rowLabel: $r('app.string.scripts'), onTapRow: () => {
+                this.navPathStack.pushPathByName('userScripts', '', true)
+              } })
+              if (this.settings.isLabEntryVisible()) {
+                SettingNavRow({ rowLabel: $r('app.string.orig_ic'), onTapRow: () => {
+                  this.navPathStack.pushPathByName('settingsExperimental', '', true)
+                } })
+              }
+              SettingNavRow({ rowLabel: $r('app.string.about'), onTapRow: () => {
+                this.navPathStack.pushPathByName('settingsAbout', '', true)
               } })
             }
-            SettingNavRow({ rowLabel: $r('app.string.about'), onTapRow: () => {
-              this.navPathStack.pushPathByName('settingsAbout', '', true)
-            } })
+            .width('100%')
+          } else if (this.searchResults.length === 0) {
+            Column() {
+              // 空态与原版列表空态一致（z8/r3）
+              Text('¯\\_(ツ)_/¯')
+                .fontSize(15)
+                .fontColor($r('app.color.fg_secondary'))
+                .margin({ top: 32 })
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Center)
+          } else {
+            Column() {
+              ForEach(this.searchResults, (entry: SettingsIndexEntry, index: number) => {
+                SettingNavRow({
+                  rowLabel: entry.label,
+                  rowValue: entry.desc,
+                  onTapRow: () => {
+                    this.openEntry(entry)
+                  }
+                })
+              }, (entry: SettingsIndexEntry, index: number) => `${entry.route}_${index}`)
+            }
+            .width('100%')
           }
-          .width('100%')
         }
         .width('100%')
         .layoutWeight(1)

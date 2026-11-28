@@ -26,6 +26,7 @@ export class LogFileService {
     try {
       this.logPath = context.filesDir + '/' + LOG_FILE_NAME
       this.initialized = true
+      console.info(`[LogDiag] init ok path=${this.logPath}`)
     } catch (e) {
       Logger.error(TAG, 'init failed:', (e as BusinessError).message)
     }
@@ -48,21 +49,31 @@ export class LogFileService {
   // 开关落盘持久化由 AppSettings 负责；开启后只记录开启之后产生的日志，关闭期间不补录。
   // 关闭时同步关闭详细模式并删除本地日志残留，下次开启从空文件重新记录。
   public setEnabled(on: boolean): void {
+    console.info(`[LogDiag] setEnabled on=${on}`)
     if (!on) {
       this.settings().setLogFileVerbose(false)
       this.clearLogFile()
     }
     this.settings().setLogFileEnabled(on)
+    if (on) {
+      // 开启即建文件写入标记行：保证「开了日志但还没产生 WARN/ERROR」时导出也有产物，
+      // 用户可据此确认开关已生效
+      this.append('INFO', TAG, '=== 日志记录开启 ===')
+    }
   }
 
   // 详细日志开关落盘持久化；仅影响 DEBUG/INFO 是否写盘，不改变基础开关。
   public setVerbose(on: boolean): void {
     this.settings().setLogFileVerbose(on)
+    if (on && this.isEnabled()) {
+      this.append('INFO', TAG, '=== 详细日志开启：DEBUG/INFO 也写盘 ===')
+    }
   }
 
   // 单文件持续追加：CREATE 保证首次写入时创建，APPEND 保证不覆盖历史
   public append(level: string, tag: string, message: string): void {
     if (!this.initialized || !this.isEnabled() || this.logPath.length === 0) {
+      console.info(`[LogDiag] append rejected level=${level} init=${this.initialized} enabled=${this.isEnabled()} pathLen=${this.logPath.length}`)
       return
     }
     let file: fs.File | undefined = undefined
@@ -70,6 +81,7 @@ export class LogFileService {
       const line: string = `[${LogFileService.timestamp()}] [${level}] ${tag}: ${message}\n`
       file = fs.openSync(this.logPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.APPEND)
       fs.writeSync(file.fd, line)
+      console.info(`[LogDiag] append wrote level=${level} path=${this.logPath}`)
     } catch (e) {
       Logger.error(TAG, 'append failed:', (e as BusinessError).message)
     } finally {

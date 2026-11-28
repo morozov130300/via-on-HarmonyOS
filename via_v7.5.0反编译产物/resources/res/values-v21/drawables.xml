@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <drawable name="p">r/m/p.xml</drawable>
+    <drawable name="q">r/m/q.xml</drawable>
+    <drawable name="r">r/m/r.xml</drawable>
+    <drawable name="an">r/m/an.xml</drawable>
+</resources>

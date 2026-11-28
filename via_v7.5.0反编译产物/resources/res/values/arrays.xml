@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="a">
+        <item>@string/q6</item>
+        <item>@string/q7</item>
+        <item>@string/ck</item>
+    </array>
+    <array name="b">
+        <item>@string/k_</item>
+        <item>@string/e2</item>
+    </array>
+    <array name="c">
+        <item>@string/fe</item>
+        <item>@string/fj</item>
+        <item>@string/fk</item>
+        <item>@string/rq</item>
+        <item>@string/fl</item>
+        <item>@string/fg</item>
+        <item>@string/fd</item>
+    </array>
+    <array name="d">
+        <item>@string/k3</item>
+        <item>@string/k4</item>
+        <item>@string/k5</item>
+    </array>
+    <array name="e">
+        <item>@string/fp</item>
+        <item>@string/g</item>
+        <item>@string/j</item>
+        <item>@string/b4</item>
+    </array>
+    <array name="f">
+        <item>@string/fp</item>
+        <item>@string/r2</item>
+        <item>@string/ym</item>
+        <item>@string/ky</item>
+        <item>@string/ov</item>
+    </array>
+    <array name="g">
+        <item>@string/go</item>
+        <item>@string/cc</item>
+        <item>@string/ck</item>
+    </array>
+    <array name="h">
+        <item>@string/ju</item>
+        <item>@string/q9</item>
+        <item>@string/qa</item>
+        <item>@string/q_</item>
+    </array>
+    <array name="i">
+        <item>@string/a0t</item>
+        <item>@string/a0s</item>
+        <item>@string/a0r</item>
+        <item>@string/a0p</item>
+    </array>
+    <array name="j">
+        <item>@string/oe</item>
+        <item>@string/ic</item>
+        <item>@string/ib</item>
+        <item>@string/id</item>
+        <item>@string/ia</item>
+    </array>
+    <array name="k">
+        <item>@string/kq</item>
+        <item>@string/kr</item>
+        <item>@string/a1k</item>
+    </array>
+    <array name="l">
+        <item>@string/fp</item>
+        <item>@string/bo</item>
+        <item>@string/bq</item>
+        <item>@string/bs</item>
+        <item>@string/bu</item>
+        <item>@string/bp</item>
+    </array>
+</resources>

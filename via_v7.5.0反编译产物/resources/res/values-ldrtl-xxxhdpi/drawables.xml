@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <drawable name="b0">r/h/b0.png</drawable>
+    <drawable name="bn">r/h/bn.png</drawable>
+    <drawable name="bz">r/h/bz.png</drawable>
+    <drawable name="cm">r/h/cm.png</drawable>
+</resources>

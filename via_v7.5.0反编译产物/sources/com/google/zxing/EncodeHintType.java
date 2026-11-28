@@ -1,0 +1,25 @@
+package com.google.zxing;
+
+/* JADX INFO: compiled from: r8-map-id-875fbd63171e2c5424b2aca0835b618037335a04f461a9f23d4d6d9cb859ddbf */
+/* JADX INFO: loaded from: classes.dex */
+public enum EncodeHintType {
+    ERROR_CORRECTION,
+    CHARACTER_SET,
+    DATA_MATRIX_SHAPE,
+    DATA_MATRIX_COMPACT,
+    MIN_SIZE,
+    MAX_SIZE,
+    MARGIN,
+    PDF417_COMPACT,
+    PDF417_COMPACTION,
+    PDF417_DIMENSIONS,
+    PDF417_AUTO_ECI,
+    AZTEC_LAYERS,
+    QR_VERSION,
+    QR_MASK_PATTERN,
+    QR_COMPACT,
+    GS1_FORMAT,
+    FORCE_CODE_SET,
+    FORCE_C40,
+    CODE128_COMPACT
+}
